@@ -436,6 +436,7 @@
   "discoverPageBasedOnLast": "统计范围",
   "discoverPageBasedOnAllTime": "统计范围",
   "discoverPageMoreOptions": "更多选项",
+  "discoverPageNewSeeds": "换一批依据歌曲",
   "discoverPageIncludePlayed": "包括最近听过的歌曲",
   "discoverPageAlbumsLibrary": "来自你曲库的专辑",
   "discoverPageAlbumsPeer": "来自 {name} 的专辑",

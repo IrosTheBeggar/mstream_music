@@ -1878,6 +1878,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverPageMoreOptions => 'Plus d’options';
 
   @override
+  String get discoverPageNewSeeds => 'Nouveaux morceaux de départ';
+
+  @override
   String get discoverPageIncludePlayed =>
       'Inclure les morceaux écoutés récemment';
 

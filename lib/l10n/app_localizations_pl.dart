@@ -1900,6 +1900,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPageMoreOptions => 'Więcej opcji';
 
   @override
+  String get discoverPageNewSeeds => 'Nowe utwory bazowe';
+
+  @override
   String get discoverPageIncludePlayed => 'Uwzględnij utwory słuchane ostatnio';
 
   @override

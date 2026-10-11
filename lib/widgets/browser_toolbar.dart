@@ -9,8 +9,9 @@
 //   • local search open → close · filter field
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
-//                          (not on Discover: its footers carry the verbs)
 //                          back · label · search · (no songs to act on)
+//   • Discover           → back · label · New seeds (no search, no verbs:
+//                          its footers carry them)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -269,6 +270,29 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
+  // Discover's "New seeds": the open frame's controller moves past the
+  // seeds the page is based on (DiscoveryPageController.newSeeds). Off
+  // while it could do nothing — no answer yet, a call out (the bar's thin
+  // line shows it; the rows stay up), the route refused — so the button
+  // follows the controller, not only the browser streams.
+  Widget _newSeedsButton(AppLocalizations l) {
+    final c = DiscoveryListing().controller;
+    Widget button(bool on) => IconButton(
+          key: const ValueKey('discovery-new-seeds'),
+          icon: const Icon(Icons.refresh, size: 22),
+          color: VelvetColors.appBarTextSecondary,
+          disabledColor:
+              VelvetColors.appBarTextSecondary.withValues(alpha: 0.4),
+          tooltip: l.discoverPageNewSeeds,
+          onPressed: on ? () => unawaited(c!.newSeeds()) : null,
+        );
+    if (c == null) return button(false);
+    return ListenableBuilder(
+      listenable: c,
+      builder: (_, _) => button(c.canNewSeeds),
+    );
+  }
+
   Widget _title(String text) => Expanded(
         child: Text(
           text,
@@ -480,11 +504,11 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // frame mixes the library's rows with connected servers' — so no
     // page-wide Play / Add all / Download, which would act on both at once
     // (and offer to download a peer's tracks unasked). Back · label ·
-    // search, like a list with nothing to play.
+    // New seeds: where other lists have search, Discover's bar starts the
+    // page from other songs you finished ([_newSeedsButton]).
     final canBack = BrowserManager().browserCache.length > 1;
-    final targets = DiscoveryListing.isListing(s.list)
-        ? const <DisplayItem>[]
-        : _actionTargets;
+    final discover = DiscoveryListing.isListing(s.list);
+    final targets = discover ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
       if (canBack)
@@ -495,7 +519,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       else
         const SizedBox(width: 12),
       _title(browserChromeLabel(l, s.label)),
-      if (canPlay) ...[
+      if (discover) ...[
+        _newSeedsButton(l),
+        const SizedBox(width: 12),
+      ] else if (canPlay) ...[
         // Play/Add all claim the bar, so search moves into the overflow.
         // Add all rather than Shuffle: in a folder the usual intent is "put
         // this on the end of what I'm listening to", and shuffling a single

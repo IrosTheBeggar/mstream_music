@@ -436,6 +436,7 @@
   "discoverPageBasedOnLast": "На основе последних",
   "discoverPageBasedOnAllTime": "Период",
   "discoverPageMoreOptions": "Другие параметры",
+  "discoverPageNewSeeds": "Новые исходные треки",
   "discoverPageIncludePlayed": "Включать недавно прослушанные треки",
   "discoverPageAlbumsLibrary": "Альбомы из вашей библиотеки",
   "discoverPageAlbumsPeer": "Альбомы с сервера «{name}»",

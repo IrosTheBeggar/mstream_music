@@ -154,12 +154,38 @@ class DiscoveryPageController extends ChangeNotifier {
   final List<String> _pins = [];
   final List<String> _exclude = [];
 
+  /// "New seeds" ([newSeeds]): the seed hashes this visit has moved past,
+  /// oldest first. Sent in `exclude` beside the drops so the server picks
+  /// the next finished songs — but never remembered (the call carries
+  /// `remember: false`) and never shown as dropped ([excluded] leaves them
+  /// out). Session-local: a fresh open starts empty, and any change to what
+  /// the seeds are steered by (window, filter, a drop or restore, a pin)
+  /// starts it over.
+  final List<String> _rotation = [];
+
+  /// The rotation the answer on screen was asked with ([seeded]'s
+  /// `excluded` lists it). [excluded] filters by this, not the live
+  /// rotation: a filter or window change clears the live one before its
+  /// call lands, and the old answer's moved-past seeds must not turn into
+  /// "Dropped" rows meanwhile.
+  Set<String> _seededRotation = const {};
+
   int _mainRid = 0;
   int _peersRid = 0;
   bool _disposed = false;
 
   List<String> get pins => List.unmodifiable(_pins);
   List<String> get exclude => List.unmodifiable(_exclude);
+  List<String> get rotation => List.unmodifiable(_rotation);
+
+  /// The answer's exclusions the seeds sheet shows (and can re-include):
+  /// the server lists every hash the call excluded, the rotation's
+  /// included, but those were never dropped — they are only the seeds
+  /// "New seeds" moved past (the rotation that answer was asked with).
+  List<TasteExcluded> get excluded => [
+        for (final e in seeded?.excluded ?? const <TasteExcluded>[])
+          if (!_seededRotation.contains(e.hash)) e,
+      ];
 
   TasteLibrary? get library => seeded?.library;
   List<TasteSeed> get seeds => seeded?.seeds ?? const [];
@@ -228,14 +254,32 @@ class DiscoveryPageController extends ChangeNotifier {
   /// client. Pins are never remembered (plan §2.3).
   bool get _remember => window != null || filter != null || _exclude.isNotEmpty;
 
+  /// The request's exclusions, oldest first: the rotation, then the drops
+  /// (TasteRequest keeps the newest [kTasteExcludeMax], so a long rotation
+  /// gives way before a drop does).
+  List<String>? get _excludeSent {
+    if (_rotation.isEmpty && _exclude.isEmpty) return null;
+    return [
+      ..._rotation.where((h) => !_exclude.contains(h)),
+      ..._exclude,
+    ];
+  }
+
+  /// `remember` on the main call: never while a rotation rides in
+  /// `exclude` (the server would save it as dropped seeds). Nothing
+  /// remembered is lost — every change worth remembering starts the
+  /// rotation over, so the call that carried it was a remembered one.
+  bool? get _rememberSent =>
+      _rotation.isNotEmpty ? false : (_remember ? true : null);
+
   /// `newArtistsOnly` is always false: it is the Explore surface's toggle,
   /// and Discover draws no control for it, so it must never thin the
   /// connected servers' rows unseen (the webapp's play page does the same).
   TasteRequest mainRequest() => TasteRequest(
         window: window,
         pin: _pins.isEmpty ? null : List.of(_pins),
-        exclude: _exclude.isEmpty ? null : List.of(_exclude),
-        remember: _remember ? true : null,
+        exclude: _excludeSent,
+        remember: _rememberSent,
         filter: filter,
         sources: const {TasteSource.library},
         limit: kDiscoveryMainLimits,
@@ -247,7 +291,7 @@ class DiscoveryPageController extends ChangeNotifier {
   TasteRequest peersRequest() => TasteRequest(
         window: window,
         pin: _pins.isEmpty ? null : List.of(_pins),
-        exclude: _exclude.isEmpty ? null : List.of(_exclude),
+        exclude: _excludeSent,
         sources: const {TasteSource.peers},
         limit: kDiscoveryPeersLimits,
         newArtistsOnly: false,
@@ -281,7 +325,8 @@ class DiscoveryPageController extends ChangeNotifier {
       // would leave Discover on placeholders nothing is loading — so the
       // cached peers stand and main is asked again.
       final owesMain = hit.seeded == null;
-      if (!owesMain) _apply(hit.seeded);
+      // The key matched, so the live rotation is the one it was asked with.
+      if (!owesMain) _apply(hit.seeded, _rotation);
       notifyListeners();
       // A visit left before its peers landed still owes them.
       await Future.wait([
@@ -301,11 +346,49 @@ class DiscoveryPageController extends ChangeNotifier {
 
   Future<void> refresh() => load(force: true);
 
+  /// Whether "New seeds" can do anything now: an answer is up, no call is
+  /// out (a second tap would only rotate past the same seeds again), and
+  /// the route is not latched off.
+  bool get canNewSeeds =>
+      available && !disabled && !loading && seeded != null;
+
+  /// "New seeds" on the toolbar: start from other songs. The current
+  /// answer's seeds — not the pins, which are the user's own choice and
+  /// stay — join the rotation, and both calls are asked again with it in
+  /// `exclude` (not remembered), so the server picks the next finished
+  /// songs; its own widening (window → all time → counters → random)
+  /// carries on from there. Once the answer is the random pick — or has no
+  /// seed of the server's own left to move past — the rotation is spent:
+  /// it starts over, and this asks for the newest finished songs again (a
+  /// cycle, never a dead end). Trimmed to the route's [kTasteExcludeMax],
+  /// newest kept. The previous answer stays up until the new one lands.
+  Future<void> newSeeds() async {
+    if (_disposed || !canNewSeeds) return;
+    final moved = isRandom
+        ? const <String>[]
+        : [
+            for (final s in seeds)
+              if (!s.pinned) s.hash
+          ];
+    if (moved.isEmpty) {
+      _rotation.clear();
+    } else {
+      _rotation
+        ..removeWhere(moved.contains)
+        ..addAll(moved);
+      if (_rotation.length > kTasteExcludeMax) {
+        _rotation.removeRange(0, _rotation.length - kTasteExcludeMax);
+      }
+    }
+    await load(force: true);
+  }
+
   Future<void> _loadMain() async {
     final rid = ++_mainRid;
     loading = true;
     error = false;
     notifyListeners();
+    final sentRotation = List.of(_rotation);
     final r = await _fetch(server, mainRequest());
     if (_disposed || rid != _mainRid) return;
     loading = false;
@@ -331,7 +414,7 @@ class DiscoveryPageController extends ChangeNotifier {
       await _loadMain();
       return;
     } else {
-      _apply(data);
+      _apply(data, sentRotation);
       _store();
     }
     notifyListeners();
@@ -359,8 +442,9 @@ class DiscoveryPageController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _apply(TasteResponse? r) {
+  void _apply(TasteResponse? r, Iterable<String> rotation) {
     seeded = r;
+    _seededRotation = Set.unmodifiable(rotation);
     final lib = r?.library;
     libraryRows = [
       for (final t in lib?.tracks ?? const <TasteTrack>[])
@@ -421,15 +505,40 @@ class DiscoveryPageController extends ChangeNotifier {
   Future<void> setFilter(TasteFilter f) async {
     if (f == effectiveFilter) return;
     final before = filter;
+    final rotationBefore = List.of(_rotation);
+    final peersBefore = peers;
+    final peersDoneBefore = _peersDone;
     filter = f;
+    // The filter starts "New seeds" over — under the 403 latch too, so the
+    // "Check again" that later carries it is a remembered call. With a
+    // rotation out, that changes the seeds, so the peers call — whose
+    // centroid must match — is asked again too; otherwise only the library
+    // depends on the filter.
+    final reseed = _rotation.isNotEmpty;
+    _rotation.clear();
     if (disabled || !available) return;
-    await _loadMain();
+    if (reseed) {
+      await load(force: true);
+    } else {
+      await _loadMain();
+    }
     // A refetch that failed (or was refused) leaves the old rows up: put
     // the choice back, so the selected chip names the rows actually shown
     // and a later call does not remember a filter that never landed. Not
     // when the user has tapped on since — that call owns `filter` now.
     if ((error || disabled) && filter == f) {
       filter = before;
+      _rotation
+        ..clear()
+        ..addAll(rotationBefore);
+      // As [setWindow]: the peers rows go back to the seeds still shown.
+      if (reseed) {
+        ++_peersRid;
+        loadingPeers = false;
+        _applyPeers(peersBefore);
+        _peersDone = peersDoneBefore;
+        if (seeded != null) _store();
+      }
       notifyListeners();
     }
   }
@@ -448,7 +557,9 @@ class DiscoveryPageController extends ChangeNotifier {
     final before = window;
     final peersBefore = peers;
     final peersDoneBefore = _peersDone;
+    final rotationBefore = List.of(_rotation);
     window = w;
+    _rotation.clear();
     notifyListeners();
     await load(force: true);
     // As [setFilter]: a refetch that failed leaves the old rows up, so the
@@ -460,6 +571,9 @@ class DiscoveryPageController extends ChangeNotifier {
     // the new window's key).
     if ((error || disabled) && window == w) {
       window = before;
+      _rotation
+        ..clear()
+        ..addAll(rotationBefore);
       ++_peersRid;
       loadingPeers = false;
       _applyPeers(peersBefore);
@@ -486,7 +600,12 @@ class DiscoveryPageController extends ChangeNotifier {
     Set<String> restore = const {},
     required List<String> pins,
   }) async {
-    if (window != effectiveWindow) this.window = window;
+    final pinsBefore = List.of(_pins);
+    var changed = drop.isNotEmpty || restore.isNotEmpty;
+    if (window != effectiveWindow) {
+      this.window = window;
+      changed = true;
+    }
     for (final h in drop) {
       if (!_exclude.contains(h)) _exclude.add(h);
     }
@@ -498,6 +617,13 @@ class DiscoveryPageController extends ChangeNotifier {
     _pins
       ..clear()
       ..addAll(pins.map(_appPath).take(kTastePinMax));
+    // Anything changed starts "New seeds" over; an apply that changed
+    // nothing keeps the seeds on screen.
+    if (changed ||
+        pinsBefore.length != _pins.length ||
+        pinsBefore.any((p) => !_pins.contains(p))) {
+      _rotation.clear();
+    }
     if (_disposed) return restored;
     await load(force: true);
     return restored;
@@ -523,7 +649,10 @@ class DiscoveryPageController extends ChangeNotifier {
   /// Pin one more song ("Choose a song…" on the random card).
   Future<void> pinSong(String path) async {
     final p = _appPath(path);
-    if (!_pins.contains(p) && _pins.length < kTastePinMax) _pins.add(p);
+    if (!_pins.contains(p) && _pins.length < kTastePinMax) {
+      _pins.add(p);
+      _rotation.clear();
+    }
     await load(force: true);
   }
 
@@ -537,6 +666,7 @@ class DiscoveryPageController extends ChangeNotifier {
     _pins
       ..clear()
       ..add(_appPath(p));
+    _rotation.clear();
     await load(force: true);
     return true;
   }

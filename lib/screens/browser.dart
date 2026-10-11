@@ -1133,7 +1133,10 @@ class _BrowserState extends State<Browser> {
   // headers, the footers. Albums run as a horizontal strip of the album
   // grid's cards when the album-grid setting is on (the browser's album
   // look), as album rows when it is off. Pull to refresh re-asks the
-  // server. Local search narrows the songs and albums; the chrome stays.
+  // server (the same seeds); the toolbar's New seeds — where other lists
+  // have local search, which this frame does not offer — asks for others.
+  // A search still open from another list narrows the songs and albums;
+  // the chrome stays.
   Widget _discoveryView(
       BuildContext context, List<DisplayItem> all, String query) {
     final c = DiscoveryListing().controller;

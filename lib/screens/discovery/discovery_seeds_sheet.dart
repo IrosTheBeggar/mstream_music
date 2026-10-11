@@ -49,7 +49,7 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
 
   List<TasteSeed> get _history =>
       c.seeds.where((s) => !s.pinned).toList(growable: false);
-  List<TasteExcluded> get _excluded => c.seeded?.excluded ?? const [];
+  List<TasteExcluded> get _excluded => c.excluded;
 
   @override
   void initState() {

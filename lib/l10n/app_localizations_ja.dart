@@ -1797,6 +1797,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageMoreOptions => 'その他のオプション';
 
   @override
+  String get discoverPageNewSeeds => 'もとにする曲を変える';
+
+  @override
   String get discoverPageIncludePlayed => '最近聴いた曲も含める';
 
   @override

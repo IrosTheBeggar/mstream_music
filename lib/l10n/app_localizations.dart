@@ -3216,6 +3216,12 @@ abstract class AppLocalizations {
   /// **'More options'**
   String get discoverPageMoreOptions;
 
+  /// Tooltip of the refresh button on the Discover page's top bar (where other lists have search): starts the page from other songs you finished — the next ones back in your history — instead of the ones it is based on now.
+  ///
+  /// In en, this message translates to:
+  /// **'New seeds'**
+  String get discoverPageNewSeeds;
+
   /// The one checkbox in Discover's seeds sheet (opened from "More options"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not.
   ///
   /// In en, this message translates to:

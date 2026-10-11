@@ -436,6 +436,7 @@
   "discoverPageBasedOnLast": "Basierend auf den letzten",
   "discoverPageBasedOnAllTime": "Zeitraum",
   "discoverPageMoreOptions": "Weitere Optionen",
+  "discoverPageNewSeeds": "Neue Ausgangstitel",
   "discoverPageIncludePlayed": "Kürzlich gehörte Titel einbeziehen",
   "discoverPageAlbumsLibrary": "Alben aus deiner Bibliothek",
   "discoverPageAlbumsPeer": "Alben von {name}",

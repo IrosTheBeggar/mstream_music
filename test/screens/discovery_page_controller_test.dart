@@ -694,6 +694,388 @@ void main() {
     });
   });
 
+  // "New seeds" (the toolbar's refresh): a session-local rotation of the
+  // seeds moved past, sent in `exclude` without `remember`, so the server
+  // picks the next finished songs; spent (and started over) at the random
+  // pick.
+  group('New seeds', () {
+    /// A server over a finished-songs history, newest first: the seeds are
+    /// the pins, then the first three history songs not excluded; none
+    /// left → the random pick. The remembered drops never come back.
+    DiscoveryFetchResult<TasteResponse> rotating(TasteRequest r,
+        {List<String>? history}) {
+      if (isPeersCall(r)) return ok(peersPayload());
+      final body = r.toJson();
+      final ex = Set.of((body['exclude'] as List?)?.cast<String>() ?? []);
+      final pins = (body['pin'] as List?)?.cast<String>() ?? const [];
+      final next = (history ?? List.generate(9, (i) => 'f$i'))
+          .where((h) => !ex.contains(h))
+          .take(3)
+          .toList();
+      return ok(mainPayload(
+        seedSource: next.isEmpty
+            ? (pins.isEmpty ? 'random' : 'pinned')
+            : 'history',
+        fallback: next.isEmpty && pins.isEmpty,
+        seeds: [
+          for (final p in pins) seedRow('pin:$p', p, 'Pinned', pinned: true),
+          for (final h in next) seedRow(h, 'Song $h', 'Someone'),
+          if (next.isEmpty && pins.isEmpty) seedRow('rnd', 'Pick', 'Anyone'),
+        ],
+      ));
+    }
+
+    List<String>? sentExclude(TasteRequest r) =>
+        (r.toJson()['exclude'] as List?)?.cast<String>();
+    List<String> seedHashes(DiscoveryPageController c) =>
+        [for (final s in c.seeds) s.hash];
+
+    test('sends the current seeds excluded, not remembered, and the peers '
+        'call the same', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      expect(seedHashes(c), ['f0', 'f1', 'f2']);
+      expect(c.canNewSeeds, isTrue);
+      taste.requests.clear();
+
+      await c.newSeeds();
+      final main = taste.mainCalls.single.toJson();
+      expect(main['exclude'], ['f0', 'f1', 'f2']);
+      expect(main['remember'], isFalse,
+          reason: 'the rotation is never saved as dropped seeds');
+      expect(taste.peersCalls.single.toJson()['exclude'],
+          ['f0', 'f1', 'f2'],
+          reason: 'the same seeds, so the same centroid');
+      expect(seedHashes(c), ['f3', 'f4', 'f5']);
+      expect(c.rotation, ['f0', 'f1', 'f2']);
+    });
+
+    test('a second call sends both sets', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.newSeeds();
+      expect(sentExclude(taste.mainCalls.last),
+          ['f0', 'f1', 'f2', 'f3', 'f4', 'f5']);
+      expect(seedHashes(c), ['f6', 'f7', 'f8']);
+    });
+
+    /// [rotating], listing every hash the call excluded as the route does
+    /// (a saved drop, then the request's own `exclude`).
+    DiscoveryFetchResult<TasteResponse> listsExcluded(TasteRequest r) {
+      final got = rotating(r);
+      if (isPeersCall(r)) return got;
+      final ex = sentExclude(r) ?? const [];
+      return ok({
+        ...mainPayload(seeds: [
+          for (final s in got.data!.seeds) seedRow(s.hash, 'S', 'A')
+        ]),
+        'excluded': [
+          for (final h in ['h-dropped', ...ex])
+            {'hash': h, 'filepath': 'music/$h.mp3', 'metadata': {}},
+        ],
+      });
+    }
+
+    test('the moved-past seeds are not shown as dropped; real drops are',
+        () async {
+      taste.auto = listsExcluded;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      expect(c.seeded!.excluded.map((e) => e.hash),
+          containsAll(['f0', 'f1', 'f2']));
+      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
+    });
+
+    test('nor while a filter change that cleared the rotation is out',
+        () async {
+      // The checkbox lives in the open seeds sheet: the answer still on
+      // screen was asked with the old rotation, so its moved-past seeds
+      // must not turn into "Dropped" rows before the new answer lands.
+      taste.auto = listsExcluded;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.newSeeds();
+      taste.auto = null;
+      final out = c.setFilter(TasteFilter.all);
+      await Future<void>.delayed(Duration.zero);
+      expect(c.rotation, isEmpty);
+      expect(c.seeded!.excluded, hasLength(7));
+      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
+      for (var i = 0; i < taste.pending.length; i++) {
+        taste.pending[i].complete(listsExcluded(taste.requests[
+            taste.requests.length - taste.pending.length + i]));
+      }
+      await out;
+      expect(c.seeded!.excluded.map((e) => e.hash), ['h-dropped']);
+      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
+    });
+
+    test('the drops ride beside the rotation, which is never remembered',
+        () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.applySeeds(window: c.effectiveWindow, drop: {'f1'}, pins: []);
+      expect(taste.mainCalls.last.toJson()['remember'], isTrue,
+          reason: 'the drop itself is remembered');
+      expect(seedHashes(c), ['f0', 'f2', 'f3']);
+
+      await c.newSeeds();
+      final main = taste.mainCalls.last.toJson();
+      expect(main['exclude'], ['f0', 'f2', 'f3', 'f1'],
+          reason: 'the rotation, then the drops');
+      expect(main['remember'], isFalse);
+      expect(c.exclude, ['f1']);
+    });
+
+    test('pins are never rotated: they stay, and only the history seeds move',
+        () async {
+      taste.auto = rotating;
+      final c = make(pin: '/music/now.mp3');
+      await c.load();
+      expect(seedHashes(c), ['pin:music/now.mp3', 'f0', 'f1', 'f2']);
+
+      await c.newSeeds();
+      final main = taste.mainCalls.last.toJson();
+      expect(main['exclude'], ['f0', 'f1', 'f2']);
+      expect(main['pin'], ['music/now.mp3']);
+      expect(seedHashes(c), ['pin:music/now.mp3', 'f3', 'f4', 'f5']);
+    });
+
+    test('the random pick spends the rotation: the next one starts again '
+        'from the newest', () async {
+      taste.auto = (r) => rotating(r, history: ['f0', 'f1', 'f2']);
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      expect(c.isRandom, isTrue, reason: 'nothing finished is left');
+      expect(seedHashes(c), ['rnd']);
+
+      await c.newSeeds();
+      expect(sentExclude(taste.mainCalls.last), isNull,
+          reason: 'the random pick is not moved past: a cycle');
+      expect(taste.mainCalls.last.toJson().containsKey('remember'), isFalse);
+      expect(c.rotation, isEmpty);
+      expect(seedHashes(c), ['f0', 'f1', 'f2']);
+    });
+
+    test('only pins left (the server has none of its own): starts over too',
+        () async {
+      taste.auto = (r) => rotating(r, history: ['f0', 'f1', 'f2']);
+      final c = make(pin: '/music/now.mp3');
+      await c.load();
+      await c.newSeeds();
+      expect(seedHashes(c), ['pin:music/now.mp3']);
+      await c.newSeeds();
+      expect(sentExclude(taste.mainCalls.last), isNull);
+      expect(seedHashes(c), ['pin:music/now.mp3', 'f0', 'f1', 'f2']);
+    });
+
+    test('a window change starts the rotation over, remembered', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.setWindow(90);
+      final main = taste.mainCalls.last.toJson();
+      expect(main.containsKey('exclude'), isFalse);
+      expect(main['window'], 90);
+      expect(main['remember'], isTrue);
+      expect(c.rotation, isEmpty);
+    });
+
+    test('a failed window change puts the rotation back with the window',
+        () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      taste.auto = (r) => const DiscoveryFetchResult.error();
+      await c.setWindow(90);
+      expect(c.rotation, ['f0', 'f1', 'f2'],
+          reason: 'the rows on screen came from it');
+    });
+
+    test('the checkbox starts it over', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      taste.requests.clear();
+      await c.setFilter(TasteFilter.all);
+      expect(c.rotation, isEmpty);
+      final main = taste.mainCalls.single.toJson();
+      expect(main.containsKey('exclude'), isFalse);
+      expect(main['remember'], isTrue);
+      expect(taste.peersCalls.single.toJson().containsKey('exclude'), isFalse,
+          reason: 'the seeds changed, so the peers centroid is asked again');
+      expect(seedHashes(c), ['f0', 'f1', 'f2']);
+
+      // Without a rotation out, the filter asks the library alone.
+      taste.requests.clear();
+      await c.setFilter(TasteFilter.fresh);
+      expect(taste.peersCalls, isEmpty);
+    });
+
+    test('a filter flipped under the 403 latch starts it over too, so the '
+        '"Check again" that carries it is remembered', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      taste.auto = (_) => const DiscoveryFetchResult.disabled();
+      await c.refresh();
+      expect(c.disabled, isTrue);
+      expect(c.rotation, ['f0', 'f1', 'f2']);
+
+      await c.setFilter(TasteFilter.all);
+      expect(c.includesPlayed, isTrue);
+      expect(c.rotation, isEmpty);
+
+      taste.auto = rotating;
+      await c.recheck();
+      final main = taste.mainCalls.last.toJson();
+      expect(main['filter'], 'all');
+      expect(main.containsKey('exclude'), isFalse);
+      expect(main['remember'], isTrue);
+    });
+
+    test('a failed filter change puts the rotation back', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      final peersShown = c.peers;
+      taste.auto = (r) => const DiscoveryFetchResult.error();
+      await c.setFilter(TasteFilter.all);
+      expect(c.includesPlayed, isFalse);
+      expect(c.rotation, ['f0', 'f1', 'f2']);
+      expect(c.peers, same(peersShown));
+    });
+
+    test('a drop or a restore starts it over', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.applySeeds(window: c.effectiveWindow, drop: {'f4'}, pins: []);
+      expect(c.rotation, isEmpty);
+      expect(sentExclude(taste.mainCalls.last), ['f4']);
+
+      await c.newSeeds();
+      expect(c.rotation, isNotEmpty);
+      await c.applySeeds(
+          window: c.effectiveWindow, restore: {'h-dropped'}, pins: []);
+      expect(c.rotation, isEmpty);
+    });
+
+    test('a pin change starts it over; an apply that changed nothing keeps '
+        'it', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.applySeeds(window: c.effectiveWindow, pins: []);
+      expect(c.rotation, ['f0', 'f1', 'f2'], reason: 'nothing changed');
+      expect(sentExclude(taste.mainCalls.last), ['f0', 'f1', 'f2']);
+
+      await c.applySeeds(window: c.effectiveWindow, pins: ['/music/x.mp3']);
+      expect(c.rotation, isEmpty);
+
+      await c.newSeeds();
+      await c.pinSong('/music/y.mp3');
+      expect(c.rotation, isEmpty, reason: '"Choose a song…" is a pin too');
+    });
+
+    test('a fresh open starts empty', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      c.dispose();
+      final again = make();
+      await again.load();
+      expect(again.rotation, isEmpty);
+      expect(sentExclude(taste.mainCalls.last), isNull);
+      expect(seedHashes(again), ['f0', 'f1', 'f2'],
+          reason: 'not the rotated visit kept in the five-minute cache');
+    });
+
+    test('kept to the newest 200', () async {
+      final history = List.generate(210, (i) => 'f$i');
+      taste.auto = (r) => rotating(r, history: history);
+      final c = make();
+      await c.load();
+      for (var i = 0; i < 67; i++) {
+        await c.newSeeds();
+      }
+      // 67 calls moved past 201 songs: the oldest one fell off before the
+      // call went out, within the route's cap.
+      expect(c.rotation, hasLength(200));
+      expect(c.rotation.first, 'f1');
+      expect(sentExclude(taste.mainCalls.last), hasLength(200));
+
+      final shown = seedHashes(c);
+      await c.newSeeds();
+      expect(c.rotation, hasLength(200));
+      expect(c.rotation.sublist(197), shown, reason: 'the newest kept');
+      expect(sentExclude(taste.mainCalls.last), hasLength(200),
+          reason: "the route's cap");
+    });
+
+    test('pull to refresh is a plain re-ask: the same seeds', () async {
+      taste.auto = rotating;
+      final c = make();
+      await c.load();
+      await c.newSeeds();
+      await c.refresh();
+      expect(sentExclude(taste.mainCalls.last), ['f0', 'f1', 'f2']);
+      expect(seedHashes(c), ['f3', 'f4', 'f5']);
+    });
+
+    test('the previous answer stays up while the new one is out', () async {
+      final c = make();
+      final first = c.load();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[0].complete(rotating(taste.requests[0]));
+      taste.pending[1].complete(rotating(taste.requests[1]));
+      await first;
+      final shown = c.seeded;
+
+      final next = c.newSeeds();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.loading, isTrue);
+      expect(c.seeded, same(shown), reason: 'no flash to placeholders');
+      expect(c.canNewSeeds, isFalse, reason: 'one call at a time');
+      // A tap while it is out asks nothing more.
+      final before = taste.requests.length;
+      await c.newSeeds();
+      expect(taste.requests, hasLength(before));
+
+      for (var i = 2; i < taste.pending.length; i++) {
+        taste.pending[i].complete(rotating(taste.requests[i]));
+      }
+      await next;
+      expect(c.seeds.first.hash, 'f3');
+    });
+
+    test('nothing happens before an answer, or under the 403 latch', () async {
+      final c = make();
+      await c.newSeeds();
+      expect(taste.requests, isEmpty);
+      taste.auto = (_) => const DiscoveryFetchResult.disabled();
+      await c.load();
+      final before = taste.requests.length;
+      await c.newSeeds();
+      expect(taste.requests, hasLength(before));
+    });
+  });
+
   test('the random fallback is recognised', () async {
     taste.auto = (r) => ok(isPeersCall(r)
         ? {'peers': null}

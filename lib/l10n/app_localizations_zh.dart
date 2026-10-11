@@ -1758,6 +1758,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageMoreOptions => '更多选项';
 
   @override
+  String get discoverPageNewSeeds => '换一批依据歌曲';
+
+  @override
   String get discoverPageIncludePlayed => '包括最近听过的歌曲';
 
   @override

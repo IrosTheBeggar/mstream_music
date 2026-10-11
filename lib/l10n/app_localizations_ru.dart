@@ -1905,6 +1905,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageMoreOptions => 'Другие параметры';
 
   @override
+  String get discoverPageNewSeeds => 'Новые исходные треки';
+
+  @override
   String get discoverPageIncludePlayed => 'Включать недавно прослушанные треки';
 
   @override

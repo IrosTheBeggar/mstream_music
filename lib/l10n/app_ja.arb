@@ -436,6 +436,7 @@
   "discoverPageBasedOnLast": "対象期間",
   "discoverPageBasedOnAllTime": "対象期間",
   "discoverPageMoreOptions": "その他のオプション",
+  "discoverPageNewSeeds": "もとにする曲を変える",
   "discoverPageIncludePlayed": "最近聴いた曲も含める",
   "discoverPageAlbumsLibrary": "ライブラリのアルバム",
   "discoverPageAlbumsPeer": "{name}のアルバム",

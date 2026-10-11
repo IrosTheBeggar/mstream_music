@@ -1881,6 +1881,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverPageMoreOptions => 'Weitere Optionen';
 
   @override
+  String get discoverPageNewSeeds => 'Neue Ausgangstitel';
+
+  @override
   String get discoverPageIncludePlayed => 'Kürzlich gehörte Titel einbeziehen';
 
   @override

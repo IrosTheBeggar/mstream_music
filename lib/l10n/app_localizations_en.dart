@@ -1857,6 +1857,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverPageMoreOptions => 'More options';
 
   @override
+  String get discoverPageNewSeeds => 'New seeds';
+
+  @override
   String get discoverPageIncludePlayed => 'Include songs I\'ve played lately';
 
   @override

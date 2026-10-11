@@ -436,6 +436,7 @@
   "discoverPageBasedOnLast": "Na podstawie ostatnich",
   "discoverPageBasedOnAllTime": "Okres",
   "discoverPageMoreOptions": "Więcej opcji",
+  "discoverPageNewSeeds": "Nowe utwory bazowe",
   "discoverPageIncludePlayed": "Uwzględnij utwory słuchane ostatnio",
   "discoverPageAlbumsLibrary": "Albumy z twojej biblioteki",
   "discoverPageAlbumsPeer": "Albumy z serwera „{name}”",

@@ -582,19 +582,106 @@ void main() {
           findsNothing);
     });
 
+    Finder inBar(IconData icon) => find.descendant(
+        of: find.byType(BrowserToolbar), matching: find.byIcon(icon));
+
     testWidgets('the toolbar has no page-wide Play, Add all or Download',
         (tester) async {
       await pumpBrowser(tester, toolbar: true);
-      Finder inBar(IconData icon) => find.descendant(
-          of: find.byType(BrowserToolbar), matching: find.byIcon(icon));
       expect(inBar(Icons.arrow_back), findsOneWidget);
       expect(find.text('Discover'), findsOneWidget, reason: 'the label');
-      expect(inBar(Icons.search), findsOneWidget);
+      expect(inBar(Icons.search), findsNothing,
+          reason: 'New seeds has its place');
+      expect(inBar(Icons.refresh), findsOneWidget);
       expect(inBar(Icons.play_arrow), findsNothing);
       expect(inBar(Icons.library_add), findsNothing);
       expect(inBar(Icons.download_sharp), findsNothing);
       expect(inBar(Icons.more_vert), findsNothing,
           reason: 'no overflow: nothing page-wide to put in it');
+    });
+
+    testWidgets("New seeds replaces search on Discover's bar only, and "
+        'starts from other songs', (tester) async {
+      final held = <Completer<DiscoveryFetchResult<TasteResponse>>>[];
+      var hold = false;
+      final asked = await pumpBrowser(tester, toolbar: true, answer: (r) {
+        if (!hold) return usual(r);
+        final c = Completer<DiscoveryFetchResult<TasteResponse>>();
+        held.add(c);
+        return c.future;
+      });
+      final c = DiscoveryListing().controller!;
+      final button = find.byTooltip('New seeds');
+      expect(button, findsOneWidget);
+      expect(inBar(Icons.search), findsNothing);
+
+      hold = true;
+      await tester.tap(button);
+      await tester.pump();
+      final main = asked.where((r) => !isPeersCall(r)).last.toJson();
+      expect(main['exclude'], ['h1', 'h2', 'h3', 'h4', 'h5'],
+          reason: "the shown answer's seeds, moved past");
+      expect(main['remember'], isFalse);
+      expect(c.rotation, ['h1', 'h2', 'h3', 'h4', 'h5']);
+      // The previous answer stays up under the bar's busy line; the button
+      // is off until the new one lands.
+      expect(find.text('Dawn Chorus'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('discovery-config-bar')),
+              matching: find.byType(LinearProgressIndicator)),
+          findsOneWidget);
+      expect(
+          tester
+              .widget<IconButton>(find.byKey(const ValueKey('discovery-new-seeds')))
+              .onPressed,
+          isNull);
+
+      // The next finished songs, and what they suggest.
+      Future<DiscoveryFetchResult<TasteResponse>> rotated(
+              TasteRequest r) async =>
+          isPeersCall(r)
+              ? usual(r)
+              : DiscoveryFetchResult.ok(parse(mainPayload(
+                  seeds: [
+                    seedRow('h6', 'Nightcall', 'Kavinsky'),
+                    seedRow('h7', 'Midnight City', 'M83'),
+                  ],
+                  tracks: [trackRow('Glasshouse', 'Kiasmos', 0.81)],
+                )));
+      hold = false;
+      for (var i = 0; i < held.length; i++) {
+        held[i].complete(await rotated(
+            asked[asked.length - held.length + i]));
+      }
+      await tester.pumpAndSettle();
+      expect(c.loading, isFalse);
+      expect([for (final s in c.seeds) s.hash], ['h6', 'h7'],
+          reason: 'the seed picker reads the new seeds');
+      expect(find.text('Glasshouse'), findsOneWidget,
+          reason: 'the new answer is drawn');
+      expect(find.text('Dawn Chorus'), findsNothing);
+      expect(
+          tester
+              .widget<IconButton>(find.byKey(const ValueKey('discovery-new-seeds')))
+              .onPressed,
+          isNotNull);
+
+      // Another list opened over Discover keeps its search, and no New
+      // seeds.
+      BrowserManager().setBrowserLabel('File Explorer');
+      BrowserManager().addListToStack(
+          [DisplayItem(server, 'music', 'directory', '/music', null, null)],
+          path: '/');
+      await tester.pumpAndSettle();
+      expect(inBar(Icons.search), findsOneWidget);
+      expect(find.byTooltip('New seeds'), findsNothing);
+
+      // Back on Discover: New seeds again.
+      BrowserManager().popBrowser();
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('New seeds'), findsOneWidget);
+      expect(inBar(Icons.search), findsNothing);
     });
 
     testWidgets('pull to refresh asks again', (tester) async {
