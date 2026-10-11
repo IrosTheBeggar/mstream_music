@@ -37,7 +37,9 @@ PlayEvent ev(String id, DateTime at,
   );
 }
 
-final t0 = DateTime(2026, 9, 10, 20, 0);
+// Relative to the clock: the outbox ages events out after 30 days, so a
+// fixed date here would start failing a month after it was written.
+final t0 = DateTime.now().subtract(const Duration(hours: 4));
 
 void main() {
   group('PlayHistory init', () {
