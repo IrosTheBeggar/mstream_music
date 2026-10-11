@@ -76,7 +76,8 @@ void main() {
     TasteSeed seed(String h, {String? outcome = 'completed', bool pinned = false}) =>
         TasteSeed(h, 'music/$h.mp3', null, outcome: outcome, pinned: pinned);
 
-    test('history: finished vs listened to, with the window', () {
+    test('history: finished vs listened to — no window (the bar owns it)',
+        () {
       expect(
           discoverySubtitle(
               l,
@@ -84,7 +85,7 @@ void main() {
                   window: 30,
                   seedSource: TasteSeedSource.history,
                   seeds: [seed('a'), seed('b')])),
-          'based on 2 songs you finished · 30 days');
+          'based on 2 songs you finished');
       expect(
           discoverySubtitle(
               l,
@@ -92,7 +93,7 @@ void main() {
                   window: 0,
                   seedSource: TasteSeedSource.history,
                   seeds: [seed('a'), seed('b', outcome: 'stopped')])),
-          'based on 2 songs you listened to · All time');
+          'based on 2 songs you listened to');
     });
 
     test('a pin alongside history is not counted as history', () {
@@ -103,7 +104,7 @@ void main() {
                   window: 7,
                   seedSource: TasteSeedSource.history,
                   seeds: [seed('p', outcome: null, pinned: true), seed('a')])),
-          'based on 1 song you finished · 7 days');
+          'based on 1 song you finished');
     });
 
     test('counters, pins only, and the random fallback', () {
@@ -132,6 +133,46 @@ void main() {
     });
   });
 
+  group('discoveryWidenedNote', () {
+    TasteSeed seed(String h) =>
+        TasteSeed(h, 'music/$h.mp3', null, outcome: 'completed');
+
+    test('names the window asked for when the server reached further back',
+        () {
+      expect(
+          discoveryWidenedNote(
+              l,
+              TasteResponse(
+                  window: 0,
+                  widenedFrom: 30,
+                  seedSource: TasteSeedSource.history,
+                  seeds: [seed('a')])),
+          'Nothing in the last 30 days, so these come from further back.');
+    });
+
+    test('none when not widened, or for a random pick', () {
+      expect(
+          discoveryWidenedNote(
+              l,
+              TasteResponse(
+                  window: 30,
+                  seedSource: TasteSeedSource.history,
+                  seeds: [seed('a')])),
+          isNull);
+      expect(
+          discoveryWidenedNote(
+              l,
+              TasteResponse(
+                  window: 0,
+                  widenedFrom: 30,
+                  seedSource: TasteSeedSource.random,
+                  fallback: true,
+                  seeds: [seed('r')])),
+          isNull);
+      expect(discoveryWidenedNote(l, null), isNull);
+    });
+  });
+
   test('every locale renders the new counts with the number', () {
     for (final locale in AppLocalizations.supportedLocales) {
       final t = lookupAppLocalizations(locale);
@@ -143,8 +184,8 @@ void main() {
         t.discoverPageAlbumsCount,
         t.discoverPageServersSearched,
         t.discoverPageUseThese,
-        (n) => t.discoverPageSubFinished(n, 'w'),
-        (n) => t.discoverPageSubListened(n, 'w'),
+        t.discoverPageSubFinished,
+        t.discoverPageSubListened,
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');

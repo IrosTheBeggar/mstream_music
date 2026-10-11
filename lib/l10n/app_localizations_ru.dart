@@ -1875,27 +1875,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageRefresh => 'Обновить';
 
   @override
-  String discoverPageSubFinished(int count, String window) {
+  String discoverPageSubFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'по $count трека, дослушанным до конца · $window',
-      many: 'по $count трекам, дослушанным до конца · $window',
-      few: 'по $count трекам, дослушанным до конца · $window',
-      one: 'по $count треку, дослушанному до конца · $window',
+      other: 'по $count трека, дослушанным до конца',
+      many: 'по $count трекам, дослушанным до конца',
+      few: 'по $count трекам, дослушанным до конца',
+      one: 'по $count треку, дослушанному до конца',
     );
     return '$_temp0';
   }
 
   @override
-  String discoverPageSubListened(int count, String window) {
+  String discoverPageSubListened(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'по $count прослушанного трека · $window',
-      many: 'по $count прослушанным трекам · $window',
-      few: 'по $count прослушанным трекам · $window',
-      one: 'по $count прослушанному треку · $window',
+      other: 'по $count прослушанного трека',
+      many: 'по $count прослушанным трекам',
+      few: 'по $count прослушанным трекам',
+      one: 'по $count прослушанному треку',
     );
     return '$_temp0';
   }
@@ -1936,11 +1936,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageBasedOn => 'На основе';
 
   @override
-  String get discoverPageBasedOnNote =>
-      'что вы дослушали · пропущенные не считаются';
+  String get discoverPageBasedOnLast => 'На основе последних';
 
   @override
-  String get discoverPageRandomChip => 'случайный';
+  String get discoverPageBasedOnAllTime => 'Период';
+
+  @override
+  String get discoverPageMoreOptions => 'Другие параметры';
 
   @override
   String get discoverPageFromLibrary => 'Из вашей библиотеки';
@@ -2143,6 +2145,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverPageCountersHeader => 'Чаще всего';
+
+  @override
+  String get discoverPageRandomHeader => 'Случайный выбор';
 
   @override
   String get discoverPageNewestFirst => 'сначала новые';

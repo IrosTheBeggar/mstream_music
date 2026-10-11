@@ -386,12 +386,119 @@ void main() {
       final c = make();
       await c.load();
       expect(c.seeded?.window, 0);
-      expect(c.effectiveWindow, 30, reason: 'what the sheet starts on');
+      expect(c.effectiveWindow, 30, reason: 'what the bar shows');
 
       await c.applySeeds(window: 0, pins: []);
       final main = taste.mainCalls.last.toJson();
       expect(main['window'], 0, reason: 'All time chosen, so sent');
       expect(main['remember'], isTrue);
+    });
+
+    test('the window from the bar refetches every source with the same seeds, '
+        'drops and pins, remembered', () async {
+      taste.auto = answer;
+      final c = make(pin: '/music/pinned.mp3');
+      await c.load();
+      await c.applySeeds(
+          window: c.effectiveWindow,
+          drop: {'h2'},
+          pins: ['/music/pinned.mp3']);
+      taste.requests.clear();
+
+      await c.setWindow(90);
+      expect(c.effectiveWindow, 90);
+      final main = taste.mainCalls.single.toJson();
+      expect(main['window'], 90);
+      expect(main['exclude'], ['h2']);
+      expect(main['pin'], ['music/pinned.mp3']);
+      expect(main['remember'], isTrue);
+      final peers = taste.peersCalls.single.toJson();
+      expect(peers['window'], 90,
+          reason: 'the window decides the seeds, so the centroid too');
+      expect(peers['exclude'], ['h2']);
+      expect(peers['pin'], ['music/pinned.mp3']);
+    });
+
+    test('choosing the window already in force asks nothing', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      taste.requests.clear();
+      await c.setWindow(c.effectiveWindow);
+      expect(taste.requests, isEmpty);
+    });
+
+    test('after widening, All time from the bar is a change', () async {
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersPayload()
+          : {...mainPayload(window: 0), 'widenedFrom': 30});
+      final c = make();
+      await c.load();
+      await c.setWindow(0);
+      expect(taste.mainCalls.last.toJson()['window'], 0);
+    });
+
+    test('a failed window change puts the old one back', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      taste.auto = (_) => const DiscoveryFetchResult.error();
+      await c.setWindow(7);
+      expect(c.error, isTrue);
+      expect(c.effectiveWindow, 30,
+          reason: 'the rows shown are still the 30-day ones');
+      expect(c.library?.tracks, hasLength(5));
+
+      taste.auto = answer;
+      await c.refresh();
+      expect(taste.mainCalls.last.toJson().containsKey('window'), isFalse,
+          reason: 'a window that never landed is not remembered');
+    });
+
+    test('a failed window change puts the peers rows back too, and the '
+        'visit is stored under the window it shows', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      final before = c.peers;
+      expect(before?.peers, isNotEmpty);
+      // Main fails; peers answers over the new window's seeds.
+      taste.auto = (r) => isPeersCall(r)
+          ? ok({
+              'peers': {'peers': [], 'searched': {'peers': 0}}
+            })
+          : const DiscoveryFetchResult.error();
+      await c.setWindow(90);
+      expect(c.effectiveWindow, 30);
+      expect(identical(c.peers, before), isTrue,
+          reason: 'one centroid for both sections');
+
+      // Reopening inside the TTL restores what was shown, asking nothing.
+      taste.requests.clear();
+      taste.auto = answer;
+      final again = make();
+      await again.load();
+      expect(taste.requests, isEmpty);
+      expect(again.peers?.peers, hasLength(before!.peers.length));
+      again.dispose();
+    });
+
+    test('under the 403 latch the window does not move and nothing is '
+        'asked', () async {
+      taste.auto = (_) => const DiscoveryFetchResult.disabled();
+      final c = make();
+      await c.load();
+      expect(c.disabled, isTrue);
+      taste.requests.clear();
+      await c.setWindow(90);
+      expect(c.window, isNull);
+      expect(c.effectiveWindow, 30);
+      expect(taste.requests, isEmpty);
+
+      // "Check again" then carries no window the user never saw land.
+      taste.auto = answer;
+      await c.recheck();
+      expect(taste.mainCalls.last.toJson().containsKey('window'), isFalse);
     });
 
     test('a restored seed leaves the saved exclusions', () async {

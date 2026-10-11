@@ -1436,27 +1436,21 @@
   "@discoverPageRefresh": {
     "description": "Discover page app-bar button: fetch the recommendations again."
   },
-  "discoverPageSubFinished": "{count, plural, =1{based on 1 song you finished · {window}} other{based on {count} songs you finished · {window}}}",
+  "discoverPageSubFinished": "{count, plural, =1{based on 1 song you finished} other{based on {count} songs you finished}}",
   "@discoverPageSubFinished": {
-    "description": "Discover page subtitle: the seeds are songs played to the end. {window} is a window label like \"30 days\" or \"all time\".",
+    "description": "Discover page subtitle: the seeds are songs played to the end. The window is not repeated here: the page's configuration bar shows it.",
     "placeholders": {
       "count": {
         "type": "int"
-      },
-      "window": {
-        "type": "String"
       }
     }
   },
-  "discoverPageSubListened": "{count, plural, =1{based on 1 song you listened to · {window}} other{based on {count} songs you listened to · {window}}}",
+  "discoverPageSubListened": "{count, plural, =1{based on 1 song you listened to} other{based on {count} songs you listened to}}",
   "@discoverPageSubListened": {
-    "description": "Discover page subtitle when some seeds were listened to past half rather than finished. {window} as above.",
+    "description": "Discover page subtitle when some seeds were listened to past half rather than finished.",
     "placeholders": {
       "count": {
         "type": "int"
-      },
-      "window": {
-        "type": "String"
       }
     }
   },
@@ -1496,15 +1490,19 @@
   },
   "discoverPageBasedOn": "Based on",
   "@discoverPageBasedOn": {
-    "description": "Discover page section header over the seed chips."
+    "description": "Title of the Discover page's seeds sheet (opened from More options): the songs the page is seeded from."
   },
-  "discoverPageBasedOnNote": "what you finished · skips left out",
-  "@discoverPageBasedOnNote": {
-    "description": "Small note next to the Based on header."
+  "discoverPageBasedOnLast": "Based on the last",
+  "@discoverPageBasedOnLast": {
+    "description": "Label in the Discover page's configuration bar, directly before the window chooser, which shows \"7 days\" / \"30 days\" / \"90 days\" / \"All time\" (discoverPageWindowDays / discoverPageWindowAll). Reads as one phrase: \"Based on the last [30 days ▾]\"."
   },
-  "discoverPageRandomChip": "random",
-  "@discoverPageRandomChip": {
-    "description": "Tag on the seed chip when it is a random pick."
+  "discoverPageBasedOnAllTime": "Based on",
+  "@discoverPageBasedOnAllTime": {
+    "description": "Label in the Discover page's configuration bar before the window chooser when the window is all time (discoverPageWindowAll), where \"Based on the last\" would read wrong: \"Based on [All time ▾]\". Any wording that reads as one phrase with the all-time label works, e.g. \"Period\"."
+  },
+  "discoverPageMoreOptions": "More options",
+  "@discoverPageMoreOptions": {
+    "description": "Link at the right of the Discover page's configuration bar; opens the seeds sheet (which songs the page is based on: drop one, bring one back, pin a song)."
   },
   "discoverPageFromLibrary": "From your library",
   "@discoverPageFromLibrary": {
@@ -1741,6 +1739,10 @@
   "discoverPageCountersHeader": "Played most",
   "@discoverPageCountersHeader": {
     "description": "Seeds sheet group: seeds from all-time play counts."
+  },
+  "discoverPageRandomHeader": "Random pick",
+  "@discoverPageRandomHeader": {
+    "description": "Group header in the Discover page's seeds sheet over the random seed the server picked because nothing was finished yet (in place of \"Finished recently\")."
   },
   "discoverPageNewestFirst": "newest first",
   "@discoverPageNewestFirst": {

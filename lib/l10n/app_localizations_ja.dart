@@ -1770,21 +1770,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageRefresh => '更新';
 
   @override
-  String discoverPageSubFinished(int count, String window) {
+  String discoverPageSubFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '最後まで聴いた $count 曲から · $window',
+      other: '最後まで聴いた $count 曲から',
     );
     return '$_temp0';
   }
 
   @override
-  String discoverPageSubListened(int count, String window) {
+  String discoverPageSubListened(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '聴いた $count 曲から · $window',
+      other: '聴いた $count 曲から',
     );
     return '$_temp0';
   }
@@ -1820,10 +1820,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageBasedOn => 'もとにした曲';
 
   @override
-  String get discoverPageBasedOnNote => '最後まで聴いた曲 · スキップは除外';
+  String get discoverPageBasedOnLast => '対象期間';
 
   @override
-  String get discoverPageRandomChip => 'ランダム';
+  String get discoverPageBasedOnAllTime => '対象期間';
+
+  @override
+  String get discoverPageMoreOptions => 'その他のオプション';
 
   @override
   String get discoverPageFromLibrary => 'ライブラリから';
@@ -2003,6 +2006,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverPageCountersHeader => 'よく聴く曲';
+
+  @override
+  String get discoverPageRandomHeader => 'ランダムに選んだ曲';
 
   @override
   String get discoverPageNewestFirst => '新しい順';

@@ -6,15 +6,18 @@ import '../../objects/display_item.dart';
 import '../../theme/velvet_theme.dart';
 import '../../widgets/federation_widgets.dart';
 import '../../widgets/song_picker_sheet.dart';
+import '../discover_screen.dart';
 import 'discovery_page_controller.dart';
 import 'discovery_widgets.dart';
 
-/// The seeds sheet (the PhoneSeeds canvas board): the window as a segmented
-/// control, a switch per seed, the dropped seeds to bring back, and "Pick a
-/// song…" to pin one. Nothing is sent until "Use these N" — the sheet edits
-/// a draft and hands it to [DiscoveryPageController.applySeeds], which
-/// remembers drops and restores server-side (so every client agrees) and
-/// keeps pins for this visit only (plan §2.3).
+/// The seeds sheet (the PhoneSeeds canvas board), opened from "More options"
+/// in the page's configuration bar: a switch per seed, the dropped seeds to
+/// bring back, "Pick a song…" to pin one, and "Find similar" on a seed (the
+/// per-song lens the old seed chips opened). The window is not here — the
+/// bar is its one home. Nothing is sent until "Use these N" — the sheet
+/// edits a draft and hands it to [DiscoveryPageController.applySeeds] over
+/// the window in force, which remembers drops and restores server-side (so
+/// every client agrees) and keeps pins for this visit only (plan §2.3).
 class DiscoverySeedsSheet extends StatefulWidget {
   final DiscoveryPageController controller;
   const DiscoverySeedsSheet({super.key, required this.controller});
@@ -36,7 +39,6 @@ class _Pin {
 class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
   DiscoveryPageController get c => widget.controller;
 
-  late int _window;
   final Set<String> _off = {}; // history seeds switched off
   final Set<String> _on = {}; // saved exclusions switched back on
   late final List<_Pin> _pins;
@@ -48,7 +50,6 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
   @override
   void initState() {
     super.initState();
-    _window = c.effectiveWindow;
     // The visit's pins, named from the seeds the server resolved them to
     // (a pin it dropped keeps its file name).
     _pins = [
@@ -75,13 +76,25 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
 
   void _reset() {
     setState(() {
-      _window = kTasteDefaultWindow;
       _off.clear();
       _on
         ..clear()
         ..addAll(_excluded.map((e) => e.hash));
       _pins.clear();
     });
+  }
+
+  /// "Find similar" on one seed: the per-song lens, pinned to it. Pushed
+  /// over the sheet, so coming back finds the draft as it was left.
+  void _moreLike(String path, String title, String? artist) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DiscoverScreen(
+        seedServer: c.server,
+        seedPath: path,
+        seedTitle: title,
+        seedArtist: artist,
+      ),
+    ));
   }
 
   Future<void> _pickSong() async {
@@ -110,7 +123,7 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
     // the sheet — can say so when a restore did not take (the server would
     // otherwise go on leaving the song out with no word).
     final pending = c.applySeeds(
-      window: _window,
+      window: c.effectiveWindow,
       drop: Set.of(_off),
       restore: Set.of(_on),
       pins: [for (final p in _pins) if (p.on) p.path],
@@ -178,29 +191,7 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  for (var i = 0; i < kTasteWindows.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    Expanded(
-                      child: DiscoveryChoicePill(
-                        discoveryWindowLabel(l, kTasteWindows[i]),
-                        // Four equal segments are ~85 px at 390: a long
-                        // label (or a large text setting) shrinks to fit
-                        // rather than reading "Gesamte Z…".
-                        fit: true,
-                        selected: _window == kTasteWindows[i],
-                        onTap: () =>
-                            setState(() => _window = kTasteWindows[i]),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
               child: Text(
                 [
                   l.discoverPageSeedsOn(_onCount, _total),
@@ -221,13 +212,17 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                     for (final p in _pins) _pinRow(l, p),
                   ],
                   if (_history.isNotEmpty) ...[
-                    _groupHeader(
-                        source == TasteSeedSource.counters
-                            ? l.discoverPageCountersHeader
-                            : l.discoverPageRecentHeader,
-                        note: source == TasteSeedSource.counters
-                            ? null
-                            : l.discoverPageNewestFirst),
+                    // A random pick is no song you finished: its own header.
+                    if (c.isRandom)
+                      _groupHeader(l.discoverPageRandomHeader)
+                    else
+                      _groupHeader(
+                          source == TasteSeedSource.counters
+                              ? l.discoverPageCountersHeader
+                              : l.discoverPageRecentHeader,
+                          note: source == TasteSeedSource.counters
+                              ? null
+                              : l.discoverPageNewestFirst),
                     for (final s in _history) _seedRow(l, s),
                   ],
                   if (_excluded.isNotEmpty) ...[
@@ -313,7 +308,13 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    VoidCallback? onMoreLike,
   }) {
+    final toggle = Switch(
+      value: value,
+      activeThumbColor: VelvetColors.primary,
+      onChanged: onChanged,
+    );
     return Opacity(
       opacity: value ? 1 : 0.55,
       child: ListTile(
@@ -332,11 +333,20 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: VelvetColors.textSecondary, fontSize: 13)),
-        trailing: Switch(
-          value: value,
-          activeThumbColor: VelvetColors.primary,
-          onChanged: onChanged,
-        ),
+        trailing: onMoreLike == null
+            ? toggle
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.explore,
+                        color: VelvetColors.textSecondary),
+                    tooltip: AppLocalizations.of(context).discoverFindSimilar,
+                    onPressed: onMoreLike,
+                  ),
+                  toggle,
+                ],
+              ),
         onTap: () => onChanged(!value),
       ),
     );
@@ -354,6 +364,7 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
       subtitle: p.artist ?? '',
       value: p.on,
       onChanged: (v) => setState(() => p.on = v),
+      onMoreLike: () => _moreLike(p.path, p.title, p.artist),
     );
   }
 
@@ -373,6 +384,8 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
       subtitle: subtitle,
       value: on,
       onChanged: (v) => setState(() => v ? _off.remove(s.hash) : _off.add(s.hash)),
+      onMoreLike: () =>
+          _moreLike('/${s.filepath}', s.displayTitle, s.metadata?.artist),
     );
   }
 

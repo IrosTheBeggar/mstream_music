@@ -3,8 +3,10 @@
 // A server whose ping advertises `discovery` and `discoveryTaste` gets a
 // Discover card under Listen on the home; opening it posts ONE library +
 // network taste call (no peers call: the ping does not grant
-// federationDiscovery) and renders the seeds as chips and the library's
-// songs as rows. The mock's GET /api/ is unmatched (404), so the app falls
+// federationDiscovery) and renders the configuration bar (the window, and
+// "More options" for the seeds sheet) over the library's songs as rows —
+// the seeds themselves only in the sheet. Choosing a window in the bar
+// re-asks with it. The mock's GET /api/ is unmatched (404), so the app falls
 // back to the ping — the flat shape the flags are read from.
 
 import 'dart:convert';
@@ -102,7 +104,8 @@ void main() {
   });
 
   testWidgets(
-    'the home Discover card opens the page with its seeds and library rows',
+    'the home Discover card opens the page with its bar, seeds sheet and '
+    'library rows',
     (WidgetTester tester) async {
       mockServer = await MockServer.start({
         '/api/v1/ping': (_) => {
@@ -151,15 +154,43 @@ void main() {
       expect(tasteBodies.single['sources'], ['library', 'network']);
       expect(tasteBodies.single.containsKey('pin'), isFalse);
 
-      expect(find.text('based on 2 songs you finished · 30 days'),
-          findsOneWidget);
-      expect(find.text('BASED ON'), findsOneWidget);
-      expect(find.text('Manor · ALM'), findsOneWidget);
-      expect(find.text('Roygbiv · Boards of Canada'), findsOneWidget);
+      // No window in the subtitle: the bar is its one home.
+      expect(find.text('based on 2 songs you finished'), findsOneWidget);
+      // The bar: the window form and "More options"; no seed chips in the
+      // body.
+      expect(find.text('Based on the last'), findsOneWidget);
+      expect(find.text('30 days'), findsOneWidget);
+      expect(find.text('More options'), findsOneWidget);
+      expect(find.text('BASED ON'), findsNothing);
+      expect(find.textContaining('Manor'), findsNothing);
+      expect(find.textContaining('Roygbiv'), findsNothing);
       expect(find.text('FROM YOUR LIBRARY'), findsOneWidget);
       expect(find.text('Dawn Chorus'), findsOneWidget);
       expect(find.text('Cirrus'), findsOneWidget);
       expect(find.text('Play all 2'), findsOneWidget);
+
+      // "More options" opens the seeds sheet; closing it asks nothing.
+      await tester.tap(find.text('More options'));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      expect(find.text('Based on'), findsOneWidget);
+      expect(find.text('Manor'), findsOneWidget);
+      expect(find.text('Roygbiv'), findsOneWidget);
+      expect(find.text('Use these 2'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      expect(tasteBodies, hasLength(1));
+
+      // The window chooser re-asks with the new window, remembered.
+      await tester.tap(find.text('30 days'));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      await tester.tap(find.ancestor(
+          of: find.text('90 days'),
+          matching: find.byType(CheckedPopupMenuItem<int>)));
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+      expect(tasteBodies, hasLength(2));
+      expect(tasteBodies.last['window'], 90);
+      expect(tasteBodies.last['remember'], isTrue);
+      expect(find.text('90 days'), findsOneWidget);
     },
   );
 }

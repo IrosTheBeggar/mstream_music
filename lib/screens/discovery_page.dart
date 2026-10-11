@@ -10,7 +10,6 @@ import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import '../widgets/song_picker_sheet.dart';
-import 'discover_screen.dart';
 import 'discovery/discovery_page_controller.dart';
 import 'discovery/discovery_seeds_sheet.dart';
 import 'discovery/discovery_source_list.dart';
@@ -22,9 +21,6 @@ const int kDiscoveryPageTracks = 4;
 const int kDiscoveryPageLeads = 3;
 const int kDiscoveryPagePeerRows = 3;
 
-/// Seed chips before the "+ N" chip.
-const int kDiscoveryPageChips = 3;
-
 /// The Discover page for one server (Discover page plan §1, §4.2; the
 /// Phone / PhoneStates canvas boards): recommendations seeded by this
 /// account's play history there — songs and albums from the library, leads
@@ -35,6 +31,13 @@ const int kDiscoveryPageChips = 3;
 /// Everything it shows comes from [DiscoveryPageController]; the rows and
 /// cards live in discovery/discovery_widgets.dart, the seeds sheet and the
 /// "See all" lists in their own files.
+///
+/// Configuration lives in the pinned gray bar under the app bar, never in
+/// the scrolling body: "Based on the last [30 days ▾]" and "More options",
+/// which opens the seeds sheet. The window lives in the bar only — the
+/// app-bar subtitle says what the page is seeded from, not over when. The seeds themselves stay behind that link —
+/// a strip of seed chips at the top of the body read as songs to play, and
+/// a first-time listener tapped them expecting music.
 class DiscoveryPage extends StatefulWidget {
   final Server server;
 
@@ -107,18 +110,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   void _seeAll(TasteSource source) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => DiscoverySourceList(controller: c, source: source),
-    ));
-  }
-
-  /// "More like this" for one seed — the per-song lens, pinned to it.
-  void _moreLikeSeed(TasteSeed seed) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DiscoverScreen(
-        seedServer: widget.server,
-        seedPath: '/${seed.filepath}',
-        seedTitle: seed.displayTitle,
-        seedArtist: seed.metadata?.artist,
-      ),
     ));
   }
 
@@ -197,14 +188,22 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           ),
           body: SafeArea(
             top: false,
-            child: RefreshIndicator(
-              color: VelvetColors.primary,
-              onRefresh: c.refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 24),
-                children: _body(l),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (c.available) _configBar(l),
+                Expanded(
+                  child: RefreshIndicator(
+                    color: VelvetColors.primary,
+                    onRefresh: c.refresh,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: _body(l),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -251,6 +250,10 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           rechecking: c.rechecking, onRecheck: c.recheck));
     }
     if (c.error) out.add(DiscoveryHint(l.discoverPageError));
+    // The bar names the window asked for; when the server had to reach
+    // further back for seeds, say so where the rows are.
+    final widened = discoveryWidenedNote(l, seeded);
+    if (widened != null) out.add(DiscoveryHint(widened));
     if (c.isRandom) {
       out.add(DiscoveryRandomCard(
         busy: _picking || c.loading,
@@ -258,8 +261,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         onChooseSong: _chooseSong,
       ));
     }
-    if (seeded.seeds.isNotEmpty) out.addAll(_seedsSection(l, seeded));
-    if (c.library != null) out.addAll(_librarySection(l, c.library!));
+    if (c.library != null) {
+      // Straight under the bar (nothing but the progress line above it):
+      // the tighter top gap of a first section.
+      final first = out.every((w) => w is LinearProgressIndicator);
+      out.addAll(_librarySection(l, c.library!, first: first));
+    }
     if (c.network != null) out.addAll(_networkSection(l, c.network!));
     out.addAll(_peersSection(l));
     return out;
@@ -283,50 +290,105 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     );
   }
 
-  // ── seeds ──────────────────────────────────────────────────────────────
+  // ── configuration bar ──────────────────────────────────────────────
 
-  List<Widget> _seedsSection(AppLocalizations l, TasteResponse r) {
-    final seeds = r.seeds;
-    final shown = seeds.take(kDiscoveryPageChips).toList();
-    final more = seeds.length - shown.length;
-    return [
-      DiscoverySectionHeader(
-        l.discoverPageBasedOn,
-        meta: c.isRandom ? null : l.discoverPageBasedOnNote,
-        actionLabel: l.edit,
-        onSeeAll: _editSeeds,
-        first: true,
+  /// The pinned configuration bar: the window ("Based on the last
+  /// [30 days ▾]", the window's one home) and "More options" for the seeds
+  /// sheet. One Wrap, so a narrow screen or a large text setting moves
+  /// "More options" to a second line instead of overflowing.
+  ///
+  /// Each control is off — and dimmed, since their text carries its own
+  /// colour — while it could not do anything useful: during a call (a
+  /// change would only race the answer it is about to replace, as the
+  /// refresh action), under the 403 latch (nothing would be asked; the
+  /// scan-pending card's "Check again" is the way out), and for "More
+  /// options" before any answer (there are no seeds to show yet).
+  Widget _configBar(AppLocalizations l) {
+    final idle = !c.loading && !c.disabled;
+    final canSeeds = idle && c.seeded != null;
+    final current = c.effectiveWindow;
+    // Plain text colours, not the link colour: on the bar's `raised` the
+    // primary is unreadable in Light (amber on light gray) and the
+    // secondary text too faint in Velvet.
+    final ink = VelvetColors.textPrimary;
+    return Container(
+      key: const ValueKey('discovery-config-bar'),
+      decoration: BoxDecoration(
+        color: VelvetColors.raised,
+        border: Border(bottom: BorderSide(color: VelvetColors.border)),
       ),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-        // 44 px chips (the tap-target floor), stretched so a seed chip and
-        // the "+ N" chip are one height.
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
             children: [
-              for (final s in shown) ...[
-                _SeedChip(
-                  item: discoverySeedItem(widget.server, s),
-                  seed: s,
-                  random: c.isRandom,
-                  onTap: () => _moreLikeSeed(s),
+              Text(
+                // "Based on the last All time" reads wrong.
+                current <= 0
+                    ? l.discoverPageBasedOnAllTime
+                    : l.discoverPageBasedOnLast,
+                style: TextStyle(color: ink, fontSize: 13),
+              ),
+              Opacity(
+                opacity: idle ? 1 : 0.5,
+                child: PopupMenuButton<int>(
+                  key: const ValueKey('discovery-window'),
+                  enabled: idle,
+                  tooltip: '',
+                  initialValue: current,
+                  color: VelvetColors.surface,
+                  onSelected: (w) => unawaited(c.setWindow(w)),
+                  itemBuilder: (_) => [
+                    for (final w in kTasteWindows)
+                      CheckedPopupMenuItem<int>(
+                        value: w,
+                        checked: w == current,
+                        child: Text(
+                          discoveryWindowLabel(l, w),
+                          style: TextStyle(
+                              color: VelvetColors.textPrimary, fontSize: 14),
+                        ),
+                      ),
+                  ],
+                  child: _WindowPill(discoveryWindowLabel(l, current)),
                 ),
-                const SizedBox(width: 8),
-              ],
-              if (more > 0) _MoreChip(count: more, onTap: _editSeeds),
+              ),
             ],
           ),
-        ),
+          Opacity(
+            opacity: canSeeds ? 1 : 0.5,
+            // Standard density: the padded 48 px target.
+            child: TextButton(
+              key: const ValueKey('discovery-more-options'),
+              onPressed: canSeeds ? _editSeeds : null,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: Text(
+                l.discoverPageMoreOptions,
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  decorationColor: VelvetColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-    ];
+    );
   }
 
   // ── library ────────────────────────────────────────────────────────────
 
-  List<Widget> _librarySection(AppLocalizations l, TasteLibrary lib) {
+  List<Widget> _librarySection(AppLocalizations l, TasteLibrary lib,
+      {bool first = false}) {
     final count = lib.tracks.length + lib.albums.length;
     // The filter the rows ARE (the answer's), not one still in flight or
     // one whose refetch failed.
@@ -336,6 +398,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         l.discoverPageFromLibrary,
         meta: '$count · ${DiscoverySourceList.filterLabel(l, shown)}',
         onSeeAll: () => _seeAll(TasteSource.library),
+        first: first,
       ),
     ];
     if (lib.albums.isEmpty && lib.tracks.isEmpty) {
@@ -464,96 +527,47 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   }
 }
 
-/// A seed chip: round art and "Title · Artist"; a pinned seed carries the
-/// accent border, the random fallback a "random" tag. Tapping opens More
-/// like this for that one song.
-class _SeedChip extends StatelessWidget {
-  final DisplayItem item;
-  final TasteSeed seed;
-  final bool random;
-  final VoidCallback onTap;
-  const _SeedChip(
-      {required this.item,
-      required this.seed,
-      required this.random,
-      required this.onTap});
+/// The window chooser's face in the configuration bar: the window in force
+/// and a caret, outlined so it reads on the bar's gray in every palette.
+/// 32 px tall (taller only under a large text setting); the
+/// [kDiscoveryTapTarget] band around it is the menu's hit area too. The
+/// label ellipsizes rather than overflow a bar narrower than it.
+class _WindowPill extends StatelessWidget {
+  final String label;
+  const _WindowPill(this.label);
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final artist = seed.metadata?.artist?.trim();
-    final label = (artist == null || artist.isEmpty)
-        ? seed.displayTitle
-        : '${seed.displayTitle} · $artist';
-    return Material(
-      color: VelvetColors.raised,
-      shape: StadiumBorder(
-        side: BorderSide(
-            color: seed.pinned ? VelvetColors.primary : VelvetColors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 12, 0),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: kDiscoveryTapTarget),
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          decoration: ShapeDecoration(
+            shape: StadiumBorder(
+                side: BorderSide(color: VelvetColors.border2)),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ClipOval(
-                child: SizedBox(
-                    width: 32, height: 32, child: item.getAlbumThumb(size: 32)),
-              ),
-              const SizedBox(width: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 200),
+              Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      TextStyle(color: VelvetColors.textPrimary, fontSize: 13),
-                ),
-              ),
-              if (random) ...[
-                const SizedBox(width: 6),
-                Text(
-                  l.discoverPageRandomChip,
                   style: TextStyle(
-                    color: VelvetColors.primary,
-                    fontSize: 11,
+                    color: VelvetColors.textPrimary,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+              ),
+              Icon(Icons.arrow_drop_down,
+                  size: 20, color: VelvetColors.textSecondary),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreChip extends StatelessWidget {
-  final int count;
-  final VoidCallback onTap;
-  const _MoreChip({required this.count, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: VelvetColors.raised,
-      shape: StadiumBorder(side: BorderSide(color: VelvetColors.border)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Center(
-            child: Text(
-              '+ $count',
-              style:
-                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
           ),
         ),
       ),

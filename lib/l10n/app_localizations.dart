@@ -3180,17 +3180,17 @@ abstract class AppLocalizations {
   /// **'Refresh'**
   String get discoverPageRefresh;
 
-  /// Discover page subtitle: the seeds are songs played to the end. {window} is a window label like "30 days" or "all time".
+  /// Discover page subtitle: the seeds are songs played to the end. The window is not repeated here: the page's configuration bar shows it.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{based on 1 song you finished · {window}} other{based on {count} songs you finished · {window}}}'**
-  String discoverPageSubFinished(int count, String window);
+  /// **'{count, plural, =1{based on 1 song you finished} other{based on {count} songs you finished}}'**
+  String discoverPageSubFinished(int count);
 
-  /// Discover page subtitle when some seeds were listened to past half rather than finished. {window} as above.
+  /// Discover page subtitle when some seeds were listened to past half rather than finished.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{based on 1 song you listened to · {window}} other{based on {count} songs you listened to · {window}}}'**
-  String discoverPageSubListened(int count, String window);
+  /// **'{count, plural, =1{based on 1 song you listened to} other{based on {count} songs you listened to}}'**
+  String discoverPageSubListened(int count);
 
   /// Discover page subtitle when the seeds came from all-time play counts.
   ///
@@ -3228,23 +3228,29 @@ abstract class AppLocalizations {
   /// **'Nothing in the last {window}, so these come from further back.'**
   String discoverPageWidened(String window);
 
-  /// Discover page section header over the seed chips.
+  /// Title of the Discover page's seeds sheet (opened from More options): the songs the page is seeded from.
   ///
   /// In en, this message translates to:
   /// **'Based on'**
   String get discoverPageBasedOn;
 
-  /// Small note next to the Based on header.
+  /// Label in the Discover page's configuration bar, directly before the window chooser, which shows "7 days" / "30 days" / "90 days" / "All time" (discoverPageWindowDays / discoverPageWindowAll). Reads as one phrase: "Based on the last [30 days ▾]".
   ///
   /// In en, this message translates to:
-  /// **'what you finished · skips left out'**
-  String get discoverPageBasedOnNote;
+  /// **'Based on the last'**
+  String get discoverPageBasedOnLast;
 
-  /// Tag on the seed chip when it is a random pick.
+  /// Label in the Discover page's configuration bar before the window chooser when the window is all time (discoverPageWindowAll), where "Based on the last" would read wrong: "Based on [All time ▾]". Any wording that reads as one phrase with the all-time label works, e.g. "Period".
   ///
   /// In en, this message translates to:
-  /// **'random'**
-  String get discoverPageRandomChip;
+  /// **'Based on'**
+  String get discoverPageBasedOnAllTime;
+
+  /// Link at the right of the Discover page's configuration bar; opens the seeds sheet (which songs the page is based on: drop one, bring one back, pin a song).
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get discoverPageMoreOptions;
 
   /// Discover page section header: songs and albums from the user's own library.
   ///
@@ -3503,6 +3509,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Played most'**
   String get discoverPageCountersHeader;
+
+  /// Group header in the Discover page's seeds sheet over the random seed the server picked because nothing was finished yet (in place of "Finished recently").
+  ///
+  /// In en, this message translates to:
+  /// **'Random pick'**
+  String get discoverPageRandomHeader;
 
   /// Small note next to the recent seeds header.
   ///

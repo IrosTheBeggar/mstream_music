@@ -1731,21 +1731,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageRefresh => '刷新';
 
   @override
-  String discoverPageSubFinished(int count, String window) {
+  String discoverPageSubFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '基于你听完的 $count 首歌 · $window',
+      other: '基于你听完的 $count 首歌',
     );
     return '$_temp0';
   }
 
   @override
-  String discoverPageSubListened(int count, String window) {
+  String discoverPageSubListened(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '基于你听过的 $count 首歌 · $window',
+      other: '基于你听过的 $count 首歌',
     );
     return '$_temp0';
   }
@@ -1781,10 +1781,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageBasedOn => '依据';
 
   @override
-  String get discoverPageBasedOnNote => '你听完的歌 · 不含跳过的';
+  String get discoverPageBasedOnLast => '统计范围';
 
   @override
-  String get discoverPageRandomChip => '随机';
+  String get discoverPageBasedOnAllTime => '统计范围';
+
+  @override
+  String get discoverPageMoreOptions => '更多选项';
 
   @override
   String get discoverPageFromLibrary => '来自你的曲库';
@@ -1962,6 +1965,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverPageCountersHeader => '最常播放';
+
+  @override
+  String get discoverPageRandomHeader => '随机挑选';
 
   @override
   String get discoverPageNewestFirst => '最新在前';

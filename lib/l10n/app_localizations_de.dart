@@ -1853,23 +1853,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverPageRefresh => 'Aktualisieren';
 
   @override
-  String discoverPageSubFinished(int count, String window) {
+  String discoverPageSubFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'basiert auf $count Titeln, die du zu Ende gehört hast · $window',
-      one: 'basiert auf 1 Titel, den du zu Ende gehört hast · $window',
+      other: 'basiert auf $count Titeln, die du zu Ende gehört hast',
+      one: 'basiert auf 1 Titel, den du zu Ende gehört hast',
     );
     return '$_temp0';
   }
 
   @override
-  String discoverPageSubListened(int count, String window) {
+  String discoverPageSubListened(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'basiert auf $count Titeln, die du gehört hast · $window',
-      one: 'basiert auf 1 Titel, den du gehört hast · $window',
+      other: 'basiert auf $count Titeln, die du gehört hast',
+      one: 'basiert auf 1 Titel, den du gehört hast',
     );
     return '$_temp0';
   }
@@ -1909,11 +1909,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverPageBasedOn => 'Basierend auf';
 
   @override
-  String get discoverPageBasedOnNote =>
-      'was du zu Ende gehört hast · übersprungene zählen nicht';
+  String get discoverPageBasedOnLast => 'Basierend auf den letzten';
 
   @override
-  String get discoverPageRandomChip => 'zufällig';
+  String get discoverPageBasedOnAllTime => 'Zeitraum';
+
+  @override
+  String get discoverPageMoreOptions => 'Weitere Optionen';
 
   @override
   String get discoverPageFromLibrary => 'Aus deiner Bibliothek';
@@ -2106,6 +2108,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverPageCountersHeader => 'Am meisten gehört';
+
+  @override
+  String get discoverPageRandomHeader => 'Zufällige Auswahl';
 
   @override
   String get discoverPageNewestFirst => 'neueste zuerst';

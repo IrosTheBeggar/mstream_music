@@ -73,7 +73,11 @@ String? discoveryAlbumLabel(AppLocalizations l, TasteAlbum a) {
 
 /// The app-bar subtitle: what the page is seeded from (plan §2.1–§2.2).
 /// "finished" only when every history seed was played to the end; a seed
-/// that was stopped past half makes it "listened to".
+/// that was stopped past half makes it "listened to". No window: the
+/// configuration bar is its one home — after a widened answer the two would
+/// otherwise name different windows at once (the bar the one asked for, the
+/// answer the one that produced seeds); [discoveryWidenedNote] explains that
+/// case in the body instead.
 String? discoverySubtitle(AppLocalizations l, TasteResponse? r) {
   if (r == null) return null;
   if (r.seedSource == TasteSeedSource.random || r.fallback) {
@@ -87,10 +91,20 @@ String? discoverySubtitle(AppLocalizations l, TasteResponse? r) {
   if (history.isEmpty) {
     return r.seeds.isEmpty ? null : l.discoverPageSubPinned;
   }
-  final window = discoveryWindowLabel(l, r.window ?? kTasteDefaultWindow);
   return history.any((s) => s.outcome == 'stopped')
-      ? l.discoverPageSubListened(history.length, window)
-      : l.discoverPageSubFinished(history.length, window);
+      ? l.discoverPageSubListened(history.length)
+      : l.discoverPageSubFinished(history.length);
+}
+
+/// "Nothing in the last 30 days, so these come from further back." — when
+/// the server widened the window to find seeds, so the bar's window and the
+/// rows' real reach do not silently disagree. Null otherwise, and for a
+/// random pick (no history at all: the random card already says why).
+String? discoveryWidenedNote(AppLocalizations l, TasteResponse? r) {
+  final from = r?.widenedFrom;
+  if (r == null || from == null) return null;
+  if (r.seedSource == TasteSeedSource.random || r.fallback) return null;
+  return l.discoverPageWidened(discoveryWindowLabel(l, from));
 }
 
 /// No seed is analyzed yet (the scan is pending). The server then answers
@@ -303,15 +317,11 @@ class DiscoverySectionHeader extends StatelessWidget {
   final String title;
   final String? meta;
   final VoidCallback? onSeeAll;
-
-  /// The link's label; "See all" by default ("Edit" over the seeds).
-  final String? actionLabel;
   final bool first;
   const DiscoverySectionHeader(this.title,
       {super.key,
       this.meta,
       this.onSeeAll,
-      this.actionLabel,
       this.first = false});
 
   @override
@@ -363,7 +373,7 @@ class DiscoverySectionHeader extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
               child: Text(
-                actionLabel ?? l.discoverPageSeeAll,
+                l.discoverPageSeeAll,
                 style: TextStyle(
                   color: VelvetColors.primary,
                   fontSize: 13,
@@ -946,10 +956,16 @@ class DiscoveryPill extends StatelessWidget {
                 Icon(icon, size: 18, color: fg),
                 const SizedBox(width: 6),
               ],
-              Text(
-                label,
-                style: TextStyle(
-                    color: fg, fontSize: 13, fontWeight: FontWeight.w600),
+              // Ellipsized rather than overflowing a row narrower than it
+              // (a long locale under a large text setting on a small phone).
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: fg, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),
@@ -959,28 +975,21 @@ class DiscoveryPill extends StatelessWidget {
   }
 }
 
-/// A selectable pill (filter chips, the window segments): filled with the
+/// A selectable pill (the filter chips): filled with the
 /// accent when it is the one in force — ListeningScreen's scope pill.
 class DiscoveryChoicePill extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-
-  /// Shrink a label that does not fit instead of ellipsizing it — for a
-  /// fixed-width segment, where the label is the whole meaning.
-  final bool fit;
   const DiscoveryChoicePill(this.label,
-      {super.key,
-      required this.selected,
-      required this.onTap,
-      this.fit = false});
+      {super.key, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final text = Text(
       label,
       maxLines: 1,
-      overflow: fit ? TextOverflow.visible : TextOverflow.ellipsis,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
@@ -998,7 +1007,7 @@ class DiscoveryChoicePill extends StatelessWidget {
           height: 32,
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 13),
-          child: fit ? FittedBox(fit: BoxFit.scaleDown, child: text) : text,
+          child: text,
         ),
       ),
     ));

@@ -1850,23 +1850,23 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverPageRefresh => 'Actualiser';
 
   @override
-  String discoverPageSubFinished(int count, String window) {
+  String discoverPageSubFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'd’après $count morceaux écoutés jusqu’au bout · $window',
-      one: 'd’après $count morceau écouté jusqu’au bout · $window',
+      other: 'd’après $count morceaux écoutés jusqu’au bout',
+      one: 'd’après $count morceau écouté jusqu’au bout',
     );
     return '$_temp0';
   }
 
   @override
-  String discoverPageSubListened(int count, String window) {
+  String discoverPageSubListened(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'd’après $count morceaux écoutés · $window',
-      one: 'd’après $count morceau écouté · $window',
+      other: 'd’après $count morceaux écoutés',
+      one: 'd’après $count morceau écouté',
     );
     return '$_temp0';
   }
@@ -1906,11 +1906,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverPageBasedOn => 'D’après';
 
   @override
-  String get discoverPageBasedOnNote =>
-      'ce que vous avez écouté jusqu’au bout · sans les morceaux passés';
+  String get discoverPageBasedOnLast => 'D’après les derniers';
 
   @override
-  String get discoverPageRandomChip => 'au hasard';
+  String get discoverPageBasedOnAllTime => 'Période';
+
+  @override
+  String get discoverPageMoreOptions => 'Plus d’options';
 
   @override
   String get discoverPageFromLibrary => 'De votre bibliothèque';
@@ -2104,6 +2106,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverPageCountersHeader => 'Les plus écoutés';
+
+  @override
+  String get discoverPageRandomHeader => 'Choix au hasard';
 
   @override
   String get discoverPageNewestFirst => 'les plus récents d’abord';

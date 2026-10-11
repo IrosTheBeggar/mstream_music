@@ -178,8 +178,9 @@ class DiscoveryPageController extends ChangeNotifier {
   /// The window ASKED for — this visit's choice, else the saved pref the
   /// server applied. After widening the answer's `window` is the one that
   /// produced seeds (often 0, all time) and `widenedFrom` the requested
-  /// one; the seeds sheet must start on the user's own window, and picking
-  /// "All time" there must count as a change worth sending and remembering.
+  /// one; the configuration bar must show the user's own window, and
+  /// picking "All time" there must count as a change worth sending and
+  /// remembering.
   int get effectiveWindow =>
       window ?? seeded?.widenedFrom ?? seeded?.window ?? kTasteDefaultWindow;
 
@@ -368,6 +369,41 @@ class DiscoveryPageController extends ChangeNotifier {
     }
   }
 
+  /// The window chooser in the page's configuration bar: refetch every
+  /// source with the same seeds, drops and pins over the new window
+  /// (remembered, like the filter). The window decides the seeds, so the
+  /// peers call — whose centroid must match — is asked again too.
+  ///
+  /// Under the 403 latch nothing would be asked, so nothing changes: a
+  /// window set then would name rows it never produced, and ride out (and
+  /// be remembered) on the next "Check again". The bar's chooser is off
+  /// then too.
+  Future<void> setWindow(int w) async {
+    if (w == effectiveWindow || disabled || !available) return;
+    final before = window;
+    final peersBefore = peers;
+    final peersDoneBefore = _peersDone;
+    window = w;
+    notifyListeners();
+    await load(force: true);
+    // As [setFilter]: a refetch that failed leaves the old rows up, so the
+    // bar goes back to the window those rows came from, and a later call
+    // does not remember a window that never landed. The peers call may
+    // still have answered over the NEW window's seeds — its rows go back
+    // too, so both sections keep one centroid, and the visit is stored
+    // again under the window it now shows (the peers answer had stored
+    // the new window's key).
+    if ((error || disabled) && window == w) {
+      window = before;
+      ++_peersRid;
+      loadingPeers = false;
+      peers = peersBefore;
+      _peersDone = peersDoneBefore;
+      if (seeded != null) _store();
+      notifyListeners();
+    }
+  }
+
   /// The seeds sheet's "Use these N".
   ///
   /// [drop] are hashes switched off (sent as `exclude` with `remember`, so
@@ -500,7 +536,7 @@ DisplayItem discoveryTrackItem(Server server, DiscoveryTrack t) {
   return row;
 }
 
-/// A seed as a DisplayItem — for its art and for "More like this" on it.
+/// A seed as a DisplayItem — for its art in the seeds sheet.
 DisplayItem discoverySeedItem(Server server, TasteSeed s) {
   final row = DisplayItem(server, s.filepath, 'file', '/${s.filepath}',
       Icon(Icons.music_note, color: VelvetColors.accent), null);
