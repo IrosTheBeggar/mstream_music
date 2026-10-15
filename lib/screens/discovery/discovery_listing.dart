@@ -60,8 +60,7 @@ enum DiscoveryListingState {
   /// Choose a song… / Browse your library.
   random,
 
-  /// The library answered no songs: one line, and a button that ticks
-  /// "Include songs I've played lately" when it is not ticked yet.
+  /// The library answered no songs: one line.
   libraryEmpty,
 
   /// The connected servers are still being asked: placeholder rows.
@@ -178,8 +177,9 @@ List<DisplayItem> discoveryListingItems(DiscoveryPageController c) {
 /// keeps that frame in step with it. One at a time: opening Discover again
 /// (another server, or the same one after Back) replaces it. The controller
 /// lives as long as its frame: it watches the browser stack, and the moment
-/// the frame is gone (Back, a server switch reset the stack) it lets go —
-/// the controller's own cache keeps re-opening within five minutes free.
+/// the frame is gone (Back, a server switch reset the stack) it lets go,
+/// and with it the visit's pins and drops: the next open is a fresh visit
+/// that asks again.
 /// Whenever the frame is back on top (Back from a list opened over it, such
 /// as "Browse your library"'s File Explorer) it names the toolbar
 /// "Discover" again: the browser keeps one label, not one per frame.

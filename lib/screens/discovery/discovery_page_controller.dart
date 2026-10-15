@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -9,20 +8,11 @@ import '../../objects/metadata.dart';
 import '../../objects/server.dart';
 import '../../singletons/api.dart';
 import '../../singletons/server_list.dart';
+import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 
 typedef TasteFetch = Future<DiscoveryFetchResult<TasteResponse>> Function(
     Server server, TasteRequest req);
-typedef TastePrefsFetch = Future<DiscoveryFetchResult<TastePrefs>> Function(
-    Server server);
-typedef TastePrefsSave = Future<DiscoveryFetchResult<TastePrefs>> Function(
-    Server server, TastePrefs patch);
-
-/// How long a visit's answer stands before re-entering Discover refetches.
-/// The taste route pays an index rebuild and a library pass per seed, and the
-/// server caches its own answer for the same five minutes (plan §2.4) — so a
-/// client that refetched on every open would only ever buy the same rows.
-const Duration kDiscoveryPageTtl = Duration(minutes: 5);
 
 /// Rows asked of the library call. The browser listing shows every one (it
 /// scrolls), so there is no "See all".
@@ -35,84 +25,70 @@ const TasteLimits kDiscoveryPeersLimits = TasteLimits(peers: 10);
 /// webapp's ALBUM_STRIP_MAX).
 const int kDiscoveryPeerAlbumsMax = 12;
 
-/// What a visit holds, kept per server past the listing's lifetime so
-/// leaving and coming back (Back to the home, then Discover again) does not
-/// refetch.
-class _Snapshot {
-  final String key;
-  final DateTime at;
-  final TasteResponse? seeded;
-  final TastePeers? peers;
-  final bool peersDone;
-  _Snapshot(this.key, this.at, this.seeded, this.peers, this.peersDone);
-}
-
 /// Discover's data for one server (plan §3.1, §4.2) — what the browser
-/// listing (discovery_listing.dart) is built from: two taste calls in
-/// parallel — the library, then peers on its own so the library never waits
-/// out the 4 s peer deadline — with request-id guards, a per-call 403 latch
-/// plus ONE re-ping to tell "switched off" from "scan pending", and a client
-/// TTL so re-entering Discover is free.
+/// listing (discovery_listing.dart) is built from: two taste calls — the
+/// library, then peers on its own so the library never waits out the 4 s
+/// peer deadline — with request-id guards, and a per-call 403 latch plus ONE
+/// re-ping to tell "switched off" from "scan pending".
+///
+/// One batch per visit across the sections: every call draws its own random
+/// batch of seeds, so the peers call goes out AFTER the library answer
+/// lands, pinned to that answer's seeds ([peersRequest]) — the connected
+/// servers' rows are built from the very batch the seeds sheet shows. A
+/// random library answer makes no peers call (the server asks no connected
+/// server for a random seed).
 ///
 /// Discover is the play-now page (plan §2.13, 2026-10-11): it asks only for
 /// songs you can play now — the library and the connected (federated)
 /// servers. The P2P network's leads are a later Explore surface's, so the
 /// main call asks `sources: [library]` only.
 ///
-/// Seeds are the server's to choose (history, then counters, then a random
-/// pick); Discover only steers them: the window, songs dropped (remembered
-/// server-side, so every client agrees), pins, and the one library filter
-/// ("Include songs I've played lately"). The now-playing song is pinned
-/// ONCE, at open ([pinAtOpen]) — the controller never watches playback, so a
-/// track change never reshuffles the listing under the user's thumb (plan
-/// §2.3).
+/// The feature is simple (plan §2.13, 2026-10-14): the server reads this
+/// account's song history and seeds each call from a RANDOM batch of it, so
+/// every open — and every tap — is a new answer, and that is the point.
+/// Nothing is stored server-side and nothing is reused here: every open and
+/// every refresh asks, and the answer on screen stays up until the new one
+/// lands. Discover steers the seeds only for a targeted query, and only for
+/// the visit: the window (remembered on this phone,
+/// [SettingsManager.discoverWindow]), pins, and seeds dropped (sent in
+/// `exclude`). The now-playing song is pinned ONCE, at open ([pinAtOpen])
+/// — the controller never watches playback, so a track change never
+/// reshuffles the listing under the user's thumb (plan §2.3).
 class DiscoveryPageController extends ChangeNotifier {
   final Server server;
   final TasteFetch _fetch;
-  final TastePrefsFetch _fetchPrefs;
-  final TastePrefsSave _savePrefs;
   final Future<void> Function(Server) _reping;
-  final Future<String?> Function(Server) _randomPick;
+  final void Function(int) _saveWindow;
   final DateTime Function() now;
 
+  /// [readWindow] / [saveWindow] are the phone's remembered window
+  /// (SettingsManager by default; tests inject their own).
   DiscoveryPageController({
     required this.server,
     TasteFetch? fetch,
-    TastePrefsFetch? fetchPrefs,
-    TastePrefsSave? savePrefs,
     Future<void> Function(Server)? reping,
-    Future<String?> Function(Server)? randomPick,
+    int Function()? readWindow,
+    void Function(int)? saveWindow,
     DateTime Function()? now,
     String? pinAtOpen,
   })  : _fetch = fetch ?? ApiManager().fetchDiscoveryTaste,
-        _fetchPrefs = fetchPrefs ?? ApiManager().fetchDiscoveryTastePrefs,
-        _savePrefs = savePrefs ?? ApiManager().saveDiscoveryTastePrefs,
         _reping = reping ?? ServerManager().getServerPaths,
-        _randomPick = randomPick ?? _defaultRandomPick,
+        _saveWindow = saveWindow ?? _defaultSaveWindow,
         now = now ?? DateTime.now {
+    final w = (readWindow ?? _defaultReadWindow)();
+    window = kTasteWindows.contains(w) ? w : kTasteDefaultWindow;
     if (pinAtOpen != null && pinAtOpen.trim().isNotEmpty) {
       _pins.add(_appPath(pinAtOpen));
     }
   }
 
-  static Future<String?> _defaultRandomPick(Server s) async =>
-      (await ApiManager().fetchRandomSong(s))?.data;
-
-  static final Map<String, _Snapshot> _cache = {};
-
-  /// Forget every server's cached visit (tests; a server removed).
-  @visibleForTesting
-  static void clearCache() => _cache.clear();
-
-  /// The cache slot: the server entry AND the account on it. Editing an
-  /// entry to another account keeps its localname, and the request (the
-  /// snapshot key) carries no user — so without the name a reopen inside
-  /// the TTL would show the previous account's history-seeded rows.
-  String get _slot => '${server.localname}\u0000${server.username ?? ''}';
+  static int _defaultReadWindow() => SettingsManager().discoverWindow;
+  static void _defaultSaveWindow(int w) =>
+      unawaited(SettingsManager().setDiscoverWindow(w));
 
   // ── state ────────────────────────────────────────────────────────────
 
-  /// The latest library answer: seeds, seed source, window, the remembered
+  /// The latest library answer: seeds, seed source, window, this call's
   /// exclusions, scan state. Null until the first one lands.
   TasteResponse? seeded;
   TastePeers? peers;
@@ -146,45 +122,43 @@ class DiscoveryPageController extends ChangeNotifier {
   bool peersDisabled = false;
   bool rechecking = false;
   bool _repinged = false;
-  bool _peersDone = false;
 
-  /// The user's choices this visit; null = the saved pref applies.
-  int? window;
-  TasteFilter? filter;
+  /// The window every call asks for (days; 0 = all time): the phone's
+  /// remembered choice, [kTasteDefaultWindow] until there is one. After
+  /// widening the answer's `window` is the one that produced seeds (often
+  /// 0) — the bar shows this one, the user's own.
+  late int window;
+
+  /// The visit's steering, gone on a fresh open (a new controller): the
+  /// pins, the seeds the user dropped (oldest first), and the random picks
+  /// "Another pick" passed over this visit (oldest first; each the pick on
+  /// screen when it was tapped — the webapp's `passed`, the terminal's
+  /// `skipped`). Both lists ride in `exclude` on every call of the visit,
+  /// the drops first ([_excludeSent]). The server stores neither.
   final List<String> _pins = [];
   final List<String> _exclude = [];
-
-  /// "New seeds" ([newSeeds]): the seed hashes this visit has moved past,
-  /// oldest first. Sent in `exclude` beside the drops so the server picks
-  /// the next finished songs — but never remembered (the call carries
-  /// `remember: false`) and never shown as dropped ([excluded] leaves them
-  /// out). Session-local: a fresh open starts empty, and any change to what
-  /// the seeds are steered by (window, filter, a drop or restore, a pin)
-  /// starts it over.
-  final List<String> _rotation = [];
-
-  /// The rotation the answer on screen was asked with ([seeded]'s
-  /// `excluded` lists it). [excluded] filters by this, not the live
-  /// rotation: a filter or window change clears the live one before its
-  /// call lands, and the old answer's moved-past seeds must not turn into
-  /// "Dropped" rows meanwhile.
-  Set<String> _seededRotation = const {};
+  final List<String> _passed = [];
 
   int _mainRid = 0;
   int _peersRid = 0;
+
+  /// A peers call for the batch on screen is out: a newer library call
+  /// that fails leaves it running, and the section loading.
+  bool _peersOut = false;
   bool _disposed = false;
 
   List<String> get pins => List.unmodifiable(_pins);
   List<String> get exclude => List.unmodifiable(_exclude);
-  List<String> get rotation => List.unmodifiable(_rotation);
 
-  /// The answer's exclusions the seeds sheet shows (and can re-include):
-  /// the server lists every hash the call excluded, the rotation's
-  /// included, but those were never dropped — they are only the seeds
-  /// "New seeds" moved past (the rotation that answer was asked with).
+  /// The random picks passed over this visit, oldest first.
+  List<String> get passed => List.unmodifiable(_passed);
+
+  /// The answer's exclusions the seeds sheet shows (and can use again): the
+  /// server lists every `exclude` hash that resolves — the random picks
+  /// passed over included, but those were never dropped.
   List<TasteExcluded> get excluded => [
         for (final e in seeded?.excluded ?? const <TasteExcluded>[])
-          if (!_seededRotation.contains(e.hash)) e,
+          if (_exclude.contains(e.hash) || !_passed.contains(e.hash)) e,
       ];
 
   TasteLibrary? get library => seeded?.library;
@@ -208,24 +182,6 @@ class DiscoveryPageController extends ChangeNotifier {
   bool get isRandom =>
       seeded?.seedSource == TasteSeedSource.random || seeded?.fallback == true;
 
-  /// The random pick on screen came from a "New seeds" rotation that had
-  /// gone past every finished song — the card says so instead of asking
-  /// the user to finish a few songs.
-  bool get seedsCycled => isRandom && _seededRotation.isNotEmpty;
-
-  TasteFilter get effectiveFilter =>
-      filter ?? library?.filter ?? TasteFilter.fresh;
-
-  /// The one library checkbox, "Include songs I've played lately": ticked
-  /// asks for `all`, unticked for `fresh`. The old never-played-only mode is
-  /// gone — a saved `unplayed` reads (and is re-asked) as `fresh`, see
-  /// [_loadMain].
-  bool get includesPlayed => effectiveFilter == TasteFilter.all;
-
-  /// The filter the checkbox asks for.
-  static TasteFilter filterFor({required bool includePlayed}) =>
-      includePlayed ? TasteFilter.all : TasteFilter.fresh;
-
   /// Whether connected servers are part of this visit at all: asked, not
   /// refused, and (once answered) at least one paired. Without one Discover
   /// draws no connected-server section, not even its quiet line.
@@ -245,37 +201,23 @@ class DiscoveryPageController extends ChangeNotifier {
     return named.single.name;
   }
 
-  /// The window ASKED for — this visit's choice, else the saved pref the
-  /// server applied. After widening the answer's `window` is the one that
-  /// produced seeds (often 0, all time) and `widenedFrom` the requested
-  /// one; the configuration bar must show the user's own window, and
-  /// picking "All time" there must count as a change worth sending and
-  /// remembering.
-  int get effectiveWindow =>
-      window ?? seeded?.widenedFrom ?? seeded?.window ?? kTasteDefaultWindow;
-
-  /// A choice this visit is worth remembering (window, filter, a dropped
-  /// seed): the route then saves it in `discovery:page`, the same on every
-  /// client. Pins are never remembered (plan §2.3).
-  bool get _remember => window != null || filter != null || _exclude.isNotEmpty;
-
-  /// The request's exclusions, oldest first: the rotation, then the drops
-  /// (TasteRequest keeps the newest [kTasteExcludeMax], so a long rotation
-  /// gives way before a drop does).
-  List<String>? get _excludeSent {
-    if (_rotation.isEmpty && _exclude.isEmpty) return null;
-    return [
-      ..._rotation.where((h) => !_exclude.contains(h)),
-      ..._exclude,
+  /// The request's exclusions, oldest first: the drops (the newest
+  /// [kTasteExcludeMax]), then the picks passed over that are not dropped
+  /// too, the newest that fit in the room left — a drop never gives way to
+  /// a passed pick (the webapp's buildRequests does the same).
+  List<String>? _excludeSent() {
+    final drops = _exclude.length > kTasteExcludeMax
+        ? _exclude.sublist(_exclude.length - kTasteExcludeMax)
+        : _exclude;
+    final passed = _passed.where((h) => !drops.contains(h)).toList();
+    final room = kTasteExcludeMax - drops.length;
+    final ex = [
+      ...drops,
+      if (room > 0)
+        ...passed.sublist(passed.length > room ? passed.length - room : 0),
     ];
+    return ex.isEmpty ? null : ex;
   }
-
-  /// `remember` on the main call: never while a rotation rides in
-  /// `exclude` (the server would save it as dropped seeds). Nothing
-  /// remembered is lost — every change worth remembering starts the
-  /// rotation over, so the call that carried it was a remembered one.
-  bool? get _rememberSent =>
-      _rotation.isNotEmpty ? false : (_remember ? true : null);
 
   /// `newArtistsOnly` is always false: it is the Explore surface's toggle,
   /// and Discover draws no control for it, so it must never thin the
@@ -283,154 +225,145 @@ class DiscoveryPageController extends ChangeNotifier {
   TasteRequest mainRequest() => TasteRequest(
         window: window,
         pin: _pins.isEmpty ? null : List.of(_pins),
-        exclude: _excludeSent,
-        remember: _rememberSent,
-        filter: filter,
+        exclude: _excludeSent(),
         sources: const {TasteSource.library},
         limit: kDiscoveryMainLimits,
         newArtistsOnly: false,
       );
 
-  /// The same seeds as [mainRequest] (so the centroid matches) asking only
-  /// for peers. Never `remember`: the main call already saves the choices.
-  TasteRequest peersRequest() => TasteRequest(
-        window: window,
-        pin: _pins.isEmpty ? null : List.of(_pins),
-        exclude: _excludeSent,
-        sources: const {TasteSource.peers},
-        limit: kDiscoveryPeersLimits,
-        newArtistsOnly: false,
-      );
-
-  String _cacheKey() =>
-      '${jsonEncode(mainRequest().toJson())}|peers=$asksPeers';
+  /// The peers call of one ask, built once the library answer [main] has
+  /// landed: the same window and exclusions, pinned to EVERY seed of that
+  /// answer (the user's accepted pins are among them — the server lists
+  /// them first; [kTastePinMax] = the seed cap, so a whole batch fits),
+  /// with `limit.seeds` = those pins, so the server adds no seed of its own
+  /// and the connected servers' rows come from the batch the seeds sheet
+  /// shows (the webapp's DISCOVERYPAGE.peersRequest). Null when there is
+  /// nothing to pin, or when [main] is the random fallback: the server asks
+  /// no connected server for a random seed, and a pin would make it.
+  TasteRequest? peersRequest(TasteResponse main) {
+    if (main.seedSource == TasteSeedSource.random || main.fallback) {
+      return null;
+    }
+    final pins = <String>[];
+    for (final s in main.seeds) {
+      if (pins.length >= kTastePinMax) break;
+      final p = _appPath(s.filepath);
+      if (s.filepath.isNotEmpty && !pins.contains(p)) pins.add(p);
+    }
+    if (pins.isEmpty) return null;
+    return TasteRequest(
+      window: window,
+      pin: pins,
+      exclude: _excludeSent(),
+      sources: const {TasteSource.peers},
+      limit:
+          TasteLimits(seeds: pins.length, peers: kDiscoveryPeersLimits.peers),
+      newArtistsOnly: false,
+    );
+  }
 
   // ── loading ──────────────────────────────────────────────────────────
 
-  /// Fetch both calls in parallel, or restore the cached visit when it is
-  /// fresh and asked the same thing. [force] (refresh, a changed seed set)
-  /// skips the cache.
-  Future<void> load({bool force = false}) async {
+  /// Ask the library, then — once its answer lands — the peers, pinned to
+  /// that answer's seeds ([peersRequest]). Every open and every tap asks —
+  /// the server draws a new random batch of seeds each time, which is what
+  /// makes the answer new. The answer on screen stays up until the new one
+  /// lands.
+  ///
+  /// Only the library answer's own success lets go of the peers side: the
+  /// old batch's rows go (never the old rows under the new seeds) and an
+  /// older peers call still out is dropped. A library call that fails, is
+  /// refused or is overtaken leaves both alone — the batch on screen is
+  /// unchanged, and its peers call may still land.
+  Future<void> load() async {
     if (_disposed) return;
-    if (!available) {
+    if (!available || disabled) {
       notifyListeners();
       return;
     }
-    final key = _cacheKey();
-    final hit = _cache[_slot];
-    if (!force &&
-        hit != null &&
-        hit.key == key &&
-        now().difference(hit.at) < kDiscoveryPageTtl) {
-      _applyPeers(hit.peers);
-      _peersDone = hit.peersDone;
-      // The peers call stores the snapshot too, so it can hold no library
-      // answer: the visit was left before main landed, or main failed or
-      // was refused (a new controller inherits no latch). Restoring that
-      // would leave Discover on placeholders nothing is loading — so the
-      // cached peers stand and main is asked again.
-      final owesMain = hit.seeded == null;
-      // The key matched, so the live rotation is the one it was asked with.
-      if (!owesMain) _apply(hit.seeded, _rotation);
+    final rid = ++_mainRid;
+    // The peers section shows its loading state from the start: its call
+    // only waits on the library's answer.
+    if (asksPeers && !peersDisabled) loadingPeers = true;
+    final main = await _loadMain(rid);
+    if (_disposed || rid != _mainRid) return;
+    if (main == null) {
+      loadingPeers = _peersOut;
       notifyListeners();
-      // A visit left before its peers landed still owes them.
-      await Future.wait([
-        if (owesMain && !disabled) _loadMain(),
-        if (asksPeers && !hit.peersDone && !peersDisabled) _loadPeers(),
-      ]);
-      if (!_disposed) notifyListeners();
       return;
     }
-    _peersDone = false;
-    await Future.wait([
-      if (!disabled) _loadMain(),
-      if (asksPeers && !peersDisabled) _loadPeers(),
-    ]);
-    if (!_disposed) notifyListeners();
+    final peersRid = ++_peersRid;
+    _peersOut = false;
+    _applyPeers(null);
+    final req = asksPeers && !peersDisabled ? peersRequest(main) : null;
+    if (req == null) {
+      // A random or seedless answer: no connected-server section.
+      loadingPeers = false;
+      notifyListeners();
+      return;
+    }
+    await _loadPeers(req, peersRid);
   }
 
-  Future<void> refresh() => load(force: true);
+  /// The toolbar's refresh ("New seeds"), Try again, pull to refresh: a
+  /// plain re-ask with the same window, pins, drops and passed picks.
+  Future<void> refresh() => load();
 
-  /// Whether "New seeds" can do anything now: an answer is up, no call is
-  /// out (a second tap would only rotate past the same seeds again), and
-  /// the route is not latched off.
-  bool get canNewSeeds =>
+  /// Whether the toolbar's refresh can do anything now: an answer is up, no
+  /// call is out (the bar's thin line shows it), and the route is not
+  /// latched off.
+  bool get canRefresh =>
       available && !disabled && !loading && seeded != null;
 
-  /// "New seeds" on the toolbar: start from other songs. The current
-  /// answer's seeds — not the pins, which are the user's own choice and
-  /// stay — join the rotation, and both calls are asked again with it in
-  /// `exclude` (not remembered), so the server picks the next finished
-  /// songs; its own widening (window → all time → counters → random)
-  /// carries on from there. Once the answer is the random pick — or has no
-  /// seed of the server's own left to move past — the rotation is spent:
-  /// it starts over, and this asks for the newest finished songs again (a
-  /// cycle, never a dead end). Trimmed to the route's [kTasteExcludeMax],
-  /// newest kept. The previous answer stays up until the new one lands.
-  Future<void> newSeeds() async {
-    if (_disposed || !canNewSeeds) return;
-    final moved = isRandom
-        ? const <String>[]
-        : [
-            for (final s in seeds)
-              if (!s.pinned) s.hash
-          ];
-    if (moved.isEmpty) {
-      _rotation.clear();
-    } else {
-      _rotation
-        ..removeWhere(moved.contains)
-        ..addAll(moved);
-      if (_rotation.length > kTasteExcludeMax) {
-        _rotation.removeRange(0, _rotation.length - kTasteExcludeMax);
-      }
-    }
-    await load(force: true);
-  }
-
-  Future<void> _loadMain() async {
-    final rid = ++_mainRid;
+  /// The library call [rid]. Returns the answer it applied — null when it
+  /// failed, was refused, or a newer call took over.
+  Future<TasteResponse?> _loadMain(int rid) async {
     loading = true;
     error = false;
     notifyListeners();
-    final sentRotation = List.of(_rotation);
-    final r = await _fetch(server, mainRequest());
-    if (_disposed || rid != _mainRid) return;
+    var r = await _fetch(server, mainRequest());
+    if (_disposed || rid != _mainRid) return null;
+    if (_passed.isNotEmpty && r.data != null && _noPickLeft(r.data!)) {
+      // Every song the random fallback could draw was passed over this
+      // visit: the empty answer would read as "scan pending", which it is
+      // not. Let the passed picks go and ask once more (the list is empty
+      // then, so once), so the picks start over.
+      _passed.clear();
+      r = await _fetch(server, mainRequest());
+      if (_disposed || rid != _mainRid) return null;
+    }
     loading = false;
     if (r.disabled) {
       disabled = true;
       notifyListeners();
       await _repingOnce();
-      return;
+      return null;
     }
     final data = r.data;
     if (data == null) {
       error = true;
-    } else if (filter == null &&
-        data.library?.filter == TasteFilter.unplayed) {
-      // A filter saved as `unplayed` (the retired never-played-only mode)
-      // reads as `fresh`. The client cannot know the saved filter before
-      // this first answer, so it asks again with `fresh`, once — without
-      // drawing or caching the never-played rows it just got (the listing
-      // stays on what it showed: placeholders on a first visit). `filter`
-      // is then this visit's choice, so the server remembers `fresh` and
-      // later visits ask once.
-      filter = TasteFilter.fresh;
-      await _loadMain();
-      return;
     } else {
-      _apply(data, sentRotation);
-      _store();
+      _apply(data);
     }
     notifyListeners();
+    return data;
   }
 
-  Future<void> _loadPeers() async {
-    final rid = ++_peersRid;
+  /// An answer with no pick left (the webapp's DISCOVERYPAGE.noPickLeft):
+  /// no seed at all, from the random fallback or with the scan-pending
+  /// flag — with picks passed over, the exclusions, not the scan, left the
+  /// server nothing to draw.
+  static bool _noPickLeft(TasteResponse r) =>
+      r.seeds.isEmpty &&
+      (r.seedSource == TasteSeedSource.random || r.notAnalyzed);
+
+  Future<void> _loadPeers(TasteRequest req, int rid) async {
+    _peersOut = true;
     loadingPeers = true;
     notifyListeners();
-    final r = await _fetch(server, peersRequest());
+    final r = await _fetch(server, req);
     if (_disposed || rid != _peersRid) return;
+    _peersOut = false;
     loadingPeers = false;
     if (r.disabled) {
       peersDisabled = true;
@@ -438,18 +371,13 @@ class DiscoveryPageController extends ChangeNotifier {
       await _repingOnce();
       return;
     }
-    // A transient failure keeps the rows already shown.
-    if (r.data != null) {
-      _applyPeers(r.data!.peers);
-      _peersDone = true;
-      _store();
-    }
+    // A failure draws no rows: the old batch's went when this batch landed.
+    _applyPeers(r.data?.peers);
     notifyListeners();
   }
 
-  void _apply(TasteResponse? r, Iterable<String> rotation) {
+  void _apply(TasteResponse? r) {
     seeded = r;
-    _seededRotation = Set.unmodifiable(rotation);
     final lib = r?.library;
     libraryRows = [
       for (final t in lib?.tracks ?? const <TasteTrack>[])
@@ -469,10 +397,6 @@ class DiscoveryPageController extends ChangeNotifier {
 
   static bool _answered(TastePeerGroup g) => g.reachable && !g.mismatched;
 
-  void _store() {
-    _cache[_slot] = _Snapshot(_cacheKey(), now(), seeded, peers, _peersDone);
-  }
-
   /// Settle WHY a taste call refused, once per page (DiscoverScreen's
   /// _probeAfterRefusal, same reasoning): a 403 from a route the flags
   /// advertised almost always means discovery was switched off since the
@@ -487,7 +411,7 @@ class DiscoveryPageController extends ChangeNotifier {
 
   /// "Check again" on the scan-pending card: re-ping first (config before
   /// data), then drop the latches — the one thing that should clear them is
-  /// the user asking — and fetch fresh.
+  /// the user asking — and the picks passed over, and ask again.
   Future<void> recheck() async {
     if (rechecking || _disposed) return;
     rechecking = true;
@@ -497,183 +421,78 @@ class DiscoveryPageController extends ChangeNotifier {
     rechecking = false;
     disabled = false;
     peersDisabled = false;
-    await load(force: true);
+    _passed.clear();
+    await load();
   }
 
   // ── the user's steering ──────────────────────────────────────────────
 
-  /// The checkbox (in the seeds sheet, applied at once as the webapp's is)
-  /// and the library-empty line's button: refetch the library with the
-  /// filter (remembered); peers do not depend on it. The filter flips
-  /// before the call goes out (the box ticks at once) and goes back if the
-  /// call fails.
-  Future<void> setFilter(TasteFilter f) async {
-    if (f == effectiveFilter) return;
-    final before = filter;
-    final rotationBefore = List.of(_rotation);
-    final peersBefore = peers;
-    final peersDoneBefore = _peersDone;
-    filter = f;
-    // The filter starts "New seeds" over — under the 403 latch too, so the
-    // "Check again" that later carries it is a remembered call. With a
-    // rotation out, that changes the seeds, so the peers call — whose
-    // centroid must match — is asked again too; otherwise only the library
-    // depends on the filter.
-    final reseed = _rotation.isNotEmpty;
-    _rotation.clear();
-    if (disabled || !available) return;
-    if (reseed) {
-      await load(force: true);
-    } else {
-      await _loadMain();
-    }
-    // A refetch that failed (or was refused) leaves the old rows up: put
-    // the choice back, so the selected chip names the rows actually shown
-    // and a later call does not remember a filter that never landed. Not
-    // when the user has tapped on since — that call owns `filter` now.
-    if ((error || disabled) && filter == f) {
-      filter = before;
-      _rotation
-        ..clear()
-        ..addAll(rotationBefore);
-      // As [setWindow]: the peers rows go back to the seeds still shown.
-      if (reseed) {
-        ++_peersRid;
-        loadingPeers = false;
-        _applyPeers(peersBefore);
-        _peersDone = peersDoneBefore;
-        if (seeded != null) _store();
-      }
-      notifyListeners();
-    }
-  }
-
-  /// The window chooser in the configuration bar: refetch every
-  /// source with the same seeds, drops and pins over the new window
-  /// (remembered, like the filter). The window decides the seeds, so the
-  /// peers call — whose centroid must match — is asked again too.
+  /// The window chooser in the configuration bar: remembered on this phone
+  /// and asked again of every source with the visit's pins and drops.
   ///
   /// Under the 403 latch nothing would be asked, so nothing changes: a
-  /// window set then would name rows it never produced, and ride out (and
-  /// be remembered) on the next "Check again". The bar's chooser is off
-  /// then too.
+  /// window set then would name rows it never produced. The bar's chooser
+  /// is off then too. A call that fails puts the old window back (the rows
+  /// still shown came from it — the peers rows too: a failed library call
+  /// leaves them be), remembered again.
   Future<void> setWindow(int w) async {
-    if (w == effectiveWindow || disabled || !available) return;
+    if (w == window || !kTasteWindows.contains(w) || disabled || !available) {
+      return;
+    }
     final before = window;
-    final peersBefore = peers;
-    final peersDoneBefore = _peersDone;
-    final rotationBefore = List.of(_rotation);
     window = w;
-    _rotation.clear();
+    _saveWindow(w);
     notifyListeners();
-    await load(force: true);
-    // As [setFilter]: a refetch that failed leaves the old rows up, so the
-    // bar goes back to the window those rows came from, and a later call
-    // does not remember a window that never landed. The peers call may
-    // still have answered over the NEW window's seeds — its rows go back
-    // too, so both sections keep one centroid, and the visit is stored
-    // again under the window it now shows (the peers answer had stored
-    // the new window's key).
+    await load();
+    if (_disposed) return;
     if ((error || disabled) && window == w) {
       window = before;
-      _rotation
-        ..clear()
-        ..addAll(rotationBefore);
-      ++_peersRid;
-      loadingPeers = false;
-      _applyPeers(peersBefore);
-      _peersDone = peersDoneBefore;
-      if (seeded != null) _store();
+      _saveWindow(before);
       notifyListeners();
     }
   }
 
-  /// The seeds sheet's "Use these N".
-  ///
-  /// [drop] are hashes switched off (sent as `exclude` with `remember`, so
-  /// the server keeps them); [restore] are switched back on — dropped from
-  /// this visit's list AND from the saved prefs, which otherwise keep
-  /// excluding them. [pins] replaces the visit's pins (app paths). The
-  /// sheet's checkbox is not part of this: it applies at once ([setFilter]).
-  ///
-  /// False when a restore could not be saved (the prefs read or write
-  /// failed): the server still excludes those songs from every call, so the
-  /// refetch leaves them out and the caller must say why.
-  Future<bool> applySeeds({
-    required int window,
+  /// The seeds sheet's "Use these N": [drop] are seed hashes switched off
+  /// (left out of every call this visit), [restore] are dropped ones used
+  /// again, [pins] replaces the visit's pins (app paths). Then one new call.
+  Future<void> applySeeds({
     Set<String> drop = const {},
     Set<String> restore = const {},
     required List<String> pins,
   }) async {
-    final pinsBefore = List.of(_pins);
-    var changed = drop.isNotEmpty || restore.isNotEmpty;
-    if (window != effectiveWindow) {
-      this.window = window;
-      changed = true;
-    }
+    _exclude.removeWhere(restore.contains);
     for (final h in drop) {
       if (!_exclude.contains(h)) _exclude.add(h);
-    }
-    var restored = true;
-    if (restore.isNotEmpty) {
-      _exclude.removeWhere(restore.contains);
-      restored = await _forget(restore);
     }
     _pins
       ..clear()
       ..addAll(pins.map(_appPath).take(kTastePinMax));
-    // Anything changed starts "New seeds" over; an apply that changed
-    // nothing keeps the seeds on screen.
-    if (changed ||
-        pinsBefore.length != _pins.length ||
-        pinsBefore.any((p) => !_pins.contains(p))) {
-      _rotation.clear();
-    }
-    if (_disposed) return restored;
-    await load(force: true);
-    return restored;
-  }
-
-  /// Takes [hashes] out of the saved exclusions. Read-modify-write over the
-  /// prefs route: a failed read sends nothing, since a PUT of a guessed
-  /// list would wipe the user's other exclusions. False when the read or
-  /// the write failed — the hashes are still saved, still excluded.
-  Future<bool> _forget(Set<String> hashes) async {
-    final got = await _fetchPrefs(server);
-    final saved = got.data?.exclude;
-    if (got.disabled || got.data == null) return false;
-    final next = (saved ?? const <String>[])
-        .where((h) => !hashes.contains(h))
-        .toList();
-    // None of them saved: nothing to take out, and nothing excludes them.
-    if (next.length == (saved?.length ?? 0)) return true;
-    final put = await _savePrefs(server, TastePrefs(exclude: next));
-    return !put.disabled && put.data != null;
+    if (_disposed) return;
+    await load();
   }
 
   /// Pin one more song ("Choose a song…" on the random card).
   Future<void> pinSong(String path) async {
     final p = _appPath(path);
-    if (!_pins.contains(p) && _pins.length < kTastePinMax) {
-      _pins.add(p);
-      _rotation.clear();
-    }
-    await load(force: true);
+    if (!_pins.contains(p) && _pins.length < kTastePinMax) _pins.add(p);
+    await load();
   }
 
-  /// "Another pick" on the nothing-finished card. The server's random seed
-  /// is deterministic per user per day (plan §2.8), so asking again would
-  /// answer the same song: a random library song is pinned instead. False
-  /// when none could be picked.
-  Future<bool> anotherPick() async {
-    final p = await _randomPick(server);
-    if (p == null || p.isEmpty || _disposed) return false;
-    _pins
-      ..clear()
-      ..add(_appPath(p));
-    _rotation.clear();
-    await load(force: true);
-    return true;
+  /// "Another pick" on the nothing-finished card: the pick on screen joins
+  /// the visit's passed picks, and the page asks again — every call sends
+  /// them in `exclude` (after the drops), so the server, which draws a
+  /// fresh random song per call, never repeats one this visit. When none is
+  /// left (the answer has no pick) the passed picks are let go and the call
+  /// asked once more ([_loadMain]), so the picks start over instead of a
+  /// false scan-pending card.
+  Future<void> anotherPick() async {
+    if (_disposed) return;
+    if (isRandom) {
+      for (final s in seeds) {
+        if (!s.pinned && !_passed.contains(s.hash)) _passed.add(s.hash);
+      }
+    }
+    await load();
   }
 
   // ── rows ─────────────────────────────────────────────────────────────

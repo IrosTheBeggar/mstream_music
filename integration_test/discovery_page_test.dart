@@ -5,10 +5,12 @@
 // Discover card under Listen on the home; tapping it fills the BROWSER
 // listing (no new screen): ONE library taste call (no network source, and
 // no peers call — the ping does not grant federationDiscovery), then the
-// configuration bar (the window, and "More options" for the seeds sheet,
-// where the one checkbox sits above the seeds) over "Songs from your
-// library" as the browser's own song rows, with no counts. Choosing a
-// window in the bar re-asks with it; Back returns to the server home. The
+// configuration bar (the window, and "More options" for the seeds sheet)
+// over "Songs from your library" as the browser's own song rows, with no
+// counts. Choosing a window in the bar re-asks with it and the phone
+// remembers it; Back returns to the server home, and opening Discover again
+// asks again (nothing is reused: the server draws a new random batch of
+// seeds on every call). The
 // mock's GET /api/ is unmatched (404), so the app falls back to the ping —
 // the flat shape the flags are read from.
 
@@ -20,6 +22,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:mstream_music/singletons/media.dart';
+import 'package:mstream_music/singletons/settings.dart';
 
 import 'helpers/test_helpers.dart';
 
@@ -66,7 +69,6 @@ void main() {
       'notAnalyzed': false,
       'model': {'id': 'effnet-discogs', 'version': '1'},
       'library': {
-        'filter': 'fresh',
         'tracks': [
           {
             'filepath': 'default/Moderat/Dawn Chorus.mp3',
@@ -152,6 +154,9 @@ void main() {
       }
       expect(card, findsOneWidget);
       expect(tasteBodies, isEmpty, reason: 'the home never fetches taste');
+      // The window is remembered on the phone (settings.json survives
+      // resetAppState): start every run from the default.
+      await SettingsManager().setDiscoverWindow(30);
 
       await tester.tap(card);
       await tester.pumpAndSettle(const Duration(seconds: 3));
@@ -160,7 +165,10 @@ void main() {
       expect(tasteBodies, hasLength(1));
       expect(tasteBodies.single['sources'], ['library']);
       expect(tasteBodies.single['newArtistsOnly'], isFalse);
+      expect(tasteBodies.single['window'], 30);
       expect(tasteBodies.single.containsKey('pin'), isFalse);
+      expect(tasteBodies.single.containsKey('remember'), isFalse);
+      expect(tasteBodies.single.containsKey('filter'), isFalse);
 
       // In the browser, not a pushed screen: the home's cards are gone and
       // the browser toolbar names the listing.
@@ -183,12 +191,12 @@ void main() {
       expect(find.textContaining('%'), findsNothing);
       expect(find.text('FROM THE NETWORK'), findsNothing);
 
-      // "More options" opens the seeds sheet, the checkbox above the
-      // seeds; closing it asks nothing.
+      // "More options" opens the seeds sheet with the seeds the answer was
+      // built from (no checkbox); closing it asks nothing.
       await tester.tap(find.text('More options'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(find.text('Based on'), findsOneWidget);
-      expect(find.text("Include songs I've played lately"), findsOneWidget);
+      expect(find.text("Include songs I've played lately"), findsNothing);
       expect(find.text('Manor'), findsOneWidget);
       expect(find.text('Roygbiv'), findsOneWidget);
       expect(find.text('Use these 2'), findsOneWidget);
@@ -196,7 +204,8 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(tasteBodies, hasLength(1));
 
-      // The window chooser re-asks with the new window, remembered.
+      // The window chooser re-asks with the new window, remembered on the
+      // phone.
       await tester.tap(find.text('30 days'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
       await tester.tap(find.ancestor(
@@ -205,8 +214,9 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 3));
       expect(tasteBodies, hasLength(2));
       expect(tasteBodies.last['window'], 90);
-      expect(tasteBodies.last['remember'], isTrue);
+      expect(tasteBodies.last.containsKey('remember'), isFalse);
       expect(find.text('90 days'), findsOneWidget);
+      expect(SettingsManager().discoverWindow, 90);
 
       // Back (the browser toolbar's) returns to the server home.
       await tester.tap(find.byIcon(Icons.arrow_back));
@@ -215,6 +225,24 @@ void main() {
       expect(find.text('Dawn Chorus'), findsNothing);
       expect(find.text('Discover', skipOffstage: false), findsOneWidget);
       expect(find.text('Auto DJ', skipOffstage: false), findsOneWidget);
+
+      // Opening Discover again asks again, over the remembered window.
+      if (card.evaluate().isEmpty) {
+        await tester.dragUntilVisible(
+          card,
+          find
+              .ancestor(
+                  of: find.text('Albums'), matching: find.byType(Scrollable))
+              .first,
+          const Offset(0, -200),
+        );
+      }
+      await tester.tap(card);
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+      expect(tasteBodies, hasLength(3), reason: 'no earlier answer reused');
+      expect(tasteBodies.last['window'], 90);
+      expect(find.text('90 days'), findsOneWidget);
+      await SettingsManager().setDiscoverWindow(30);
     },
   );
 }

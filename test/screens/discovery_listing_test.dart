@@ -2,7 +2,7 @@
 // phone's "browser format, not a new page"): the DisplayItems the controller
 // feeds the browser list — the configuration bar first, then sections and
 // the browser's own album and song items, in order; the connected-server
-// block hidden without connected servers; the states; the one checkbox —
+// block hidden without connected servers; the states; the seed picker —
 // and the frame DiscoveryListing keeps on BrowserManager's stack, swapped in
 // place as answers land and let go after Back. A widget pass draws it all
 // through the real Browser screen.
@@ -21,7 +21,6 @@ import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/browser.dart';
 import 'package:mstream_music/screens/discovery/discovery_listing.dart';
-import 'package:mstream_music/screens/discovery/discovery_widgets.dart';
 import 'package:mstream_music/screens/discovery/discovery_page_controller.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
@@ -45,12 +44,10 @@ void main() {
   });
 
   setUp(() {
-    DiscoveryPageController.clearCache();
     ServerManager().serverList.clear();
     server = discoveryServer();
   });
   tearDown(() {
-    DiscoveryPageController.clearCache();
     ServerManager().serverList.clear();
   });
 
@@ -62,21 +59,20 @@ void main() {
 
   DiscoveryPageController make(
           Future<DiscoveryFetchResult<TasteResponse>> Function(TasteRequest)
-              answer,
-          {Future<String?> Function(Server)? randomPick}) =>
+              answer) =>
       DiscoveryPageController(
         server: server,
         fetch: (_, r) => answer(r),
-        fetchPrefs: (_) async => const DiscoveryFetchResult.ok(TastePrefs()),
-        savePrefs: (_, p) async => DiscoveryFetchResult.ok(p),
         reping: (_) async {},
-        randomPick: randomPick ?? (_) async => null,
+        readWindow: () => kTasteDefaultWindow,
+        saveWindow: (_) {},
         now: () => DateTime.utc(2026, 10, 5, 12),
       );
 
   Future<DiscoveryFetchResult<TasteResponse>> usual(TasteRequest r) async =>
-      DiscoveryFetchResult.ok(
-          parse(isPeersCall(r) ? peersPayload() : mainPayload()));
+      DiscoveryFetchResult.ok(parse(isPeersCall(r)
+          ? peersPayload()
+          : mainPayload(exclude: excludeOf(r))));
 
   /// A compact picture of a listing: type, plus the key a test cares about
   /// (the section / state / footer key, the row's title, the album's name).
@@ -364,6 +360,31 @@ void main() {
       expect(DiscoveryListing().controller, same(c));
     });
 
+    test('a fresh open builds a fresh controller: no pins, drops or passed '
+        'picks carried over', () async {
+      // The flags off, so the app's own controller asks nothing (no
+      // network): what is under test is that open() builds a new one.
+      server.discoveryTasteAvailable = false;
+      DiscoveryListing().open(server);
+      await pumpEventQueue();
+      final first = DiscoveryListing().controller;
+      expect(first, isNotNull);
+      BrowserManager().popBrowser();
+      await pumpEventQueue();
+      expect(DiscoveryListing().controller, isNull);
+
+      DiscoveryListing().open(server);
+      await pumpEventQueue();
+      final second = DiscoveryListing().controller;
+      expect(second, isNotNull);
+      expect(second, isNot(same(first)));
+      expect(second!.passed, isEmpty);
+      expect(second.pins, isEmpty);
+      expect(second.exclude, isEmpty);
+      BrowserManager().popBrowser();
+      await pumpEventQueue();
+    });
+
     test('opening Discover again lets the previous controller go', () async {
       final first = make(usual);
       DiscoveryListing().open(server, controller: first);
@@ -410,32 +431,28 @@ void main() {
       return asked;
     }
 
-    testWidgets('the random card after a rotation says the seeds cycled '
-        'and offers New seeds first', (tester) async {
-      var asked = 0;
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: appSupportedLocales,
-        home: Scaffold(
-          body: DiscoveryRandomCard(
-            busy: false,
-            cycled: true,
-            onNewSeeds: () => asked++,
-            onAnotherPick: () {},
-            onChooseSong: () {},
-            onBrowse: () {},
-          ),
-        ),
-      ));
-      await tester.pumpAndSettle();
-      expect(find.text("You've been through every song you finished"),
-          findsOneWidget);
+    testWidgets('the random card: Another pick asks again with the pick '
+        'passed over; no New seeds on the card', (tester) async {
+      final asked = await pumpBrowser(tester,
+          answer: (r) async => DiscoveryFetchResult.ok(parse(isPeersCall(r)
+              ? {'peers': null}
+              : mainPayload(
+                  seedSource: 'random',
+                  fallback: true,
+                  network: false,
+                  seeds: [seedRow('hr', 'Pick', 'Someone')]))));
       expect(find.text('Finish a few songs and this page learns your taste'),
+          findsOneWidget);
+      expect(find.text("You've been through every song you finished"),
           findsNothing);
-      expect(find.text('New seeds'), findsOneWidget);
-      await tester.tap(find.text('New seeds'));
-      await tester.pump();
-      expect(asked, 1);
+      expect(find.text('New seeds'), findsNothing);
+      final before = asked.where((r) => !isPeersCall(r)).length;
+      await tester.tap(find.text('Another pick'));
+      await tester.pumpAndSettle();
+      final main = asked.where((r) => !isPeersCall(r)).toList();
+      expect(main, hasLength(before + 1));
+      expect(main.last.toJson()['exclude'], ['hr']);
+      expect(main.last.toJson().containsKey('pin'), isFalse);
     });
 
     testWidgets('the bar, the sections and the rows, with no numbers',
@@ -472,39 +489,38 @@ void main() {
       expect(find.textContaining('See all'), findsNothing);
     });
 
-    testWidgets('More options: the checkbox above the seeds, applied at once',
-        (tester) async {
+    testWidgets('More options: the seeds with their switches, no checkbox; '
+        'Use these asks again with the drop', (tester) async {
       final asked = await pumpBrowser(tester);
       final before = asked.where((r) => !isPeersCall(r)).length;
       await tester.tap(find.text('More options'));
       await tester.pumpAndSettle();
-      final box = find.byKey(const ValueKey('discovery-include-played'));
-      expect(box, findsOneWidget);
-      expect(find.text("Include songs I've played lately"), findsOneWidget);
-      expect(tester.widget<CheckboxListTile>(box).value, isFalse);
-      // Above the seeds.
-      expect(tester.getTopLeft(box).dy,
-          lessThan(tester.getTopLeft(find.text('Manor')).dy));
+      expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.text("Include songs I've played lately"), findsNothing);
+      expect(find.text('Manor'), findsOneWidget);
+      expect(find.text('Pick a song…'), findsOneWidget);
+      expect(find.textContaining('LEFT OUT', findRichText: true), findsNothing,
+          reason: 'nothing dropped on a fresh visit');
 
-      // As the webapp's: re-asked the moment it is ticked, no "Use these".
-      await tester.tap(box);
+      // Switch one seed off: nothing is asked until "Use these N".
+      await tester.tap(find.text('Roygbiv'));
+      await tester.pump();
+      expect(asked.where((r) => !isPeersCall(r)), hasLength(before));
+      await tester.tap(find.text('Use these 4'));
       await tester.pumpAndSettle();
-      expect(tester.widget<CheckboxListTile>(box).value, isTrue);
+      expect(find.text('Manor'), findsNothing, reason: 'the sheet closed');
       final main = asked.where((r) => !isPeersCall(r)).toList();
       expect(main, hasLength(before + 1));
-      expect(main.last.toJson()['filter'], 'all');
-      expect(main.last.toJson()['remember'], isTrue);
+      expect(main.last.toJson()['exclude'], ['h2']);
+      expect(main.last.toJson().containsKey('remember'), isFalse);
+      expect(DiscoveryListing().controller?.exclude, ['h2']);
 
-      // Reset is the seeds' — it leaves the checkbox alone; closing the
-      // sheet keeps it.
-      await tester.tap(find.text('Reset'));
-      await tester.pump();
-      expect(tester.widget<CheckboxListTile>(box).value, isTrue);
-      await tester.tap(find.byTooltip('Close'));
+      // The answer's excluded row is what the sheet draws as left out.
+      await tester.tap(find.text('More options'));
       await tester.pumpAndSettle();
-      expect(box, findsNothing);
-      expect(DiscoveryListing().controller?.includesPlayed, isTrue);
-      expect(asked.where((r) => !isPeersCall(r)), hasLength(before + 1));
+      expect(find.textContaining('LEFT OUT', findRichText: true),
+          findsOneWidget);
+      expect(find.text('Left h2'), findsOneWidget);
     });
 
     // The connected servers' rows without their art: a test has no image
@@ -590,25 +606,15 @@ void main() {
       expect(BrowserManager().albumDetail, same(c.albumItems[1]));
     });
 
-    testWidgets("the library-empty line's button re-asks with played songs",
-        (tester) async {
-      final asked = await pumpBrowser(tester,
+    testWidgets('the library-empty line has no button', (tester) async {
+      await pumpBrowser(tester,
           answer: (r) async => DiscoveryFetchResult.ok(parse(isPeersCall(r)
               ? peersPayload()
-              : r.filter == TasteFilter.all
-                  ? mainPayload(filter: 'all')
-                  : (mainPayload(tracks: const [])
-                    ..['library']['albums'] = const []))));
+              : (mainPayload(tracks: const [])
+                ..['library']['albums'] = const []))));
       expect(find.text('Nothing new in your library sounds like these songs.'),
           findsOneWidget);
-      await tester.tap(find.text("Include songs I've played lately"));
-      await tester.pumpAndSettle();
-      final main = asked.where((r) => !isPeersCall(r)).toList();
-      expect(main.last.toJson()['filter'], 'all');
-      expect(main.last.toJson()['remember'], isTrue);
-      expect(find.text('Dawn Chorus'), findsOneWidget);
-      expect(find.text('Nothing new in your library sounds like these songs.'),
-          findsNothing);
+      expect(find.text("Include songs I've played lately"), findsNothing);
     });
 
     Finder inBar(IconData icon) => find.descendant(
@@ -630,7 +636,7 @@ void main() {
     });
 
     testWidgets("New seeds replaces search on Discover's bar only, and "
-        'starts from other songs', (tester) async {
+        'is a plain re-ask', (tester) async {
       final held = <Completer<DiscoveryFetchResult<TasteResponse>>>[];
       var hold = false;
       final asked = await pumpBrowser(tester, toolbar: true, answer: (r) {
@@ -644,14 +650,14 @@ void main() {
       expect(button, findsOneWidget);
       expect(inBar(Icons.search), findsNothing);
 
+      final first = asked.where((r) => !isPeersCall(r)).last.toJson();
       hold = true;
       await tester.tap(button);
       await tester.pump();
       final main = asked.where((r) => !isPeersCall(r)).last.toJson();
-      expect(main['exclude'], ['h1', 'h2', 'h3', 'h4', 'h5'],
-          reason: "the shown answer's seeds, moved past");
-      expect(main['remember'], isFalse);
-      expect(c.rotation, ['h1', 'h2', 'h3', 'h4', 'h5']);
+      expect(main, first,
+          reason: 'the same question: the server draws a new random batch');
+      expect(main.containsKey('exclude'), isFalse);
       // The previous answer stays up under the bar's busy line; the button
       // is off until the new one lands.
       expect(find.text('Dawn Chorus'), findsOneWidget);
@@ -666,7 +672,7 @@ void main() {
               .onPressed,
           isNull);
 
-      // The next finished songs, and what they suggest.
+      // Another batch of finished songs, and what they suggest.
       Future<DiscoveryFetchResult<TasteResponse>> rotated(
               TasteRequest r) async =>
           isPeersCall(r)
@@ -722,7 +728,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(asked.length, greaterThan(before));
       expect(asked.where((r) => !isPeersCall(r)), hasLength(2),
-          reason: 'the library asked again, past the five-minute cache');
+          reason: 'the library asked again');
     });
   });
 }

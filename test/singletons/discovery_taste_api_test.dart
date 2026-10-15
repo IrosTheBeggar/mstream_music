@@ -57,15 +57,21 @@ void main() {
           () => ApiManager().fetchDiscoveryTaste(
               _server,
               const TasteRequest(
+                window: 90,
                 pin: ['/music/now.mp3'],
+                exclude: ['h-dropped'],
                 sources: {TasteSource.library, TasteSource.network},
               )));
       final req = seen.single;
       expect(req.method, 'POST');
       expect(req.url.path, '/api/v1/discovery/taste');
       expect(req.headers['x-access-token'], 'JWT');
+      // The whole body: no `remember`, `filter` or `staleDays` (the route
+      // answers 400 to those now).
       expect(jsonDecode(req.body), {
+        'window': 90,
         'pin': ['music/now.mp3'],
+        'exclude': ['h-dropped'],
         'sources': ['library', 'network'],
       });
       expect(res.disabled, isFalse);
@@ -100,43 +106,6 @@ void main() {
           () => ApiManager().fetchDiscoveryTaste(_server, const TasteRequest()));
       expect(thrown.disabled, isFalse);
       expect(thrown.data, isNull);
-    });
-  });
-
-  group('taste prefs', () {
-    test('GET reads the saved prefs', () async {
-      final seen = <http.Request>[];
-      final res = await _withMock(
-          seen,
-          (_) async => _json({'window': 90, 'filter': 'all', 'exclude': []}),
-          () => ApiManager().fetchDiscoveryTastePrefs(_server));
-      expect(seen.single.method, 'GET');
-      expect(seen.single.url.path, '/api/v1/discovery/taste/prefs');
-      expect(res.data!.window, 90);
-      expect(res.data!.filter, TasteFilter.all);
-      expect(res.data!.exclude, isEmpty);
-    });
-
-    test('PUT sends the patch and reads back the merged prefs', () async {
-      final seen = <http.Request>[];
-      final res = await _withMock(
-          seen,
-          (_) async => _json(
-              {'window': 7, 'filter': 'fresh', 'staleDays': 90, 'exclude': ['h']}),
-          () => ApiManager().saveDiscoveryTastePrefs(
-              _server, const TastePrefs(window: 7)));
-      expect(seen.single.method, 'PUT');
-      expect(seen.single.url.path, '/api/v1/discovery/taste/prefs');
-      expect(jsonDecode(seen.single.body), {'window': 7});
-      expect(res.data!.window, 7);
-      expect(res.data!.staleDays, 90);
-      expect(res.data!.exclude, ['h']);
-    });
-
-    test('jukebox mode 403s the prefs like the page', () async {
-      final res = await _withMock([], (_) async => _json({}, 403),
-          () => ApiManager().fetchDiscoveryTastePrefs(_server));
-      expect(res.disabled, isTrue);
     });
   });
 }

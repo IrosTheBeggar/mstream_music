@@ -1881,18 +1881,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverPageNewSeeds => 'Nouveaux morceaux de départ';
 
   @override
-  String get discoverPageSeedsCycled =>
-      'Vous avez fait le tour de tous les morceaux que vous avez terminés';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'Voici des suggestions autour d\'un morceau pris au hasard dans votre bibliothèque. « Nouveaux morceaux de départ » recommence à partir des derniers morceaux que vous avez terminés.';
-
-  @override
-  String get discoverPageIncludePlayed =>
-      'Inclure les morceaux écoutés récemment';
-
-  @override
   String get discoverPageAlbumsLibrary => 'Albums de votre bibliothèque';
 
   @override
@@ -1957,10 +1945,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed =>
-      'Impossible de rétablir ces morceaux. Réessayez.';
-
-  @override
   String get discoverPageRandomTitle =>
       'Écoutez quelques morceaux jusqu’au bout et cette page apprendra vos goûts';
 
@@ -1973,10 +1957,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => 'Choisir un morceau…';
-
-  @override
-  String get discoverPageRandomFailed =>
-      'Impossible de choisir un morceau au hasard.';
 
   @override
   String get discoverPageError =>
@@ -2005,9 +1985,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'Choix au hasard';
-
-  @override
-  String get discoverPageNewestFirst => 'les plus récents d’abord';
 
   @override
   String get discoverPageDroppedHeader => 'Écartés';

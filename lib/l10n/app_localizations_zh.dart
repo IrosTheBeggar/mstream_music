@@ -1761,16 +1761,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageNewSeeds => '换一批依据歌曲';
 
   @override
-  String get discoverPageSeedsCycled => '你听完的歌曲已经全部用过了';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      '这里是围绕你曲库中一首随机歌曲的推荐。“换一批依据歌曲”会从你最近听完的歌曲重新开始。';
-
-  @override
-  String get discoverPageIncludePlayed => '包括最近听过的歌曲';
-
-  @override
   String get discoverPageAlbumsLibrary => '来自你曲库的专辑';
 
   @override
@@ -1831,9 +1821,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed => '无法恢复这些歌曲。请重试。';
-
-  @override
   String get discoverPageRandomTitle => '听完几首歌，这个页面就会了解你的口味';
 
   @override
@@ -1845,9 +1832,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => '选择一首歌…';
-
-  @override
-  String get discoverPageRandomFailed => '无法随机选择歌曲。';
 
   @override
   String get discoverPageError => '无法加载“发现”。请检查连接后重试。';
@@ -1874,9 +1858,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => '随机挑选';
-
-  @override
-  String get discoverPageNewestFirst => '最新在前';
 
   @override
   String get discoverPageDroppedHeader => '已排除';

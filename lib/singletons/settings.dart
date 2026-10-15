@@ -6,6 +6,7 @@ import 'dart:ui' show Locale;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../objects/discovery.dart' show kTasteDefaultWindow, kTasteWindows;
 import '../objects/player_layout.dart';
 import '../theme/velvet_theme.dart';
 import '../util/write_chain.dart';
@@ -220,6 +221,10 @@ class SettingsManager {
   // not already in the library ("new artists only"). Sticky, shared by both
   // sections — mirrors the webapp's localStorage discoverNewArtistsOnly.
   bool discoverNewArtistsOnly = false;
+  // The Discover page's window ("Based on the last [30 days ▾]"), days; 0 =
+  // all time. Remembered on this phone only and sent with every taste call
+  // — the server stores nothing about the page (mStream plan §2.13).
+  int discoverWindow = kTasteDefaultWindow;
   // A phone notification when a federation request lands in an admin's
   // inbox (FederationInboxAlerts). On by default; the OS permission is only
   // asked for when there is something to show.
@@ -357,6 +362,10 @@ class SettingsManager {
       final cap = m['autoDownloadCap'];
       autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;
       discoverNewArtistsOnly = m['discoverNewArtistsOnly'] ?? false;
+      final window = m['discoverWindow'];
+      discoverWindow = window is int && kTasteWindows.contains(window)
+          ? window
+          : kTasteDefaultWindow;
       notifyFederationRequests = m['notifyFederationRequests'] ?? true;
       historyEnabled = m['historyEnabled'] ?? true;
       historySendToServer = m['historySendToServer'] ?? true;
@@ -565,6 +574,7 @@ class SettingsManager {
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
       'autoDownloadCap': autoDownloadCap,
       'discoverNewArtistsOnly': discoverNewArtistsOnly,
+      'discoverWindow': discoverWindow,
       'notifyFederationRequests': notifyFederationRequests,
       'historyEnabled': historyEnabled,
       'historySendToServer': historySendToServer,
@@ -662,6 +672,12 @@ class SettingsManager {
 
   Future<void> setDiscoverNewArtistsOnly(bool v) async {
     discoverNewArtistsOnly = v;
+    await _save();
+  }
+
+  Future<void> setDiscoverWindow(int v) async {
+    if (!kTasteWindows.contains(v)) return;
+    discoverWindow = v;
     await _save();
   }
 

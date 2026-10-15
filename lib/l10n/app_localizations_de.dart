@@ -1884,17 +1884,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverPageNewSeeds => 'Neue Ausgangstitel';
 
   @override
-  String get discoverPageSeedsCycled =>
-      'Du hast alle Titel durch, die du zu Ende gehört hast';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'Hier sind Vorschläge rund um einen zufälligen Titel aus deiner Bibliothek. „Neue Ausgangstitel“ beginnt wieder bei den zuletzt zu Ende gehörten Titeln.';
-
-  @override
-  String get discoverPageIncludePlayed => 'Kürzlich gehörte Titel einbeziehen';
-
-  @override
   String get discoverPageAlbumsLibrary => 'Alben aus deiner Bibliothek';
 
   @override
@@ -1959,10 +1948,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed =>
-      'Die Titel konnten nicht zurückgeholt werden. Versuch es erneut.';
-
-  @override
   String get discoverPageRandomTitle =>
       'Hör ein paar Titel zu Ende, dann lernt diese Seite deinen Geschmack';
 
@@ -1975,9 +1960,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => 'Titel wählen…';
-
-  @override
-  String get discoverPageRandomFailed => 'Konnte keinen Zufallstitel wählen.';
 
   @override
   String get discoverPageError =>
@@ -2006,9 +1988,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'Zufällige Auswahl';
-
-  @override
-  String get discoverPageNewestFirst => 'neueste zuerst';
 
   @override
   String get discoverPageDroppedHeader => 'Ausgelassen';

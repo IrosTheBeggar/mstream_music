@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/discovery.dart';
 
 // Fixtures follow the Discover page contract (mStream
-// docs/discovery-page-plan.md §3.1–§3.2): POST /api/v1/discovery/taste and
-// GET/PUT /api/v1/discovery/taste/prefs. Lite metadata is kebab-case, paths
+// docs/discovery-page-plan.md §3.1): POST /api/v1/discovery/taste, the one
+// stateless route. Lite metadata is kebab-case, paths
 // are vpath-form WITHOUT a leading slash, timestamps are ISO (`toIso`), and
 // every network / peers row carries the `source` the server stamps on it.
 
@@ -64,7 +64,6 @@ Map<String, dynamic> _fullPayload() => {
       'notAnalyzed': false,
       'model': {'id': 'effnet-discogs', 'version': '1.0'},
       'library': {
-        'filter': 'fresh',
         'tracks': [
           {
             'filepath': 'music/Tycho/Awake.flac',
@@ -239,7 +238,6 @@ void main() {
 
     test('library tracks are DiscoveryTracks with play facts', () {
       final lib = r.library!;
-      expect(lib.filter, TasteFilter.fresh);
       expect(lib.capped, isFalse);
       expect(lib.tracks, hasLength(2));
       final t = lib.tracks[0];
@@ -363,7 +361,7 @@ void main() {
         'seeds': [
           {'hash': 'h', 'filepath': 'music/a.mp3'},
         ],
-        'library': {'filter': 'unplayed', 'tracks': [], 'albums': []},
+        'library': {'tracks': [], 'albums': []},
         'network': null,
         'peers': null,
       });
@@ -375,7 +373,6 @@ void main() {
       expect(seed.pinned, isFalse);
       expect(seed.analyzed, isTrue, reason: 'absent reads as analyzed');
       expect(seed.outcome, isNull);
-      expect(r.library!.filter, TasteFilter.unplayed);
       expect(r.library!.tracks, isEmpty);
       expect(r.library!.capped, isFalse);
       expect(r.network, isNull);
@@ -451,7 +448,6 @@ void main() {
           {'hash': 'ok', 'filepath': 'music/ok.mp3'},
         ],
         'library': {
-          'filter': 7,
           'capped': 'yes',
           'tracks': [
             {'similarity': 0.9},
@@ -480,7 +476,6 @@ void main() {
         },
       });
       expect(r.seeds.map((s) => s.hash), ['ok']);
-      expect(r.library!.filter, isNull);
       expect(r.library!.capped, isFalse);
       final t = r.library!.tracks.single;
       expect(t.filepath, 'music/t.mp3');
@@ -615,7 +610,7 @@ void main() {
   });
 
   group('TasteRequest.toJson', () {
-    test('an empty request sends nothing, so saved prefs apply', () {
+    test('an empty request sends nothing, so the server defaults apply', () {
       expect(const TasteRequest().toJson(), isEmpty);
     });
 
@@ -624,9 +619,6 @@ void main() {
         window: 90,
         pin: ['/music/now playing.mp3', 'music/picked.flac'],
         exclude: ['h1', 'h2'],
-        remember: true,
-        filter: TasteFilter.unplayed,
-        staleDays: 120,
         sources: {TasteSource.peers, TasteSource.library},
         limit: TasteLimits(seeds: 6, tracks: 24),
         newArtistsOnly: false,
@@ -636,9 +628,6 @@ void main() {
         'window': 90,
         'pin': ['music/now playing.mp3', 'music/picked.flac'],
         'exclude': ['h1', 'h2'],
-        'remember': true,
-        'filter': 'unplayed',
-        'staleDays': 120,
         'sources': ['library', 'peers'],
         'limit': {'seeds': 6, 'tracks': 24},
         'newArtistsOnly': false,
@@ -652,86 +641,28 @@ void main() {
 
     test('values the route would 400 on are clamped or left out', () {
       final j = TasteRequest(
-        window: 14, // not a window the route takes → the saved pref
-        pin: ['/a', '/', ...List.generate(10, (i) => 'p$i')],
+        window: 14, // not a window the route takes → the server's default
+        pin: ['/a', '/', ...List.generate(14, (i) => 'p$i')],
         exclude: ['', 'x' * 129, ...List.generate(205, (i) => 'h$i')],
-        staleDays: 99999,
         sources: const {},
         limit: const TasteLimits(
-            seeds: 99, tracks: 0, albums: 99, network: 99, peers: 99),
+            seeds: 0, tracks: -1, albums: 99, network: 99, peers: 99),
         ignoreVPaths: const [],
       ).toJson();
       expect(j.containsKey('window'), isFalse);
-      expect(j['pin'], ['a', 'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
-          reason: '≤ 8 pins, slashes stripped, empty paths dropped');
+      expect(j['pin'], ['a', for (var i = 0; i < 11; i++) 'p$i'],
+          reason: '≤ 12 pins (= the seed limit), slashes stripped, empty '
+              'paths dropped');
+      expect(kTastePinMax, 12);
       final ex = j['exclude'] as List;
       expect(ex, hasLength(200));
       expect(ex.first, 'h5', reason: 'the newest 200 are kept');
       expect(ex.last, 'h204');
-      expect(j['staleDays'], 3650);
       expect(j.containsKey('sources'), isFalse);
       expect(j['limit'],
-          {'seeds': 12, 'tracks': 1, 'albums': 24, 'network': 50, 'peers': 25});
+          {'seeds': 1, 'tracks': 0, 'albums': 24, 'network': 50, 'peers': 25},
+          reason: 'seeds 1..12; the row limits may be 0');
       expect(j.containsKey('ignoreVPaths'), isFalse);
-    });
-  });
-
-  group('TastePrefs', () {
-    test('parses the saved prefs', () {
-      final p = TastePrefs.fromServerMap({
-        'window': 7,
-        'exclude': ['h1', 'h2'],
-        'filter': 'all',
-        'staleDays': 30,
-      });
-      expect(p.window, 7);
-      expect(p.exclude, ['h1', 'h2']);
-      expect(p.filter, TasteFilter.all);
-      expect(p.staleDays, 30);
-    });
-
-    test('accepts a {prefs: …} envelope', () {
-      final p = TastePrefs.fromServerMap({
-        'prefs': {'window': 0, 'filter': 'fresh'}
-      });
-      expect(p.window, 0);
-      expect(p.filter, TasteFilter.fresh);
-    });
-
-    test('nothing saved, or junk, reads as unset', () {
-      final empty = TastePrefs.fromServerMap({});
-      expect(empty.window, isNull);
-      expect(empty.exclude, isNull);
-      expect(empty.filter, isNull);
-      expect(empty.staleDays, isNull);
-      final junk = TastePrefs.fromServerMap({
-        'window': 45,
-        'exclude': ['ok', 3, null, ''],
-        'filter': 'recent',
-        'staleDays': 0,
-      });
-      expect(junk.window, isNull);
-      expect(junk.exclude, ['ok']);
-      expect(junk.filter, isNull);
-      expect(junk.staleDays, isNull);
-    });
-
-    test('a patch sends only what it sets', () {
-      expect(const TastePrefs().toJson(), isEmpty);
-      expect(const TastePrefs(window: 90).toJson(), {'window': 90});
-      expect(
-          TastePrefs(
-                  exclude: List.generate(201, (i) => 'h$i'),
-                  filter: TasteFilter.fresh,
-                  staleDays: 0)
-              .toJson(),
-          {
-            'exclude': List.generate(200, (i) => 'h${i + 1}'),
-            'filter': 'fresh',
-            'staleDays': 1,
-          });
-      expect(const TastePrefs(exclude: []).toJson(), {'exclude': []},
-          reason: 'an empty list clears the saved exclusions');
     });
   });
 

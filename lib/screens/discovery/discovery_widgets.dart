@@ -84,13 +84,11 @@ void discoveryToast(BuildContext context, String message) {
   ));
 }
 
-/// "More options": the seeds sheet. "Use these N" pops with the apply in
-/// flight, so a restore the server would not take can still be reported
-/// once the sheet is gone.
+/// "More options": the seeds sheet. "Use these N" pops it and asks again;
+/// the page shows the new answer when it lands.
 Future<void> discoveryEditSeeds(
     BuildContext context, DiscoveryPageController c) async {
-  final l = AppLocalizations.of(context);
-  final pending = await showModalBottomSheet<Future<bool>>(
+  await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: VelvetColors.surface,
@@ -99,11 +97,6 @@ Future<void> discoveryEditSeeds(
     ),
     builder: (_) => DiscoverySeedsSheet(controller: c),
   );
-  if (pending == null) return;
-  final restored = await pending;
-  if (!restored && context.mounted) {
-    discoveryToast(context, l.discoverPageRestoreFailed);
-  }
 }
 
 /// "Choose a song…" on the nothing-finished card: pin one of your own.
@@ -123,15 +116,6 @@ Future<void> discoveryChooseSong(
   final path = picked?.data;
   if (path == null) return;
   await c.pinSong(path);
-}
-
-/// "Another pick" on the nothing-finished card.
-Future<void> discoveryAnotherPick(
-    BuildContext context, DiscoveryPageController c) async {
-  final l = AppLocalizations.of(context);
-  if (!await c.anotherPick() && context.mounted) {
-    discoveryToast(context, l.discoverPageRandomFailed);
-  }
 }
 
 /// "Browse your library": the server's File Explorer, pushed over Discover
@@ -211,9 +195,8 @@ class _HitArea extends StatelessWidget {
 }
 
 /// The gray configuration bar, the listing's first row: "Based on the last
-/// [30 days ▾]" (the window's one home) and "More options", which opens the
-/// seeds sheet — where the one checkbox, "Include songs I've played lately",
-/// sits above the seeds. One Wrap, so a narrow screen or a large text
+/// [30 days ▾]" (the window's one home, remembered on this phone) and "More
+/// options", which opens the seeds sheet. One Wrap, so a narrow screen or a large text
 /// setting moves "More options" to a second line instead of overflowing.
 ///
 /// Each control is off — and dimmed, since their text carries its own
@@ -232,7 +215,7 @@ class DiscoveryConfigBar extends StatelessWidget {
     final c = controller;
     final idle = !c.loading && !c.disabled;
     final canSeeds = idle && c.seeded != null;
-    final current = c.effectiveWindow;
+    final current = c.window;
     // Plain text colours, not the link colour: on the bar's `raised` the
     // primary is unreadable in Light (amber on light gray) and the
     // secondary text too faint in Velvet.
@@ -679,38 +662,27 @@ class DiscoveryScanPendingCard extends StatelessWidget {
 /// library itself.
 class DiscoveryRandomCard extends StatelessWidget {
   final bool busy;
-  /// The pick came from a "New seeds" rotation that went past every
-  /// finished song: the card says so and offers New seeds first.
-  final bool cycled;
   final VoidCallback onAnotherPick;
   final VoidCallback onChooseSong;
   final VoidCallback onBrowse;
-  final VoidCallback? onNewSeeds;
   const DiscoveryRandomCard({
     super.key,
     required this.busy,
-    this.cycled = false,
     required this.onAnotherPick,
     required this.onChooseSong,
     required this.onBrowse,
-    this.onNewSeeds,
   });
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return _StateCard(
-      title: cycled ? l.discoverPageSeedsCycled : l.discoverPageRandomTitle,
-      body: cycled ? l.discoverPageSeedsCycledBody : l.discoverPageRandomBody,
+      title: l.discoverPageRandomTitle,
+      body: l.discoverPageRandomBody,
       actions: [
-        if (cycled)
-          DiscoveryPill(l.discoverPageNewSeeds,
-              icon: Icons.refresh,
-              primary: true,
-              onTap: busy ? null : onNewSeeds),
         DiscoveryPill(l.discoverPageAnotherPick,
             icon: Icons.casino_outlined,
-            primary: !cycled,
+            primary: true,
             onTap: busy ? null : onAnotherPick),
         DiscoveryPill(l.discoverPageChooseSong,
             icon: Icons.search, onTap: busy ? null : onChooseSong),
@@ -743,12 +715,8 @@ Widget discoveryStateWidget(BuildContext context, DisplayItem item,
     case DiscoveryListingState.random:
       return DiscoveryRandomCard(
         busy: c == null || c.loading,
-        cycled: c?.seedsCycled ?? false,
-        onNewSeeds: () {
-          if (c != null) c.newSeeds();
-        },
         onAnotherPick: () {
-          if (c != null) discoveryAnotherPick(context, c);
+          if (c != null) unawaited(c.anotherPick());
         },
         onChooseSong: () {
           if (c != null) discoveryChooseSong(context, c);
@@ -758,17 +726,7 @@ Widget discoveryStateWidget(BuildContext context, DisplayItem item,
         },
       );
     case DiscoveryListingState.libraryEmpty:
-      // The way out is to let played songs back in — offered only while
-      // they are left out.
-      final offer = c != null && !c.includesPlayed;
-      return DiscoveryHint(
-        l.discoverPageLibraryNothing,
-        action: offer ? l.discoverPageIncludePlayed : null,
-        onAction: offer
-            ? () => c.setFilter(
-                DiscoveryPageController.filterFor(includePlayed: true))
-            : null,
-      );
+      return DiscoveryHint(l.discoverPageLibraryNothing);
     case DiscoveryListingState.peersQuiet:
       return DiscoveryHint(l.discoverPagePeersQuiet);
     case null:

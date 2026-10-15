@@ -1472,19 +1472,7 @@
   },
   "discoverPageNewSeeds": "New seeds",
   "@discoverPageNewSeeds": {
-    "description": "Tooltip of the refresh button on the Discover page's top bar (where other lists have search): starts the page from other songs you finished — the next ones back in your history — instead of the ones it is based on now."
-  },
-  "discoverPageSeedsCycled": "You've been through every song you finished",
-  "@discoverPageSeedsCycled": {
-    "description": "Title of the random-pick card once New seeds has gone past every finished song"
-  },
-  "discoverPageSeedsCycledBody": "Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.",
-  "@discoverPageSeedsCycledBody": {
-    "description": "Body of that card; names the New seeds button"
-  },
-  "discoverPageIncludePlayed": "Include songs I've played lately",
-  "@discoverPageIncludePlayed": {
-    "description": "The one checkbox in Discover's seeds sheet (opened from \"More options\"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not."
+    "description": "Tooltip of the refresh button on the Discover page's top bar (where other lists have search): asks again, and the server answers from a new random batch of the songs you finished."
   },
   "discoverPageAlbumsLibrary": "Albums from your library",
   "@discoverPageAlbumsLibrary": {
@@ -1562,10 +1550,6 @@
       }
     }
   },
-  "discoverPageRestoreFailed": "Couldn't bring those songs back. Try again.",
-  "@discoverPageRestoreFailed": {
-    "description": "Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out)."
-  },
   "discoverPageRandomTitle": "Finish a few songs and this page learns your taste",
   "@discoverPageRandomTitle": {
     "description": "Card title when nothing has been finished yet."
@@ -1581,10 +1565,6 @@
   "discoverPageChooseSong": "Choose a song…",
   "@discoverPageChooseSong": {
     "description": "Button on the nothing-finished card: pick the seed song yourself."
-  },
-  "discoverPageRandomFailed": "Couldn't pick a random song.",
-  "@discoverPageRandomFailed": {
-    "description": "Snackbar when no random song could be picked."
   },
   "discoverPageError": "Discover couldn't load. Check the connection and try again.",
   "@discoverPageError": {
@@ -1616,7 +1596,7 @@
   },
   "discoverPageRecentHeader": "Finished recently",
   "@discoverPageRecentHeader": {
-    "description": "Seeds sheet group: seeds from recent play history."
+    "description": "Seeds sheet group: seeds drawn at random from the songs finished in the chosen window."
   },
   "discoverPageCountersHeader": "Played most",
   "@discoverPageCountersHeader": {
@@ -1626,13 +1606,9 @@
   "@discoverPageRandomHeader": {
     "description": "Group header in the Discover page's seeds sheet over the random seed the server picked because nothing was finished yet (in place of \"Finished recently\")."
   },
-  "discoverPageNewestFirst": "newest first",
-  "@discoverPageNewestFirst": {
-    "description": "Small note next to the recent seeds header."
-  },
   "discoverPageDroppedHeader": "Left out",
   "@discoverPageDroppedHeader": {
-    "description": "Seeds sheet group: seeds the user switched off (remembered on the server)."
+    "description": "Seeds sheet group: seeds the user switched off (left out for the rest of this visit)."
   },
   "discoverPageDroppedNote": "switch one on to bring it back",
   "@discoverPageDroppedNote": {

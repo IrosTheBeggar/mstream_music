@@ -1860,17 +1860,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverPageNewSeeds => 'New seeds';
 
   @override
-  String get discoverPageSeedsCycled =>
-      'You\'ve been through every song you finished';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.';
-
-  @override
-  String get discoverPageIncludePlayed => 'Include songs I\'ve played lately';
-
-  @override
   String get discoverPageAlbumsLibrary => 'Albums from your library';
 
   @override
@@ -1935,10 +1924,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed =>
-      'Couldn\'t bring those songs back. Try again.';
-
-  @override
   String get discoverPageRandomTitle =>
       'Finish a few songs and this page learns your taste';
 
@@ -1951,9 +1936,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => 'Choose a song…';
-
-  @override
-  String get discoverPageRandomFailed => 'Couldn\'t pick a random song.';
 
   @override
   String get discoverPageError =>
@@ -1982,9 +1964,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'Random pick';
-
-  @override
-  String get discoverPageNewestFirst => 'newest first';
 
   @override
   String get discoverPageDroppedHeader => 'Left out';

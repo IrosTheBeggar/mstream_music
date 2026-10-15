@@ -3216,29 +3216,11 @@ abstract class AppLocalizations {
   /// **'More options'**
   String get discoverPageMoreOptions;
 
-  /// Tooltip of the refresh button on the Discover page's top bar (where other lists have search): starts the page from other songs you finished — the next ones back in your history — instead of the ones it is based on now.
+  /// Tooltip of the refresh button on the Discover page's top bar (where other lists have search): asks again, and the server answers from a new random batch of the songs you finished.
   ///
   /// In en, this message translates to:
   /// **'New seeds'**
   String get discoverPageNewSeeds;
-
-  /// Title of the random-pick card once New seeds has gone past every finished song
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve been through every song you finished'**
-  String get discoverPageSeedsCycled;
-
-  /// Body of that card; names the New seeds button
-  ///
-  /// In en, this message translates to:
-  /// **'Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.'**
-  String get discoverPageSeedsCycledBody;
-
-  /// The one checkbox in Discover's seeds sheet (opened from "More options"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not.
-  ///
-  /// In en, this message translates to:
-  /// **'Include songs I\'ve played lately'**
-  String get discoverPageIncludePlayed;
 
   /// Discover section header (shown in small caps): albums from the user's own library.
   ///
@@ -3324,12 +3306,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 year ago} other{{count} years ago}}'**
   String discoverPageAgoYears(int count);
 
-  /// Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out).
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t bring those songs back. Try again.'**
-  String get discoverPageRestoreFailed;
-
   /// Card title when nothing has been finished yet.
   ///
   /// In en, this message translates to:
@@ -3353,12 +3329,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a song…'**
   String get discoverPageChooseSong;
-
-  /// Snackbar when no random song could be picked.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t pick a random song.'**
-  String get discoverPageRandomFailed;
 
   /// Shown when the Discover page could not load and has nothing to show.
   ///
@@ -3390,7 +3360,7 @@ abstract class AppLocalizations {
   /// **'Picked for this visit'**
   String get discoverPagePickedHeader;
 
-  /// Seeds sheet group: seeds from recent play history.
+  /// Seeds sheet group: seeds drawn at random from the songs finished in the chosen window.
   ///
   /// In en, this message translates to:
   /// **'Finished recently'**
@@ -3408,13 +3378,7 @@ abstract class AppLocalizations {
   /// **'Random pick'**
   String get discoverPageRandomHeader;
 
-  /// Small note next to the recent seeds header.
-  ///
-  /// In en, this message translates to:
-  /// **'newest first'**
-  String get discoverPageNewestFirst;
-
-  /// Seeds sheet group: seeds the user switched off (remembered on the server).
+  /// Seeds sheet group: seeds the user switched off (left out for the rest of this visit).
   ///
   /// In en, this message translates to:
   /// **'Left out'**

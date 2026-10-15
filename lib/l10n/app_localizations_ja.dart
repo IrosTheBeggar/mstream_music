@@ -1800,16 +1800,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageNewSeeds => 'もとにする曲を変える';
 
   @override
-  String get discoverPageSeedsCycled => '最後まで聴いた曲をすべて使い切りました';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'ライブラリからランダムに選んだ曲をもとにしたおすすめです。「もとにする曲を変える」で、最近最後まで聴いた曲からやり直します。';
-
-  @override
-  String get discoverPageIncludePlayed => '最近聴いた曲も含める';
-
-  @override
   String get discoverPageAlbumsLibrary => 'ライブラリのアルバム';
 
   @override
@@ -1870,9 +1860,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed => '曲を元に戻せませんでした。もう一度お試しください。';
-
-  @override
   String get discoverPageRandomTitle => '何曲か最後まで聴くと、このページがあなたの好みを学びます';
 
   @override
@@ -1884,9 +1871,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => '曲を選ぶ…';
-
-  @override
-  String get discoverPageRandomFailed => 'ランダムな曲を選べませんでした。';
 
   @override
   String get discoverPageError => 'ディスカバーを読み込めませんでした。接続を確認して、もう一度お試しください。';
@@ -1913,9 +1897,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'ランダムに選んだ曲';
-
-  @override
-  String get discoverPageNewestFirst => '新しい順';
 
   @override
   String get discoverPageDroppedHeader => '除外した曲';

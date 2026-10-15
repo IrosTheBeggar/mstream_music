@@ -270,11 +270,12 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
-  // Discover's "New seeds": the open frame's controller moves past the
-  // seeds the page is based on (DiscoveryPageController.newSeeds). Off
-  // while it could do nothing — no answer yet, a call out (the bar's thin
-  // line shows it; the rows stay up), the route refused — so the button
-  // follows the controller, not only the browser streams.
+  // Discover's "New seeds": the open frame's controller asks again
+  // (DiscoveryPageController.refresh) — a plain re-ask, which the server
+  // answers from a new random batch of seeds. Off while it could do nothing
+  // — no answer yet, a call out (the bar's thin line shows it; the rows stay
+  // up), the route refused — so the button follows the controller, not only
+  // the browser streams.
   Widget _newSeedsButton(AppLocalizations l) {
     final c = DiscoveryListing().controller;
     Widget button(bool on) => IconButton(
@@ -284,12 +285,12 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           disabledColor:
               VelvetColors.appBarTextSecondary.withValues(alpha: 0.4),
           tooltip: l.discoverPageNewSeeds,
-          onPressed: on ? () => unawaited(c!.newSeeds()) : null,
+          onPressed: on ? () => unawaited(c!.refresh()) : null,
         );
     if (c == null) return button(false);
     return ListenableBuilder(
       listenable: c,
-      builder: (_, _) => button(c.canNewSeeds),
+      builder: (_, _) => button(c.canRefresh),
     );
   }
 
@@ -504,8 +505,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // frame mixes the library's rows with connected servers' — so no
     // page-wide Play / Add all / Download, which would act on both at once
     // (and offer to download a peer's tracks unasked). Back · label ·
-    // New seeds: where other lists have search, Discover's bar starts the
-    // page from other songs you finished ([_newSeedsButton]).
+    // New seeds: where other lists have search, Discover's bar asks again,
+    // from a new random batch of songs you finished ([_newSeedsButton]).
     final canBack = BrowserManager().browserCache.length > 1;
     final discover = DiscoveryListing.isListing(s.list);
     final targets = discover ? const <DisplayItem>[] : _actionTargets;

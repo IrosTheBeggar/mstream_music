@@ -850,34 +850,22 @@ class ApiManager {
   /// uniform 404 for an unknown / not-yet-embedded seed) is a plain error and
   /// the caller just skips that refresh.
   Future<DiscoveryFetchResult<T>> _postDiscovery<T>(
-          Server server,
-          String location,
-          Map<String, dynamic> body,
-          T Function(Map) parse,
-          {Duration timeout = const Duration(seconds: 15)}) =>
-      _sendDiscovery('POST', server, location, body, parse, timeout: timeout);
-
-  /// [_postDiscovery] for any method: GET sends no body, POST / PUT send
-  /// [body] as JSON. Same classification, same never-throws contract.
-  Future<DiscoveryFetchResult<T>> _sendDiscovery<T>(
-      String method,
       Server server,
       String location,
-      Map<String, dynamic>? body,
+      Map<String, dynamic> body,
       T Function(Map) parse,
       {Duration timeout = const Duration(seconds: 15)}) async {
     try {
-      final uri = server.apiUri(location);
-      final headers = {
-        'Content-Type': 'application/json',
-        'x-access-token': server.authToken ?? '',
-      };
-      final Future<http.Response> call = switch (method) {
-        'GET' => _direct.get(uri, headers: headers),
-        'PUT' => _direct.put(uri, headers: headers, body: jsonEncode(body)),
-        _ => _direct.post(uri, headers: headers, body: jsonEncode(body)),
-      };
-      final response = await call.timeout(timeout);
+      final response = await _direct
+          .post(
+            server.apiUri(location),
+            body: jsonEncode(body),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.authToken ?? '',
+            },
+          )
+          .timeout(timeout);
       if (response.statusCode == 403) {
         return DiscoveryFetchResult<T>.disabled();
       }
@@ -910,33 +898,6 @@ class ApiManager {
       req.toJson(),
       (m) => TasteResponse.fromServerMap(m),
       timeout: const Duration(seconds: 30),
-    );
-  }
-
-  /// GET /api/v1/discovery/taste/prefs — the page's saved window, filter,
-  /// stale threshold and dropped seeds (user_settings `discovery:page`).
-  Future<DiscoveryFetchResult<TastePrefs>> fetchDiscoveryTastePrefs(
-      Server server) {
-    return _sendDiscovery(
-      'GET',
-      server,
-      '/api/v1/discovery/taste/prefs',
-      null,
-      (m) => TastePrefs.fromServerMap(m),
-    );
-  }
-
-  /// PUT /api/v1/discovery/taste/prefs — saves the set fields of [patch] and
-  /// answers the merged prefs. The public-mode account never persists (the
-  /// server answers without saving); jukebox mode 403s like the page.
-  Future<DiscoveryFetchResult<TastePrefs>> saveDiscoveryTastePrefs(
-      Server server, TastePrefs patch) {
-    return _sendDiscovery(
-      'PUT',
-      server,
-      '/api/v1/discovery/taste/prefs',
-      patch.toJson(),
-      (m) => TastePrefs.fromServerMap(m),
     );
   }
 

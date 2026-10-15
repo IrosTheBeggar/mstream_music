@@ -1882,18 +1882,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverPageNewSeeds => 'Nuevas canciones base';
 
   @override
-  String get discoverPageSeedsCycled =>
-      'Ya has pasado por todas las canciones que terminaste';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'Aquí tienes sugerencias en torno a una canción al azar de tu biblioteca. «Nuevas canciones base» vuelve a empezar por las últimas canciones que terminaste.';
-
-  @override
-  String get discoverPageIncludePlayed =>
-      'Incluir canciones que he escuchado hace poco';
-
-  @override
   String get discoverPageAlbumsLibrary => 'Álbumes de tu biblioteca';
 
   @override
@@ -1958,10 +1946,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed =>
-      'No se pudieron recuperar esas canciones. Vuelve a intentarlo.';
-
-  @override
   String get discoverPageRandomTitle =>
       'Escucha unas cuantas canciones enteras y esta página aprenderá tu gusto';
 
@@ -1974,10 +1958,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => 'Elegir una canción…';
-
-  @override
-  String get discoverPageRandomFailed =>
-      'No se pudo elegir una canción al azar.';
 
   @override
   String get discoverPageError =>
@@ -2006,9 +1986,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'Selección aleatoria';
-
-  @override
-  String get discoverPageNewestFirst => 'las más recientes primero';
 
   @override
   String get discoverPageDroppedHeader => 'Excluidas';

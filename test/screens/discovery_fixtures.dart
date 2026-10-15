@@ -40,15 +40,22 @@ Map<String, dynamic> trackRow(String title, String artist, double sim,
       'lastPlayed': lastPlayed,
     };
 
-/// A history-seeded library + network answer.
+/// The request's `exclude` hashes (none when it sent none) — what a fake
+/// route echoes back as the answer's `excluded` rows.
+List<String> excludeOf(TasteRequest r) =>
+    (r.toJson()['exclude'] as List?)?.cast<String>() ?? const [];
+
+/// A history-seeded library + network answer. [exclude] is the request's
+/// exclusions: the stateless route lists a row for each one that resolves,
+/// and none on a call that sent none.
 Map<String, dynamic> mainPayload({
   String seedSource = 'history',
   bool fallback = false,
   List<Map<String, dynamic>>? seeds,
   List<Map<String, dynamic>>? tracks,
   bool network = true,
-  String filter = 'fresh',
   int window = 30,
+  List<String> exclude = const [],
 }) =>
     {
       'window': window,
@@ -64,17 +71,17 @@ Map<String, dynamic> mainPayload({
             seedRow('h5', 'Awake', 'Tycho'),
           ],
       'excluded': [
-        {
-          'hash': 'h-dropped',
-          'filepath': 'music/Kids/Song.mp3',
-          'metadata': {'title': 'Kids Song', 'artist': 'Someone'},
-        },
+        for (final h in exclude)
+          {
+            'hash': h,
+            'filepath': 'music/Left/$h.mp3',
+            'metadata': {'title': 'Left $h', 'artist': 'Someone'},
+          },
       ],
       'dropped': 0,
       'notAnalyzed': false,
       'model': {'id': 'effnet-discogs', 'version': '1'},
       'library': {
-        'filter': filter,
         'tracks': tracks ??
             [
               trackRow('Dawn Chorus', 'Moderat', 0.83),

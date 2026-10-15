@@ -1908,17 +1908,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageNewSeeds => 'Новые исходные треки';
 
   @override
-  String get discoverPageSeedsCycled =>
-      'Вы прошли все треки, которые дослушали до конца';
-
-  @override
-  String get discoverPageSeedsCycledBody =>
-      'Вот рекомендации вокруг случайного трека из вашей библиотеки. «Новые исходные треки» начнёт заново с последних дослушанных треков.';
-
-  @override
-  String get discoverPageIncludePlayed => 'Включать недавно прослушанные треки';
-
-  @override
   String get discoverPageAlbumsLibrary => 'Альбомы из вашей библиотеки';
 
   @override
@@ -1987,10 +1976,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get discoverPageRestoreFailed =>
-      'Не удалось вернуть эти треки. Попробуйте ещё раз.';
-
-  @override
   String get discoverPageRandomTitle =>
       'Дослушайте несколько треков, и эта страница узнает ваш вкус';
 
@@ -2003,9 +1988,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverPageChooseSong => 'Выбрать трек…';
-
-  @override
-  String get discoverPageRandomFailed => 'Не удалось выбрать случайный трек.';
 
   @override
   String get discoverPageError =>
@@ -2034,9 +2016,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverPageRandomHeader => 'Случайный выбор';
-
-  @override
-  String get discoverPageNewestFirst => 'сначала новые';
 
   @override
   String get discoverPageDroppedHeader => 'Исключённые';

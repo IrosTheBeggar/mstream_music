@@ -287,41 +287,33 @@ class DiscoveryPath {
 // is a new route, so every key is on its Joi floor), and each parser below
 // takes what it can from a malformed row rather than throwing.
 
-/// The windows the route accepts, in the seeds sheet's order (days; 0 = all
-/// time). Anything else is left out of a request so the saved pref applies.
+/// The windows the route accepts, in the bar's order (days; 0 = all time).
+/// Anything else is left out of a request, so the server's default (30)
+/// applies.
 const List<int> kTasteWindows = [7, 30, 90, 0];
 
-/// The window the server falls back to when neither the request nor a saved
-/// pref names one.
+/// The window a client asks for until the user picks another (the server's
+/// own default too).
 const int kTasteDefaultWindow = 30;
 
-/// Route caps (plan §3.1): `pin` ≤ 8 paths, `exclude` ≤ 200 hashes,
-/// `staleDays` 1..3650. A request is clamped to them client-side — the
-/// route's Joi would 400 the whole call over one extra pin.
-const int kTastePinMax = 8;
+/// Route caps (plan §3.1): `pin` ≤ 12 paths (= the seed limit, so a client
+/// can pin a whole seed batch — Discover's peers call pins the library
+/// answer's seeds), `exclude` ≤ 200 hashes. A request is clamped to them
+/// client-side — the route's Joi would 400 the whole call over one extra
+/// pin.
+const int kTastePinMax = 12;
 const int kTasteExcludeMax = 200;
-const int kTasteStaleDaysMax = 3650;
-
-/// The library source's filter: `fresh` (never played, or not played in
-/// `staleDays`), `unplayed` (never played) or `all`. Enum names are the
-/// wire values.
-enum TasteFilter {
-  fresh,
-  unplayed,
-  all;
-
-  static TasteFilter? parse(dynamic v) =>
-      v is String ? TasteFilter.values.asNameMap()[v] : null;
-}
 
 /// The three sources one taste call can ask for. Enum names are the wire
-/// values. Clients ask for `peers` in a separate parallel call (plan §3.1)
-/// so the library never waits on a 4 s peer deadline.
+/// values. Clients ask for `peers` in a separate call (plan §3.1) so the
+/// library never waits on a 4 s peer deadline — after the library answer
+/// lands, pinned to its seeds, so both sections share one seed batch.
 enum TasteSource { library, network, peers }
 
 /// Where the seeds came from after the server's widening chain (plan §2.2):
-/// the window's plays, all-time play counters, one random analyzed track
-/// (nothing played yet — `fallback`), or only the client's pins.
+/// a random batch of the window's finished songs, all-time play counters,
+/// one random analyzed track (nothing played yet — `fallback`), or only the
+/// client's pins.
 enum TasteSeedSource {
   history,
   counters,
@@ -332,8 +324,9 @@ enum TasteSeedSource {
       v is String ? TasteSeedSource.values.asNameMap()[v] : null;
 }
 
-/// Per-source row limits; the server caps them at 12 / 50 / 24 / 50 / 25
-/// (peers: per peer). Only the set ones are sent.
+/// Per-source row limits; the server takes seeds 1..12 and tracks 0..50,
+/// albums 0..24, network 0..50, peers 0..25 (peers: per peer). Only the set
+/// ones are sent.
 class TasteLimits {
   final int? seeds;
   final int? tracks;
@@ -346,17 +339,17 @@ class TasteLimits {
 
   Map<String, dynamic> toJson() => {
         if (seeds != null) 'seeds': seeds!.clamp(1, 12),
-        if (tracks != null) 'tracks': tracks!.clamp(1, 50),
-        if (albums != null) 'albums': albums!.clamp(1, 24),
-        if (network != null) 'network': network!.clamp(1, 50),
-        if (peers != null) 'peers': peers!.clamp(1, 25),
+        if (tracks != null) 'tracks': tracks!.clamp(0, 50),
+        if (albums != null) 'albums': albums!.clamp(0, 24),
+        if (network != null) 'network': network!.clamp(0, 50),
+        if (peers != null) 'peers': peers!.clamp(0, 25),
       };
 }
 
 /// The body of `POST /api/v1/discovery/taste`. Every key is optional and
-/// only the set ones are sent: the route has no Joi defaults for `window`,
-/// `filter` or `staleDays` precisely so a saved pref applies when the client
-/// says nothing.
+/// only the set ones are sent. Nothing is stored between calls: each call
+/// is answered from this body alone (plan §2.13, 2026-10-14), so the seeds
+/// are a new random batch every time.
 class TasteRequest {
   /// Days: 7, 30, 90 or 0 (all time) — see [kTasteWindows].
   final int? window;
@@ -366,12 +359,9 @@ class TasteRequest {
   /// leading slash; [toJson] strips it, as every discovery route wants.
   final List<String>? pin;
 
-  /// Seed hashes the user dropped, oldest first; merged with the saved ones
-  /// when [remember] is set.
+  /// Seed hashes to leave out of THIS call, oldest first (the visit's
+  /// drops). The server never stores them.
   final List<String>? exclude;
-  final bool? remember;
-  final TasteFilter? filter;
-  final int? staleDays;
 
   /// Which sources to answer; null or empty asks for the server's default
   /// (all three).
@@ -387,9 +377,6 @@ class TasteRequest {
     this.window,
     this.pin,
     this.exclude,
-    this.remember,
-    this.filter,
-    this.staleDays,
     this.sources,
     this.limit,
     this.newArtistsOnly,
@@ -408,10 +395,6 @@ class TasteRequest {
       if (window != null && kTasteWindows.contains(window)) 'window': window,
       if (pins != null && pins.isNotEmpty) 'pin': pins,
       if (drops != null && drops.isNotEmpty) 'exclude': drops,
-      if (remember != null) 'remember': remember,
-      if (filter != null) 'filter': filter!.name,
-      if (staleDays != null)
-        'staleDays': staleDays!.clamp(1, kTasteStaleDaysMax),
       if (sources != null && sources!.isNotEmpty)
         // Canonical order, whatever order the set was built in.
         'sources': [
@@ -477,8 +460,9 @@ class TasteSeed {
   String get displayTitle => metadata?.title ?? filepath.split('/').last;
 }
 
-/// A saved exclusion the server could resolve — what the seeds sheet lists
-/// under "dropped" so the user can bring one back.
+/// One of this call's `exclude` hashes that the server could resolve — what
+/// the seeds sheet lists under "dropped" so the user can use it again within
+/// the visit.
 class TasteExcluded {
   final String hash;
   final String filepath;
@@ -594,19 +578,18 @@ class TasteAlbum {
   bool get unplayed => playedTracks == 0;
 }
 
-/// The library source: albums before songs (plan §2.6).
+/// The library source: albums before songs (plan §2.6), under the fixed
+/// rule "songs you haven't played lately" (never, or more than 90 days ago).
 class TasteLibrary {
-  final TasteFilter? filter;
   final List<TasteTrack> tracks;
   final List<TasteAlbum> albums;
 
   /// The walk hit its budget before the limits filled — "there may be more".
   final bool capped;
 
-  TasteLibrary(this.filter, this.tracks, this.albums, this.capped);
+  TasteLibrary(this.tracks, this.albums, this.capped);
 
   factory TasteLibrary.fromServerMap(Map m) => TasteLibrary(
-        TasteFilter.parse(m['filter']),
         _listOf(m['tracks'], TasteTrack.fromServerMap),
         _listOf(m['albums'], TasteAlbum.fromServerMap),
         m['capped'] == true,
@@ -782,49 +765,6 @@ class TasteResponse {
       peers: peers is Map ? TastePeers.fromServerMap(peers) : null,
     );
   }
-}
-
-/// The page's saved preferences (`GET/PUT /api/v1/discovery/taste/prefs`,
-/// user_settings namespace `discovery:page`), the same on every client.
-/// Every field is nullable: parsed, null means "not saved"; as a PUT patch,
-/// null means "leave it" and only set fields are sent (the PUT answers the
-/// merged prefs). `newArtistsOnly` is deliberately not here — it stays a
-/// client-local setting.
-class TastePrefs {
-  final int? window;
-  final List<String>? exclude;
-  final TasteFilter? filter;
-  final int? staleDays;
-
-  const TastePrefs({this.window, this.exclude, this.filter, this.staleDays});
-
-  factory TastePrefs.fromServerMap(Map m) {
-    // Tolerate a `{prefs: {...}}` envelope as well as the bare object.
-    final body = m['prefs'] is Map ? m['prefs'] as Map : m;
-    final window = _count(body['window']);
-    final exclude = body['exclude'];
-    final staleDays = _count(body['staleDays']);
-    return TastePrefs(
-      window: window != null && kTasteWindows.contains(window) ? window : null,
-      exclude: exclude is List
-          ? exclude.map(_hash).whereType<String>().toList()
-          : null,
-      filter: TasteFilter.parse(body['filter']),
-      staleDays: staleDays != null &&
-              staleDays >= 1 &&
-              staleDays <= kTasteStaleDaysMax
-          ? staleDays
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        if (window != null && kTasteWindows.contains(window)) 'window': window,
-        if (exclude != null) 'exclude': _newestHashes(exclude!),
-        if (filter != null) 'filter': filter!.name,
-        if (staleDays != null)
-          'staleDays': staleDays!.clamp(1, kTasteStaleDaysMax),
-      };
 }
 
 /// Parses a `genreTags` wire value (string list or null) without throwing.

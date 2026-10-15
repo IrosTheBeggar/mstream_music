@@ -1,11 +1,14 @@
 // DiscoveryPageController (Discover page plan §3.1, §4.2, §2.13): the two
-// parallel taste calls (the library, then peers), stale answers dropped, the
-// 403 latch with ONE re-ping, the five-minute client TTL, remembered
-// exclusions, pins at open only, the one library checkbox, and the
-// connected servers' playable rows and album cards.
+// taste calls (the library, then — once it lands — peers pinned to its
+// seeds, so both sections share one batch), stale answers dropped, the
+// 403 latch with ONE re-ping, no reuse of an earlier answer (every open and
+// every tap asks — the server draws a new random batch of seeds each time),
+// the window remembered on the phone, the visit-local pins and drops, and
+// the connected servers' playable rows and album cards.
 //
-// Every dependency is injected — taste fetch, prefs, re-ping, random pick,
-// clock — so nothing here touches the network or a singleton's state.
+// Every dependency is injected — taste fetch, re-ping, the remembered
+// window, clock — so nothing here touches the network or a singleton's
+// state.
 
 import 'dart:async';
 
@@ -44,74 +47,82 @@ DiscoveryFetchResult<TasteResponse> ok(Map<String, dynamic> m) =>
 /// The usual answers: the main payload for the library, the peers one for
 /// peers.
 DiscoveryFetchResult<TasteResponse> answer(TasteRequest r) =>
-    ok(isPeersCall(r) ? peersPayload() : mainPayload());
+    ok(isPeersCall(r) ? peersPayload() : mainPayload(exclude: excludeOf(r)));
 
 void main() {
   late FakeTaste taste;
   late int repings;
   late DateTime clock;
   late Server server;
+  // The phone's remembered window (SettingsManager in the app).
+  late int stored;
+  late List<int> saves;
 
   DiscoveryPageController make({
     String? pin,
     Future<void> Function(Server)? reping,
-    Future<DiscoveryFetchResult<TastePrefs>> Function(Server)? fetchPrefs,
-    Future<DiscoveryFetchResult<TastePrefs>> Function(Server, TastePrefs)?
-        savePrefs,
-    Future<String?> Function(Server)? randomPick,
   }) =>
       DiscoveryPageController(
         server: server,
         fetch: taste.call,
-        fetchPrefs: fetchPrefs ??
-            (_) async => const DiscoveryFetchResult.ok(TastePrefs()),
-        savePrefs: savePrefs ??
-            (_, p) async => DiscoveryFetchResult.ok(p),
         reping: reping ?? (_) async => repings++,
-        randomPick: randomPick ?? (_) async => null,
+        readWindow: () => stored,
+        saveWindow: (w) {
+          stored = w;
+          saves.add(w);
+        },
         now: () => clock,
         pinAtOpen: pin,
       );
 
   setUp(() {
-    DiscoveryPageController.clearCache();
     taste = FakeTaste();
     repings = 0;
     clock = DateTime.utc(2026, 10, 5, 12);
     server = discoveryServer();
+    stored = kTasteDefaultWindow;
+    saves = [];
   });
 
-  group('two parallel requests', () {
-    test('the library and peers go out together, before either answers',
-        () async {
+  group('one batch per visit: peers after the library', () {
+    test('the peers call waits for the library answer and is pinned to its '
+        'seeds', () async {
       final c = make();
       final done = c.load();
       await Future<void>.delayed(Duration.zero);
-      expect(taste.requests, hasLength(2), reason: 'both in flight at once');
+      expect(taste.requests, hasLength(1),
+          reason: 'each call draws its own batch: peers waits for the seeds');
       final main = taste.mainCalls.single.toJson();
       // The play-now page: no P2P network (a later Explore surface's).
       expect(main['sources'], ['library']);
       expect(main['limit'], {'tracks': 24, 'albums': 8});
+      expect(main['window'], 30, reason: 'the window is sent on every call');
       // Discover draws no "new artists only" control, so it never thins
       // the rows unseen.
       expect(main['newArtistsOnly'], isFalse);
-      final peersBody = taste.peersCalls.single.toJson();
-      expect(peersBody['sources'], ['peers']);
-      expect(peersBody['newArtistsOnly'], isFalse);
       expect(c.loading, isTrue);
-      expect(c.loadingPeers, isTrue);
+      expect(c.loadingPeers, isTrue,
+          reason: 'the section shows it is coming from the start');
 
-      // The peers answer first: the library is not held up by it, nor it
-      // by the library.
-      taste.pending[1].complete(ok(peersPayload()));
-      await Future<void>.delayed(Duration.zero);
-      expect(c.peers?.peers, hasLength(2));
-      expect(c.seeded, isNull);
-
+      // The library lands: it is drawn at once, and only now is peers asked.
       taste.pending[0].complete(ok(mainPayload()));
-      await done;
+      await Future<void>.delayed(Duration.zero);
       expect(c.loading, isFalse);
       expect(c.seeds, hasLength(5));
+      expect(c.loadingPeers, isTrue);
+      final peersBody = taste.peersCalls.single.toJson();
+      expect(peersBody['sources'], ['peers']);
+      expect(peersBody['window'], 30);
+      expect(peersBody['newArtistsOnly'], isFalse);
+      expect(peersBody['pin'], [for (final s in c.seeds) s.filepath],
+          reason: "the library answer's seeds, so both sections share them");
+      expect(peersBody['limit'], {'seeds': 5, 'peers': 10},
+          reason: 'limit.seeds = the pins: the server adds no seed of its own');
+
+      taste.pending[1].complete(ok(peersPayload()));
+      await done;
+      expect(c.loadingPeers, isFalse);
+      expect(c.peers?.peers, hasLength(2));
       expect(c.library?.tracks, hasLength(5));
       // Rows are playable DisplayItems with the app's leading slash and the
       // lite-metadata flag.
@@ -124,6 +135,157 @@ void main() {
       // is "Artist · Album", the card's the credit alone.
       expect(c.albumItems.first.subtext, 'Tycho');
       expect(c.libraryRows.first.subtext, 'Moderat');
+    });
+
+    test('nothing the server no longer takes is ever sent', () async {
+      taste.auto = answer;
+      final c = make(pin: '/music/now.mp3');
+      await c.load();
+      await c.applySeeds(drop: {'h2'}, pins: ['/music/now.mp3']);
+      await c.setWindow(90);
+      for (final r in taste.requests) {
+        final body = r.toJson();
+        expect(body.containsKey('remember'), isFalse);
+        expect(body.containsKey('filter'), isFalse);
+        expect(body.containsKey('staleDays'), isFalse);
+      }
+    });
+
+    test("the seeds sheet shows the batch both sections were built from",
+        () async {
+      // Every call draws a new batch: the fake answers each main call with
+      // another one.
+      var batch = 0;
+      taste.auto = (r) {
+        if (isPeersCall(r)) return ok(peersPayload());
+        batch++;
+        return ok(mainPayload(seeds: [
+          for (var i = 0; i < 3; i++) seedRow('b$batch-$i', 'Song $i', 'Batch $batch'),
+        ]));
+      };
+      final c = make();
+      await c.load();
+      await c.refresh();
+      expect(taste.peersCalls, hasLength(2));
+      final pinned = taste.peersCalls.last.toJson()['pin'];
+      expect(pinned, [for (var i = 0; i < 3; i++) 'music/Batch 2/Song $i.flac']);
+      expect([for (final s in c.seeds) s.filepath], pinned,
+          reason: 'the picker shows the batch the peers rows came from');
+    });
+
+    test("the user's pins ride along; every seed of a full batch is pinned "
+        '(12)', () async {
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersPayload()
+          : mainPayload(seeds: [
+              seedRow('p', 'Now', 'Pinned', pinned: true),
+              for (var i = 0; i < 11; i++) seedRow('h$i', 'S$i', 'A'),
+            ]));
+      final c = make(pin: '/music/Pinned/Now.flac');
+      await c.load();
+      final body = taste.peersCalls.single.toJson();
+      expect(body['pin'], [
+        'music/Pinned/Now.flac',
+        for (var i = 0; i < 11; i++) 'music/A/S$i.flac',
+      ]);
+      expect((body['pin'] as List), hasLength(kTastePinMax));
+      expect(body['limit'], {'seeds': 12, 'peers': 10});
+
+      // A pin the server dropped (not visible) is not among the seeds, so
+      // the peers call does not send it: the server would stop at
+      // limit.seeds before reading it (the webapp pins the seeds alone).
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersPayload()
+          : {...mainPayload(), 'dropped': 1});
+      final d = make(pin: '/music/gone.mp3');
+      await d.load();
+      final next = taste.peersCalls.last.toJson();
+      expect(next['pin'], [for (final s in d.seeds) s.filepath]);
+      expect(next['limit'], {'seeds': 5, 'peers': 10});
+    });
+
+    test('a failed library call asks no peers and keeps the rows shown',
+        () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      final shown = c.peers;
+      taste.auto = (_) => const DiscoveryFetchResult.error();
+      await c.refresh();
+      expect(taste.peersCalls, hasLength(1));
+      expect(c.loadingPeers, isFalse);
+      expect(identical(c.peers, shown), isTrue);
+    });
+
+    test('a new batch never stands over the old batch\'s peers rows: a '
+        'failed peers call shows none', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      expect(c.peers?.peers, isNotEmpty);
+
+      taste.auto = null;
+      final next = c.refresh();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.peers, isNotNull, reason: 'up while the library call is out');
+      // The new batch lands: the old rows go, the section is loading.
+      taste.pending[0]
+          .complete(ok(mainPayload(seeds: [seedRow('n1', 'New', 'One')])));
+      await Future<void>.delayed(Duration.zero);
+      expect(c.seeds.single.hash, 'n1');
+      expect(c.peers, isNull);
+      expect(c.peerRows, isEmpty);
+      expect(c.loadingPeers, isTrue);
+      expect(c.hasConnectedServers, isTrue, reason: 'its loading line');
+
+      // Its peers call fails: nothing is drawn, not the old batch's rows.
+      taste.pending[1].complete(const DiscoveryFetchResult.error());
+      await next;
+      expect(c.peers, isNull);
+      expect(c.peerRows, isEmpty);
+      expect(c.loadingPeers, isFalse);
+      expect(c.hasConnectedServers, isFalse);
+    });
+
+    test('a refresh that fails leaves the peers call of the batch on screen '
+        'to land', () async {
+      final c = make();
+      final first = c.load();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[0].complete(ok(mainPayload()));
+      await Future<void>.delayed(Duration.zero);
+      expect(taste.peersCalls, hasLength(1));
+      final shown = c.seeded;
+
+      // The user refreshes while that peers call is out (canRefresh only
+      // waits on the library call), and the new library call fails.
+      expect(c.canRefresh, isTrue);
+      final second = c.refresh();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[2].complete(const DiscoveryFetchResult.error());
+      await second;
+      expect(c.error, isTrue);
+      expect(c.seeded, same(shown));
+      expect(taste.peersCalls, hasLength(1), reason: 'no batch to pin');
+      expect(c.loadingPeers, isTrue, reason: 'its peers call is still out');
+      expect(c.hasConnectedServers, isTrue);
+
+      // That call belongs to the batch still on screen: it is drawn.
+      taste.pending[1].complete(ok(peersPayload()));
+      await first;
+      expect(c.loadingPeers, isFalse);
+      expect(c.peers?.peers, hasLength(2));
+    });
+
+    test('a library answer with no seed asks no peers', () async {
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersPayload()
+          : {...mainPayload(seeds: const []), 'notAnalyzed': true});
+      final c = make();
+      await c.load();
+      expect(taste.peersCalls, isEmpty);
+      expect(c.loadingPeers, isFalse);
+      expect(c.hasConnectedServers, isFalse);
     });
 
     test('no peers call when this account may not query peers', () async {
@@ -147,25 +309,52 @@ void main() {
 
   test('a stale answer is dropped', () async {
     final c = make();
-    final first = c.load(force: true);
+    final first = c.load();
     await Future<void>.delayed(Duration.zero);
-    final second = c.load(force: true);
+    final second = c.load();
     await Future<void>.delayed(Duration.zero);
     expect(taste.mainCalls, hasLength(2));
 
-    // Main calls are pending[0] and pending[2]; peers [1] and [3].
-    taste.pending[2].complete(ok(mainPayload(window: 7)));
-    taste.pending[3].complete(ok(peersPayload()));
+    // Main calls are pending[0] and pending[1].
+    taste.pending[1].complete(ok(mainPayload(window: 7)));
+    await Future<void>.delayed(Duration.zero);
+    expect(taste.peersCalls, hasLength(1));
+    taste.pending[2].complete(ok(peersPayload()));
     await second;
     expect(c.seeded?.window, 7);
 
-    // The first call's late answer must not overwrite the newer one.
+    // The first call's late answer must not overwrite the newer one, nor
+    // send a peers call of its own.
     taste.pending[0].complete(ok(mainPayload(window: 90)));
-    taste.pending[1].complete(
-        const DiscoveryFetchResult<TasteResponse>.disabled());
     await first;
     expect(c.seeded?.window, 7);
+    expect(taste.peersCalls, hasLength(1));
+    expect(repings, 0);
+  });
+
+  test('a stale peers answer is dropped, and its 403 latches nothing',
+      () async {
+    final c = make();
+    final first = c.load();
+    await Future<void>.delayed(Duration.zero);
+    taste.pending[0].complete(ok(mainPayload(window: 90)));
+    await Future<void>.delayed(Duration.zero);
+    expect(taste.peersCalls, hasLength(1));
+
+    // A refresh overtakes the first visit's peers call.
+    final second = c.refresh();
+    await Future<void>.delayed(Duration.zero);
+    taste.pending[2].complete(ok(mainPayload(window: 7)));
+    await Future<void>.delayed(Duration.zero);
+    taste.pending[3].complete(ok(peersPayload()));
+    await second;
+    expect(c.peers?.peers, hasLength(2));
+
+    taste.pending[1]
+        .complete(const DiscoveryFetchResult<TasteResponse>.disabled());
+    await first;
     expect(c.peersDisabled, isFalse, reason: 'a stale 403 latches nothing');
+    expect(c.peers?.peers, hasLength(2));
     expect(repings, 0);
   });
 
@@ -175,15 +364,33 @@ void main() {
       final c = make();
       await c.load();
       expect(c.disabled, isTrue);
-      expect(c.peersDisabled, isTrue);
-      expect(repings, 1, reason: 'one re-ping for the page, not per call');
+      expect(taste.peersCalls, isEmpty,
+          reason: 'no library seeds to pin the peers call to');
+      expect(c.loadingPeers, isFalse);
+      expect(repings, 1);
       // Flags survived the re-ping: discovery is on, nothing indexed yet.
       expect(c.scanPending, isTrue);
 
-      // Latched: a reload asks neither call again.
-      await c.load(force: true);
-      expect(taste.requests, hasLength(2));
+      // Latched: a reload asks nothing again.
+      await c.refresh();
+      expect(taste.requests, hasLength(1));
       expect(repings, 1);
+    });
+
+    test('a peers 403 latches the peers call alone, with the same one '
+        're-ping', () async {
+      taste.auto = (r) => isPeersCall(r)
+          ? const DiscoveryFetchResult.disabled()
+          : ok(mainPayload());
+      final c = make();
+      await c.load();
+      expect(c.peersDisabled, isTrue);
+      expect(c.disabled, isFalse);
+      expect(repings, 1);
+      await c.refresh();
+      expect(taste.mainCalls, hasLength(2));
+      expect(taste.peersCalls, hasLength(1), reason: 'latched');
+      expect(repings, 1, reason: 'one re-ping for the page, not per call');
     });
 
     test('a re-ping that turns the flag off reads as switched off',
@@ -208,7 +415,8 @@ void main() {
       expect(repings, 2);
       expect(c.disabled, isFalse);
       expect(c.peersDisabled, isFalse);
-      expect(taste.requests, hasLength(4));
+      expect(taste.mainCalls, hasLength(2));
+      expect(taste.peersCalls, hasLength(1));
       expect(c.seeds, isNotEmpty);
     });
 
@@ -225,169 +433,142 @@ void main() {
     });
   });
 
-  group('client TTL', () {
-    test('re-entering within five minutes does not refetch', () async {
+  // Seeds that differ on every open are the feature: no answer is reused.
+  group('every open asks', () {
+    test('re-entering Discover at once asks again, for a new batch',
+        () async {
       taste.auto = answer;
       final a = make();
       await a.load();
       a.dispose();
       expect(taste.requests, hasLength(2));
 
-      clock = clock.add(const Duration(minutes: 4));
       final b = make();
       await b.load();
-      expect(taste.requests, hasLength(2), reason: 'served from the cache');
+      expect(taste.requests, hasLength(4), reason: 'nothing is reused');
       expect(b.seeds, hasLength(5));
-      expect(b.peers?.peers, hasLength(2));
-      b.dispose();
+    });
 
-      clock = clock.add(const Duration(minutes: 2));
+    test('refresh is a plain re-ask with the same window, pins and drops',
+        () async {
+      taste.auto = answer;
+      final c = make(pin: '/music/now.mp3');
+      await c.load();
+      await c.applySeeds(drop: {'h2'}, pins: ['/music/now.mp3']);
+      final before = taste.mainCalls.last.toJson();
+      expect(c.canRefresh, isTrue);
+      await c.refresh();
+      expect(taste.mainCalls.last.toJson(), before);
+      expect(taste.peersCalls.last.toJson()['exclude'], ['h2']);
+    });
+
+    test('the previous answer stays up while the new one is out', () async {
+      final c = make();
+      final first = c.load();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[0].complete(answer(taste.requests[0]));
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[1].complete(answer(taste.requests[1]));
+      await first;
+      final shown = c.seeded;
+      final shownPeers = c.peers;
+
+      final next = c.refresh();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.loading, isTrue);
+      expect(c.seeded, same(shown), reason: 'no flash to placeholders');
+      expect(c.peers, same(shownPeers));
+      expect(c.canRefresh, isFalse, reason: 'one call at a time');
+
+      taste.pending[2]
+          .complete(ok(mainPayload(seeds: [seedRow('n1', 'New', 'One')])));
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[3].complete(answer(taste.requests[3]));
+      await next;
+      expect(c.seeds.single.hash, 'n1');
+    });
+
+    test('nothing to refresh before an answer, or under the 403 latch',
+        () async {
+      final c = make();
+      expect(c.canRefresh, isFalse);
+      taste.auto = (_) => const DiscoveryFetchResult.disabled();
+      await c.load();
+      expect(c.canRefresh, isFalse);
+    });
+
+    test('a fresh open forgets the visit\'s pins and drops', () async {
+      taste.auto = answer;
       final c = make();
       await c.load();
-      expect(taste.requests, hasLength(4), reason: 'stale after 5 minutes');
-    });
+      await c.applySeeds(drop: {'h2'}, pins: ['/music/x.mp3']);
+      expect(c.exclude, ['h2']);
+      c.dispose();
 
-    test('refresh always fetches; a different pin is a different visit',
-        () async {
-      taste.auto = answer;
-      final a = make();
-      await a.load();
-      await a.refresh();
-      expect(taste.requests, hasLength(4));
-      a.dispose();
-
-      final b = make(pin: '/music/Other/Song.mp3');
-      await b.load();
-      expect(taste.requests, hasLength(6));
-    });
-
-    test('a visit left before its peers landed still fetches them',
-        () async {
-      final a = make();
-      final done = a.load();
-      await Future<void>.delayed(Duration.zero);
-      taste.pending[0].complete(ok(mainPayload()));
-      await Future<void>.delayed(Duration.zero);
-      a.dispose();
-      taste.pending[1].complete(ok(peersPayload()));
-      await done;
-
-      taste.auto = answer;
-      final b = make();
-      await b.load();
-      expect(taste.mainCalls, hasLength(1), reason: 'library from the cache');
-      expect(taste.peersCalls, hasLength(2));
-      expect(b.peers?.peers, hasLength(2));
-    });
-
-    // The peers call stores the snapshot too, so a snapshot can hold no
-    // library answer. Restoring it as a hit left the page on a spinner
-    // nothing was loading.
-    test('peers landed, main left in flight: the reopen asks main again',
-        () async {
-      final a = make();
-      final done = a.load();
-      await Future<void>.delayed(Duration.zero);
-      taste.pending[1].complete(ok(peersPayload()));
-      await Future<void>.delayed(Duration.zero);
-      a.dispose();
-      taste.pending[0].complete(ok(mainPayload()));
-      await done;
-
-      taste.auto = answer;
-      final b = make();
-      final reopened = b.load();
-      expect(b.loading, isTrue, reason: 'in flight, so the spinner is true');
-      await reopened;
-      expect(taste.mainCalls, hasLength(2));
-      expect(taste.peersCalls, hasLength(1), reason: 'peers from the cache');
-      expect(b.seeded, isNotNull);
-      expect(b.peers?.peers, hasLength(2));
-    });
-
-    test('main failed, peers landed: the reopen asks main again', () async {
-      taste.auto = (r) => isPeersCall(r)
-          ? ok(peersPayload())
-          : const DiscoveryFetchResult.error();
-      final a = make();
-      await a.load();
-      expect(a.error, isTrue);
-      a.dispose();
-
-      taste.auto = answer;
-      final b = make();
-      await b.load();
-      expect(taste.mainCalls, hasLength(2));
-      expect(b.seeds, hasLength(5));
-      expect(b.error, isFalse);
-    });
-
-    test('main refused, peers landed: the reopen asks main again and the '
-        'refusal reads as scan pending', () async {
-      taste.auto = (r) => isPeersCall(r)
-          ? ok(peersPayload())
-          : const DiscoveryFetchResult.disabled();
-      final a = make();
-      await a.load();
-      a.dispose();
-
-      final b = make();
-      await b.load();
-      expect(taste.mainCalls, hasLength(2),
-          reason: 'a new controller inherits no latch');
-      expect(b.disabled, isTrue);
-      expect(b.scanPending, isTrue);
-      expect(repings, 2, reason: 'one re-ping per page');
-    });
-
-    test('the cache is per account, not only per server entry', () async {
-      taste.auto = answer;
-      server.username = 'alice';
-      final a = make();
-      await a.load();
-      a.dispose();
-
-      // The same entry edited to another account keeps its localname.
-      server = discoveryServer()..username = 'bob';
-      final b = make();
-      await b.load();
-      expect(taste.mainCalls, hasLength(2), reason: "not alice's rows");
+      final again = make();
+      await again.load();
+      expect(again.pins, isEmpty);
+      expect(again.exclude, isEmpty);
+      final main = taste.mainCalls.last.toJson();
+      expect(main.containsKey('exclude'), isFalse);
+      expect(main.containsKey('pin'), isFalse);
     });
   });
 
-  group('steering', () {
-    test('a dropped seed is sent as exclude with remember', () async {
+  group('the window', () {
+    test('the remembered window is asked for from the first call', () async {
+      stored = 90;
       taste.auto = answer;
       final c = make();
+      expect(c.window, 90);
       await c.load();
-      expect(taste.mainCalls.single.toJson().containsKey('remember'), isFalse,
-          reason: 'nothing chosen yet: the saved prefs apply');
-
-      await c.applySeeds(window: c.effectiveWindow, drop: {'h2'}, pins: []);
-      final main = taste.mainCalls.last.toJson();
-      expect(main['exclude'], ['h2']);
-      expect(main['remember'], isTrue);
-      expect(main.containsKey('window'), isFalse,
-          reason: 'the window did not change');
-      final peers = taste.peersCalls.last.toJson();
-      expect(peers['exclude'], ['h2'],
-          reason: 'the same seeds, so the same centroid');
-      expect(peers.containsKey('remember'), isFalse,
-          reason: 'saved once, by the main call');
+      expect(taste.mainCalls.single.toJson()['window'], 90);
+      expect(taste.peersCalls.single.toJson()['window'], 90);
     });
 
-    test('a changed window is sent and remembered', () async {
+    test('a remembered window the route would refuse reads as the default',
+        () {
+      stored = 45;
+      expect(make().window, kTasteDefaultWindow);
+    });
+
+    test('the bar re-asks every source with the visit\'s pins and drops, and '
+        'the phone remembers it', () async {
       taste.auto = answer;
-      final c = make();
+      final c = make(pin: '/music/pinned.mp3');
       await c.load();
-      await c.applySeeds(window: 90, pins: []);
-      final main = taste.mainCalls.last.toJson();
+      await c.applySeeds(drop: {'h2'}, pins: ['/music/pinned.mp3']);
+      taste.requests.clear();
+
+      await c.setWindow(90);
+      expect(c.window, 90);
+      expect(saves, [90]);
+      final main = taste.mainCalls.single.toJson();
       expect(main['window'], 90);
-      expect(main['remember'], isTrue);
+      expect(main['exclude'], ['h2']);
+      expect(main['pin'], ['music/pinned.mp3']);
+      final peers = taste.peersCalls.single.toJson();
+      expect(peers['window'], 90);
+      expect(peers['exclude'], ['h2']);
+      expect(peers['pin'], [for (final s in c.seeds) s.filepath],
+          reason: "the new answer's seeds (accepted pins are among them)");
+
+      // The next open starts from it.
+      expect(make().window, 90);
     });
 
-    test('after widening, the window is the one asked for, and All time is '
-        'a change', () async {
+    test('choosing the window already in force asks nothing', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      taste.requests.clear();
+      await c.setWindow(c.window);
+      expect(taste.requests, isEmpty);
+      expect(saves, isEmpty);
+    });
+
+    test('after widening, the bar keeps the window asked for, and All time '
+        'is a change', () async {
       // The server reports the window that produced seeds (0) and the one
       // asked for in widenedFrom.
       taste.auto = (r) => ok(isPeersCall(r)
@@ -396,101 +577,45 @@ void main() {
       final c = make();
       await c.load();
       expect(c.seeded?.window, 0);
-      expect(c.effectiveWindow, 30, reason: 'what the bar shows');
-
-      await c.applySeeds(window: 0, pins: []);
-      final main = taste.mainCalls.last.toJson();
-      expect(main['window'], 0, reason: 'All time chosen, so sent');
-      expect(main['remember'], isTrue);
-    });
-
-    test('the window from the bar refetches every source with the same seeds, '
-        'drops and pins, remembered', () async {
-      taste.auto = answer;
-      final c = make(pin: '/music/pinned.mp3');
-      await c.load();
-      await c.applySeeds(
-          window: c.effectiveWindow,
-          drop: {'h2'},
-          pins: ['/music/pinned.mp3']);
-      taste.requests.clear();
-
-      await c.setWindow(90);
-      expect(c.effectiveWindow, 90);
-      final main = taste.mainCalls.single.toJson();
-      expect(main['window'], 90);
-      expect(main['exclude'], ['h2']);
-      expect(main['pin'], ['music/pinned.mp3']);
-      expect(main['remember'], isTrue);
-      final peers = taste.peersCalls.single.toJson();
-      expect(peers['window'], 90,
-          reason: 'the window decides the seeds, so the centroid too');
-      expect(peers['exclude'], ['h2']);
-      expect(peers['pin'], ['music/pinned.mp3']);
-    });
-
-    test('choosing the window already in force asks nothing', () async {
-      taste.auto = answer;
-      final c = make();
-      await c.load();
-      taste.requests.clear();
-      await c.setWindow(c.effectiveWindow);
-      expect(taste.requests, isEmpty);
-    });
-
-    test('after widening, All time from the bar is a change', () async {
-      taste.auto = (r) => ok(isPeersCall(r)
-          ? peersPayload()
-          : {...mainPayload(window: 0), 'widenedFrom': 30});
-      final c = make();
-      await c.load();
+      expect(c.window, 30, reason: 'what the bar shows');
       await c.setWindow(0);
       expect(taste.mainCalls.last.toJson()['window'], 0);
     });
 
-    test('a failed window change puts the old one back', () async {
+    test('a failed window change puts the old one back, remembered too',
+        () async {
       taste.auto = answer;
       final c = make();
       await c.load();
       taste.auto = (_) => const DiscoveryFetchResult.error();
       await c.setWindow(7);
       expect(c.error, isTrue);
-      expect(c.effectiveWindow, 30,
-          reason: 'the rows shown are still the 30-day ones');
+      expect(c.window, 30, reason: 'the rows shown are still the 30-day ones');
+      expect(stored, 30);
       expect(c.library?.tracks, hasLength(5));
 
       taste.auto = answer;
       await c.refresh();
-      expect(taste.mainCalls.last.toJson().containsKey('window'), isFalse,
-          reason: 'a window that never landed is not remembered');
+      expect(taste.mainCalls.last.toJson()['window'], 30);
     });
 
-    test('a failed window change puts the peers rows back too, and the '
-        'visit is stored under the window it shows', () async {
+    test('a failed window change puts the peers rows back too', () async {
       taste.auto = answer;
       final c = make();
       await c.load();
       final before = c.peers;
       expect(before?.peers, isNotEmpty);
-      // Main fails; peers answers over the new window's seeds.
+      // Main fails, so no peers call goes out (had one, it would answer
+      // over the new window).
       taste.auto = (r) => isPeersCall(r)
           ? ok({
               'peers': {'peers': [], 'searched': {'peers': 0}}
             })
           : const DiscoveryFetchResult.error();
       await c.setWindow(90);
-      expect(c.effectiveWindow, 30);
+      expect(c.window, 30);
       expect(identical(c.peers, before), isTrue,
-          reason: 'one centroid for both sections');
-
-      // Reopening inside the TTL restores what was shown, asking nothing.
-      taste.requests.clear();
-      taste.auto = answer;
-      final again = make();
-      await again.load();
-      expect(taste.requests, isEmpty);
-      expect(again.peers?.peers, hasLength(before!.peers.length));
-      again.dispose();
+          reason: 'both sections from the window the bar shows');
     });
 
     test('under the 403 latch the window does not move and nothing is '
@@ -501,153 +626,76 @@ void main() {
       expect(c.disabled, isTrue);
       taste.requests.clear();
       await c.setWindow(90);
-      expect(c.window, isNull);
-      expect(c.effectiveWindow, 30);
+      expect(c.window, 30);
+      expect(saves, isEmpty);
       expect(taste.requests, isEmpty);
-
-      // "Check again" then carries no window the user never saw land.
-      taste.auto = answer;
-      await c.recheck();
-      expect(taste.mainCalls.last.toJson().containsKey('window'), isFalse);
     });
+  });
 
-    test('a restored seed leaves the saved exclusions', () async {
-      taste.auto = answer;
-      TastePrefs? saved;
-      final c = make(
-        fetchPrefs: (_) async => const DiscoveryFetchResult.ok(
-            TastePrefs(exclude: ['h-old', 'h-dropped'])),
-        savePrefs: (_, p) async {
-          saved = p;
-          return DiscoveryFetchResult.ok(p);
-        },
-      );
-      await c.load();
-      expect(
-          await c.applySeeds(
-              window: c.effectiveWindow, restore: {'h-dropped'}, pins: []),
-          isTrue);
-      expect(saved?.toJson(), {
-        'exclude': ['h-old']
-      });
-    });
-
-    test('a restore whose write fails reports it', () async {
-      taste.auto = answer;
-      final c = make(
-        fetchPrefs: (_) async => const DiscoveryFetchResult.ok(
-            TastePrefs(exclude: ['h-dropped'])),
-        savePrefs: (_, p) async => const DiscoveryFetchResult.error(),
-      );
-      await c.load();
-      expect(
-          await c.applySeeds(
-              window: c.effectiveWindow, restore: {'h-dropped'}, pins: []),
-          isFalse);
-      expect(taste.mainCalls, hasLength(2), reason: 'the refetch still runs');
-    });
-
-    test('a failed prefs read saves nothing (it would wipe the list)',
-        () async {
-      taste.auto = answer;
-      var saves = 0;
-      final c = make(
-        fetchPrefs: (_) async => const DiscoveryFetchResult.error(),
-        savePrefs: (_, p) async {
-          saves++;
-          return DiscoveryFetchResult.ok(p);
-        },
-      );
-      await c.load();
-      expect(
-          await c.applySeeds(
-              window: c.effectiveWindow, restore: {'h-dropped'}, pins: []),
-          isFalse,
-          reason: 'the server still excludes it: the page must say so');
-      expect(saves, 0);
-    });
-
-    test('the checkbox refetches the library only, remembered', () async {
-      taste.auto = answer;
-      final c = make();
-      await c.load();
-      expect(c.includesPlayed, isFalse, reason: "the answer's 'fresh'");
-      await c.setFilter(
-          DiscoveryPageController.filterFor(includePlayed: true));
-      expect(taste.mainCalls, hasLength(2));
-      expect(taste.peersCalls, hasLength(1), reason: 'peers ignore the filter');
-      final main = taste.mainCalls.last.toJson();
-      expect(main['filter'], 'all');
-      expect(main['remember'], isTrue);
-      expect(c.includesPlayed, isTrue);
-    });
-
-    test('the checkbox maps ticked to all and unticked to fresh', () {
-      expect(DiscoveryPageController.filterFor(includePlayed: true),
-          TasteFilter.all);
-      expect(DiscoveryPageController.filterFor(includePlayed: false),
-          TasteFilter.fresh);
-    });
-
-    test('a saved never-played-only filter reads as fresh: asked again '
-        'once, then remembered', () async {
-      // The server answers the filter asked for, else the saved one.
-      taste.auto = (r) => ok(isPeersCall(r)
-          ? peersPayload()
-          : mainPayload(filter: r.filter?.name ?? 'unplayed'));
-      final c = make();
-      final drawn = <TasteFilter?>[];
-      c.addListener(() => drawn.add(c.seeded?.library?.filter));
-      await c.load();
-      expect(taste.mainCalls, hasLength(2));
-      expect(drawn, isNot(contains(TasteFilter.unplayed)),
-          reason: 'the never-played answer is re-asked, never drawn');
-      expect(taste.mainCalls.first.toJson().containsKey('filter'), isFalse);
-      final again = taste.mainCalls.last.toJson();
-      expect(again['filter'], 'fresh');
-      expect(again['remember'], isTrue);
-      expect(c.includesPlayed, isFalse);
-
-      await c.refresh();
-      expect(taste.mainCalls, hasLength(3),
-          reason: 'the choice is made: no second re-ask');
-      expect(taste.mainCalls.last.toJson()['filter'], 'fresh');
-    });
-
-    test('the checkbox applies at once and the seeds\' apply keeps it',
+  group('the seed picker', () {
+    test('a dropped seed is sent as exclude on both calls, for this visit',
         () async {
       taste.auto = answer;
       final c = make();
       await c.load();
-      final pending =
-          c.setFilter(DiscoveryPageController.filterFor(includePlayed: true));
-      expect(c.includesPlayed, isTrue, reason: 'the box ticks at once');
-      await pending;
-      expect(taste.mainCalls.last.toJson()['filter'], 'all');
+      expect(taste.mainCalls.single.toJson().containsKey('exclude'), isFalse);
 
-      // "Use these N" afterwards carries the filter in force, no new choice.
-      final before = taste.mainCalls.length;
-      await c.applySeeds(window: c.effectiveWindow, pins: const []);
-      expect(taste.mainCalls, hasLength(before + 1));
-      expect(taste.mainCalls.last.toJson()['filter'], 'all');
-      expect(c.filter, TasteFilter.all);
+      await c.applySeeds(drop: {'h2'}, pins: []);
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h2']);
+      expect(taste.peersCalls.last.toJson()['exclude'], ['h2']);
+
+      // It stays out for the rest of the visit.
+      await c.refresh();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h2']);
+      await c.applySeeds(drop: {'h3'}, pins: []);
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h2', 'h3']);
     });
 
-    test('a failed filter change puts the old choice back', () async {
+    test('"Use again" takes it out of the list and asks again', () async {
       taste.auto = answer;
       final c = make();
       await c.load();
-      taste.auto = (_) => const DiscoveryFetchResult.error();
-      await c.setFilter(TasteFilter.all);
-      expect(c.error, isTrue);
-      expect(c.effectiveFilter, TasteFilter.fresh,
-          reason: 'the rows shown are still the fresh ones');
-      expect(c.library?.tracks, hasLength(5));
+      await c.applySeeds(drop: {'h2', 'h3'}, pins: []);
+      final calls = taste.mainCalls.length;
+      await c.applySeeds(restore: {'h2'}, pins: []);
+      expect(taste.mainCalls, hasLength(calls + 1));
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h3']);
+      expect(c.exclude, ['h3']);
+    });
 
+    test('the dropped list is the answer\'s excluded rows', () async {
       taste.auto = answer;
-      await c.refresh();
-      expect(taste.mainCalls.last.toJson().containsKey('filter'), isFalse,
-          reason: 'a filter that never landed is not remembered');
+      final c = make();
+      await c.load();
+      expect(c.excluded, isEmpty, reason: 'nothing dropped on a fresh visit');
+      await c.applySeeds(drop: {'h2'}, pins: []);
+      expect(c.excluded.map((e) => e.hash), ['h2']);
+      await c.applySeeds(restore: {'h2'}, pins: []);
+      expect(c.excluded, isEmpty);
+    });
+
+    test('pins replace the visit\'s pins; unpinning asks without it',
+        () async {
+      taste.auto = answer;
+      final c = make(pin: '/music/now.mp3');
+      await c.load();
+      await c.applySeeds(pins: ['/music/now.mp3', 'music/picked.mp3']);
+      expect(taste.mainCalls.last.toJson()['pin'],
+          ['music/now.mp3', 'music/picked.mp3']);
+      expect(c.pins, ['/music/now.mp3', '/music/picked.mp3']);
+
+      await c.applySeeds(pins: ['/music/picked.mp3']);
+      expect(taste.mainCalls.last.toJson()['pin'], ['music/picked.mp3']);
+      expect(c.pins, ['/music/picked.mp3']);
+    });
+
+    test('at most twelve pins (= the seed limit)', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      await c.applySeeds(pins: [for (var i = 0; i < 14; i++) '/music/$i.mp3']);
+      expect(kTastePinMax, 12);
+      expect(c.pins, hasLength(kTastePinMax));
     });
   });
 
@@ -657,7 +705,10 @@ void main() {
       final c = make(pin: '/music/ALM/Manor.flac');
       await c.load();
       expect(taste.mainCalls.single.toJson()['pin'], ['music/ALM/Manor.flac']);
-      expect(taste.peersCalls.single.toJson()['pin'], ['music/ALM/Manor.flac']);
+      // The peers call pins the library answer's seeds — the server lists
+      // an accepted pin among them.
+      expect(taste.peersCalls.single.toJson()['pin'],
+          [for (final s in c.seeds) s.filepath]);
     });
 
     test('it stays the open-time song: a refresh does not re-read playback',
@@ -677,424 +728,201 @@ void main() {
       expect(taste.mainCalls.single.toJson().containsKey('pin'), isFalse);
     });
 
-    test('Another pick pins a random library song', () async {
-      taste.auto = answer;
-      final c = make(randomPick: (_) async => '/music/Random/Pick.mp3');
-      await c.load();
-      expect(await c.anotherPick(), isTrue);
-      expect(taste.mainCalls.last.toJson()['pin'], ['music/Random/Pick.mp3']);
-    });
-
-    test('Another pick with nothing to pick changes nothing', () async {
+    test('"Choose a song…" pins one more and asks again', () async {
       taste.auto = answer;
       final c = make();
       await c.load();
-      expect(await c.anotherPick(), isFalse);
-      expect(taste.mainCalls, hasLength(1));
+      await c.pinSong('music/Chosen.mp3');
+      expect(taste.mainCalls.last.toJson()['pin'], ['music/Chosen.mp3']);
+      expect(c.pins, ['/music/Chosen.mp3']);
     });
   });
 
-  // "New seeds" (the toolbar's refresh): a session-local rotation of the
-  // seeds moved past, sent in `exclude` without `remember`, so the server
-  // picks the next finished songs; spent (and started over) at the random
-  // pick.
-  group('New seeds', () {
-    /// A server over a finished-songs history, newest first: the seeds are
-    /// the pins, then the first three history songs not excluded; none
-    /// left → the random pick. The remembered drops never come back.
-    DiscoveryFetchResult<TasteResponse> rotating(TasteRequest r,
-        {List<String>? history}) {
-      if (isPeersCall(r)) return ok(peersPayload());
-      final body = r.toJson();
-      final ex = Set.of((body['exclude'] as List?)?.cast<String>() ?? []);
-      final pins = (body['pin'] as List?)?.cast<String>() ?? const [];
-      final next = (history ?? List.generate(9, (i) => 'f$i'))
-          .where((h) => !ex.contains(h))
-          .take(3)
-          .toList();
-      return ok(mainPayload(
-        seedSource: next.isEmpty
-            ? (pins.isEmpty ? 'random' : 'pinned')
-            : 'history',
-        fallback: next.isEmpty && pins.isEmpty,
-        seeds: [
-          for (final p in pins) seedRow('pin:$p', p, 'Pinned', pinned: true),
-          for (final h in next) seedRow(h, 'Song $h', 'Someone'),
-          if (next.isEmpty && pins.isEmpty) seedRow('rnd', 'Pick', 'Anyone'),
-        ],
-      ));
-    }
+  group('the random pick', () {
+    Map<String, dynamic> randomPayload(String hash) => mainPayload(
+        seedSource: 'random',
+        fallback: true,
+        network: false,
+        seeds: [seedRow(hash, 'Pick $hash', 'Someone')]);
 
-    List<String>? sentExclude(TasteRequest r) =>
-        (r.toJson()['exclude'] as List?)?.cast<String>();
-    List<String> seedHashes(DiscoveryPageController c) =>
-        [for (final s in c.seeds) s.hash];
-
-    test('sends the current seeds excluded, not remembered, and the peers '
-        'call the same', () async {
-      taste.auto = rotating;
+    test('the random fallback is recognised', () async {
+      taste.auto = (r) =>
+          ok(isPeersCall(r) ? {'peers': null} : randomPayload('hr'));
       final c = make();
       await c.load();
-      expect(seedHashes(c), ['f0', 'f1', 'f2']);
-      expect(c.canNewSeeds, isTrue);
-      taste.requests.clear();
-
-      await c.newSeeds();
-      final main = taste.mainCalls.single.toJson();
-      expect(main['exclude'], ['f0', 'f1', 'f2']);
-      expect(main['remember'], isFalse,
-          reason: 'the rotation is never saved as dropped seeds');
-      expect(taste.peersCalls.single.toJson()['exclude'],
-          ['f0', 'f1', 'f2'],
-          reason: 'the same seeds, so the same centroid');
-      expect(seedHashes(c), ['f3', 'f4', 'f5']);
-      expect(c.rotation, ['f0', 'f1', 'f2']);
-    });
-
-    test('a second call sends both sets', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.newSeeds();
-      expect(sentExclude(taste.mainCalls.last),
-          ['f0', 'f1', 'f2', 'f3', 'f4', 'f5']);
-      expect(seedHashes(c), ['f6', 'f7', 'f8']);
-    });
-
-    /// [rotating], listing every hash the call excluded as the route does
-    /// (a saved drop, then the request's own `exclude`).
-    DiscoveryFetchResult<TasteResponse> listsExcluded(TasteRequest r) {
-      final got = rotating(r);
-      if (isPeersCall(r)) return got;
-      final ex = sentExclude(r) ?? const [];
-      return ok({
-        ...mainPayload(seeds: [
-          for (final s in got.data!.seeds) seedRow(s.hash, 'S', 'A')
-        ]),
-        'excluded': [
-          for (final h in ['h-dropped', ...ex])
-            {'hash': h, 'filepath': 'music/$h.mp3', 'metadata': {}},
-        ],
-      });
-    }
-
-    test('the moved-past seeds are not shown as dropped; real drops are',
-        () async {
-      taste.auto = listsExcluded;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      expect(c.seeded!.excluded.map((e) => e.hash),
-          containsAll(['f0', 'f1', 'f2']));
-      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
-    });
-
-    test('nor while a filter change that cleared the rotation is out',
-        () async {
-      // The checkbox lives in the open seeds sheet: the answer still on
-      // screen was asked with the old rotation, so its moved-past seeds
-      // must not turn into "Dropped" rows before the new answer lands.
-      taste.auto = listsExcluded;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.newSeeds();
-      taste.auto = null;
-      final out = c.setFilter(TasteFilter.all);
-      await Future<void>.delayed(Duration.zero);
-      expect(c.rotation, isEmpty);
-      expect(c.seeded!.excluded, hasLength(7));
-      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
-      for (var i = 0; i < taste.pending.length; i++) {
-        taste.pending[i].complete(listsExcluded(taste.requests[
-            taste.requests.length - taste.pending.length + i]));
-      }
-      await out;
-      expect(c.seeded!.excluded.map((e) => e.hash), ['h-dropped']);
-      expect(c.excluded.map((e) => e.hash), ['h-dropped']);
-    });
-
-    test('the drops ride beside the rotation, which is never remembered',
-        () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.applySeeds(window: c.effectiveWindow, drop: {'f1'}, pins: []);
-      expect(taste.mainCalls.last.toJson()['remember'], isTrue,
-          reason: 'the drop itself is remembered');
-      expect(seedHashes(c), ['f0', 'f2', 'f3']);
-
-      await c.newSeeds();
-      final main = taste.mainCalls.last.toJson();
-      expect(main['exclude'], ['f0', 'f2', 'f3', 'f1'],
-          reason: 'the rotation, then the drops');
-      expect(main['remember'], isFalse);
-      expect(c.exclude, ['f1']);
-    });
-
-    test('pins are never rotated: they stay, and only the history seeds move',
-        () async {
-      taste.auto = rotating;
-      final c = make(pin: '/music/now.mp3');
-      await c.load();
-      expect(seedHashes(c), ['pin:music/now.mp3', 'f0', 'f1', 'f2']);
-
-      await c.newSeeds();
-      final main = taste.mainCalls.last.toJson();
-      expect(main['exclude'], ['f0', 'f1', 'f2']);
-      expect(main['pin'], ['music/now.mp3']);
-      expect(seedHashes(c), ['pin:music/now.mp3', 'f3', 'f4', 'f5']);
-    });
-
-    test('the random pick spends the rotation: the next one starts again '
-        'from the newest', () async {
-      taste.auto = (r) => rotating(r, history: ['f0', 'f1', 'f2']);
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      expect(c.isRandom, isTrue, reason: 'nothing finished is left');
-      expect(seedHashes(c), ['rnd']);
-      expect(c.seedsCycled, isTrue,
-          reason: 'this random pick came from a rotation: the card says so');
-
-      await c.newSeeds();
-      expect(sentExclude(taste.mainCalls.last), isNull,
-          reason: 'the random pick is not moved past: a cycle');
-      expect(taste.mainCalls.last.toJson().containsKey('remember'), isFalse);
-      expect(c.rotation, isEmpty);
-      expect(seedHashes(c), ['f0', 'f1', 'f2']);
-      expect(c.seedsCycled, isFalse);
-    });
-
-    test('only pins left (the server has none of its own): starts over too',
-        () async {
-      taste.auto = (r) => rotating(r, history: ['f0', 'f1', 'f2']);
-      final c = make(pin: '/music/now.mp3');
-      await c.load();
-      await c.newSeeds();
-      expect(seedHashes(c), ['pin:music/now.mp3']);
-      await c.newSeeds();
-      expect(sentExclude(taste.mainCalls.last), isNull);
-      expect(seedHashes(c), ['pin:music/now.mp3', 'f0', 'f1', 'f2']);
-    });
-
-    test('a window change starts the rotation over, remembered', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.setWindow(90);
-      final main = taste.mainCalls.last.toJson();
-      expect(main.containsKey('exclude'), isFalse);
-      expect(main['window'], 90);
-      expect(main['remember'], isTrue);
-      expect(c.rotation, isEmpty);
-    });
-
-    test('a failed window change puts the rotation back with the window',
-        () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      taste.auto = (r) => const DiscoveryFetchResult.error();
-      await c.setWindow(90);
-      expect(c.rotation, ['f0', 'f1', 'f2'],
-          reason: 'the rows on screen came from it');
-    });
-
-    test('the checkbox starts it over', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      taste.requests.clear();
-      await c.setFilter(TasteFilter.all);
-      expect(c.rotation, isEmpty);
-      final main = taste.mainCalls.single.toJson();
-      expect(main.containsKey('exclude'), isFalse);
-      expect(main['remember'], isTrue);
-      expect(taste.peersCalls.single.toJson().containsKey('exclude'), isFalse,
-          reason: 'the seeds changed, so the peers centroid is asked again');
-      expect(seedHashes(c), ['f0', 'f1', 'f2']);
-
-      // Without a rotation out, the filter asks the library alone.
-      taste.requests.clear();
-      await c.setFilter(TasteFilter.fresh);
+      expect(c.isRandom, isTrue);
+      // The server asks no connected server for a random seed, so no
+      // peers call is made (a pin would make it ask).
       expect(taste.peersCalls, isEmpty);
+      expect(c.loadingPeers, isFalse);
+      expect(c.peers, isNull);
+      expect(c.hasConnectedServers, isFalse);
     });
 
-    test('a filter flipped under the 403 latch starts it over too, so the '
-        '"Check again" that carries it is remembered', () async {
-      taste.auto = rotating;
+    test('a random answer after a seeded one clears the connected-server '
+        'rows', () async {
+      taste.auto = answer;
       final c = make();
       await c.load();
-      await c.newSeeds();
-      taste.auto = (_) => const DiscoveryFetchResult.disabled();
+      expect(c.peers, isNotNull);
+      taste.auto = (r) => ok(randomPayload('hr'));
       await c.refresh();
-      expect(c.disabled, isTrue);
-      expect(c.rotation, ['f0', 'f1', 'f2']);
+      expect(taste.peersCalls, hasLength(1));
+      expect(c.peers, isNull);
+      expect(c.peerRows, isEmpty);
+      expect(c.hasConnectedServers, isFalse);
+    });
 
-      await c.setFilter(TasteFilter.all);
-      expect(c.includesPlayed, isTrue);
-      expect(c.rotation, isEmpty);
+    test('Another pick asks again with the pick on screen passed over, and '
+        'never lists it as dropped', () async {
+      taste.auto = (r) {
+        if (isPeersCall(r)) return ok({'peers': null});
+        final ex = (r.toJson()['exclude'] as List?)?.cast<String>() ?? [];
+        final pick = ['r1', 'r2', 'r3'].firstWhere((h) => !ex.contains(h));
+        return ok({
+          ...randomPayload(pick),
+          'excluded': [
+            for (final h in ex)
+              {'hash': h, 'filepath': 'music/$h.mp3', 'metadata': {}},
+          ],
+        });
+      };
+      final c = make();
+      await c.load();
+      expect(c.seeds.single.hash, 'r1');
 
-      taste.auto = rotating;
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r1']);
+      expect(c.seeds.single.hash, 'r2');
+      expect(c.excluded, isEmpty, reason: 'a passed pick was never dropped');
+
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r1', 'r2']);
+      expect(c.seeds.single.hash, 'r3');
+    });
+
+    test('past the last song to draw, Another pick starts over instead of '
+        'showing a false scan-pending card', () async {
+      taste.auto = (r) {
+        if (isPeersCall(r)) return ok({'peers': null});
+        final ex = excludeOf(r);
+        final left = ['r1', 'r2'].where((h) => !ex.contains(h)).toList();
+        if (left.isEmpty) {
+          // The server's answer when its random draw finds nothing.
+          return ok({
+            ...mainPayload(
+                seedSource: 'random',
+                fallback: true,
+                network: false,
+                seeds: const [],
+                exclude: ex),
+            'notAnalyzed': true,
+          });
+        }
+        return ok(randomPayload(left.first));
+      };
+      final c = make();
+      await c.load();
+      await c.anotherPick();
+      expect(c.seeds.single.hash, 'r2');
+
+      expect(taste.mainCalls, hasLength(2));
+
+      await c.anotherPick();
+      expect(taste.mainCalls, hasLength(4),
+          reason: 'the empty answer, then exactly one re-ask');
+      expect(taste.mainCalls[2].toJson()['exclude'], ['r1', 'r2']);
+      expect(taste.mainCalls[3].toJson().containsKey('exclude'), isFalse,
+          reason: 'the passed picks are let go');
+      expect(c.passed, isEmpty);
+      expect(c.seeds.single.hash, 'r1');
+      expect(c.scanPending, isFalse);
+      expect(c.loading, isFalse);
+    });
+
+    test('a history answer still scanning is no "no pick left": no re-ask',
+        () async {
+      var calls = 0;
+      taste.auto = (r) {
+        if (isPeersCall(r)) return ok({'peers': null});
+        calls++;
+        return ok(calls == 1
+            ? randomPayload('r1')
+            : {...mainPayload(), 'notAnalyzed': true});
+      };
+      final c = make();
+      await c.load();
+      await c.anotherPick();
+      expect(taste.mainCalls, hasLength(2));
+      expect(c.passed, ['r1']);
+      expect(c.scanPending, isTrue);
+    });
+
+    test('Another pick passes over the pick on screen; the passed picks '
+        'ride on every call of the visit', () async {
+      // Fresh per call: the fake draws the next pick on every plain call.
+      final order = ['r1', 'r2', 'r3', 'r4'];
+      var plain = 0;
+      taste.auto = (r) {
+        final ex = excludeOf(r);
+        final pick = ex.isEmpty
+            ? order[plain++ % order.length]
+            : order.firstWhere((h) => !ex.contains(h));
+        return ok(randomPayload(pick));
+      };
+      final c = make();
+      await c.load();
+      await c.refresh();
+      expect(taste.mainCalls.last.toJson().containsKey('exclude'), isFalse);
+      expect(c.seeds.single.hash, 'r2');
+      expect(c.passed, isEmpty, reason: 'a refresh passes nothing over');
+
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r2']);
+      expect(c.passed, ['r2']);
+      expect(c.seeds.single.hash, 'r1');
+
+      await c.refresh();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r2'],
+          reason: 'passed over for the rest of the visit');
+    });
+
+    test('Check again lets the passed picks go', () async {
+      taste.auto = (r) {
+        final ex = excludeOf(r);
+        return ok(randomPayload(
+            ['r1', 'r2', 'r3'].firstWhere((h) => !ex.contains(h))));
+      };
+      final c = make();
+      await c.load();
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r1']);
+      expect(c.passed, ['r1']);
       await c.recheck();
-      final main = taste.mainCalls.last.toJson();
-      expect(main['filter'], 'all');
-      expect(main.containsKey('exclude'), isFalse);
-      expect(main['remember'], isTrue);
+      expect(taste.mainCalls.last.toJson().containsKey('exclude'), isFalse);
+      expect(c.passed, isEmpty);
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['r1']);
     });
 
-    test('a failed filter change puts the rotation back', () async {
-      taste.auto = rotating;
+    test('the drops come first in exclude, and keep their room under the '
+        'cap', () async {
+      taste.auto = (r) => ok(randomPayload('r1'));
       final c = make();
       await c.load();
-      await c.newSeeds();
-      final peersShown = c.peers;
-      taste.auto = (r) => const DiscoveryFetchResult.error();
-      await c.setFilter(TasteFilter.all);
-      expect(c.includesPlayed, isFalse);
-      expect(c.rotation, ['f0', 'f1', 'f2']);
-      expect(c.peers, same(peersShown));
-    });
+      await c.applySeeds(drop: {'h9'}, pins: []);
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h9']);
+      await c.anotherPick();
+      expect(taste.mainCalls.last.toJson()['exclude'], ['h9', 'r1']);
 
-    test('a drop or a restore starts it over', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.applySeeds(window: c.effectiveWindow, drop: {'f4'}, pins: []);
-      expect(c.rotation, isEmpty);
-      expect(sentExclude(taste.mainCalls.last), ['f4']);
-
-      await c.newSeeds();
-      expect(c.rotation, isNotEmpty);
+      // A full list of drops leaves no room: the passed pick gives way.
       await c.applySeeds(
-          window: c.effectiveWindow, restore: {'h-dropped'}, pins: []);
-      expect(c.rotation, isEmpty);
+          drop: {for (var i = 0; i < kTasteExcludeMax; i++) 'd$i'}, pins: []);
+      final ex = excludeOf(taste.mainCalls.last);
+      expect(ex, hasLength(kTasteExcludeMax));
+      expect(ex, isNot(contains('r1')));
+      expect(ex.last, 'd${kTasteExcludeMax - 1}');
     });
-
-    test('a pin change starts it over; an apply that changed nothing keeps '
-        'it', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.applySeeds(window: c.effectiveWindow, pins: []);
-      expect(c.rotation, ['f0', 'f1', 'f2'], reason: 'nothing changed');
-      expect(sentExclude(taste.mainCalls.last), ['f0', 'f1', 'f2']);
-
-      await c.applySeeds(window: c.effectiveWindow, pins: ['/music/x.mp3']);
-      expect(c.rotation, isEmpty);
-
-      await c.newSeeds();
-      await c.pinSong('/music/y.mp3');
-      expect(c.rotation, isEmpty, reason: '"Choose a song…" is a pin too');
-    });
-
-    test('a fresh open starts empty', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      c.dispose();
-      final again = make();
-      await again.load();
-      expect(again.rotation, isEmpty);
-      expect(sentExclude(taste.mainCalls.last), isNull);
-      expect(seedHashes(again), ['f0', 'f1', 'f2'],
-          reason: 'not the rotated visit kept in the five-minute cache');
-    });
-
-    test('kept to the newest 200', () async {
-      final history = List.generate(210, (i) => 'f$i');
-      taste.auto = (r) => rotating(r, history: history);
-      final c = make();
-      await c.load();
-      for (var i = 0; i < 67; i++) {
-        await c.newSeeds();
-      }
-      // 67 calls moved past 201 songs: the oldest one fell off before the
-      // call went out, within the route's cap.
-      expect(c.rotation, hasLength(200));
-      expect(c.rotation.first, 'f1');
-      expect(sentExclude(taste.mainCalls.last), hasLength(200));
-
-      final shown = seedHashes(c);
-      await c.newSeeds();
-      expect(c.rotation, hasLength(200));
-      expect(c.rotation.sublist(197), shown, reason: 'the newest kept');
-      expect(sentExclude(taste.mainCalls.last), hasLength(200),
-          reason: "the route's cap");
-    });
-
-    test('pull to refresh is a plain re-ask: the same seeds', () async {
-      taste.auto = rotating;
-      final c = make();
-      await c.load();
-      await c.newSeeds();
-      await c.refresh();
-      expect(sentExclude(taste.mainCalls.last), ['f0', 'f1', 'f2']);
-      expect(seedHashes(c), ['f3', 'f4', 'f5']);
-    });
-
-    test('the previous answer stays up while the new one is out', () async {
-      final c = make();
-      final first = c.load();
-      await Future<void>.delayed(Duration.zero);
-      taste.pending[0].complete(rotating(taste.requests[0]));
-      taste.pending[1].complete(rotating(taste.requests[1]));
-      await first;
-      final shown = c.seeded;
-
-      final next = c.newSeeds();
-      await Future<void>.delayed(Duration.zero);
-      expect(c.loading, isTrue);
-      expect(c.seeded, same(shown), reason: 'no flash to placeholders');
-      expect(c.canNewSeeds, isFalse, reason: 'one call at a time');
-      // A tap while it is out asks nothing more.
-      final before = taste.requests.length;
-      await c.newSeeds();
-      expect(taste.requests, hasLength(before));
-
-      for (var i = 2; i < taste.pending.length; i++) {
-        taste.pending[i].complete(rotating(taste.requests[i]));
-      }
-      await next;
-      expect(c.seeds.first.hash, 'f3');
-    });
-
-    test('nothing happens before an answer, or under the 403 latch', () async {
-      final c = make();
-      await c.newSeeds();
-      expect(taste.requests, isEmpty);
-      taste.auto = (_) => const DiscoveryFetchResult.disabled();
-      await c.load();
-      final before = taste.requests.length;
-      await c.newSeeds();
-      expect(taste.requests, hasLength(before));
-    });
-  });
-
-  test('the random fallback is recognised', () async {
-    taste.auto = (r) => ok(isPeersCall(r)
-        ? {'peers': null}
-        : mainPayload(
-            seedSource: 'random',
-            fallback: true,
-            network: false,
-            seeds: [seedRow('hr', 'Pick', 'Someone')]));
-    final c = make();
-    await c.load();
-    expect(c.isRandom, isTrue);
-    expect(c.seedsCycled, isFalse,
-        reason: 'a plain random pick is not a cycled rotation');
-    // The server asks no connected server for a random seed.
-    expect(c.peers, isNull);
-    expect(c.hasConnectedServers, isFalse);
   });
 
   // Peers rows play through the parent's federation stream proxy: as a row
@@ -1144,8 +972,6 @@ void main() {
         peer(10)..parentServer = server,
         peer(11)..parentServer = server,
       ]);
-      // The group's setUp visit is cached under the same request.
-      DiscoveryPageController.clearCache();
       taste.auto = (r) =>
           ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
       final c = make();
@@ -1169,8 +995,6 @@ void main() {
         peer(7)..parentServer = server,
         peer(8)..parentServer = server,
       ]);
-      // The group's setUp visit is cached under the same request.
-      DiscoveryPageController.clearCache();
       taste.auto = (r) =>
           ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
       final c = make();
@@ -1204,7 +1028,6 @@ void main() {
     });
 
     test('no paired server: no connected-server section at all', () async {
-      DiscoveryPageController.clearCache();
       taste.auto = (r) => ok(isPeersCall(r)
           ? {
               'peers': {'peers': [], 'searched': {'peers': 0}}
