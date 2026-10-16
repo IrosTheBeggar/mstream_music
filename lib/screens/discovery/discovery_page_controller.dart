@@ -501,14 +501,8 @@ class DiscoveryPageController extends ChangeNotifier {
   /// ServerManager mirrors from this server's peer list with the same peer
   /// id. Null when the app has not mirrored it (the peer list refreshes with
   /// the server; a brand-new peer may not be there yet).
-  Server? peerServerFor(DiscoveryLead lead) {
-    final id = lead.peerId;
-    if (id == null) return null;
-    for (final s in ServerManager().federatedChildren(server)) {
-      if (s.federationPeerId == id) return s;
-    }
-    return null;
-  }
+  Server? peerServerFor(DiscoveryLead lead) =>
+      discoveryPeerServer(server, lead.peerId);
 
   /// A peers row as a playable DisplayItem on its peer's virtual Server, so
   /// the queue builds the parent's federation stream-proxy URL exactly as it
@@ -521,9 +515,15 @@ class DiscoveryPageController extends ChangeNotifier {
     final row = DisplayItem(peer, lead.title, 'file', '/$fp',
         Icon(Icons.music_note, color: VelvetColors.accent),
         discoveryRowSubtext(lead.artist, lead.album));
-    // The art file resolves against the peer's virtual Server, so the
-    // browser's art tile goes through the parent's federation art proxy
-    // (buildAlbumArtUrl), as a browsed peer track's does.
+    // The row's albumArt (the peer's cached cover name) resolves against
+    // the peer's virtual Server, so the browser's art tile is fetched the
+    // way a browsed peer track's is (buildAlbumArtUrl): on the proxy path
+    // through the parent's federation art proxy
+    // (<parent>/api/v1/federation/peers/<id>/art/<file>?compress=s); while
+    // the peer is direct (its own tunnel, issue #143), from the peer's own
+    // /album-art/<file> over that tunnel with its guest token, as every
+    // other direct-peer byte is. No albumArt (an older peer, a track
+    // without a cover): the note tile.
     row.metadata = MusicMetadata(lead.artist.isEmpty ? null : lead.artist,
         lead.album, lead.title, null, null, lead.year, '', null, lead.art,
         durationSeconds: lead.durationSeconds);
@@ -546,6 +546,31 @@ class DiscoveryPageController extends ChangeNotifier {
     _disposed = true;
     super.dispose();
   }
+}
+
+/// The virtual Server ServerManager mirrors from [parent]'s peer list for
+/// peer [id], or null when it is not mirrored (or [id] is null).
+Server? discoveryPeerServer(Server? parent, int? id) {
+  if (parent == null || id == null) return null;
+  for (final s in ServerManager().federatedChildren(parent)) {
+    if (s.federationPeerId == id) return s;
+  }
+  return null;
+}
+
+/// A federation lead's cover as an art-only DisplayItem on its peer's
+/// virtual Server — so getAlbumThumb fetches the lead's albumArt through
+/// [parent]'s federation art proxy, as the Discover page's peer rows do.
+/// Null (the caller keeps its own icon) for a P2P lead, a lead without
+/// albumArt, or a peer the app has not mirrored. More like this's "From
+/// your peers" rows use it; a lead there stays a lead (tap copies).
+DisplayItem? discoveryLeadArtItem(Server? parent, DiscoveryLead lead) {
+  final art = lead.art;
+  if (art == null) return null;
+  final peer = discoveryPeerServer(parent, lead.peerId);
+  if (peer == null) return null;
+  return DisplayItem(peer, lead.title, 'file', null, null, null)
+    ..altAlbumArt = art;
 }
 
 /// App-side paths carry the leading slash ([DisplayItem.data], MediaItem
@@ -626,7 +651,8 @@ List<DisplayItem> discoveryPeerAlbumItems(List<DisplayItem> rows) {
           (artist ?? '').isEmpty ? null : artist);
       card.trackArtist = (artist ?? '').isEmpty ? null : artist;
     }
-    // The first row that has art lends it to the card.
+    // The first row that has art lends it to the card (through the same
+    // proxy: the card is on the peer's virtual Server too).
     card.altAlbumArt ??= r.metadata?.albumArt;
   }
   return byKey.values.toList();

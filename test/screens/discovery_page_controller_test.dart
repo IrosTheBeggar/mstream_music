@@ -1017,6 +1017,88 @@ void main() {
       expect(albums.last.altAlbumArt, isNull);
     });
 
+    // mStream plan §3.1 "Peer covers": a peers row's albumArt is the peer's
+    // cached cover name, drawn through the PARENT's federation art proxy
+    // while the peer is on the proxy path (no tunnel of its own).
+    test("a connected server's row and album card draw the row's albumArt "
+        "through the parent's art proxy; no albumArt, the note tile",
+        () async {
+      ServerManager().serverList.addAll([
+        server,
+        peer(7)..parentServer = server,
+        peer(8)..parentServer = server,
+      ]);
+      taste.auto = (r) =>
+          ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
+      final c = make();
+      await c.load();
+      const proxied = 'http://music.example/api/v1/federation/peers/7/art/'
+          'blurred.jpg?compress=s&token=JWT';
+
+      final alpha = c.peerRows.firstWhere((r) => r.name == 'Alpha');
+      expect(alpha.metadata?.albumArt, 'blurred.jpg');
+      expect(artUrlOf(alpha.getImage()), proxied,
+          reason: "the browser's song row, on the proxy path: the parent's "
+              "proxy, not the peer's host");
+      expect(artUrlOf(alpha.getAlbumThumb()), proxied);
+
+      final card = c.peerAlbumItems.firstWhere((a) => a.name == 'Blurred');
+      expect(artUrlOf(card.getAlbumThumb()), proxied,
+          reason: "the album card takes its first covered row's art");
+
+      // Bravo's row and Lee's whole album came without albumArt (an older
+      // peer, or no cover): the note tile.
+      final bravo = c.peerRows.firstWhere((r) => r.name == 'Bravo');
+      expect(bravo.metadata?.albumArt, isNull);
+      expect(artUrlOf(bravo.getImage()), isNull);
+      final persona = c.peerAlbumItems.firstWhere((a) => a.name == 'Persona');
+      expect(artUrlOf(persona.getAlbumThumb()), isNull);
+    });
+
+    // A peer reached directly (issue #143, its own tunnel): the cover comes
+    // from the peer's own /album-art over that tunnel with its guest token,
+    // as every other direct-peer byte does — not through the parent.
+    test("a direct peer's row and album card draw the row's albumArt from "
+        "the peer's own tunnel", () async {
+      ServerManager().serverList.addAll([
+        server,
+        peer(7)
+          ..parentServer = server
+          ..tunnelPort = 40123
+          ..tunnelToken = 'peerlt'
+          ..directGuestToken = 'GUEST-JWT',
+        peer(8)..parentServer = server,
+      ]);
+      taste.auto = (r) =>
+          ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
+      final c = make();
+      await c.load();
+      const direct = 'http://127.0.0.1:40123/album-art/blurred.jpg'
+          '?compress=s&token=GUEST-JWT&__lt=peerlt';
+      final alpha = c.peerRows.firstWhere((r) => r.name == 'Alpha');
+      expect(alpha.server?.isDirect, isTrue);
+      expect(artUrlOf(alpha.getImage()), direct);
+      expect(artUrlOf(alpha.getAlbumThumb()), direct);
+      final card = c.peerAlbumItems.firstWhere((a) => a.name == 'Blurred');
+      expect(artUrlOf(card.getAlbumThumb()), direct);
+      expect(artUrlOf(card.getAlbumThumb()), isNot(contains('token=JWT')),
+          reason: "never the parent's token");
+    });
+
+    test('a refused albumArt keeps the note tile', () async {
+      ServerManager().serverList.addAll([server, peer(7)..parentServer = server]);
+      final p = manyPeersPayload();
+      final sam = (p['peers']['peers'] as List).first as Map;
+      ((sam['results'] as List).first as Map)['albumArt'] = '../etc/passwd';
+      taste.auto = (r) => ok(isPeersCall(r) ? p : mainPayload());
+      final c = make();
+      await c.load();
+      final alpha = c.peerRows.firstWhere((r) => r.name == 'Alpha');
+      expect(alpha.metadata?.albumArt, isNull);
+      expect(artUrlOf(alpha.getImage()), isNull);
+      expect(c.peerAlbumItems.first.altAlbumArt, isNull);
+    });
+
     test('one connected server answered: it is named', () async {
       ServerManager().serverList.addAll([server, peer(7)..parentServer = server]);
       final c = make();
@@ -1037,6 +1119,51 @@ void main() {
       await c.load();
       expect(c.peers?.peers, isEmpty);
       expect(c.hasConnectedServers, isFalse);
+    });
+
+    // More like this's "From your peers" leads (the per-song
+    // /discovery/federation/similar route) carry albumArt too.
+    test("a per-song peer lead's cover: through the parent's art proxy, "
+        'or none', () {
+      ServerManager().serverList.addAll([server, peer(3)..parentServer = server]);
+      DiscoveryLead lead(Map<String, dynamic> extra) =>
+          DiscoveryLead.fromServerMap({'title': 'T', ...extra})!;
+      final covered = discoveryLeadArtItem(
+          server,
+          lead({
+            'albumArt': 'abc.png',
+            'peer': {'id': 3, 'name': 'P'},
+          }));
+      expect(covered?.server?.federationPeerId, 3);
+      expect(artUrlOf(covered?.getAlbumThumb(size: 44)),
+          'http://music.example/api/v1/federation/peers/3/art/abc.png'
+          '?compress=s&token=JWT');
+      expect(
+          discoveryLeadArtItem(
+              server,
+              lead({
+                'peer': {'id': 3, 'name': 'P'},
+              })),
+          isNull,
+          reason: 'no albumArt: the lead icon');
+      expect(
+          discoveryLeadArtItem(
+              server,
+              lead({
+                'albumArt': 'abc.png',
+                'peer': {'id': 4, 'name': 'Q'},
+              })),
+          isNull,
+          reason: 'not mirrored');
+      expect(
+          discoveryLeadArtItem(
+              server,
+              lead({
+                'albumArt': 'abc.png',
+                'peer': {'endpointId': 'ep', 'name': 'R'},
+              })),
+          isNull,
+          reason: 'a P2P lead has no proxy to go through');
     });
 
     test('an unmirrored peer, or one under another parent, gives no row',

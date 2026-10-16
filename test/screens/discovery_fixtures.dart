@@ -2,6 +2,7 @@
 // flags, and taste payloads in the plan §3.1 wire shape (lite kebab-case
 // metadata, vpath-form paths WITHOUT the leading slash, ISO timestamps).
 
+import 'package:flutter/widgets.dart';
 import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/objects/server.dart';
 
@@ -179,7 +180,20 @@ Map<String, dynamic> peersPayload() => {
       },
     };
 
-/// A federation row in a peers answer.
+/// The URL a DisplayItem's art widget loads — getImage()'s Image.network,
+/// or getAlbumThumb()'s clipped, cache-sized one — or null when it draws
+/// the note / placeholder tile instead.
+String? artUrlOf(Widget? w) {
+  Widget? cur = w;
+  if (cur is ClipRRect) cur = cur.child;
+  if (cur is! Image) return null;
+  var p = cur.image;
+  if (p is ResizeImage) p = p.imageProvider;
+  return p is NetworkImage ? p.url : null;
+}
+
+/// A federation row in a peers answer. [art] is its `albumArt` — the
+/// peer's cached cover name (mStream plan §3.1, "Peer covers").
 Map<String, dynamic> peerRow(String title, String artist, double sim,
         {String? album, String? path, String? art}) =>
     {
@@ -188,7 +202,7 @@ Map<String, dynamic> peerRow(String title, String artist, double sim,
       'similarity': sim,
       'filepath': ?path,
       'album': ?album,
-      'album_art_file': ?art,
+      'albumArt': ?art,
       'source': 'federation',
       'seedHash': null,
     };

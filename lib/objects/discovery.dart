@@ -204,12 +204,21 @@ class DiscoveryLead {
   /// artist is unknown) — same lead-following flow as the webapp.
   String get copyText => artist.isEmpty ? title : '$artist - $title';
 
-  /// A federation row's album-art file on its peer, when the row names one
-  /// (the webapp's peerArtOf reads the same keys) — resolved through the
-  /// parent's federation art proxy. Null for a P2P lead, which has none.
+  /// A federation row's album-art file on its peer: the row's `albumArt`
+  /// (mStream plan §3.1, "Peer covers") — the file name the peer's own
+  /// browse rows carry as 'album-art' and its `/album-art/<file>` serves. The
+  /// app resolves it against the peer's virtual Server, so the cover is
+  /// fetched through the parent's federation art proxy
+  /// (`<parent>/api/v1/federation/peers/<id>/art/<file>`, buildAlbumArtUrl).
+  /// The other spellings are older guesses, read only after it (as the
+  /// webapp's peerArtOf does).
+  /// Null for a P2P lead, a peer on an older server (no field), a track
+  /// without a cover, or anything but one cached cover's file name (the
+  /// proxy takes the file as ONE path segment) — the row keeps the note
+  /// tile.
   String? get art {
-    for (final k in const ['art', 'albumArt', 'album-art', 'album_art_file']) {
-      final v = _path(raw[k]);
+    for (final k in const ['albumArt', 'art', 'album-art', 'album_art_file']) {
+      final v = _artName(raw[k]);
       if (v != null) return v;
     }
     return null;
@@ -804,6 +813,14 @@ String? _str(dynamic v, {int max = 512}) =>
 String? _path(dynamic v) => _str(v, max: 2048);
 
 String? _hash(dynamic v) => _str(v, max: 128);
+
+/// A cached cover's file name, by the server's own rule (mStream
+/// src/api/discovery-federation.js ART_NAME, the album-art cache's names: an
+/// md5 hash plus its extension). Nothing else — no '/', '%', '?', dot
+/// segment or space — is spliced into the art proxy's path.
+final RegExp _artNameRule = RegExp(r'^[a-zA-Z0-9_-]{1,100}\.[a-zA-Z0-9]{1,7}$');
+String? _artName(dynamic v) =>
+    v is String && _artNameRule.hasMatch(v) ? v : null;
 
 /// An integer from a num (rounded) or a numeric string; null otherwise.
 int? _int(dynamic v) {

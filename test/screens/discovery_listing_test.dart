@@ -162,6 +162,31 @@ void main() {
       }
     });
 
+    // mStream plan §3.1 "Peer covers": what the browser draws for the
+    // connected servers' items is the row's albumArt through the PARENT's
+    // federation art proxy — makeAlbumWidget's getAlbumThumb for a card,
+    // makeBasicWidget's getImage for a song row.
+    test("a peers answer with albumArt: the connected servers' album cards "
+        "and song rows resolve their art to the parent's art proxy",
+        () async {
+      ServerManager().serverList.addAll([server, peer(7), peer(8)]);
+      final c = make((r) async => DiscoveryFetchResult.ok(
+          parse(isPeersCall(r) ? manyPeersPayload() : mainPayload())));
+      addTearDown(c.dispose);
+      await c.load();
+      final items = discoveryListingItems(c);
+      DisplayItem item(String type, String name) =>
+          items.firstWhere((i) => i.type == type && i.name == name);
+      const proxied = 'http://music.example/api/v1/federation/peers/7/art/'
+          'blurred.jpg?compress=s&token=JWT';
+      expect(artUrlOf(item('album', 'Blurred').getAlbumThumb()), proxied);
+      expect(artUrlOf(item('file', 'Alpha').getImage()), proxied);
+      // Rows the peer sent no albumArt for keep the note tile.
+      expect(artUrlOf(item('album', 'Persona').getAlbumThumb()), isNull);
+      expect(artUrlOf(item('file', 'Delta').getImage()), isNull);
+      expect(artUrlOf(item('file', 'Charlie').getImage()), isNull);
+    });
+
     test('no connected servers: no connected-server block at all', () async {
       server = discoveryServer(peers: false);
       final c = make(usual);
@@ -530,7 +555,7 @@ void main() {
       final p = manyPeersPayload();
       for (final g in p['peers']['peers'] as List) {
         for (final r in g['results'] as List) {
-          (r as Map).remove('album_art_file');
+          (r as Map).remove('albumArt');
         }
       }
       return p;

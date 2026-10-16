@@ -164,6 +164,7 @@ Map<String, dynamic> _fullPayload() => {
                 'genreTags': ['Electronic---Ambient'],
                 'recordingMbid': null,
                 'filepath': 'sams/Nils Frahm/Says.flac',
+                'albumArt': '0f3c9a.jpeg',
                 'peer': {'id': 1, 'name': "Sam's server"},
                 'source': 'federation',
                 'seedHash': null,
@@ -326,6 +327,8 @@ void main() {
       expect(row.source, 'federation');
       expect(row.seedHash, isNull);
       expect(row.genreTags, ['Electronic---Ambient']);
+      expect(row.art, '0f3c9a.jpeg',
+          reason: "the peer's cached cover name, for the parent's art proxy");
 
       final basement = peers.peers[1];
       expect(basement.reachable, isFalse);
@@ -581,6 +584,56 @@ void main() {
       expect(row.peerName, 'Attic');
       expect(r.peers!.peers.single.reachable, isTrue,
           reason: 'no state, but it answered rows');
+    });
+  });
+
+  // mStream plan §3.1 "Peer covers": a peers row's optional albumArt.
+  group('DiscoveryLead.art', () {
+    String? artOf(Map<String, dynamic> extra) => DiscoveryLead.fromServerMap(
+            {'title': 'T', 'filepath': 'p/t.mp3', ...extra})!
+        .art;
+
+    test('albumArt is the cover; null or absent is none', () {
+      expect(artOf({'albumArt': 'd41d8cd98f00b204e9800998ecf8427e.jpeg'}),
+          'd41d8cd98f00b204e9800998ecf8427e.jpeg');
+      expect(artOf({'albumArt': null}), isNull, reason: 'no cover');
+      expect(artOf({}), isNull, reason: 'a peer on an older server');
+    });
+
+    test('albumArt wins over the older spellings, which still read', () {
+      expect(artOf({'albumArt': 'new.jpg', 'album_art_file': 'old.jpg'}),
+          'new.jpg');
+      expect(artOf({'album_art_file': 'old.jpg'}), 'old.jpg');
+    });
+
+    test('anything but one cached cover name is refused', () {
+      for (final bad in <Object>[
+        '',
+        'a/b.jpg',
+        '../x.jpg',
+        '..',
+        r'a\b.jpg',
+        'a b.jpg',
+        'a%2Fb.jpg',
+        'a.jpg?x=1',
+        'noext',
+        'a\u0001.jpg',
+        '${'a' * 101}.jpg',
+        42,
+        {'f': 1},
+      ]) {
+        expect(artOf({'albumArt': bad}), isNull, reason: '$bad');
+      }
+    });
+
+    test('a per-song /federation/similar row carries it too', () {
+      final lead = DiscoveryLead.fromServerMap({
+        'title': 'T',
+        'albumArt': 'abc.png',
+        'peer': {'id': 3, 'name': 'P'},
+      })!;
+      expect(lead.art, 'abc.png');
+      expect(lead.peerId, 3);
     });
   });
 

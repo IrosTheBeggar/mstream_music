@@ -20,6 +20,7 @@ import '../util/media_item_credits.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
+import 'discovery/discovery_page_controller.dart';
 import 'sonic_path_screen.dart';
 
 /// More like this — sonic-similarity recommendations seeded by ONE song (the
@@ -1013,8 +1014,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     ].join(' · ');
     return ListTile(
       dense: true,
-      leading: Icon(Icons.travel_explore,
-          color: VelvetColors.textSecondary, size: 22),
+      // A federation lead with albumArt shows its cover, fetched through
+      // the seed server's federation art proxy; otherwise the lead icon.
+      leading:
+          discoveryLeadArtItem(_seedServer, lead)?.getAlbumThumb(size: 44) ??
+              Icon(Icons.travel_explore,
+                  color: VelvetColors.textSecondary, size: 22),
       title: Text(
         lead.title,
         maxLines: 1,
