@@ -1879,21 +1879,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageRetry => '再試行';
 
   @override
-  String get discoverPageSeedsSub => '最後まで聴いた曲 · スキップは数えません';
-
-  @override
-  String discoverPageSeedsOn(int on, int total) {
-    return '$total 曲中 $on 曲がオン';
-  }
-
-  @override
   String get discoverPagePickedHeader => '今回選んだ曲';
-
-  @override
-  String get discoverPageRecentHeader => '最近聴き終えた曲';
-
-  @override
-  String get discoverPageCountersHeader => 'よく聴く曲';
 
   @override
   String get discoverPageRandomHeader => 'ランダムに選んだ曲';

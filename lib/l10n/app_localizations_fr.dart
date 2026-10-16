@@ -1966,22 +1966,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverPageRetry => 'Réessayer';
 
   @override
-  String get discoverPageSeedsSub =>
-      'morceaux écoutés jusqu’au bout · les morceaux passés ne comptent pas';
-
-  @override
-  String discoverPageSeedsOn(int on, int total) {
-    return '$on sur $total actifs';
-  }
-
-  @override
   String get discoverPagePickedHeader => 'Choisis pour cette visite';
-
-  @override
-  String get discoverPageRecentHeader => 'Écoutés récemment';
-
-  @override
-  String get discoverPageCountersHeader => 'Les plus écoutés';
 
   @override
   String get discoverPageRandomHeader => 'Choix au hasard';

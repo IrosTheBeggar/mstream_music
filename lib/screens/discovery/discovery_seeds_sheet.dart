@@ -75,7 +75,6 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
       _on.length +
       _pins.where((p) => p.on).length;
 
-  int get _total => _history.length + _excluded.length + _pins.length;
 
   void _reset() {
     setState(() {
@@ -135,7 +134,6 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final widened = c.seeded?.widenedFrom;
-    final source = c.seeded?.seedSource;
     final maxH = MediaQuery.sizeOf(context).height * 0.88;
     return SafeArea(
       top: false,
@@ -172,12 +170,6 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l.discoverPageSeedsSub,
-                          style: TextStyle(
-                              color: VelvetColors.textSecondary, fontSize: 12),
-                        ),
                       ],
                     ),
                   ),
@@ -190,18 +182,15 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-              child: Text(
-                [
-                  l.discoverPageSeedsOn(_onCount, _total),
-                  if (widened != null)
-                    l.discoverPageWidened(discoveryWindowLabel(l, widened)),
-                ].join(' · '),
-                style:
-                    TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
+            if (widened != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text(
+                  l.discoverPageWidened(discoveryWindowLabel(l, widened)),
+                  style:
+                      TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
+                ),
               ),
-            ),
             Flexible(
               child: ListView(
                 shrinkWrap: true,
@@ -212,13 +201,9 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                     for (final p in _pins) _pinRow(l, p),
                   ],
                   if (_history.isNotEmpty) ...[
-                    // A random pick is no song you finished: its own header.
-                    if (c.isRandom)
-                      _groupHeader(l.discoverPageRandomHeader)
-                    else
-                      _groupHeader(source == TasteSeedSource.counters
-                          ? l.discoverPageCountersHeader
-                          : l.discoverPageRecentHeader),
+                    // A random pick is no song you finished: say so. Finished
+                    // songs carry no header — the sheet's title already does.
+                    if (c.isRandom) _groupHeader(l.discoverPageRandomHeader),
                     for (final s in _history) _seedRow(l, s),
                   ],
                   if (_excluded.isNotEmpty) ...[

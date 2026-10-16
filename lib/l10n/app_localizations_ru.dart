@@ -1997,22 +1997,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageRetry => 'Повторить';
 
   @override
-  String get discoverPageSeedsSub =>
-      'треки, дослушанные до конца · пропущенные не считаются';
-
-  @override
-  String discoverPageSeedsOn(int on, int total) {
-    return 'включено $on из $total';
-  }
-
-  @override
   String get discoverPagePickedHeader => 'Выбрано на этот раз';
-
-  @override
-  String get discoverPageRecentHeader => 'Недавно дослушанные';
-
-  @override
-  String get discoverPageCountersHeader => 'Чаще всего';
 
   @override
   String get discoverPageRandomHeader => 'Случайный выбор';

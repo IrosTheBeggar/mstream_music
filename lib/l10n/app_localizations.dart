@@ -3342,35 +3342,11 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get discoverPageRetry;
 
-  /// Seeds sheet subtitle under "Based on".
-  ///
-  /// In en, this message translates to:
-  /// **'songs you played to the end · skips never count'**
-  String get discoverPageSeedsSub;
-
-  /// Seeds sheet line: how many seeds are switched on.
-  ///
-  /// In en, this message translates to:
-  /// **'{on} of {total} on'**
-  String discoverPageSeedsOn(int on, int total);
-
   /// Seeds sheet group: songs pinned for this visit (now playing at open, songs picked).
   ///
   /// In en, this message translates to:
   /// **'Picked for this visit'**
   String get discoverPagePickedHeader;
-
-  /// Seeds sheet group: seeds drawn at random from the songs finished in the chosen window.
-  ///
-  /// In en, this message translates to:
-  /// **'Finished recently'**
-  String get discoverPageRecentHeader;
-
-  /// Seeds sheet group: seeds from all-time play counts.
-  ///
-  /// In en, this message translates to:
-  /// **'Played most'**
-  String get discoverPageCountersHeader;
 
   /// Group header in the Discover page's seeds sheet over the random seed the server picked because nothing was finished yet (in place of "Finished recently").
   ///

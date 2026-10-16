@@ -1840,21 +1840,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageRetry => '重试';
 
   @override
-  String get discoverPageSeedsSub => '你听完的歌 · 跳过的不算';
-
-  @override
-  String discoverPageSeedsOn(int on, int total) {
-    return '已启用 $on/$total';
-  }
-
-  @override
   String get discoverPagePickedHeader => '本次选择';
-
-  @override
-  String get discoverPageRecentHeader => '最近听完';
-
-  @override
-  String get discoverPageCountersHeader => '最常播放';
 
   @override
   String get discoverPageRandomHeader => '随机挑选';
