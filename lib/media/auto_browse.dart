@@ -706,8 +706,10 @@ class AutoBrowse {
       // its id would carry no 'v', and album:null can't be loaded server-side
       // (matches _firstNamed / _dirNodes / _trackNodes).
       if (r.type != 'album' || r.data == null) continue;
+      // 'l' (256 px): the server caches only 's' and 'l'; 'm' served the
+      // full-size original.
       final art = r.altAlbumArt != null
-          ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'm')
+          ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'l')
           : null;
       out.add(_browse(
         // 'aa' / 'y': the album artist and year the list carried, read back

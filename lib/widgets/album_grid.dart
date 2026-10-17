@@ -181,7 +181,10 @@ class AlbumGridCard extends StatelessWidget {
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
-      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'm');
+      // 'l': the server's 256 px rendition, the webapp's album-card size.
+      // mStream caches only 's' (92 px) and 'l'; any other value serves the
+      // full-size original, which is what 'm' quietly did here.
+      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'l');
       return Image.network(
         url,
         fit: BoxFit.cover,
