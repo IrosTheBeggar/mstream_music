@@ -69,7 +69,8 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
           .fetchAlbumSongs(widget.album.data,
               useThisServer: widget.album.server,
               year: widget.album.year,
-              albumArtist: widget.album.albumArtist);
+              albumArtist: widget.album.albumArtist,
+              artist: widget.album.trackArtist);
       // Publish to BrowserManager so the top toolbar's download / add-all act on
       // these songs.
       BrowserManager().albumDetailSongs = songs;

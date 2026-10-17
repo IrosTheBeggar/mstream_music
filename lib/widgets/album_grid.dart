@@ -87,7 +87,7 @@ class AlbumGrid extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (context, i) {
           final item = items[i];
-          return _AlbumCard(
+          return AlbumGridCard(
             item: item,
             onTap: () => onTap(i),
             cacheWidth: cacheW,
@@ -98,13 +98,18 @@ class AlbumGrid extends StatelessWidget {
   }
 }
 
-class _AlbumCard extends StatelessWidget {
+/// One album card: cover art, name, subtext. Public so Discover's album
+/// strips draw the browser's own album look (browser.dart).
+class AlbumGridCard extends StatelessWidget {
   final DisplayItem item;
   final VoidCallback onTap;
   final int cacheWidth;
 
-  const _AlbumCard(
-      {required this.item, required this.onTap, required this.cacheWidth});
+  const AlbumGridCard(
+      {super.key,
+      required this.item,
+      required this.onTap,
+      required this.cacheWidth});
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +181,10 @@ class _AlbumCard extends StatelessWidget {
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
-      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'm');
+      // 'l': the server's 256 px rendition, the webapp's album-card size.
+      // mStream caches only 's' (92 px) and 'l'; any other value serves the
+      // full-size original, which is what 'm' quietly did here.
+      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'l');
       return Image.network(
         url,
         fit: BoxFit.cover,

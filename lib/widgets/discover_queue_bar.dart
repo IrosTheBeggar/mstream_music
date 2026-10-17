@@ -61,10 +61,12 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
   // 0.0 = collapsed strip, 1.0 = open panel. A continuous value rather than
   // a bool, which is the whole difference between "commits on release" and
   // "follows the finger" — the same thing PlayerPanelState does one layer up.
-  late final AnimationController _ctrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 320),
-  );
+  //
+  // Created in initState, not lazily: a bar that stays hidden (nothing
+  // playing) never reads it in build, and a lazy initializer would then
+  // first run inside dispose — creating a ticker on a deactivated element,
+  // which asserts when the tree is torn down.
+  late final AnimationController _ctrl;
 
   /// Travel available to a drag, in logical px: set from layout each build,
   /// so the finger moves the panel 1:1 whatever height the panel resolved to.
@@ -89,6 +91,10 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
   @override
   void initState() {
     super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
     _sub = MediaManager().audioHandler.mediaItem.listen((item) {
       final extras = item?.extras;
       if (extras?['path'] == _seedPath &&

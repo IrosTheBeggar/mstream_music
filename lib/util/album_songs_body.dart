@@ -8,9 +8,15 @@
 /// predates the fields (it ignores unknown keys) sees the request it always did,
 /// and never a joined display of several credits (the list gives `album_artist`
 /// null when its rows disagree — sending anything then would match nothing).
+///
+/// [artist] is the route's `artist` filter — a TRACK (performer) artist, so
+/// the album's songs by that artist — for a card built from tracks, which
+/// knows no album credit (DisplayItem.trackArtist). Sent only when non-blank.
 Map<String, dynamic> albumSongsBody(String? album,
-    {int? year, String? albumArtist}) {
+    {int? year, String? albumArtist, String? artist}) {
   final body = <String, dynamic>{'album': album};
+  final by = artist?.trim();
+  if (by != null && by.isNotEmpty) body['artist'] = by;
   if (year != null) body['year'] = year;
   final credit = albumArtist?.trim();
   if (credit != null && credit.isNotEmpty) body['album_artist'] = credit;

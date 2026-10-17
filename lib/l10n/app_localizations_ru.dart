@@ -1866,7 +1866,184 @@ class AppLocalizationsRu extends AppLocalizations {
       'Функция «Поделиться» недоступна для одноранговых (iroh) серверов — у них нет публичного URL для ссылки.';
 
   @override
-  String get discoverTitle => 'Открытия';
+  String get discoverTitle => 'Похожее';
+
+  @override
+  String get discoverPageTitle => 'Открытия';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дня',
+      many: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => 'Всегда';
+
+  @override
+  String discoverPageWidened(String window) {
+    return 'За последние $window ничего нет, поэтому эти — из более раннего времени.';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'На основе';
+
+  @override
+  String get discoverPageBasedOnLast => 'На основе последних';
+
+  @override
+  String get discoverPageBasedOnAllTime => 'Период';
+
+  @override
+  String get discoverPageMoreOptions => 'Другие параметры';
+
+  @override
+  String get discoverPageNewSeeds => 'Новые исходные треки';
+
+  @override
+  String get discoverPageAlbumsLibrary => 'Альбомы из вашей библиотеки';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return 'Альбомы с сервера «$name»';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Альбомы с подключённых серверов';
+
+  @override
+  String get discoverPageSongsLibrary => 'Треки из вашей библиотеки';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Треки с сервера «$name»';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Треки с подключённых серверов';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'В вашей библиотеке нет ничего нового, похожего на эти треки.';
+
+  @override
+  String get discoverPagePeersQuiet =>
+      'С подключённых серверов пока ничего нет.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Сохранить как плейлист';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Открыть библиотеку';
+
+  @override
+  String get discoverPageAgoToday => 'сегодня';
+
+  @override
+  String get discoverPageAgoYesterday => 'вчера';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца назад',
+      many: '$count месяцев назад',
+      few: '$count месяца назад',
+      one: '$count месяц назад',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count года назад',
+      many: '$count лет назад',
+      few: '$count года назад',
+      one: '$count год назад',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle =>
+      'Дослушайте несколько треков, и эта страница узнает ваш вкус';
+
+  @override
+  String get discoverPageRandomBody =>
+      '«Открытия» опираются на треки, которые вы дослушиваете до конца. Пропущенные не считаются. Пока таких нет, вот подборка вокруг случайного трека из вашей библиотеки.';
+
+  @override
+  String get discoverPageAnotherPick => 'Другой трек';
+
+  @override
+  String get discoverPageChooseSong => 'Выбрать трек…';
+
+  @override
+  String get discoverPageError =>
+      'Не удалось загрузить «Открытия». Проверьте подключение и попробуйте ещё раз.';
+
+  @override
+  String get discoverPageRetry => 'Повторить';
+
+  @override
+  String get discoverPagePickedHeader => 'Выбрано на этот раз';
+
+  @override
+  String get discoverPageRandomHeader => 'Случайный выбор';
+
+  @override
+  String get discoverPageDroppedHeader => 'Исключённые';
+
+  @override
+  String get discoverPageDroppedNote => 'включите, чтобы вернуть';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return 'слушали $count×';
+  }
+
+  @override
+  String get discoverPageListenedTo => 'прослушан';
+
+  @override
+  String get discoverPageNotAnalyzed => 'ещё не проанализирован';
+
+  @override
+  String get discoverPageAddOwn => 'Добавьте свой';
+
+  @override
+  String get discoverPageAddOwnSub => 'трек, которого хочется больше';
+
+  @override
+  String get discoverPagePickSong => 'Выбрать трек…';
+
+  @override
+  String get discoverPagePickSongSub =>
+      'найдите в библиотеке или возьмите случайный';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Использовать эти $count',
+      many: 'Использовать эти $count',
+      few: 'Использовать эти $count',
+      one: 'Использовать $count',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'Подобрано по звучанию';
@@ -3391,20 +3568,20 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
+          'Открывает «Похожее» для играющего трека · подсказки из $count загруженных библиотек',
       many:
-          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
+          'Открывает «Похожее» для играющего трека · подсказки из $count загруженных библиотек',
       few:
-          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
+          'Открывает «Похожее» для играющего трека · подсказки из $count загруженных библиотек',
       one:
-          'Открывает «Открытия» для играющего трека · подсказки из $count загруженной библиотеки',
+          'Открывает «Похожее» для играющего трека · подсказки из $count загруженной библиотеки',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Сначала включите что-нибудь — «Открытия» следуют за текущим треком';
+      'Сначала включите что-нибудь — «Похожее» следует за текущим треком';
 
   @override
   String get p2pNewArtistsOnlySub =>

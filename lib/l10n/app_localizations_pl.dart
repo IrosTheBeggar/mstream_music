@@ -1861,7 +1861,182 @@ class AppLocalizationsPl extends AppLocalizations {
       'Udostępnianie nie jest dostępne dla serwerów peer-to-peer (iroh) — nie mają publicznego adresu URL, do którego można linkować.';
 
   @override
-  String get discoverTitle => 'Odkrywaj';
+  String get discoverTitle => 'Więcej podobnych';
+
+  @override
+  String get discoverPageTitle => 'Odkrywaj';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dnia',
+      many: '$count dni',
+      few: '$count dni',
+      one: '1 dzień',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => 'Cały czas';
+
+  @override
+  String discoverPageWidened(String window) {
+    return 'W ostatnich $window nic nie było, więc te pochodzą z wcześniej.';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'Na podstawie';
+
+  @override
+  String get discoverPageBasedOnLast => 'Na podstawie ostatnich';
+
+  @override
+  String get discoverPageBasedOnAllTime => 'Okres';
+
+  @override
+  String get discoverPageMoreOptions => 'Więcej opcji';
+
+  @override
+  String get discoverPageNewSeeds => 'Nowe utwory bazowe';
+
+  @override
+  String get discoverPageAlbumsLibrary => 'Albumy z twojej biblioteki';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return 'Albumy z serwera „$name”';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Albumy z połączonych serwerów';
+
+  @override
+  String get discoverPageSongsLibrary => 'Utwory z twojej biblioteki';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Utwory z serwera „$name”';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Utwory z połączonych serwerów';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'Nic nowego w twojej bibliotece nie brzmi jak te utwory.';
+
+  @override
+  String get discoverPagePeersQuiet => 'Na razie nic z połączonych serwerów.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Zapisz jako playlistę';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Przeglądaj bibliotekę';
+
+  @override
+  String get discoverPageAgoToday => 'dzisiaj';
+
+  @override
+  String get discoverPageAgoYesterday => 'wczoraj';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count miesiąca temu',
+      many: '$count miesięcy temu',
+      few: '$count miesiące temu',
+      one: '1 miesiąc temu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count roku temu',
+      many: '$count lat temu',
+      few: '$count lata temu',
+      one: '1 rok temu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle =>
+      'Przesłuchaj do końca kilka utworów, a ta strona pozna twój gust';
+
+  @override
+  String get discoverPageRandomBody =>
+      'Odkrywaj opiera się na utworach słuchanych do końca. Pominięte nigdy się nie liczą. Zanim jakieś się pojawią, oto propozycje wokół losowego utworu z twojej biblioteki.';
+
+  @override
+  String get discoverPageAnotherPick => 'Inny utwór';
+
+  @override
+  String get discoverPageChooseSong => 'Wybierz utwór…';
+
+  @override
+  String get discoverPageError =>
+      'Nie udało się wczytać Odkrywaj. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get discoverPageRetry => 'Spróbuj ponownie';
+
+  @override
+  String get discoverPagePickedHeader => 'Wybrane na tę wizytę';
+
+  @override
+  String get discoverPageRandomHeader => 'Losowy wybór';
+
+  @override
+  String get discoverPageDroppedHeader => 'Pominięte';
+
+  @override
+  String get discoverPageDroppedNote => 'włącz, aby przywrócić';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return 'odtworzono $count×';
+  }
+
+  @override
+  String get discoverPageListenedTo => 'przesłuchany';
+
+  @override
+  String get discoverPageNotAnalyzed => 'jeszcze nie przeanalizowany';
+
+  @override
+  String get discoverPageAddOwn => 'Dodaj własny';
+
+  @override
+  String get discoverPageAddOwnSub => 'utwór, którego chcesz więcej';
+
+  @override
+  String get discoverPagePickSong => 'Wybierz utwór…';
+
+  @override
+  String get discoverPagePickSongSub => 'przeszukaj bibliotekę lub wylosuj';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Użyj tych $count',
+      many: 'Użyj tych $count',
+      few: 'Użyj tych $count',
+      one: 'Użyj 1',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'Dopasowane brzmieniem';
@@ -3386,20 +3561,20 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       many:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       few:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       one:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Najpierw coś odtwórz — ekran Odkrywaj podąża za bieżącym utworem';
+      'Najpierw coś odtwórz — ekran Więcej podobnych podąża za bieżącym utworem';
 
   @override
   String get p2pNewArtistsOnlySub =>

@@ -85,6 +85,25 @@ class Server {
   //                                  answered (an older build never does).
   //                                  Feeds the home banner and the alerts.
   int? federationInbox;
+  //   discoveryTasteAvailable      — the history-seeded Discover page
+  //                                  (POST /api/v1/discovery/taste + its
+  //                                  prefs routes). The wire value is an
+  //                                  integer generation like `stats`
+  //                                  (`features.discoveryTaste`, ping
+  //                                  `discoveryTaste`); any generation ≥ 1
+  //                                  has the page, so the app keeps the
+  //                                  answer, not the number. The home card
+  //                                  wants it AND [discoveryAvailable] (the
+  //                                  route 403s with discovery off).
+  bool? discoveryTasteAvailable;
+  //   discoveryPluginsAvailable    — at least one discovery plug-in is on,
+  //                                  so a recommendation row has actions
+  //                                  (`features.discoveryPlugins`, ping
+  //                                  `discoveryPlugins`). Read and kept now;
+  //                                  the plug-in client is the Discover
+  //                                  plan's phase B, and v1 network rows
+  //                                  carry no plug-in verbs.
+  bool? discoveryPluginsAvailable;
   //   statsVersion                 — the Stats API generation the server
   //                                  advertises (`features.stats`; 2 = Stats
   //                                  API v2: plays post, history reads). Null
@@ -402,6 +421,12 @@ class Server {
             : null,
         federationInbox =
             json['federationInbox'] is int ? json['federationInbox'] : null,
+        discoveryTasteAvailable = json['discoveryTasteAvailable'] is bool
+            ? json['discoveryTasteAvailable']
+            : null,
+        discoveryPluginsAvailable = json['discoveryPluginsAvailable'] is bool
+            ? json['discoveryPluginsAvailable']
+            : null,
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
         discoveryEnabled =
@@ -448,6 +473,8 @@ class Server {
         'federationAvailable': federationAvailable,
         'p2pAvailable': p2pAvailable,
         'federationInbox': federationInbox,
+        'discoveryTasteAvailable': discoveryTasteAvailable,
+        'discoveryPluginsAvailable': discoveryPluginsAvailable,
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,

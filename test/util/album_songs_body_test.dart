@@ -21,6 +21,13 @@ void main() {
           reason: 'blank is not a credit');
     });
 
+    test('a track artist rides as the artist filter, blank is left out', () {
+      expect(albumSongsBody('Greatest Hits', artist: ' Ann '),
+          {'album': 'Greatest Hits', 'artist': 'Ann'});
+      expect(albumSongsBody('Greatest Hits', artist: '  '),
+          {'album': 'Greatest Hits'});
+    });
+
     test('the singles bucket keeps album null', () {
       expect(albumSongsBody(null, year: null, albumArtist: 'Ann'),
           {'album': null, 'album_artist': 'Ann'});

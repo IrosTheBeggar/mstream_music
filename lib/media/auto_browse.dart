@@ -706,6 +706,11 @@ class AutoBrowse {
       // its id would carry no 'v', and album:null can't be loaded server-side
       // (matches _firstNamed / _dirNodes / _trackNodes).
       if (r.type != 'album' || r.data == null) continue;
+      // Deliberately the ORIGINAL cover, not a cached rendition: a car
+      // display draws album art large. mStream caches only 's' (92 px) and
+      // 'l' (256 px) and serves the full-size file for any other value, so
+      // 'm' is that request (the phone's album cards moved to 'l',
+      // 2026-10-17; Android Auto stays on the original on purpose).
       final art = r.altAlbumArt != null
           ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'm')
           : null;

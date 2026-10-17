@@ -385,6 +385,17 @@ class BrowserManager {
       if (server.discoveryPathAvailable == true)
         DisplayItem(server, 'Sonic path', 'execAction', 'sonicPath',
             Icon(Icons.route, color: VelvetColors.textSecondary), null),
+      // Discover: songs to play now, seeded by this ACCOUNT's play history
+      // on this server — one server's history, so a card here rather than a
+      // drawer entry (mStream docs/discovery-page-plan.md §2.9). A browser
+      // listing like Albums, not a screen of its own (discovery_listing.dart). Both flags: the
+      // taste route 403s with discovery off. A peer never gets it (both
+      // pinned false: the route wants a logged-in account, and a peer's
+      // plays are its parent's).
+      if (server.discoveryAvailable == true &&
+          server.discoveryTasteAvailable == true)
+        DisplayItem(server, 'Discover', 'execAction', 'discover',
+            Icon(Icons.explore, color: VelvetColors.textSecondary), null),
       // Listening stats are one record across every server (this phone's,
       // plus each server's), so they live in the drawer, not under a server.
       // NETWORK: the libraries other servers share with this one. Only when
@@ -532,6 +543,24 @@ class BrowserManager {
     DownloadManager().rebindActiveDownloads(newList);
     _browserStream.sink.add(browserList);
     unawaited(_resolveDownloadBadges(newList));
+  }
+
+  /// Swaps the frame [old] (matched by identity) for [newList] wherever it
+  /// sits in the back-stack: the top frame re-emits through [replaceTop], a
+  /// frame under it is replaced silently and shows when Back reaches it.
+  /// False when [old] is no longer on the stack (popped, or the stack was
+  /// reset by a server switch) — the caller's view is gone and it should
+  /// stop feeding it. Used by a list that fills itself in after it is shown
+  /// (Discover: its answers land after the frame is pushed).
+  bool replaceFrame(List<DisplayItem> old, List<DisplayItem> newList) {
+    final at = browserCache.lastIndexWhere((f) => identical(f, old));
+    if (at < 0) return false;
+    if (at == browserCache.length - 1) {
+      replaceTop(newList);
+    } else {
+      browserCache[at] = newList;
+    }
+    return true;
   }
 
   // Re-check the on-device download badge for cached file rows against their

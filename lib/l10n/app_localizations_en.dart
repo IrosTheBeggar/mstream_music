@@ -1820,7 +1820,176 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
 
   @override
-  String get discoverTitle => 'Discover';
+  String get discoverTitle => 'More like this';
+
+  @override
+  String get discoverPageTitle => 'Discover';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => 'All time';
+
+  @override
+  String discoverPageWidened(String window) {
+    return 'Nothing in the last $window, so these come from further back.';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'Based on';
+
+  @override
+  String get discoverPageBasedOnLast => 'Based on the last';
+
+  @override
+  String get discoverPageBasedOnAllTime => 'Based on';
+
+  @override
+  String get discoverPageMoreOptions => 'More options';
+
+  @override
+  String get discoverPageNewSeeds => 'New seeds';
+
+  @override
+  String get discoverPageAlbumsLibrary => 'Albums from your library';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return 'Albums from $name';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Albums from connected servers';
+
+  @override
+  String get discoverPageSongsLibrary => 'Songs from your library';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Songs from $name';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Songs from connected servers';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'Nothing new in your library sounds like these songs.';
+
+  @override
+  String get discoverPagePeersQuiet =>
+      'Nothing from your connected servers right now.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Save as playlist';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Browse your library';
+
+  @override
+  String get discoverPageAgoToday => 'today';
+
+  @override
+  String get discoverPageAgoYesterday => 'yesterday';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months ago',
+      one: '1 month ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years ago',
+      one: '1 year ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle =>
+      'Finish a few songs and this page learns your taste';
+
+  @override
+  String get discoverPageRandomBody =>
+      'Discover seeds itself from songs you play to the end. Skipped songs never count. Until there are some, here are suggestions around a random pick from your library.';
+
+  @override
+  String get discoverPageAnotherPick => 'Another pick';
+
+  @override
+  String get discoverPageChooseSong => 'Choose a song…';
+
+  @override
+  String get discoverPageError =>
+      'Discover couldn\'t load. Check the connection and try again.';
+
+  @override
+  String get discoverPageRetry => 'Try again';
+
+  @override
+  String get discoverPagePickedHeader => 'Picked for this visit';
+
+  @override
+  String get discoverPageRandomHeader => 'Random pick';
+
+  @override
+  String get discoverPageDroppedHeader => 'Left out';
+
+  @override
+  String get discoverPageDroppedNote => 'switch one on to bring it back';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return 'played $count×';
+  }
+
+  @override
+  String get discoverPageListenedTo => 'listened to';
+
+  @override
+  String get discoverPageNotAnalyzed => 'not analyzed yet';
+
+  @override
+  String get discoverPageAddOwn => 'Add your own';
+
+  @override
+  String get discoverPageAddOwnSub => 'a song you want more of';
+
+  @override
+  String get discoverPagePickSong => 'Pick a song…';
+
+  @override
+  String get discoverPagePickSongSub =>
+      'search your library, or take a random one';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Use these $count',
+      one: 'Use this 1',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'Matched by sound';
@@ -3317,16 +3486,16 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Opens Discover for the track playing now · leads from $count downloaded libraries',
+          'Opens More like this for the track playing now · leads from $count downloaded libraries',
       one:
-          'Opens Discover for the track playing now · leads from 1 downloaded library',
+          'Opens More like this for the track playing now · leads from 1 downloaded library',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Play something first — Discover follows the current track';
+      'Play something first — More like this follows the current track';
 
   @override
   String get p2pNewArtistsOnlySub =>

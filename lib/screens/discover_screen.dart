@@ -20,10 +20,14 @@ import '../util/media_item_credits.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
+import 'discovery/discovery_page_controller.dart';
 import 'sonic_path_screen.dart';
 
-/// Discover — sonic-similarity recommendations seeded by the NOW-PLAYING
-/// track, the mobile counterpart of the webapp's Discover panel. Up to four
+/// More like this — sonic-similarity recommendations seeded by ONE song (the
+/// now-playing track, or the one a "Find similar" entry passed), the mobile
+/// counterpart of the webapp's now-playing panel. Titled "More like this"
+/// (l.discoverTitle) since the Discover page plan §2.12: "Discover" alone
+/// names the history-seeded listing (discovery/discovery_listing.dart). Up to four
 /// sections, each shown only when the seed's server advertised the matching
 /// /api/v1/ping flag (never probed blind):
 ///   • Similar tracks   — local library, playable rows + "Queue all"
@@ -1010,8 +1014,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     ].join(' · ');
     return ListTile(
       dense: true,
-      leading: Icon(Icons.travel_explore,
-          color: VelvetColors.textSecondary, size: 22),
+      // A federation lead with albumArt shows its cover, fetched through
+      // the seed server's federation art proxy; otherwise the lead icon.
+      leading:
+          discoveryLeadArtItem(_seedServer, lead)?.getAlbumThumb(size: 44) ??
+              Icon(Icons.travel_explore,
+                  color: VelvetColors.textSecondary, size: 22),
       title: Text(
         lead.title,
         maxLines: 1,
