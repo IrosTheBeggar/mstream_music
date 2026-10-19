@@ -445,6 +445,7 @@
   "discoverPageSongsPeers": "Músicas de servidores conectados",
   "discoverPageLibraryNothing": "Nada novo na sua biblioteca soa como estas músicas.",
   "discoverPagePeersQuiet": "Nada dos seus servidores conectados no momento.",
+  "discoverPagePeersFailed": "Não foi possível acessar seus servidores conectados.",
   "discoverPageSaveAsPlaylist": "Salvar como playlist",
   "discoverPageBrowseLibrary": "Explorar sua biblioteca",
   "discoverPageAgoToday": "hoje",

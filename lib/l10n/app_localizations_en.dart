@@ -1890,6 +1890,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing from your connected servers right now.';
 
   @override
+  String get discoverPagePeersFailed =>
+      'Couldn\'t reach your connected servers.';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'Save as playlist';
 
   @override

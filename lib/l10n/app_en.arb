@@ -1516,6 +1516,10 @@
   "@discoverPagePeersQuiet": {
     "description": "One line under the connected servers' songs header when they had nothing playable."
   },
+  "discoverPagePeersFailed": "Couldn't reach your connected servers.",
+  "@discoverPagePeersFailed": {
+    "description": "One line under the connected servers' songs header when asking them failed; a Try again button follows it."
+  },
   "discoverPageSaveAsPlaylist": "Save as playlist",
   "@discoverPageSaveAsPlaylist": {
     "description": "Button under Discover's library songs: save them as a server playlist."

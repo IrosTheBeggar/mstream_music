@@ -1938,6 +1938,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'С подключённых серверов пока ничего нет.';
 
   @override
+  String get discoverPagePeersFailed =>
+      'Не удалось связаться с подключёнными серверами.';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'Сохранить как плейлист';
 
   @override

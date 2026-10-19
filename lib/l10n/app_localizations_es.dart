@@ -1912,6 +1912,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Ahora mismo no hay nada de tus servidores conectados.';
 
   @override
+  String get discoverPagePeersFailed =>
+      'No se pudo contactar con tus servidores conectados.';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'Guardar como lista de reproducción';
 
   @override

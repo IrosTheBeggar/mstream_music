@@ -8,6 +8,7 @@ import '../../objects/display_item.dart';
 import '../../singletons/api.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/queue_actions.dart';
+import '../../widgets/album_grid.dart';
 import '../../widgets/player_panel.dart';
 import '../../widgets/playlist_picker_sheet.dart';
 import '../../widgets/song_picker_sheet.dart';
@@ -394,6 +395,37 @@ class DiscoveryHint extends StatelessWidget {
       );
 }
 
+/// The width of one card in a Discover album strip (the browser's
+/// _discoveryAlbumStrip); the strip is one card tall.
+const double kDiscoverStripCardWidth = 132;
+const double kDiscoverStripHeight = kDiscoverStripCardWidth / AlbumGrid.aspectRatio;
+
+/// A Discover album strip's placeholder: the strip's own height, cards and
+/// padding, so the strip that replaces it moves nothing below it.
+class DiscoveryStripSkeleton extends StatelessWidget {
+  const DiscoveryStripSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        key: const ValueKey('discovery-strip-skeleton'),
+        height: kDiscoverStripHeight,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          itemCount: 4,
+          separatorBuilder: (_, _) => const SizedBox(width: AlbumGrid.spacing),
+          itemBuilder: (_, _) => Container(
+            width: kDiscoverStripCardWidth,
+            decoration: BoxDecoration(
+              color: VelvetColors.raised,
+              borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+            ),
+          ),
+        ),
+      );
+}
+
 /// Placeholders while a source is asked — album tiles and song rows in the
 /// browser's shapes, no words.
 class DiscoverySkeleton extends StatelessWidget {
@@ -696,7 +728,7 @@ class DiscoveryRandomCard extends StatelessWidget {
 /// One [kDiscoverState] item, drawn. The browser hands each state item
 /// here; the controller is the open listing's.
 Widget discoveryStateWidget(BuildContext context, DisplayItem item,
-    DiscoveryPageController? c) {
+    DiscoveryPageController? c, {bool grid = true}) {
   final l = AppLocalizations.of(context);
   final state = DiscoveryListingState.values.asNameMap()[item.data];
   switch (state) {
@@ -706,6 +738,14 @@ Widget discoveryStateWidget(BuildContext context, DisplayItem item,
       return const DiscoverySkeleton(albums: true, rows: 6);
     case DiscoveryListingState.peersLoading:
       return const DiscoverySkeleton(rows: 3);
+    case DiscoveryListingState.peersAlbumsLoading:
+      // With the album grid off, albums are rows: a count no placeholder
+      // can know, so two rows stand in.
+      return grid ? const DiscoveryStripSkeleton() : const DiscoverySkeleton(rows: 2);
+    case DiscoveryListingState.peersFailed:
+      return DiscoveryHint(l.discoverPagePeersFailed,
+          action: l.discoverPageRetry,
+          onAction: c == null ? null : () => unawaited(c.retryPeers()));
     case DiscoveryListingState.failed:
       return DiscoveryFailedCard(onRetry: () => c?.refresh());
     case DiscoveryListingState.scanPending:

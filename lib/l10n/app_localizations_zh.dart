@@ -1789,6 +1789,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPagePeersQuiet => '已连接的服务器暂时没有内容。';
 
   @override
+  String get discoverPagePeersFailed => '无法访问已连接的服务器。';
+
+  @override
   String get discoverPageSaveAsPlaylist => '保存为播放列表';
 
   @override

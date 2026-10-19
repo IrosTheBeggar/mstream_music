@@ -3270,6 +3270,12 @@ abstract class AppLocalizations {
   /// **'Nothing from your connected servers right now.'**
   String get discoverPagePeersQuiet;
 
+  /// One line under the connected servers' songs header when asking them failed; a Try again button follows it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach your connected servers.'**
+  String get discoverPagePeersFailed;
+
   /// Button under Discover's library songs: save them as a server playlist.
   ///
   /// In en, this message translates to:

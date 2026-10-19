@@ -445,6 +445,7 @@
   "discoverPageSongsPeers": "来自已连接服务器的歌曲",
   "discoverPageLibraryNothing": "曲库中没有听起来像这些歌的新歌。",
   "discoverPagePeersQuiet": "已连接的服务器暂时没有内容。",
+  "discoverPagePeersFailed": "无法访问已连接的服务器。",
   "discoverPageSaveAsPlaylist": "保存为播放列表",
   "discoverPageBrowseLibrary": "浏览曲库",
   "discoverPageAgoToday": "今天",

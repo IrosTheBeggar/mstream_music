@@ -112,6 +112,11 @@ class DiscoveryPageController extends ChangeNotifier {
   bool loading = false;
   bool loadingPeers = false;
 
+  /// The connected servers' last call failed transiently (not a 403): their
+  /// section stays, with one line and Try again ([retryPeers]) — never a
+  /// section that silently vanishes.
+  bool peersError = false;
+
   /// The last library call failed transiently (not a 403); what is already
   /// shown stays.
   bool error = false;
@@ -145,6 +150,10 @@ class DiscoveryPageController extends ChangeNotifier {
   /// A peers call for the batch on screen is out: a newer library call
   /// that fails leaves it running, and the section loading.
   bool _peersOut = false;
+
+  /// The batch on screen's peers call, as sent: what [retryPeers] sends
+  /// again. Null when the batch makes none (a random seed).
+  TasteRequest? _peersReq;
   bool _disposed = false;
 
   List<String> get pins => List.unmodifiable(_pins);
@@ -188,7 +197,13 @@ class DiscoveryPageController extends ChangeNotifier {
   bool get hasConnectedServers =>
       asksPeers &&
       !peersDisabled &&
-      (peers == null ? loadingPeers : peers!.peers.isNotEmpty);
+      (peers == null ? loadingPeers || peersError : peers!.peers.isNotEmpty);
+
+  /// The connected servers are being asked for the batch on screen: their
+  /// album strip keeps its place (a placeholder the strip's height) so the
+  /// answer landing never pushes the library's songs down.
+  bool get peersPending =>
+      hasConnectedServers && peers == null && loadingPeers && !peersError;
 
   /// "Albums from {name}" / "Songs from {name}" when ONE connected server
   /// answered (or, when none answered, when only one is paired); null for
@@ -294,8 +309,10 @@ class DiscoveryPageController extends ChangeNotifier {
     }
     final peersRid = ++_peersRid;
     _peersOut = false;
+    peersError = false;
     _applyPeers(null);
     final req = asksPeers && !peersDisabled ? peersRequest(main) : null;
+    _peersReq = req;
     if (req == null) {
       // A random or seedless answer: no connected-server section.
       loadingPeers = false;
@@ -308,6 +325,18 @@ class DiscoveryPageController extends ChangeNotifier {
   /// The toolbar's refresh ("New seeds"), Try again, pull to refresh: a
   /// plain re-ask with the same window, pins, drops and passed picks.
   Future<void> refresh() => load();
+
+  /// The connected servers' Try again: their last call again, as it was
+  /// sent (the same pins — the batch on screen — window and limits). The
+  /// library batch on screen, the visit's pins and drops stay as they are.
+  /// Does nothing while a call is out: a library call asks the servers
+  /// itself once it lands (and its answer drops this one's), and a peers
+  /// call is already asking.
+  Future<void> retryPeers() async {
+    final req = _peersReq;
+    if (_disposed || req == null || loading || loadingPeers) return;
+    await _loadPeers(req, ++_peersRid);
+  }
 
   /// Whether the toolbar's refresh can do anything now: an answer is up, no
   /// call is out (the bar's thin line shows it), and the route is not
@@ -360,6 +389,7 @@ class DiscoveryPageController extends ChangeNotifier {
   Future<void> _loadPeers(TasteRequest req, int rid) async {
     _peersOut = true;
     loadingPeers = true;
+    peersError = false;
     notifyListeners();
     final r = await _fetch(server, req);
     if (_disposed || rid != _peersRid) return;
@@ -371,7 +401,9 @@ class DiscoveryPageController extends ChangeNotifier {
       await _repingOnce();
       return;
     }
-    // A failure draws no rows: the old batch's went when this batch landed.
+    // A failure draws no rows (the old batch's went when this batch
+    // landed) but keeps the section: one line and Try again.
+    peersError = r.data == null;
     _applyPeers(r.data?.peers);
     notifyListeners();
   }

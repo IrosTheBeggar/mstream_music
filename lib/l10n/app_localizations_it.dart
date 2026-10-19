@@ -1912,6 +1912,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Al momento niente dai tuoi server collegati.';
 
   @override
+  String get discoverPagePeersFailed =>
+      'Impossibile raggiungere i tuoi server collegati.';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'Salva come playlist';
 
   @override

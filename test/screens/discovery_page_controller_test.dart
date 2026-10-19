@@ -238,13 +238,83 @@ void main() {
       expect(c.loadingPeers, isTrue);
       expect(c.hasConnectedServers, isTrue, reason: 'its loading line');
 
-      // Its peers call fails: nothing is drawn, not the old batch's rows.
+      // Its peers call fails: none of the old batch's rows — and the section
+      // stays, with its failure line and Try again, never a silent vanish.
       taste.pending[1].complete(const DiscoveryFetchResult.error());
       await next;
       expect(c.peers, isNull);
       expect(c.peerRows, isEmpty);
       expect(c.loadingPeers, isFalse);
-      expect(c.hasConnectedServers, isFalse);
+      expect(c.peersError, isTrue);
+      expect(c.peersPending, isFalse);
+      expect(c.hasConnectedServers, isTrue, reason: 'its failure line');
+    });
+
+    test("the connected servers' Try again re-sends their last call alone, "
+        'as it was sent; the library batch on screen stays', () async {
+      final c = make();
+      final first = c.load();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[0].complete(ok(mainPayload()));
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[1].complete(const DiscoveryFetchResult.error());
+      await first;
+      expect(c.peersError, isTrue);
+      final seeded = c.seeded;
+      final rows = c.libraryRows;
+      final sent = taste.peersCalls.single.toJson();
+
+      final retry = c.retryPeers();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.peersError, isFalse, reason: 'asking again, not failed');
+      expect(c.peersPending, isTrue, reason: "the strip's place is held");
+      expect(taste.mainCalls, hasLength(1), reason: 'the library is not asked');
+      expect(taste.peersCalls, hasLength(2));
+      expect(taste.peersCalls.last.toJson(), sent,
+          reason: 'the same pins, window and limits');
+
+      taste.pending[2].complete(ok(peersPayload()));
+      await retry;
+      expect(c.peers?.peers, isNotEmpty);
+      expect(c.peersError, isFalse);
+      expect(identical(c.seeded, seeded), isTrue);
+      expect(identical(c.libraryRows, rows), isTrue,
+          reason: 'the same row objects: nothing redrawn under the user');
+    });
+
+    test("Try again does nothing while a call is out, and a newer batch "
+        "drops a late retry's answer", () async {
+      final c = make();
+      final first = c.load();
+      await Future<void>.delayed(Duration.zero);
+      // The library call is out: no retry, no request.
+      await c.retryPeers();
+      expect(taste.requests, hasLength(1));
+      taste.pending[0].complete(ok(mainPayload()));
+      await Future<void>.delayed(Duration.zero);
+      // The peers call is out: a retry is not a second one.
+      await c.retryPeers();
+      expect(taste.peersCalls, hasLength(1));
+      taste.pending[1].complete(const DiscoveryFetchResult.error());
+      await first;
+
+      // A retry goes out; New seeds starts a new batch before it answers.
+      final retry = c.retryPeers();
+      await Future<void>.delayed(Duration.zero);
+      final next = c.refresh();
+      await Future<void>.delayed(Duration.zero);
+      taste.pending[3]
+          .complete(ok(mainPayload(seeds: [seedRow('n1', 'New', 'One')])));
+      await Future<void>.delayed(Duration.zero);
+      expect(taste.peersCalls, hasLength(3), reason: "the new batch's own call");
+      // The late retry answers for the old batch: dropped.
+      taste.pending[2].complete(ok(peersPayload()));
+      await retry;
+      expect(c.peers, isNull);
+      expect(c.peersPending, isTrue);
+      taste.pending[4].complete(ok(peersPayload()));
+      await next;
+      expect(c.peers?.peers, isNotEmpty);
     });
 
     test('a refresh that fails leaves the peers call of the batch on screen '

@@ -445,6 +445,7 @@
   "discoverPageSongsPeers": "接続中のサーバーの曲",
   "discoverPageLibraryNothing": "ライブラリに、これらの曲に似た新しい曲はありません。",
   "discoverPagePeersQuiet": "接続中のサーバーからは今のところ何もありません。",
+  "discoverPagePeersFailed": "接続中のサーバーに接続できませんでした。",
   "discoverPageSaveAsPlaylist": "プレイリストとして保存",
   "discoverPageBrowseLibrary": "ライブラリを見る",
   "discoverPageAgoToday": "今日",

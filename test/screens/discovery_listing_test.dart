@@ -224,6 +224,47 @@ void main() {
       expect(shape(discoveryListingItems(c)).last, 'state:peersQuiet');
     });
 
+    test("while the connected servers answer, their strip's place is held "
+        "between the library's albums and songs; the strip lands in it",
+        () async {
+      ServerManager().serverList.addAll([server, peer(7), peer(8)]);
+      final peersAnswer = Completer<DiscoveryFetchResult<TasteResponse>>();
+      final c = make((r) => isPeersCall(r)
+          ? peersAnswer.future
+          : Future.value(DiscoveryFetchResult.ok(parse(mainPayload()))));
+      addTearDown(c.dispose);
+      final done = c.load();
+      await Future<void>.delayed(Duration.zero);
+      var items = shape(discoveryListingItems(c));
+      final held = items.indexOf('state:peersAlbumsLoading');
+      expect(items.sublist(held - 1, held + 2), [
+        'section:albumsPeers',
+        'state:peersAlbumsLoading',
+        'section:songsLibrary',
+      ]);
+      expect(items.last, 'state:peersLoading');
+      peersAnswer.complete(DiscoveryFetchResult.ok(parse(manyPeersPayload())));
+      await done;
+      items = shape(discoveryListingItems(c));
+      expect(items, isNot(contains('state:peersAlbumsLoading')));
+      expect(items[held - 1], 'section:albumsPeers');
+      expect(items[held], startsWith('album:'),
+          reason: 'the strip stands where its placeholder stood');
+    });
+
+    test("a failed connected call keeps their section: its header, one line "
+        'and Try again', () async {
+      final c = make((r) async => isPeersCall(r)
+          ? const DiscoveryFetchResult.error()
+          : DiscoveryFetchResult.ok(parse(mainPayload())));
+      addTearDown(c.dispose);
+      await c.load();
+      final items = shape(discoveryListingItems(c));
+      expect(items.sublist(items.length - 2),
+          ['section:songsPeers', 'state:peersFailed']);
+      expect(items, isNot(contains('state:peersAlbumsLoading')));
+    });
+
     test('before the first answer: the bar over placeholders', () async {
       final main = Completer<DiscoveryFetchResult<TasteResponse>>();
       final c = make((r) => main.future);
@@ -478,6 +519,59 @@ void main() {
       expect(main, hasLength(before + 1));
       expect(main.last.toJson()['exclude'], ['hr']);
       expect(main.last.toJson().containsKey('pin'), isFalse);
+    });
+
+    testWidgets("the connected servers' strip lands in its held place: "
+        "the library's songs do not move", (tester) async {
+      ServerManager().serverList.addAll([peer(7), peer(8)]);
+      final peersAnswer = Completer<DiscoveryFetchResult<TasteResponse>>();
+      await pumpBrowser(tester,
+          answer: (r) => isPeersCall(r)
+              ? peersAnswer.future
+              : Future.value(DiscoveryFetchResult.ok(parse(mainPayload()))));
+      expect(find.byKey(const ValueKey('discovery-strip-skeleton')),
+          findsOneWidget);
+      final songsHeader = find.text('SONGS FROM YOUR LIBRARY');
+      final before = tester.getTopLeft(songsHeader).dy;
+
+      peersAnswer.complete(DiscoveryFetchResult.ok(parse(manyPeersPayload())));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discovery-strip-skeleton')),
+          findsNothing);
+      expect(find.text('Blurred'), findsWidgets,
+          reason: "the connected servers' album card is drawn");
+      expect(tester.getTopLeft(songsHeader).dy, before,
+          reason: 'the strip replaced its placeholder at the same height');
+    });
+
+    testWidgets("a failed connected call: their line and Try again, which "
+        'asks them alone and draws their rows', (tester) async {
+      ServerManager().serverList.addAll([peer(7), peer(8)]);
+      var failPeers = true;
+      final asked = await pumpBrowser(tester,
+          answer: (r) async => isPeersCall(r)
+              ? (failPeers
+                  ? const DiscoveryFetchResult.error()
+                  : DiscoveryFetchResult.ok(parse(manyPeersPayload())))
+              : DiscoveryFetchResult.ok(parse(mainPayload())));
+      expect(find.text('SONGS FROM CONNECTED SERVERS'), findsOneWidget);
+      expect(find.text("Couldn't reach your connected servers."),
+          findsOneWidget);
+      final mainBefore = asked.where((r) => !isPeersCall(r)).length;
+      final peersSent = asked.where(isPeersCall).toList();
+      failPeers = false;
+      final tryAgain = find.text('Try again');
+      await tester.ensureVisible(tryAgain);
+      await tester.tap(tryAgain);
+      await tester.pumpAndSettle();
+      expect(asked.where((r) => !isPeersCall(r)), hasLength(mainBefore),
+          reason: 'the library is not asked again');
+      final peersNow = asked.where(isPeersCall).toList();
+      expect(peersNow, hasLength(peersSent.length + 1));
+      expect(peersNow.last.toJson(), peersSent.last.toJson());
+      expect(find.text("Couldn't reach your connected servers."), findsNothing);
+      expect(find.text('Alpha'), findsOneWidget,
+          reason: "the connected servers' rows are drawn");
     });
 
     testWidgets('the bar, the sections and the rows, with no numbers',

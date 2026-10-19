@@ -1932,6 +1932,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPagePeersQuiet => 'Na razie nic z połączonych serwerów.';
 
   @override
+  String get discoverPagePeersFailed =>
+      'Nie udało się połączyć z połączonymi serwerami.';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'Zapisz jako playlistę';
 
   @override

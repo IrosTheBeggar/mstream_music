@@ -1828,6 +1828,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPagePeersQuiet => '接続中のサーバーからは今のところ何もありません。';
 
   @override
+  String get discoverPagePeersFailed => '接続中のサーバーに接続できませんでした。';
+
+  @override
   String get discoverPageSaveAsPlaylist => 'プレイリストとして保存';
 
   @override

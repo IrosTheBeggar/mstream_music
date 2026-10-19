@@ -66,6 +66,13 @@ enum DiscoveryListingState {
   /// The connected servers are still being asked: placeholder rows.
   peersLoading,
 
+  /// The connected servers are still being asked: their album strip's
+  /// place, held by a placeholder the strip's height (no jump on landing).
+  peersAlbumsLoading,
+
+  /// The connected servers' call failed: one line and Try again.
+  peersFailed,
+
   /// Connected servers answered nothing playable.
   peersQuiet,
 }
@@ -140,6 +147,12 @@ List<DisplayItem> discoveryListingItems(DiscoveryPageController c) {
         peerName == null ? 'Albums from connected servers' : 'Albums from $peerName',
         name: peerName));
     out.addAll(c.peerAlbumItems);
+  } else if (c.peersPending && !waiting) {
+    // Their call is out: the strip's place is held, so the strip landing
+    // replaces the placeholder instead of pushing the library's songs down.
+    // (An answer with no album-tagged row gives the place back.)
+    out.add(section(DiscoverySection.albumsPeers, 'Albums from connected servers'));
+    out.add(state(DiscoveryListingState.peersAlbumsLoading));
   }
 
   if (c.library != null && !(waiting && c.libraryRows.isEmpty)) {
@@ -153,7 +166,10 @@ List<DisplayItem> discoveryListingItems(DiscoveryPageController c) {
   }
 
   if (c.hasConnectedServers && !(waiting && c.peerRows.isEmpty)) {
-    if (c.peers == null) {
+    if (c.peers == null && c.peersError) {
+      out.add(section(DiscoverySection.songsPeers, 'Songs from connected servers'));
+      out.add(state(DiscoveryListingState.peersFailed));
+    } else if (c.peers == null) {
       out.add(state(DiscoveryListingState.peersLoading));
     } else {
       out.add(section(

@@ -1162,7 +1162,7 @@ class _BrowserState extends State<Browser> {
             case kDiscoverBar:
               if (c != null) children.add(DiscoveryConfigBar(controller: c));
             case kDiscoverState:
-              children.add(discoveryStateWidget(context, it, c));
+              children.add(discoveryStateWidget(context, it, c, grid: grid));
             case kDiscoverFoot:
               if (c != null) {
                 children.add(DiscoveryFooter(controller: c, which: it.data!));
@@ -1223,7 +1223,8 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  static const double _stripCardWidth = 132;
+  // DiscoveryStripSkeleton holds a strip's place at the same size.
+  static const double _stripCardWidth = kDiscoverStripCardWidth;
 
   /// Album items [from]..[to] of [items] as one horizontal strip of the
   /// album grid's cards; a tap goes through handleTap, as a grid card's
@@ -1232,7 +1233,7 @@ class _BrowserState extends State<Browser> {
       BuildContext context, List<DisplayItem> items, int from, int to) {
     final cacheW = artCacheSize(_stripCardWidth);
     return SizedBox(
-      height: _stripCardWidth / AlbumGrid.aspectRatio,
+      height: kDiscoverStripHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 14),

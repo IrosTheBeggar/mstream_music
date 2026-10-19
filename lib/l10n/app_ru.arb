@@ -445,6 +445,7 @@
   "discoverPageSongsPeers": "Треки с подключённых серверов",
   "discoverPageLibraryNothing": "В вашей библиотеке нет ничего нового, похожего на эти треки.",
   "discoverPagePeersQuiet": "С подключённых серверов пока ничего нет.",
+  "discoverPagePeersFailed": "Не удалось связаться с подключёнными серверами.",
   "discoverPageSaveAsPlaylist": "Сохранить как плейлист",
   "discoverPageBrowseLibrary": "Открыть библиотеку",
   "discoverPageAgoToday": "сегодня",
