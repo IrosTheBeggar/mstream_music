@@ -109,5 +109,31 @@ void main() {
           fileExists: onDisk);
       expect(picked.length, 1);
     });
+
+    // The player is pulling the streaming track itself: a second transfer of
+    // the same bytes beside it took a third of a federated key's bandwidth
+    // and landed after the track had ended (2026-10-20). Unmarked, so it is
+    // a candidate again once playback has moved on.
+    test('the track the player is streaming is skipped, and not marked', () {
+      final attempted = <String>{};
+      final q = [item('/a.mp3'), item('/b.mp3')];
+      final picked = DownloadManager.autoDownloadCandidates(q, attempted,
+          fileExists: onDisk, streaming: 's1/a.mp3');
+      expect(picked.map((m) => m.extras!['path']), ['/b.mp3']);
+      expect(attempted, {'s1/b.mp3'});
+      final later = DownloadManager.autoDownloadCandidates(q, attempted,
+          fileExists: onDisk);
+      expect(later.map((m) => m.extras!['path']), ['/a.mp3']);
+    });
+  });
+
+  group('DownloadManager.autoDownloadSlots', () {
+    // A federated peer caps its key at 3 concurrent streams, shared with the
+    // parent and with the player's own stream: two transfers filled it
+    // exactly and every skip then tripped it.
+    test('one transfer on a federated peer, two on a server of your own', () {
+      expect(DownloadManager.autoDownloadSlots(federated: true), 1);
+      expect(DownloadManager.autoDownloadSlots(federated: false), 2);
+    });
   });
 }

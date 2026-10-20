@@ -1862,6 +1862,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     return i.clamp(0, q.length - 1);
   }
 
+  /// Key (server + path, the sweep's) of the track the local player is
+  /// pulling from the network right now, so keep-queue-offline does not pull
+  /// the same bytes beside it — on a federated peer that was a third of the
+  /// key's shared bandwidth, and the copy landed after the track had ended.
+  String? get streamingTrackKey {
+    if (!identical(_backend, _localBackend) ||
+        _localBackend.processingState == BackendProcessingState.idle) {
+      return null;
+    }
+    final item = _itemAt(_localBackend.currentIndex);
+    if (item == null || !_streamsFromNetwork(item)) return null;
+    final s = item.extras?['server'], p = item.extras?['path'];
+    return s is String && p is String ? s + p : null;
+  }
+
   /// Reload the local backend at its current spot, with every URL re-derived
   /// against the live tunnel/transcode state, then resume if the user still
   /// wants playback. The revive primitive for a parked player: once just_audio
