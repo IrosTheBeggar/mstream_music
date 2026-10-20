@@ -342,10 +342,12 @@ class DownloadManager {
   ///
   /// Deliberately does NOT wrap past the end: without repeat enabled, tracks
   /// before the playing one are behind you and aren't coming back, so near the
-  /// end of a queue the window is simply shorter. Pure; unit-tested.
+  /// end of a queue the window is simply shorter — whatever the queue's
+  /// length (a short queue used to come back whole, and the sweep then
+  /// fetched the tracks behind the playhead first). Pure; unit-tested.
   static List<MediaItem> cacheWindow(
       List<MediaItem> items, int cap, int startIndex) {
-    if (cap <= 0 || items.length <= cap) return items;
+    if (cap <= 0 || items.isEmpty) return items;
     final start = startIndex < 0
         ? 0
         : (startIndex >= items.length ? items.length - 1 : startIndex);
@@ -356,10 +358,14 @@ class DownloadManager {
   /// With [slotsFor], at most that many candidates per server are picked (and
   /// marked) in one sweep; the rest stay unmarked, so the next sweep — every
   /// queue change, every landing — picks them up as transfers finish.
+  /// [streaming] (server + path) is the track the player is pulling from the
+  /// network itself: never fetched beside it, and left unmarked so it is a
+  /// candidate again once playback has moved on.
   static List<MediaItem> autoDownloadCandidates(
       List<MediaItem> items, Set<String> attempted,
       {required bool Function(String path) fileExists,
-      int Function(String server)? slotsFor}) {
+      int Function(String server)? slotsFor,
+      String? streaming}) {
     final out = <MediaItem>[];
     final used = <String, int>{};
     for (final m in items) {
@@ -369,6 +375,7 @@ class DownloadManager {
       final localPath = m.extras?['localPath'] as String?;
       if (localPath != null && fileExists(localPath)) continue;
       if (attempted.contains(server + path)) continue;
+      if (server + path == streaming) continue;
       if (slotsFor != null) {
         final taken = used[server] ?? 0;
         if (taken >= slotsFor(server)) continue; // unmarked: a later sweep
@@ -382,15 +389,25 @@ class DownloadManager {
 
   /// How many keep-queue-offline transfers may run against one server at
   /// once. A queued album used to fire every track together: a federated
-  /// peer caps a key at 3 concurrent streams (guests share it), so most came
-  /// back 429 to retry in another burst, and the burst competed with the
-  /// player's own stream; a small self-hosted server is not happier about
-  /// 26 range requests either. Manual downloads are not held back.
-  static const int kAutoDownloadParallel = 2;
+  /// peer caps a key at 3 concurrent streams (guests share it with the
+  /// parent and with the player's own stream), so most came back 429 to
+  /// retry in another burst, and the burst competed with the player; a
+  /// small self-hosted server is not happier about 26 range requests
+  /// either. Two transfers beside the player's stream filled a peer's cap
+  /// exactly, and every skip then tripped it (2026-10-20) — a peer gets one.
+  /// Manual downloads are not held back. Pure; unit-tested.
+  static int autoDownloadSlots({required bool federated}) =>
+      federated ? 1 : 2;
 
   // In-flight keys are `<serverName><filepath>`, and paths start with '/'.
   int _inFlightFor(String server) =>
       _inFlight.where((k) => k.startsWith('$server/')).length;
+
+  int _slotsFor(String server) =>
+      autoDownloadSlots(
+          federated:
+              ServerManager().byLocalname(server)?.isFederated ?? false) -
+      _inFlightFor(server);
 
   /// Keep-queue-offline sweep: enqueue a download for every queued server
   /// track not yet on disk. Fired on every queue change (audio_stuff._init)
@@ -440,7 +457,8 @@ class DownloadManager {
     }
     for (final m in autoDownloadCandidates(window, _autoAttempted,
         fileExists: (p) => File(p).existsSync(),
-        slotsFor: (server) => kAutoDownloadParallel - _inFlightFor(server))) {
+        slotsFor: _slotsFor,
+        streaming: MediaManager().audioHandler.streamingTrackKey)) {
       await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
           requiresWiFi: wifiOnly, auto: true, quiet: true);
     }

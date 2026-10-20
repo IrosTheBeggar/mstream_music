@@ -23,8 +23,14 @@ void main() {
       expect(ids(DownloadManager.cacheWindow(queue(10), -5, 0)).length, 10);
     });
 
-    test('a queue shorter than the cap is returned whole', () {
+    // A short queue used to come back whole, so the sweep walked it from the
+    // top and fetched the tracks BEHIND the playhead first (2026-10-20: two
+    // already-played tracks landed while the one playing streamed).
+    test('a queue shorter than the cap still starts at the playing track',
+        () {
       expect(ids(DownloadManager.cacheWindow(queue(8), 50, 0)).length, 8);
+      expect(ids(DownloadManager.cacheWindow(queue(8), 50, 3)),
+          ['t3', 't4', 't5', 't6', 't7']);
     });
 
     test('caches forward from the playing track, not from the top', () {
