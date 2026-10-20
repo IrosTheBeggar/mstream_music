@@ -138,6 +138,8 @@ class DownloadManager {
           // re-enqueue before giving up — only then is it a genuine failure. The
           // re-enqueued task carries its own tracker, so bail here without a toast.
           if (await _reEnqueueOnLiveTunnel(dt, update.task)) return;
+          appLog('[dl] failed: ${_fileOf(dt)} (${_reasonOf(update)}) '
+              'for=${dt.serverName}');
           dt.progress = 0;
           terminal = true;
           _unmarkAutoAttempt(dt);
@@ -145,6 +147,7 @@ class DownloadManager {
           break;
         case TaskStatus.notFound:
           // 404 — the source is genuinely gone; re-resolving wouldn't help.
+          appLog('[dl] failed: ${_fileOf(dt)} (http 404) for=${dt.serverName}');
           dt.progress = 0;
           terminal = true;
           _unmarkAutoAttempt(dt);
@@ -154,8 +157,14 @@ class DownloadManager {
           dt.progress = 0;
           terminal = true;
           break;
+        case TaskStatus.waitingToRetry:
+          // Up to five per task, with backoff — a peer answering 429 to
+          // every transfer was invisible without them.
+          appLog('[dl] retrying ${_fileOf(dt)} (${_reasonOf(update)}) '
+              'for=${dt.serverName}');
+          break;
         default:
-          break; // enqueued / running / paused / waitingToRetry
+          break; // enqueued / running / paused
       }
     }
 
@@ -183,6 +192,18 @@ class DownloadManager {
 
     // Re-emit so the Downloads screen's StreamBuilder rebuilds.
     _downloadStream.add(downloadMap);
+  }
+
+  // The log names a transfer by its file — the URL carries the token.
+  static String _fileOf(DownloadTracker dt) =>
+      path.basename(dt.dataPath ?? dt.filePath);
+
+  static String _reasonOf(TaskStatusUpdate u) {
+    final e = u.exception;
+    if (e is TaskHttpException) return 'http ${e.httpResponseCode}';
+    final d = e?.description ?? '';
+    if (d.isEmpty) return u.status.name;
+    return d.length > 80 ? '${d.substring(0, 80)}…' : d;
   }
 
   // A terminally-failed download must not eat the once-per-session sweep
