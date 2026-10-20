@@ -12,6 +12,7 @@ DirectAuthAction act({
   Duration? sinceLastRecovery,
   bool probed = false,
   int? probedStatus,
+  Duration? retryAfter,
 }) =>
     AudioPlayerHandler.directAuthAction(
       isDirect: isDirect,
@@ -19,6 +20,7 @@ DirectAuthAction act({
       sinceLastRecovery: sinceLastRecovery,
       probed: probed,
       probedStatus: probedStatus,
+      retryAfter: retryAfter,
     );
 
 void main() {
@@ -37,14 +39,24 @@ void main() {
           DirectAuthAction.walk);
     });
 
-    // The gap: a token the parent renewed seconds ago cannot have lapsed, so
-    // a second failure inside it is the walk's — not another round trip.
-    test('a recovery inside the gap → walk; at the gap → probe', () {
-      expect(act(sinceLastRecovery: const Duration(seconds: 9)),
+    // The probe is one ranged GET, so every failure gets one — a 429 inside
+    // the gap is still the cap, and walking it blind cost three retries
+    // into the cap and a skip (Galaxy, 2026-10-20). The gap gates the
+    // RENEWAL: a token the parent renewed seconds ago cannot have lapsed,
+    // so a 401 inside it is the walk's — not another round trip.
+    test('inside the gap: still a probe; a 401 walks, a 429 backs off', () {
+      const inside = Duration(seconds: 9);
+      expect(act(sinceLastRecovery: inside), DirectAuthAction.probe);
+      expect(act(sinceLastRecovery: inside, probed: true, probedStatus: 401),
           DirectAuthAction.walk);
+      expect(act(sinceLastRecovery: inside, probed: true, probedStatus: 429),
+          DirectAuthAction.backoff);
       expect(
-          act(sinceLastRecovery: AudioPlayerHandler.kDirectAuthRecoveryGap),
-          DirectAuthAction.probe);
+          act(
+              sinceLastRecovery: AudioPlayerHandler.kDirectAuthRecoveryGap,
+              probed: true,
+              probedStatus: 401),
+          DirectAuthAction.refresh);
       expect(act(sinceLastRecovery: null), DirectAuthAction.probe);
     });
 
@@ -64,9 +76,40 @@ void main() {
     // DJ rig's rapid skips tripped it on the S25, 2026-09-19).
     test('the peer at its stream cap → back off and reload', () {
       expect(act(probed: true, probedStatus: 429), DirectAuthAction.backoff);
+      expect(
+          act(
+              probed: true,
+              probedStatus: 429,
+              retryAfter: const Duration(seconds: 5)),
+          DirectAuthAction.backoff);
+      expect(
+          act(
+              probed: true,
+              probedStatus: 429,
+              retryAfter: AudioPlayerHandler.kDirectBusyMaxWait),
+          DirectAuthAction.backoff);
       expect(AudioPlayerHandler.kDirectBusyAttempts, greaterThan(0));
       expect(AudioPlayerHandler.kDirectBusyBackoff,
           greaterThanOrEqualTo(const Duration(seconds: 1)));
+    });
+
+    // The peer's other 429: its daily transfer quota, with a Retry-After at
+    // UTC midnight. Three 3 s waits and a walk, track after track, had
+    // nothing to wait for.
+    test('a 429 with a Retry-After past the busy wait → quota', () {
+      expect(
+          act(
+              probed: true,
+              probedStatus: 429,
+              retryAfter: const Duration(hours: 13)),
+          DirectAuthAction.quota);
+      expect(
+          act(
+              probed: true,
+              probedStatus: 429,
+              retryAfter: AudioPlayerHandler.kDirectBusyMaxWait +
+                  const Duration(seconds: 1)),
+          DirectAuthAction.quota);
     });
 
     // A source that answers fine now was a blip; a 5xx or silence is the
@@ -77,6 +120,23 @@ void main() {
             reason: 'http $s is not the token');
       }
       expect(act(probed: true, probedStatus: null), DirectAuthAction.walk);
+    });
+  });
+
+  group('AudioPlayerHandler.retryAfterOf', () {
+    test('delay-seconds, as the peer sends it', () {
+      expect(AudioPlayerHandler.retryAfterOf('5'), const Duration(seconds: 5));
+      expect(AudioPlayerHandler.retryAfterOf(' 43200 '),
+          const Duration(hours: 12));
+      expect(AudioPlayerHandler.retryAfterOf('0'), Duration.zero);
+    });
+
+    test('absent, malformed or an HTTP-date → null', () {
+      expect(AudioPlayerHandler.retryAfterOf(null), isNull);
+      expect(AudioPlayerHandler.retryAfterOf(''), isNull);
+      expect(AudioPlayerHandler.retryAfterOf('-1'), isNull);
+      expect(AudioPlayerHandler.retryAfterOf('Wed, 21 Oct 2026 00:00:00 GMT'),
+          isNull);
     });
   });
 }
