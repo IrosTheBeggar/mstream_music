@@ -7271,6 +7271,924 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This launcher can\'t add widgets from here. Use its own widget picker.'**
   String get homeWidgetPinUnsupported;
+
+  /// Connected-server song/album sheet: the status line under the header while that server answers (a green dot before it). {name} is the connected server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} online'**
+  String discoverSheetPeerOnline(String name);
+
+  /// Connected-server sheet: the status line when that server did not answer (a grey dot before it). {name} is the server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} not answering'**
+  String discoverSheetPeerNotAnswering(String name);
+
+  /// Connected-server sheets: how many songs an album has on that server (the album line, the Album choice's size).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 song} other{{count} songs}}'**
+  String discoverSheetSongCount(int count);
+
+  /// Connected-server sheets: a number of albums (the artist line, the Artist choice's size, a finished copy's line).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 album} other{{count} albums}}'**
+  String discoverSheetAlbumCount(int count);
+
+  /// Connected-server song sheet, album line: the user's own library has no album of this name by the artist.
+  ///
+  /// In en, this message translates to:
+  /// **'not in your library'**
+  String get discoverSheetNotInLibrary;
+
+  /// Connected-server song sheet, album line: the user's own library already has an album of this name by the artist.
+  ///
+  /// In en, this message translates to:
+  /// **'in your library'**
+  String get discoverSheetInLibrary;
+
+  /// Connected-server song sheet, artist line when that server did not answer: how many albums by the artist the user's own library has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{you have 1 album} other{you have {count} albums}}'**
+  String discoverSheetYouHaveAlbums(int count);
+
+  /// Connected-server sheets: button/row that opens the album (through that server).
+  ///
+  /// In en, this message translates to:
+  /// **'Open album'**
+  String get discoverSheetOpenAlbum;
+
+  /// Connected-server sheets: button/row that adds the album's songs to the end of the queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue album'**
+  String get discoverSheetQueueAlbum;
+
+  /// Connected-server album sheet: row that plays the album now.
+  ///
+  /// In en, this message translates to:
+  /// **'Play album'**
+  String get discoverSheetPlayAlbum;
+
+  /// Connected-server song sheet, artist line: button that opens the artist's albums on that server.
+  ///
+  /// In en, this message translates to:
+  /// **'Open artist'**
+  String get discoverSheetOpenArtist;
+
+  /// Connected-server album sheet: small-caps label over the play/queue/open rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get discoverSheetListen;
+
+  /// Connected-server sheets: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone).
+  ///
+  /// In en, this message translates to:
+  /// **'Keep a copy'**
+  String get discoverSheetKeepCopy;
+
+  /// Connected-server song sheet: row that lists links to this song on other services (MusicBrainz, Deezer, …).
+  ///
+  /// In en, this message translates to:
+  /// **'Open elsewhere'**
+  String get discoverSheetOpenElsewhere;
+
+  /// Connected-server song sheet: row that switches the app to browsing that server's library. {name} is the server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse {name}'**
+  String discoverSheetBrowsePeer(String name);
+
+  /// Connected-server song sheet, last row: saves the song file onto THIS phone for offline play (the old Download, renamed so it is never confused with Keep a copy, which copies to the server).
+  ///
+  /// In en, this message translates to:
+  /// **'Download to this phone'**
+  String get discoverSheetDownloadToPhone;
+
+  /// Second line under 'Download to this phone'.
+  ///
+  /// In en, this message translates to:
+  /// **'For offline play on this device'**
+  String get discoverSheetDownloadToPhoneSub;
+
+  /// Toast when Play album / Queue album could not get the album's songs from the connected server. {name} is that server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this album from {name}'**
+  String discoverSheetAlbumFailed(String name);
+
+  /// Accessible name of the ⋯ button on a connected server's album card on Discover (opens the album sheet). {album} is the album name.
+  ///
+  /// In en, this message translates to:
+  /// **'More for {album}'**
+  String discoverAlbumCardMore(String album);
+
+  /// Keep a copy card: choice that copies only this song.
+  ///
+  /// In en, this message translates to:
+  /// **'This song'**
+  String get discoverKeepThisSong;
+
+  /// Keep a copy card: choice that copies the song's whole album.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get discoverKeepAlbum;
+
+  /// Keep a copy card: choice that copies the artist's albums.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get discoverKeepArtist;
+
+  /// Accessible name of the Keep a copy choices (This song / Album / Artist).
+  ///
+  /// In en, this message translates to:
+  /// **'What to keep'**
+  String get discoverKeepWhat;
+
+  /// Keep a copy card, under the Artist choice after the album count ('1 album · you have 3'): albums by the artist the user's own library already has.
+  ///
+  /// In en, this message translates to:
+  /// **'you have {count}'**
+  String discoverKeepYouHave(int count);
+
+  /// Keep a copy card, checkbox under the Artist choice: copy only the artist's albums the user's library lacks (matched by album name).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Only the 1 album you don\'t have} other{Only the {count} albums you don\'t have}}'**
+  String discoverKeepOnlyMissing(int count);
+
+  /// Keep a copy card: start of the line naming where the copied files land ('Files go to copies › Artist › Album').
+  ///
+  /// In en, this message translates to:
+  /// **'Files go to'**
+  String get discoverKeepFilesGoTo;
+
+  /// Keep a copy card: end of the destination line for an artist copy (each album lands in its own folder).
+  ///
+  /// In en, this message translates to:
+  /// **'one folder per album'**
+  String get discoverKeepFolderPerAlbum;
+
+  /// Keep a copy card: link after the destination line that opens the destination picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get discoverKeepChange;
+
+  /// Accessible name of the Keep a copy card's Change link.
+  ///
+  /// In en, this message translates to:
+  /// **'Change where copies go'**
+  String get discoverKeepChangeHint;
+
+  /// Keep a copy card's main button with This song chosen: copies the song to the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'Add song'**
+  String get discoverKeepAddSong;
+
+  /// Keep a copy card's main button with Album chosen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add album'**
+  String get discoverKeepAddAlbum;
+
+  /// Keep a copy card's main button with Artist chosen (every album by the artist on that server).
+  ///
+  /// In en, this message translates to:
+  /// **'Add every album'**
+  String get discoverKeepAddEveryAlbum;
+
+  /// Keep a copy card's main button with Artist chosen and 'only the albums you don't have' ticked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Add 1 album} other{Add {count} albums}}'**
+  String discoverKeepAddAlbums(int count);
+
+  /// Keep a copy card's main button when only the missing albums can be copied and their number is not known yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the albums you don\'t have'**
+  String get discoverKeepAddMissing;
+
+  /// Keep a copy card's only line when the user's account may not upload to their server.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t add files to this server'**
+  String get discoverKeepUploadsOff;
+
+  /// Keep a copy card's only line when uploads are allowed but no library on the user's server accepts new files.
+  ///
+  /// In en, this message translates to:
+  /// **'No library on your server takes new files'**
+  String get discoverKeepNoLibrary;
+
+  /// Keep a copy card: the copy could not be started and the server gave no words of its own (a network failure).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach your server. Try again.'**
+  String get discoverKeepStartFailed;
+
+  /// Confirmation title before copying several albums by an artist from a connected server. {peer} is that server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Copy 1 album from {peer}?} other{Copy {count} albums from {peer}?}}'**
+  String discoverKeepConfirmTitle(int count, String peer);
+
+  /// Confirmation title before copying every album by an artist when their number is not known yet. {artist} is the artist, {peer} the connected server.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy every album by {artist} from {peer}?'**
+  String discoverKeepConfirmEveryTitle(String artist, String peer);
+
+  /// Body of the confirmation before an artist copy. {path} is where the files land on the user's server, like 'copies › Boukmanflow'.
+  ///
+  /// In en, this message translates to:
+  /// **'They land on your server in {path}, one folder per album. Songs you already have are skipped.'**
+  String discoverKeepConfirmBody(String path);
+
+  /// The confirmation's yes button.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Copy 1 album} other{Copy {count} albums}}'**
+  String discoverKeepConfirmAction(int count);
+
+  /// The every-album confirmation's yes button (count not known).
+  ///
+  /// In en, this message translates to:
+  /// **'Copy every album'**
+  String get discoverKeepConfirmEveryAction;
+
+  /// Keep a copy card: the copy is queued behind another one on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a free slot'**
+  String get discoverJobQueued;
+
+  /// Under 'Waiting for a free slot': nothing to do, it starts by itself.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts on its own'**
+  String get discoverJobQueuedSub;
+
+  /// Keep a copy card: the copy is running (a progress bar and the server's status line follow).
+  ///
+  /// In en, this message translates to:
+  /// **'Copying'**
+  String get discoverJobCopying;
+
+  /// Keep a copy card: running but the server has not said anything yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get discoverJobStarting;
+
+  /// Keep a copy card: the user cancelled a running copy; it stops at its next check.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping…'**
+  String get discoverJobStopping;
+
+  /// Keep a copy card: the copy landed in a library on the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'In your collection'**
+  String get discoverJobInCollection;
+
+  /// Keep a copy card: nothing was copied because the user's library already had it.
+  ///
+  /// In en, this message translates to:
+  /// **'Already yours'**
+  String get discoverJobOwned;
+
+  /// Under 'Already yours' for one song (the library file's path may follow).
+  ///
+  /// In en, this message translates to:
+  /// **'Your library has this song'**
+  String get discoverJobOwnedSub;
+
+  /// Keep a copy card: the song was not copied because a file already exists where it would land.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped · a file is already there'**
+  String get discoverJobSkipped;
+
+  /// Under the skipped line. {path} is where the song would have landed.
+  ///
+  /// In en, this message translates to:
+  /// **'A file is already at {path} · nothing was overwritten'**
+  String discoverJobExistsSub(String path);
+
+  /// Keep a copy card: the copy failed (the server's own words follow).
+  ///
+  /// In en, this message translates to:
+  /// **'Copy failed'**
+  String get discoverJobFailed;
+
+  /// Under 'Copy failed' when the server said nothing more.
+  ///
+  /// In en, this message translates to:
+  /// **'The copy did not finish'**
+  String get discoverJobFailedSub;
+
+  /// Start of a failed album copy's line ('Nothing copied · 3 failed').
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing copied'**
+  String get discoverJobNothingCopiedLead;
+
+  /// End of a stopped copy's line after its reason ('… · nothing copied').
+  ///
+  /// In en, this message translates to:
+  /// **'nothing copied'**
+  String get discoverJobNothingCopied;
+
+  /// Keep a copy card: the copy ended early (its reason follows).
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get discoverJobStopped;
+
+  /// Why a copy stopped: the connected server's daily transfer limit. {peer} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'{peer}\'s transfer limit stopped it'**
+  String discoverJobStoppedQuota(String peer);
+
+  /// Why a copy stopped: the connected server is busy. {peer} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'{peer} is serving too many streams right now'**
+  String discoverJobStoppedBusy(String peer);
+
+  /// Why a copy stopped: the connected server stopped answering. {peer} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'{peer} went away'**
+  String discoverJobStoppedPeer(String peer);
+
+  /// Why a copy stopped: the connected server refuses copies to the user's server (no Retry). {peer} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'{peer} does not allow copies with your server\'s key'**
+  String discoverJobStoppedRefused(String peer);
+
+  /// Keep a copy card: the user cancelled the copy before anything landed.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped · nothing was copied'**
+  String get discoverJobCancelledNothing;
+
+  /// Keep a copy card: the user cancelled an album copy after some songs landed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Stopped · 1 copied} other{Stopped · {count} copied}}'**
+  String discoverJobCancelledSome(int count);
+
+  /// Under a cancelled copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You cancelled it'**
+  String get discoverJobCancelledSub;
+
+  /// Under a cancelled album copy: the songs that already landed stay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}'**
+  String discoverJobCancelledStay(int count);
+
+  /// Keep a copy card: an album/artist copy found nothing to copy — the user already has everything.
+  ///
+  /// In en, this message translates to:
+  /// **'You have it all'**
+  String get discoverJobNothingAll;
+
+  /// Under 'You have it all'. {peer} is the connected server.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to copy from {peer}'**
+  String discoverJobNothingFrom(String peer);
+
+  /// Keep a copy card: an artist copy found the artist only as a guest on that server's albums.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing of theirs to copy'**
+  String get discoverJobOnlyGuest;
+
+  /// Under 'Nothing of theirs to copy'. {artist} is the artist, {peer} the connected server.
+  ///
+  /// In en, this message translates to:
+  /// **'{artist} only appears as a guest on {peer}\'s albums'**
+  String discoverJobOnlyGuestSub(String artist, String peer);
+
+  /// Keep a copy card: the same album/artist is being copied from ANOTHER connected server. {peer} is that other server.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying from {peer}'**
+  String discoverJobFromOther(String peer);
+
+  /// Under 'Copying from …'. {action} is the card's button label ('Add album').
+  ///
+  /// In en, this message translates to:
+  /// **'{action} comes back when that copy ends'**
+  String discoverJobComesBack(String action);
+
+  /// Keep a copy card: a copy finished in a way this app cannot read in detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get discoverJobDone;
+
+  /// Part of a finished album copy's line: songs copied.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} copied}}'**
+  String discoverJobCopiedCount(int count);
+
+  /// Part of a finished album copy's line: songs skipped because the library already had them.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} already yours}}'**
+  String discoverJobOwnedCount(int count);
+
+  /// Part of a finished album copy's line: songs that failed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} failed}}'**
+  String discoverJobFailedCount(int count);
+
+  /// Part of a finished artist copy's line: albums whose listing failed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 album failed} other{{count} albums failed}}'**
+  String discoverJobAlbumsFailed(int count);
+
+  /// Part of a finished artist copy's line: albums not copied (already owned, or the artist only guests on them).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 album left out} other{{count} albums left out}}'**
+  String discoverJobAlbumsLeftOut(int count);
+
+  /// Keep a copy card: start the same copy again (it takes only what is still missing).
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get discoverJobRetry;
+
+  /// Keep a copy card: start a cancelled copy again.
+  ///
+  /// In en, this message translates to:
+  /// **'Add again'**
+  String get discoverJobAddAgain;
+
+  /// Keep a copy card: queue the copied song (the new library file).
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue'**
+  String get discoverJobAddToQueue;
+
+  /// Discover, on a connected server's song row or album card: the user's copy of it is queued. Lowercase, a word only.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting'**
+  String get discoverMarkWaiting;
+
+  /// Discover row/card marker: the copy is running.
+  ///
+  /// In en, this message translates to:
+  /// **'copying…'**
+  String get discoverMarkCopying;
+
+  /// Discover album card marker while its album copies: songs done of the album's total.
+  ///
+  /// In en, this message translates to:
+  /// **'copying {done} of {total}'**
+  String discoverMarkCopyingCount(int done, int total);
+
+  /// Discover row/card marker: the copy was cancelled and is stopping.
+  ///
+  /// In en, this message translates to:
+  /// **'stopping…'**
+  String get discoverMarkStopping;
+
+  /// Discover row/card marker: the copy landed on the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'in your collection'**
+  String get discoverMarkInCollection;
+
+  /// Discover row/card marker: nothing was copied, the library already had it.
+  ///
+  /// In en, this message translates to:
+  /// **'already yours'**
+  String get discoverMarkAlreadyYours;
+
+  /// Discover row/card marker: the copy ended early (limit, busy, server gone).
+  ///
+  /// In en, this message translates to:
+  /// **'stopped'**
+  String get discoverMarkStopped;
+
+  /// Discover row/card marker: the connected server refuses copies to the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'refused'**
+  String get discoverMarkRefused;
+
+  /// Discover row/card marker: the copy failed.
+  ///
+  /// In en, this message translates to:
+  /// **'failed'**
+  String get discoverMarkFailed;
+
+  /// Discover row/card marker: not copied because a file already exists where it would land.
+  ///
+  /// In en, this message translates to:
+  /// **'skipped'**
+  String get discoverMarkSkipped;
+
+  /// Discover's Copies strip under the configuration bar: copies running or waiting on the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{Copying {count}}}'**
+  String discoverCopiesCopying(int count);
+
+  /// Discover's Copies strip: copies that failed or stopped and still want the user (Retry / Clear finished).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} failed}}'**
+  String discoverCopiesFailed(int count);
+
+  /// Accessible name of Discover's Copies strip (opens the Copies list). {summary} is the strip's text, e.g. 'Copying 2, 1 failed'.
+  ///
+  /// In en, this message translates to:
+  /// **'Copies: {summary}'**
+  String discoverCopiesLabel(String summary);
+
+  /// Title of the Copies sheet, and the name of the home SERVER card listing what the user's own server is copying for them from connected servers (Discover's Keep a copy).
+  ///
+  /// In en, this message translates to:
+  /// **'Copies'**
+  String get discoverCopiesTitle;
+
+  /// Copies sheet section header (drawn in capitals): copies running or waiting for a free slot.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying'**
+  String get discoverCopiesSectionCopying;
+
+  /// Copies sheet section header (drawn in capitals): copies that failed or stopped early and still want Retry or Clear finished.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped or failed'**
+  String get discoverCopiesSectionAttention;
+
+  /// Copies sheet section header (drawn in capitals): copies the phone saw end since it opened (landed, already yours, cancelled).
+  ///
+  /// In en, this message translates to:
+  /// **'Just finished'**
+  String get discoverCopiesSectionFinished;
+
+  /// Copies sheet button pinned at the bottom: removes the finished copies from the list (on the user's server).
+  ///
+  /// In en, this message translates to:
+  /// **'Clear finished'**
+  String get discoverCopiesClearFinished;
+
+  /// Copies sheet empty state: the server is copying nothing and nothing failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing copying'**
+  String get discoverCopiesEmpty;
+
+  /// Copies sheet empty state: how a copy starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a connected server\'s song or album on Discover to keep a copy.'**
+  String get discoverCopiesEmptySub;
+
+  /// Copies sheet empty state (opened from the home): a pill that opens the Discover page.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Discover'**
+  String get discoverCopiesOpenDiscover;
+
+  /// Copies sheet error state: the list of copies could not be read from the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your copies'**
+  String get discoverCopiesLoadFailed;
+
+  /// Copies sheet error state's second line when the server sent no words of its own (copies run on the server, not the phone).
+  ///
+  /// In en, this message translates to:
+  /// **'Your server didn\'t answer. Copies keep running there.'**
+  String get discoverCopiesLoadFailedSub;
+
+  /// Accessible label of the Copies sheet's loading placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your copies'**
+  String get discoverCopiesLoading;
+
+  /// Copies sheet row: what a copy takes (first part of 'Song · Artist · from Server').
+  ///
+  /// In en, this message translates to:
+  /// **'Song'**
+  String get discoverCopiesKindSong;
+
+  /// Copies sheet row: what a copy takes (first part of 'Album · Artist · from Server').
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get discoverCopiesKindAlbum;
+
+  /// Copies sheet row: a copy of every album by an artist (first part of 'Every album · from Server').
+  ///
+  /// In en, this message translates to:
+  /// **'Every album'**
+  String get discoverCopiesKindEvery;
+
+  /// Copies sheet row: a copy of only the artist's albums the library lacks (first part of 'What you're missing · from Server').
+  ///
+  /// In en, this message translates to:
+  /// **'What you\'re missing'**
+  String get discoverCopiesKindMissing;
+
+  /// Copies sheet row: the connected server a copy comes from (last part of 'Song · Artist · from Server').
+  ///
+  /// In en, this message translates to:
+  /// **'from {peer}'**
+  String discoverCopiesFrom(String peer);
+
+  /// Copies sheet row title for a copy of every album by an artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Every album by {artist}'**
+  String discoverCopiesEveryAlbumBy(String artist);
+
+  /// Copies sheet row title for a copy of only the artist's albums the library lacks.
+  ///
+  /// In en, this message translates to:
+  /// **'{artist} · albums you don\'t have'**
+  String discoverCopiesMissingOf(String artist);
+
+  /// Toast when Cancel reached the server after the copy had already ended (the row turns into its outcome).
+  ///
+  /// In en, this message translates to:
+  /// **'Already finished · nothing to cancel'**
+  String get discoverCopiesAlreadyFinished;
+
+  /// Toast when a copy's Cancel could not reach the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel. Try again.'**
+  String get discoverCopiesCancelFailed;
+
+  /// Toast once the sheet that started a copy closes: the song or album title, and the connected server it is copied from.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying {title} from {peer}'**
+  String discoverToastCopying(String title, String peer);
+
+  /// Toast once the sheet that started an every-album copy closes.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying every album by {artist} from {peer}'**
+  String discoverToastCopyingEvery(String artist, String peer);
+
+  /// Toast once the sheet that started an only-the-albums-you-don't-have copy closes.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying the albums by {artist} you don\'t have from {peer}'**
+  String discoverToastCopyingMissing(String artist, String peer);
+
+  /// Toast when a copy the phone saw running ends with something copied into the user's library.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your collection'**
+  String get discoverToastAdded;
+
+  /// Toast when a copy ends having copied nothing because the library already had it all.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in your library'**
+  String get discoverToastAlreadyYours;
+
+  /// Toast when a copy fails; {reason} is the server's own words (or what the counts say).
+  ///
+  /// In en, this message translates to:
+  /// **'Copy failed: {reason}'**
+  String discoverToastFailed(String reason);
+
+  /// Toast when a copy ends early (the connected server's transfer limit, busy, gone, or refusing copies); {reason} says which.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped early: {reason}'**
+  String discoverToastStopped(String reason);
+
+  /// Toast when an Open elsewhere link could not be opened outside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open that link'**
+  String get discoverToastLinkFailed;
+
+  /// Toast after the destination picker saved: {path} is the library and base folder, e.g. 'copies › from-peers'.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved · copies land in {path}'**
+  String discoverToastSaved(String path);
+
+  /// Title of the destination picker sheet (where on the user's server copies from connected servers are put).
+  ///
+  /// In en, this message translates to:
+  /// **'Where copies land'**
+  String get discoverDestTitle;
+
+  /// Destination picker subtitle: the destination is one setting per account, shared by every copy.
+  ///
+  /// In en, this message translates to:
+  /// **'One setting for your account · every copy uses it'**
+  String get discoverDestSub;
+
+  /// Destination picker tag beside the title: the library's own default destination is in force.
+  ///
+  /// In en, this message translates to:
+  /// **'library default'**
+  String get discoverDestTagDefault;
+
+  /// Destination picker tag beside the title: the account's own saved destination is in force.
+  ///
+  /// In en, this message translates to:
+  /// **'yours'**
+  String get discoverDestTagYours;
+
+  /// Destination picker preview label above the path where this song would be copied; {title} is the song's title.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} lands at'**
+  String discoverDestLandsAt(String title);
+
+  /// Destination picker preview while the typed base folder would be refused.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix the base folder to see where files land'**
+  String get discoverDestFixBase;
+
+  /// Destination picker preview while the chosen layout would be refused.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix the layout to see where files land'**
+  String get discoverDestFixLayout;
+
+  /// Destination picker section label (drawn in capitals): the libraries this account can add files to.
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get discoverDestLibrary;
+
+  /// Destination picker section label (drawn in capitals) and the accessible name of its text field: a folder inside the library.
+  ///
+  /// In en, this message translates to:
+  /// **'Base folder'**
+  String get discoverDestBase;
+
+  /// Destination picker base folder field placeholder: empty means the root of the library.
+  ///
+  /// In en, this message translates to:
+  /// **'library root'**
+  String get discoverDestBaseHint;
+
+  /// Destination picker help under the base folder field; {library} is the chosen library's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Inside {library}. Leave empty for the library root.'**
+  String discoverDestBaseHelp(String library);
+
+  /// Destination picker section label (drawn in capitals): how folders are made from the tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get discoverDestLayout;
+
+  /// Destination picker layout preset: a folder per artist, then per album.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist / Album'**
+  String get discoverDestPresetArtistAlbum;
+
+  /// Destination picker layout preset: a folder named after the connected server, then artist, then album.
+  ///
+  /// In en, this message translates to:
+  /// **'Server / Artist / Album'**
+  String get discoverDestPresetServer;
+
+  /// Destination picker layout preset: the chosen library's own path template (shown only when it has one).
+  ///
+  /// In en, this message translates to:
+  /// **'Library layout'**
+  String get discoverDestPresetLibrary;
+
+  /// Destination picker layout choice: the layout in force when it is none of the presets (set elsewhere).
+  ///
+  /// In en, this message translates to:
+  /// **'Your current layout'**
+  String get discoverDestPresetCurrent;
+
+  /// Destination picker text button: drops the account's saved destination and goes back to the library default.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the library default'**
+  String get discoverDestUseDefault;
+
+  /// Destination picker Save button while the save is in flight.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get discoverDestSaving;
+
+  /// Destination picker error state: the destination could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load where copies land'**
+  String get discoverDestLoadFailed;
+
+  /// Accessible label of the destination picker's loading placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading where copies land'**
+  String get discoverDestLoading;
+
+  /// Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Copies go to your server, not this phone. Check where they land before the first one.'**
+  String get discoverKeepFirstUse;
+
+  /// Open elsewhere section label (drawn in capitals): pages for this exact recording on MusicBrainz.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact pages'**
+  String get discoverElsewhereExact;
+
+  /// Open elsewhere section label (drawn in capitals): searches on other catalogues (the rows are the catalogues' own names).
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get discoverElsewhereSearch;
+
+  /// Open elsewhere row: the MusicBrainz page of this recording.
+  ///
+  /// In en, this message translates to:
+  /// **'MusicBrainz recording'**
+  String get discoverElsewhereMbRecording;
+
+  /// Open elsewhere row: the MusicBrainz page of the release group (the album).
+  ///
+  /// In en, this message translates to:
+  /// **'MusicBrainz release group'**
+  String get discoverElsewhereMbReleaseGroup;
+
+  /// Open elsewhere row: the MusicBrainz page of the recording's ISRC code.
+  ///
+  /// In en, this message translates to:
+  /// **'MusicBrainz ISRC'**
+  String get discoverElsewhereMbIsrc;
+
+  /// Open elsewhere empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No links for this song'**
+  String get discoverElsewhereEmpty;
+
+  /// Open elsewhere empty state: why there are no links.
+  ///
+  /// In en, this message translates to:
+  /// **'It has no MusicBrainz ids, and no title or artist to search for.'**
+  String get discoverElsewhereEmptySub;
+
+  /// Open elsewhere error state; the server's own words, when it sent some, show under it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t look up links right now'**
+  String get discoverElsewhereFailed;
+
+  /// Accessible label of Open elsewhere's loading placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up links'**
+  String get discoverElsewhereLoading;
+
+  /// Accessibility hint on an Open elsewhere row.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens outside the app'**
+  String get discoverElsewhereOpensOutside;
 }
 
 class _AppLocalizationsDelegate

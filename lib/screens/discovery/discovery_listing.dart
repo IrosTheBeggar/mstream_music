@@ -4,6 +4,7 @@ import '../../objects/display_item.dart';
 import '../../objects/server.dart';
 import '../../singletons/browser_list.dart';
 import '../../singletons/media.dart';
+import 'copies_hub.dart';
 import 'discovery_page_controller.dart';
 
 /// Discover as a browser listing (mStream plan §2.13, 2026-10-11 — the
@@ -221,10 +222,16 @@ class DiscoveryListing {
   /// [controller] is injected by tests.
   void open(Server server, {DiscoveryPageController? controller}) {
     _detach();
+    // The app's copies are one per own server, shared with the home's
+    // Copies row (CopiesHub, once installed): this visit reads them afresh.
+    final hub = CopiesHub();
+    final shared =
+        controller == null && hub.installed ? hub.visit(server) : null;
     final c = controller ??
         DiscoveryPageController(
           server: server,
           pinAtOpen: discoveryNowPlayingPin(server),
+          jobs: shared,
         );
     _c = c;
     final items = discoveryListingItems(c);
@@ -246,8 +253,11 @@ class DiscoveryListing {
       _detach();
       return;
     }
-    if (identical(stack.last, frame) &&
-        BrowserManager().listName != kDiscoverLabel) {
+    final onTop = identical(stack.last, frame);
+    // Covered (an album opened over it): its markers are out of sight, so
+    // the jobs poll's Discover beat stops; back on top it catches up.
+    _c?.jobs.discoverVisible = onTop;
+    if (onTop && BrowserManager().listName != kDiscoverLabel) {
       BrowserManager().setBrowserLabel(kDiscoverLabel);
     }
   }
@@ -275,6 +285,11 @@ class DiscoveryListing {
     unawaited(sub?.cancel());
     if (c == null) return;
     c.removeListener(_onChange);
+    // Shared copies outlive the visit; its rows (and their lookups) go.
+    if (CopiesHub().owns(c.jobs)) {
+      final jobs = c.jobs;
+      scheduleMicrotask(() => unawaited(jobs.setRows(const [])));
+    }
     // Possibly inside the controller's own notifyListeners (a change found
     // the frame gone), where disposing would assert: after it returns.
     scheduleMicrotask(c.dispose);

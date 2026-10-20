@@ -154,6 +154,12 @@ class DiscoveryLead {
   final List<String> genreTags; // federation only; empty on P2P rows
   final String? peerName;
   final String? album;
+
+  /// The album's credit (`albumArtist`, taste peers rows from servers that
+  /// send it; null when absent): what groups a connected server's album
+  /// card — a compilation is one card under "Various Artists", not one per
+  /// track artist — and what its album copy takes whole.
+  final String? albumArtist;
   final int? year;
   final String? filepath; // the PEER's path, no leading slash (federation)
   final int? peerId; // the peer's row id on this server (federation)
@@ -164,6 +170,7 @@ class DiscoveryLead {
   DiscoveryLead(this.artist, this.title, this.similarity,
       this.durationSeconds, this.recordingMbid, this.genreTags, this.peerName,
       {this.album,
+      this.albumArtist,
       this.year,
       this.filepath,
       this.peerId,
@@ -191,6 +198,7 @@ class DiscoveryLead {
       parseGenreTags(m['genreTags']),
       (peer is Map ? _str(peer['name']) : null) ?? peerName,
       album: _str(m['album']),
+      albumArtist: _str(m['albumArtist']),
       year: _int(m['year']),
       filepath: _path(m['filepath']),
       peerId: (peer is Map ? _count(peer['id']) : null) ?? peerId,

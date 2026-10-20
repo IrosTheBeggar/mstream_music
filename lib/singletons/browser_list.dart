@@ -28,6 +28,13 @@ class BrowserManager {
     return false;
   }
 
+  /// Whether the home's SERVER section shows "Copies" for a server (what the
+  /// user's server is copying for them from connected servers). The copies
+  /// hub answers once it is installed (screens/discovery/copies_hub.dart);
+  /// until then, never.
+  static bool Function(Server server) homeCopiesRow = noCopiesRow;
+  static bool noCopiesRow(Server server) => false;
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip
@@ -432,10 +439,19 @@ class BrowserManager {
       // SERVER: work the server does for you. Torrents have no ping flag —
       // the screen's preflight probe is the gate — but the route is off the
       // federation allowlist, so a peer never gets it.
+      // Copies: what the server is copying for you from connected servers
+      // (Discover's Keep a copy) — only where copies are possible: the
+      // plug-ins on, the account may upload, the copy plug-in listed and
+      // jobs allowed. Hidden, never grey.
       if (!federated) ...[
         header('Server'),
         DisplayItem(server, 'Add torrent', 'execAction', 'torrents',
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
+        if (homeCopiesRow(server))
+          DisplayItem(server, 'Copies', 'execAction', 'copies',
+              Icon(Icons.library_add_outlined,
+                  color: VelvetColors.textSecondary),
+              null),
       ],
     ];
 

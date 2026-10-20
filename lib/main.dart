@@ -11,6 +11,7 @@ import 'package:rxdart/rxdart.dart';
 
 import 'screens/browser.dart';
 import 'screens/album_detail_view.dart';
+import 'screens/discovery/copies_hub.dart';
 import 'objects/display_item.dart';
 import 'native/carplay_bridge.dart';
 import 'native/now_playing_widget_publisher.dart';
@@ -141,6 +142,10 @@ Future<void> _startApp() async {
   // the keep-queue-offline sweep runs from the handler's queue listener in
   // those sessions, and a completed download must still patch the queue.
   DownloadManager().initDownloader();
+  // The copies the user's servers make for them from connected servers
+  // (Discover's Keep a copy): one per server, shared by Discover and the
+  // home's SERVER "Copies" row, with their end-of-copy toasts.
+  CopiesHub().install();
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,

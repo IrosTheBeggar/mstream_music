@@ -53,6 +53,11 @@ class ApiManager {
     _direct = http.Client();
   }
 
+  /// The pooled client itself, for the direct-call clients that live beside
+  /// ApiManager (DiscoveryPluginsApi). Read it per call: [resetDirectClient]
+  /// replaces it.
+  http.Client get directClient => _direct;
+
   /// POST /api/v1/db/genres — returns the server's distinct genre
   /// list with track counts. Used by the AutoDJ screen to populate
   /// the genre-picker autocomplete.
@@ -162,7 +167,14 @@ class ApiManager {
     final int loadToken = BrowserManager()
         .beginLoading(onCancel: cancelable ? client.close : null);
     try {
-      Server server = ServerManager().currentServer ??
+      // The server the caller names — an item's own server — else the one
+      // being browsed. Discover lists a connected server's albums and songs
+      // while the user's own server is current: opening one of them must ask
+      // that connected server (through the parent's proxy, server.apiUri),
+      // not the current one. (Until 2026-10-20 the argument was ignored, so
+      // such an album opened the current server's same-named album.)
+      Server server = currentServer ??
+          ServerManager().currentServer ??
           (throw Exception('No Server Selected'));
 
       Uri currentUri = server.apiUri(location);

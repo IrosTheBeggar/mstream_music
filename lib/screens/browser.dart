@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
@@ -28,8 +30,14 @@ import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
+import 'discovery/copies_hub.dart';
+import 'discovery/copies_sheet.dart';
+import 'discovery/discovery_copy_marks.dart';
 import 'discovery/discovery_listing.dart';
+import 'discovery/discovery_page_controller.dart';
 import 'discovery/discovery_widgets.dart';
+import 'discovery/keep_copy_ui.dart';
+import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
@@ -171,6 +179,17 @@ class _BrowserState extends State<Browser> {
         browserList[index].data == 'torrents') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
+      return;
+    }
+    // Copies: what the server is copying for you (Discover's Keep a copy),
+    // a sheet over the home.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'copies') {
+      final s = browserList[index].server;
+      if (s != null) {
+        unawaited(showCopiesSheet(context, CopiesHub().jobsFor(s),
+            fromHome: true));
+      }
       return;
     }
     if ((browserList[index].type == 'execAction' ||
@@ -725,13 +744,25 @@ class _BrowserState extends State<Browser> {
   // misaligns the text.
   Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
+    // A connected server's album on Discover (the album grid off): the
+    // long-press opens its album sheet, and a copy's marker leads its line.
+    final page = DiscoveryListing().controller;
+    final leads = discoveryCardLeads(b[i]);
+    final peerCard = page != null && leads.isNotEmpty;
+    final marker =
+        peerCard ? page.jobs.cardMarker(leads, album: b[i].name) : null;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: ListTile(
             leading: b[i].getAlbumThumb(),
             title: b[i].getText(l: l),
-            subtitle: b[i].getSubText(l: l),
+            subtitle: marker != null
+                ? DiscoveryRowMarkerLine(
+                    marker: marker, rest: b[i].subtext, counts: true)
+                : b[i].getSubText(l: l),
+            onLongPress:
+                peerCard ? () => showPeerAlbumSheet(c, b[i], page) : null,
             onTap: () {
               handleTap(b, i, c);
             }));
@@ -988,6 +1019,9 @@ class _BrowserState extends State<Browser> {
                                       : VelvetColors.textSecondary));
                         },
                       )
+                    else if (item.data == 'copies' && item.server != null)
+                      // Live counts only: "Copying 2" / "1 failed".
+                      CopiesHomeLines(jobs: CopiesHub().jobsFor(item.server!))
                     else if (item.subtext != null)
                       Text(
                         homeCardSubtext(l, item.subtext!),
@@ -1063,14 +1097,34 @@ class _BrowserState extends State<Browser> {
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
   // convention everywhere (Apple Music / Spotify / Symfonium).
-  void _showTrackActions(DisplayItem item, BuildContext c) =>
-      showTrackActionsSheet(c, item);
+  //
+  // A connected server's song on Discover gets its own sheet instead: the
+  // same listen verbs, its album and artist, Keep a copy, Open elsewhere,
+  // Browse that server, and Download to this phone last.
+  void _showTrackActions(DisplayItem item, BuildContext c) {
+    final lead = discoveryLeadOf(item);
+    final page = DiscoveryListing().controller;
+    if (lead != null && page != null) {
+      showPeerSongSheet(c, item, lead, page);
+      return;
+    }
+    showTrackActionsSheet(c, item);
+  }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
     final allowWrap = !LetterStrip.showsFor(b);
+    // A connected server's row on Discover: what the user's copy of it is
+    // doing ("copying…", "in your collection"…) leads its second line, and
+    // its strip fills with the copy (primary — a phone download keeps the
+    // green).
+    final lead = discoveryLeadOf(b[i]);
+    final marker = lead == null
+        ? null
+        : DiscoveryListing().controller?.jobs.markerFor(lead);
+    final copyStrip = discoveryRowCopyStrip(marker);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -1096,7 +1150,7 @@ class _BrowserState extends State<Browser> {
                         children: <Widget>[
                       SizedBox(
                         width: 4,
-                        child: RotatedBox(
+                        child: copyStrip ?? RotatedBox(
                           quarterTurns: 3,
                           child: LinearProgressIndicator(
                             // value: displayList[index].downloadProgress/100,
@@ -1115,7 +1169,10 @@ class _BrowserState extends State<Browser> {
                           child: ListTile(
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
-                              subtitle: b[i].getSubText(),
+                              subtitle: marker != null
+                                  ? DiscoveryRowMarkerLine(
+                                      marker: marker, rest: b[i].subtext)
+                                  : b[i].getSubText(),
                               // No trailing control: it sat exactly where
                               // the letter strip lands, and long-press opens
                               // the same sheet.
@@ -1160,7 +1217,11 @@ class _BrowserState extends State<Browser> {
           final it = items[i];
           switch (it.type) {
             case kDiscoverBar:
-              if (c != null) children.add(DiscoveryConfigBar(controller: c));
+              if (c != null) {
+                children.add(DiscoveryConfigBar(controller: c));
+                // What the server is copying for you, under the bar.
+                children.add(DiscoveryCopiesStrip(controller: c));
+              }
             case kDiscoverState:
               children.add(discoveryStateWidget(context, it, c, grid: grid));
             case kDiscoverFoot:
@@ -1214,7 +1275,10 @@ class _BrowserState extends State<Browser> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: VelvetColors.primary,
+          // The canvas's --ptext on the page: the primary only where it
+          // reads at 4.5:1 there (Velvet's violet does not; Light's amber
+          // is darkened).
+          color: keepInkOnPage(),
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.6,
@@ -1239,14 +1303,33 @@ class _BrowserState extends State<Browser> {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         itemCount: to - from + 1,
         separatorBuilder: (_, _) => const SizedBox(width: AlbumGrid.spacing),
-        itemBuilder: (context, k) => SizedBox(
-          width: _stripCardWidth,
-          child: AlbumGridCard(
-            item: items[from + k],
-            cacheWidth: cacheW,
-            onTap: () => handleTap(items, from + k, context),
-          ),
-        ),
+        itemBuilder: (context, k) {
+          final item = items[from + k];
+          // A connected server's card: its copy's badge in the cover, and
+          // a long-press or its ⋯ for the album sheet. The tap still opens
+          // the album.
+          final page = DiscoveryListing().controller;
+          final leads = discoveryCardLeads(item);
+          final peerCard = page != null && leads.isNotEmpty;
+          final marker =
+              peerCard ? page.jobs.cardMarker(leads, album: item.name) : null;
+          void sheet() => showPeerAlbumSheet(context, item, page!);
+          return SizedBox(
+            width: _stripCardWidth,
+            child: AlbumGridCard(
+              item: item,
+              cacheWidth: cacheW,
+              onTap: () => handleTap(items, from + k, context),
+              onLongPress: peerCard ? sheet : null,
+              onMore: peerCard ? sheet : null,
+              moreLabel: peerCard
+                  ? AppLocalizations.of(context).discoverAlbumCardMore(item.name)
+                  : null,
+              coverBadge:
+                  marker == null ? null : DiscoveryCardBadge(marker: marker),
+            ),
+          );
+        },
       ),
     );
   }

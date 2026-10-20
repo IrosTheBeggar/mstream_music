@@ -368,6 +368,7 @@ class ServerManager {
       final int? prevStats = server.statsVersion;
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
+      final bool? prevNoUpload = server.noUpload;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -427,6 +428,7 @@ class ServerManager {
           server.discoveryPathAvailable != prevDiscoveryPath ||
           server.discoveryTasteAvailable != prevDiscoveryTaste ||
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
+          server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
       }
@@ -441,6 +443,9 @@ class ServerManager {
           server.discoveryPathAvailable != prevDiscoveryPath ||
           server.discoveryAvailable != prevDiscovery ||
           server.discoveryTasteAvailable != prevDiscoveryTaste ||
+          // The SERVER section's Copies row follows these two.
+          server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
+          server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         _refreshHomeIfShowing(server);
       }
@@ -549,6 +554,10 @@ class ServerManager {
         features is Map && hasTasteGeneration(features['discoveryTaste']);
     server.discoveryPluginsAvailable =
         features is Map && features['discoveryPlugins'] == true;
+    // Caller-scoped (the account's upload right), so under `user` here.
+    server.noUpload = user is Map && user['noUpload'] is bool
+        ? user['noUpload'] as bool
+        : null;
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -602,6 +611,7 @@ class ServerManager {
     // that has the Discover page (mStream docs/discovery-page-plan.md §2.10).
     server.discoveryTasteAvailable = hasTasteGeneration(res['discoveryTaste']);
     server.discoveryPluginsAvailable = res['discoveryPlugins'] == true;
+    server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
   }
 
   /// Whether a `discoveryTaste` wire value advertises the Discover page: an
@@ -2577,6 +2587,7 @@ class ServerManager {
     // parent's page; the plug-in routes are off the allowlist besides.
     server.discoveryTasteAvailable = false;
     server.discoveryPluginsAvailable = false;
+    server.noUpload = null; // a copy lands on the parent, whose flag governs
     server.statsVersion = null; // its plays post to the parent, whose flag governs
     server.playlists.clear();
   }

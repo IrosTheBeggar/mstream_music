@@ -4577,4 +4577,699 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get homeWidgetPinUnsupported =>
       'Этот лаунчер не может добавлять виджеты отсюда. Воспользуйтесь его собственным списком виджетов.';
+
+  @override
+  String discoverSheetPeerOnline(String name) {
+    return '«$name» в сети';
+  }
+
+  @override
+  String discoverSheetPeerNotAnswering(String name) {
+    return '«$name» не отвечает';
+  }
+
+  @override
+  String discoverSheetSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count трека',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverSheetAlbumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count альбома',
+      many: '$count альбомов',
+      few: '$count альбома',
+      one: '$count альбом',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetNotInLibrary => 'нет в вашей библиотеке';
+
+  @override
+  String get discoverSheetInLibrary => 'есть в вашей библиотеке';
+
+  @override
+  String discoverSheetYouHaveAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'у вас $count альбома',
+      many: 'у вас $count альбомов',
+      few: 'у вас $count альбома',
+      one: 'у вас $count альбом',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetOpenAlbum => 'Открыть альбом';
+
+  @override
+  String get discoverSheetQueueAlbum => 'Добавить альбом в очередь';
+
+  @override
+  String get discoverSheetPlayAlbum => 'Воспроизвести альбом';
+
+  @override
+  String get discoverSheetOpenArtist => 'Открыть исполнителя';
+
+  @override
+  String get discoverSheetListen => 'Слушать';
+
+  @override
+  String get discoverSheetKeepCopy => 'Сохранить копию';
+
+  @override
+  String get discoverSheetOpenElsewhere => 'Открыть в другом месте';
+
+  @override
+  String discoverSheetBrowsePeer(String name) {
+    return 'Обзор «$name»';
+  }
+
+  @override
+  String get discoverSheetDownloadToPhone => 'Скачать на этот телефон';
+
+  @override
+  String get discoverSheetDownloadToPhoneSub =>
+      'Для прослушивания офлайн на этом устройстве';
+
+  @override
+  String discoverSheetAlbumFailed(String name) {
+    return 'Не удалось загрузить этот альбом с «$name»';
+  }
+
+  @override
+  String discoverAlbumCardMore(String album) {
+    return 'Ещё для «$album»';
+  }
+
+  @override
+  String get discoverKeepThisSong => 'Этот трек';
+
+  @override
+  String get discoverKeepAlbum => 'Альбом';
+
+  @override
+  String get discoverKeepArtist => 'Исполнитель';
+
+  @override
+  String get discoverKeepWhat => 'Что сохранить';
+
+  @override
+  String discoverKeepYouHave(int count) {
+    return 'у вас $count';
+  }
+
+  @override
+  String discoverKeepOnlyMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Только $count альбома, которых у вас нет',
+      many: 'Только $count альбомов, которых у вас нет',
+      few: 'Только $count альбома, которых у вас нет',
+      one: 'Только $count альбом, которого у вас нет',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepFilesGoTo => 'Файлы попадут в';
+
+  @override
+  String get discoverKeepFolderPerAlbum => 'по папке на альбом';
+
+  @override
+  String get discoverKeepChange => 'Изменить';
+
+  @override
+  String get discoverKeepChangeHint => 'Изменить, куда сохраняются копии';
+
+  @override
+  String get discoverKeepAddSong => 'Добавить трек';
+
+  @override
+  String get discoverKeepAddAlbum => 'Добавить альбом';
+
+  @override
+  String get discoverKeepAddEveryAlbum => 'Добавить все альбомы';
+
+  @override
+  String discoverKeepAddAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Добавить $count альбома',
+      many: 'Добавить $count альбомов',
+      few: 'Добавить $count альбома',
+      one: 'Добавить $count альбом',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepAddMissing => 'Добавить альбомы, которых у вас нет';
+
+  @override
+  String get discoverKeepUploadsOff =>
+      'Ваша учётная запись не может добавлять файлы на этот сервер';
+
+  @override
+  String get discoverKeepNoLibrary =>
+      'Ни одна библиотека на вашем сервере не принимает новые файлы';
+
+  @override
+  String get discoverKeepStartFailed =>
+      'Не удалось связаться с вашим сервером. Попробуйте ещё раз.';
+
+  @override
+  String discoverKeepConfirmTitle(int count, String peer) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Скопировать $count альбома с «$peer»?',
+      many: 'Скопировать $count альбомов с «$peer»?',
+      few: 'Скопировать $count альбома с «$peer»?',
+      one: 'Скопировать $count альбом с «$peer»?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepConfirmEveryTitle(String artist, String peer) {
+    return 'Скопировать все альбомы исполнителя $artist с «$peer»?';
+  }
+
+  @override
+  String discoverKeepConfirmBody(String path) {
+    return 'Они попадут на ваш сервер в $path, по папке на альбом. Треки, которые у вас уже есть, будут пропущены.';
+  }
+
+  @override
+  String discoverKeepConfirmAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Скопировать $count альбома',
+      many: 'Скопировать $count альбомов',
+      few: 'Скопировать $count альбома',
+      one: 'Скопировать $count альбом',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepConfirmEveryAction => 'Скопировать все альбомы';
+
+  @override
+  String get discoverJobQueued => 'Ожидает свободного места';
+
+  @override
+  String get discoverJobQueuedSub => 'Начнётся автоматически';
+
+  @override
+  String get discoverJobCopying => 'Копирование';
+
+  @override
+  String get discoverJobStarting => 'Запуск…';
+
+  @override
+  String get discoverJobStopping => 'Остановка…';
+
+  @override
+  String get discoverJobInCollection => 'В вашей коллекции';
+
+  @override
+  String get discoverJobOwned => 'Уже у вас';
+
+  @override
+  String get discoverJobOwnedSub => 'Этот трек уже есть в вашей библиотеке';
+
+  @override
+  String get discoverJobSkipped => 'Пропущено · там уже есть файл';
+
+  @override
+  String discoverJobExistsSub(String path) {
+    return 'По пути $path уже есть файл · ничего не перезаписано';
+  }
+
+  @override
+  String get discoverJobFailed => 'Не удалось скопировать';
+
+  @override
+  String get discoverJobFailedSub => 'Копирование не завершилось';
+
+  @override
+  String get discoverJobNothingCopiedLead => 'Ничего не скопировано';
+
+  @override
+  String get discoverJobNothingCopied => 'ничего не скопировано';
+
+  @override
+  String get discoverJobStopped => 'Остановлено';
+
+  @override
+  String discoverJobStoppedQuota(String peer) {
+    return 'Остановлено лимитом передачи «$peer»';
+  }
+
+  @override
+  String discoverJobStoppedBusy(String peer) {
+    return '«$peer» сейчас обслуживает слишком много потоков';
+  }
+
+  @override
+  String discoverJobStoppedPeer(String peer) {
+    return '«$peer» отключился';
+  }
+
+  @override
+  String discoverJobStoppedRefused(String peer) {
+    return '«$peer» не разрешает копирование с ключом вашего сервера';
+  }
+
+  @override
+  String get discoverJobCancelledNothing =>
+      'Остановлено · ничего не скопировано';
+
+  @override
+  String discoverJobCancelledSome(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Остановлено · скопировано $count',
+      many: 'Остановлено · скопировано $count',
+      few: 'Остановлено · скопировано $count',
+      one: 'Остановлено · скопирован $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobCancelledSub => 'Вы отменили копирование';
+
+  @override
+  String discoverJobCancelledStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Вы отменили · $count трека остаются в вашей коллекции',
+      many: 'Вы отменили · $count треков остаются в вашей коллекции',
+      few: 'Вы отменили · $count трека остаются в вашей коллекции',
+      one: 'Вы отменили · $count трек остаётся в вашей коллекции',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobNothingAll => 'У вас уже всё есть';
+
+  @override
+  String discoverJobNothingFrom(String peer) {
+    return 'Нечего копировать с «$peer»';
+  }
+
+  @override
+  String get discoverJobOnlyGuest =>
+      'Нет их собственных альбомов для копирования';
+
+  @override
+  String discoverJobOnlyGuestSub(String artist, String peer) {
+    return '$artist лишь участвует как гость в альбомах «$peer»';
+  }
+
+  @override
+  String discoverJobFromOther(String peer) {
+    return 'Копирование с «$peer»';
+  }
+
+  @override
+  String discoverJobComesBack(String action) {
+    return '«$action» вернётся, когда это копирование закончится';
+  }
+
+  @override
+  String get discoverJobDone => 'Готово';
+
+  @override
+  String discoverJobCopiedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'скопировано $count',
+      many: 'скопировано $count',
+      few: 'скопировано $count',
+      one: 'скопирован $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobOwnedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count уже были у вас',
+      many: '$count уже были у вас',
+      few: '$count уже были у вас',
+      one: '$count уже был у вас',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobFailedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count с ошибкой',
+      many: '$count с ошибкой',
+      few: '$count с ошибкой',
+      one: '$count с ошибкой',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count альбома с ошибкой',
+      many: '$count альбомов с ошибкой',
+      few: '$count альбома с ошибкой',
+      one: '$count альбом с ошибкой',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsLeftOut(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count альбома пропущено',
+      many: '$count альбомов пропущено',
+      few: '$count альбома пропущено',
+      one: '$count альбом пропущен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobRetry => 'Повторить';
+
+  @override
+  String get discoverJobAddAgain => 'Добавить снова';
+
+  @override
+  String get discoverJobAddToQueue => 'Добавить в очередь';
+
+  @override
+  String get discoverMarkWaiting => 'ожидает';
+
+  @override
+  String get discoverMarkCopying => 'копируется…';
+
+  @override
+  String discoverMarkCopyingCount(int done, int total) {
+    return 'копируется $done из $total';
+  }
+
+  @override
+  String get discoverMarkStopping => 'останавливается…';
+
+  @override
+  String get discoverMarkInCollection => 'в вашей коллекции';
+
+  @override
+  String get discoverMarkAlreadyYours => 'уже у вас';
+
+  @override
+  String get discoverMarkStopped => 'остановлено';
+
+  @override
+  String get discoverMarkRefused => 'отказано';
+
+  @override
+  String get discoverMarkFailed => 'ошибка';
+
+  @override
+  String get discoverMarkSkipped => 'пропущено';
+
+  @override
+  String discoverCopiesCopying(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Копируются $count',
+      many: 'Копируются $count',
+      few: 'Копируются $count',
+      one: 'Копируется $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count с ошибкой',
+      many: '$count с ошибкой',
+      few: '$count с ошибкой',
+      one: '$count с ошибкой',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesLabel(String summary) {
+    return 'Копии: $summary';
+  }
+
+  @override
+  String get discoverCopiesTitle => 'Копии';
+
+  @override
+  String get discoverCopiesSectionCopying => 'Копируются';
+
+  @override
+  String get discoverCopiesSectionAttention => 'Остановлены или с ошибкой';
+
+  @override
+  String get discoverCopiesSectionFinished => 'Только что завершены';
+
+  @override
+  String get discoverCopiesClearFinished => 'Убрать завершённые';
+
+  @override
+  String get discoverCopiesEmpty => 'Ничего не копируется';
+
+  @override
+  String get discoverCopiesEmptySub =>
+      'Нажмите и удерживайте трек или альбом с подключённого сервера в «Открытиях», чтобы сохранить копию.';
+
+  @override
+  String get discoverCopiesOpenDiscover => 'Открыть «Открытия»';
+
+  @override
+  String get discoverCopiesLoadFailed => 'Не удалось загрузить ваши копии';
+
+  @override
+  String get discoverCopiesLoadFailedSub =>
+      'Ваш сервер не ответил. Копирование там продолжается.';
+
+  @override
+  String get discoverCopiesLoading => 'Загрузка ваших копий';
+
+  @override
+  String get discoverCopiesKindSong => 'Трек';
+
+  @override
+  String get discoverCopiesKindAlbum => 'Альбом';
+
+  @override
+  String get discoverCopiesKindEvery => 'Все альбомы';
+
+  @override
+  String get discoverCopiesKindMissing => 'Чего у вас нет';
+
+  @override
+  String discoverCopiesFrom(String peer) {
+    return 'с «$peer»';
+  }
+
+  @override
+  String discoverCopiesEveryAlbumBy(String artist) {
+    return 'Все альбомы исполнителя $artist';
+  }
+
+  @override
+  String discoverCopiesMissingOf(String artist) {
+    return '$artist · альбомы, которых у вас нет';
+  }
+
+  @override
+  String get discoverCopiesAlreadyFinished => 'Уже завершено · нечего отменять';
+
+  @override
+  String get discoverCopiesCancelFailed =>
+      'Не удалось отменить. Попробуйте ещё раз.';
+
+  @override
+  String discoverToastCopying(String title, String peer) {
+    return 'Копирование «$title» с «$peer»';
+  }
+
+  @override
+  String discoverToastCopyingEvery(String artist, String peer) {
+    return 'Копирование всех альбомов исполнителя $artist с «$peer»';
+  }
+
+  @override
+  String discoverToastCopyingMissing(String artist, String peer) {
+    return 'Копирование с «$peer» альбомов исполнителя $artist, которых у вас нет';
+  }
+
+  @override
+  String get discoverToastAdded => 'Добавлено в вашу коллекцию';
+
+  @override
+  String get discoverToastAlreadyYours => 'Уже есть в вашей библиотеке';
+
+  @override
+  String discoverToastFailed(String reason) {
+    return 'Не удалось скопировать: $reason';
+  }
+
+  @override
+  String discoverToastStopped(String reason) {
+    return 'Остановлено раньше времени: $reason';
+  }
+
+  @override
+  String get discoverToastLinkFailed => 'Не удалось открыть ссылку';
+
+  @override
+  String discoverToastSaved(String path) {
+    return 'Сохранено · копии попадут в $path';
+  }
+
+  @override
+  String get discoverDestTitle => 'Куда попадают копии';
+
+  @override
+  String get discoverDestSub =>
+      'Одна настройка для вашей учётной записи · её используют все копии';
+
+  @override
+  String get discoverDestTagDefault => 'по умолчанию для библиотеки';
+
+  @override
+  String get discoverDestTagYours => 'ваш';
+
+  @override
+  String discoverDestLandsAt(String title) {
+    return '«$title» попадёт в';
+  }
+
+  @override
+  String get discoverDestFixBase =>
+      'Исправьте базовую папку, чтобы увидеть, куда попадут файлы';
+
+  @override
+  String get discoverDestFixLayout =>
+      'Исправьте структуру папок, чтобы увидеть, куда попадут файлы';
+
+  @override
+  String get discoverDestLibrary => 'Библиотека';
+
+  @override
+  String get discoverDestBase => 'Базовая папка';
+
+  @override
+  String get discoverDestBaseHint => 'корень библиотеки';
+
+  @override
+  String discoverDestBaseHelp(String library) {
+    return 'Внутри «$library». Оставьте пустым для корня библиотеки.';
+  }
+
+  @override
+  String get discoverDestLayout => 'Структура папок';
+
+  @override
+  String get discoverDestPresetArtistAlbum => 'Исполнитель / Альбом';
+
+  @override
+  String get discoverDestPresetServer => 'Сервер / Исполнитель / Альбом';
+
+  @override
+  String get discoverDestPresetLibrary => 'Структура библиотеки';
+
+  @override
+  String get discoverDestPresetCurrent => 'Ваша текущая структура';
+
+  @override
+  String get discoverDestUseDefault =>
+      'Использовать настройку библиотеки по умолчанию';
+
+  @override
+  String get discoverDestSaving => 'Сохранение…';
+
+  @override
+  String get discoverDestLoadFailed =>
+      'Не удалось загрузить, куда попадают копии';
+
+  @override
+  String get discoverDestLoading => 'Загрузка места для копий';
+
+  @override
+  String get discoverKeepFirstUse =>
+      'Копии сохраняются на вашем сервере, а не на этом телефоне. Перед первой проверьте, куда они попадут.';
+
+  @override
+  String get discoverElsewhereExact => 'Точные страницы';
+
+  @override
+  String get discoverElsewhereSearch => 'Поиск';
+
+  @override
+  String get discoverElsewhereMbRecording => 'Запись в MusicBrainz';
+
+  @override
+  String get discoverElsewhereMbReleaseGroup => 'Группа релизов в MusicBrainz';
+
+  @override
+  String get discoverElsewhereMbIsrc => 'ISRC в MusicBrainz';
+
+  @override
+  String get discoverElsewhereEmpty => 'Для этого трека нет ссылок';
+
+  @override
+  String get discoverElsewhereEmptySub =>
+      'У него нет идентификаторов MusicBrainz, а также названия или исполнителя для поиска.';
+
+  @override
+  String get discoverElsewhereFailed => 'Сейчас не удалось найти ссылки';
+
+  @override
+  String get discoverElsewhereLoading => 'Поиск ссылок';
+
+  @override
+  String get discoverElsewhereOpensOutside => 'Откроется вне приложения';
 }

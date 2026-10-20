@@ -418,12 +418,15 @@ void main() {
       expect(BrowserManager().listName, 'File Explorer');
       expect(DiscoveryListing().controller, same(c),
           reason: 'covered, not gone');
+      expect(c.jobs.discoverVisible, isFalse,
+          reason: "covered: the copies poll's Discover beat stops");
 
       BrowserManager().popBrowser();
       await pumpEventQueue();
       expect(DiscoveryListing.isListing(BrowserManager().browserList), isTrue);
       expect(BrowserManager().listName, 'Discover');
       expect(DiscoveryListing().controller, same(c));
+      expect(c.jobs.discoverVisible, isTrue);
     });
 
     test('a fresh open builds a fresh controller: no pins, drops or passed '

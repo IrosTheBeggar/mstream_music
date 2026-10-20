@@ -194,14 +194,17 @@ String? artUrlOf(Widget? w) {
 
 /// A federation row in a peers answer. [art] is its `albumArt` — the
 /// peer's cached cover name (mStream plan §3.1, "Peer covers").
+///
+/// [albumArtist] is the album's credit, on rows from servers that send it.
 Map<String, dynamic> peerRow(String title, String artist, double sim,
-        {String? album, String? path, String? art}) =>
+        {String? album, String? path, String? art, String? albumArtist}) =>
     {
       'artist': artist,
       'title': title,
       'similarity': sim,
       'filepath': ?path,
       'album': ?album,
+      'albumArtist': ?albumArtist,
       'albumArt': ?art,
       'source': 'federation',
       'seedHash': null,

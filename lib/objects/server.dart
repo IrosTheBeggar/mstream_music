@@ -99,11 +99,23 @@ class Server {
   //   discoveryPluginsAvailable    — at least one discovery plug-in is on,
   //                                  so a recommendation row has actions
   //                                  (`features.discoveryPlugins`, ping
-  //                                  `discoveryPlugins`). Read and kept now;
-  //                                  the plug-in client is the Discover
-  //                                  plan's phase B, and v1 network rows
-  //                                  carry no plug-in verbs.
+  //                                  `discoveryPlugins`). Discover's Keep a
+  //                                  copy and the Copies list gate on it
+  //                                  first (DiscoveryJobsController): off,
+  //                                  no plug-in route is asked at all.
   bool? discoveryPluginsAvailable;
+  //   noUpload                     — this ACCOUNT may not add files to the
+  //                                  server (caller-scoped: `user.noUpload`
+  //                                  on /api, `noUpload` on ping — the
+  //                                  server switch or the user's
+  //                                  allow_upload). Keep a copy reads it to
+  //                                  word a null collection destination:
+  //                                  "your account can't add files" against
+  //                                  "no library takes new files". Null
+  //                                  from a server too old to say, and on a
+  //                                  federated peer (a copy lands on the
+  //                                  PARENT, whose flag governs).
+  bool? noUpload;
   //   statsVersion                 — the Stats API generation the server
   //                                  advertises (`features.stats`; 2 = Stats
   //                                  API v2: plays post, history reads). Null
@@ -427,6 +439,7 @@ class Server {
         discoveryPluginsAvailable = json['discoveryPluginsAvailable'] is bool
             ? json['discoveryPluginsAvailable']
             : null,
+        noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
         discoveryEnabled =
@@ -475,6 +488,7 @@ class Server {
         'federationInbox': federationInbox,
         'discoveryTasteAvailable': discoveryTasteAvailable,
         'discoveryPluginsAvailable': discoveryPluginsAvailable,
+        'noUpload': noUpload,
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,

@@ -12,13 +12,18 @@
 
 import 'dart:async';
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/discovery/discovery_jobs_controller.dart';
 import 'package:mstream_music/screens/discovery/discovery_page_controller.dart';
 import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/util/discover_badges.dart';
 
 import 'discovery_fixtures.dart';
+import 'discovery_plugin_fakes.dart';
 
 /// A scripted taste route: records every request and answers each through
 /// a completer the test resolves (or [auto] answers at once).
@@ -61,6 +66,7 @@ void main() {
   DiscoveryPageController make({
     String? pin,
     Future<void> Function(Server)? reping,
+    DiscoveryJobsController? jobs,
   }) =>
       DiscoveryPageController(
         server: server,
@@ -73,6 +79,7 @@ void main() {
         },
         now: () => clock,
         pinAtOpen: pin,
+        jobs: jobs,
       );
 
   setUp(() {
@@ -1242,6 +1249,168 @@ void main() {
       final c = make();
       expect(c.peerServerFor(lead), isNull);
       expect(c.peerTrackItem(lead), isNull);
+    });
+  });
+  // Keep a copy (plug-ins): the controller keeps each connected-server row's
+  // lead (its raw row is the recommendation every plug-in call sends
+  // unchanged), groups a compilation's rows under its album artist, and has
+  // every connected-servers answer looked up — the Try again's too.
+  group('connected servers and the plug-ins', () {
+    late FakePluginServer plugins;
+    late DiscoveryJobsController jobs;
+
+    setUp(() {
+      ServerManager().serverList.clear();
+      plugins = FakePluginServer();
+      server.discoveryPluginsAvailable = true;
+      jobs = DiscoveryJobsController(
+          server: server,
+          api: plugins.api(server),
+          timer: FakeTimers().call,
+          watchLifecycle: false);
+    });
+    tearDown(() {
+      jobs.dispose();
+      ServerManager().serverList.clear();
+    });
+
+    Server peer(int id) =>
+        Server('federated://home/$id', null, null, null, 'peer-$id')
+          ..federationParent = 'home'
+          ..federationPeerId = id
+          ..parentServer = server;
+
+    Map<String, dynamic> peersOf(List<Map<String, dynamic>> rows) => {
+          'window': 30,
+          'seedSource': 'history',
+          'seeds': [],
+          'library': null,
+          'network': null,
+          'peers': {
+            'peers': [
+              {'id': 7, 'name': "Sam's server", 'reachable': true, 'mismatched': false, 'results': rows},
+            ],
+            'searched': {'peers': 1, 'unreachable': 0, 'mismatched': 0},
+          },
+        };
+
+    List<Object?> sent(int i) =>
+        jsonDecode(plugins.calls('POST', '/lookup/batch')[i].body)['recommendations'] as List;
+
+    test('each row keeps its lead; every answer, and its Try again, is looked up with the rows exactly as received', () async {
+      ServerManager().serverList.addAll([server, peer(7)]);
+      final rows = [
+        peerRow('Alpha', 'Kiasmos', 0.70, album: 'Blurred', path: 'sam/a.flac', art: 'blurred.jpg'),
+        peerRow('Bravo', 'Kiasmos', 0.90, album: 'Blurred', path: 'sam/b.flac'),
+      ];
+      taste.auto = (r) => ok(isPeersCall(r) ? peersOf(rows) : mainPayload());
+      final c = make(jobs: jobs);
+      await c.load();
+      await settle();
+      expect(plugins.count('GET', '/discovery/plugins'), 1, reason: 'the listing, once a visit');
+      expect([for (final r in c.peerRows) discoveryLeadOf(r)?.title], ['Bravo', 'Alpha']);
+      expect(discoveryLeadOf(c.libraryRows.first), isNull, reason: 'a library row has no lead');
+      expect(plugins.count('POST', '/lookup/batch'), 1);
+      expect(sent(0), [jsonDecode(jsonEncode(rows[1])), jsonDecode(jsonEncode(rows[0]))],
+          reason: 'best first, as drawn; unchanged');
+      expect(jobs.leads, [for (final r in c.peerRows) discoveryLeadOf(r)]);
+
+      // The connected servers' call fails, then their Try again answers.
+      var fail = true;
+      taste.auto = (r) => isPeersCall(r) && fail
+          ? const DiscoveryFetchResult.error()
+          : ok(isPeersCall(r) ? peersOf(rows) : mainPayload());
+      await c.load();
+      await settle();
+      expect(c.peersError, isTrue);
+      expect(jobs.leads, isEmpty, reason: 'no rows on the page: none looked up');
+      fail = false;
+      await c.retryPeers();
+      await settle();
+      expect(plugins.count('POST', '/lookup/batch'), 2, reason: "the Try again's answer is looked up");
+      expect(jobs.leads, hasLength(2));
+    });
+
+    test("a job the poll sees end has the rows looked up again, and the page redraws for the markers", () async {
+      ServerManager().serverList.addAll([server, peer(7)]);
+      final rows = [peerRow('Bravo', 'Kiasmos', 0.90, album: 'Blurred', path: 'sam/b.flac')];
+      final timers = FakeTimers();
+      jobs.dispose();
+      jobs = DiscoveryJobsController(
+          server: server, api: plugins.api(server), timer: timers.call, watchLifecycle: false);
+      final j = plugins.addJob(rows.first, state: 'running', progress: 0.5);
+      taste.auto = (r) => ok(isPeersCall(r) ? peersOf(rows) : mainPayload());
+      final c = make(jobs: jobs);
+      await c.load();
+      await settle();
+      final bravo = discoveryLeadOf(c.peerRows.single)!;
+      expect(jobs.markerFor(bravo)!.kind, CopyMarkerKind.copying);
+      var redraws = 0;
+      c.addListener(() => redraws++);
+      j['state'] = 'done';
+      j['result'] = {'copied': {'filepath': 'copies/Kiasmos/Blurred/Bravo.flac'}};
+      timers.active!.fire();
+      await settle();
+      expect(plugins.count('POST', '/lookup/batch'), 2);
+      expect(jobs.markerFor(bravo)!.kind, CopyMarkerKind.inCollection);
+      expect(redraws, greaterThan(0));
+    });
+
+    test('a compilation is ONE card under its album artist, opened by album_artist; its leads are its rows, best first', () async {
+      ServerManager().serverList.addAll([server, peer(7)]);
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersOf([
+              peerRow('Party Verse', 'Boukmanflow', 0.90, album: 'Block Party Comp', path: 'sam/va/07.mp3', albumArtist: 'Various Artists'),
+              peerRow('Kim Song', 'Peer Kim', 0.80, album: 'Block Party Comp', path: 'sam/va/03.mp3', albumArtist: 'Various Artists'),
+              peerRow('Late Train Verse', 'Boukmanflow', 0.70, album: 'Borrowed Tapes', path: 'sam/bt/02.mp3', albumArtist: 'Boukmanflow'),
+              peerRow('Old Row', 'Rival Consoles', 0.60, album: 'Persona', path: 'sam/p/01.mp3'),
+            ])
+          : mainPayload());
+      final c = make(jobs: jobs);
+      await c.load();
+      final cards = c.peerAlbumItems;
+      expect([for (final a in cards) [a.name, a.subtext]], [
+        ['Block Party Comp', 'Various Artists'],
+        ['Borrowed Tapes', 'Boukmanflow'],
+        ['Persona', 'Rival Consoles'],
+      ], reason: 'one compilation card, its artist line the album artist');
+      final comp = cards[0];
+      expect([comp.albumArtist, comp.trackArtist], ['Various Artists', null],
+          reason: 'the tap opens the whole album by its credit, as its copy takes it');
+      expect([for (final l in discoveryCardLeads(comp)) l.title], ['Party Verse', 'Kim Song']);
+      expect(discoveryCardLeads(comp).first.albumArtist, 'Various Artists');
+      expect(discoveryCardIsCompilation(comp), isTrue);
+      expect(jobs.scopesForCard(discoveryCardLeads(comp), compilation: true), isEmpty,
+          reason: 'no listing in this test: nothing offered');
+      // an album credited to its own artist is no compilation
+      expect([cards[1].albumArtist, discoveryCardIsCompilation(cards[1])], ['Boukmanflow', false]);
+      // a row that names no album artist keeps the track-artist narrowing
+      expect([cards[2].albumArtist, cards[2].trackArtist, discoveryCardIsCompilation(cards[2])], [null, 'Rival Consoles', false]);
+      expect(discoveryCardLeads(c.peerRows.first), isEmpty, reason: 'a row is not a card');
+    });
+
+    test('albumArtist is parsed off a row: a string, null when absent or blank', () {
+      DiscoveryLead lead(Map<String, dynamic> extra) =>
+          DiscoveryLead.fromServerMap({'title': 'T', ...extra})!;
+      expect(lead({'albumArtist': 'Various Artists'}).albumArtist, 'Various Artists');
+      expect(lead({}).albumArtist, isNull);
+      expect(lead({'albumArtist': null}).albumArtist, isNull);
+      expect(lead({'albumArtist': '  '}).albumArtist, isNull);
+      expect(lead({'albumArtist': 7}).albumArtist, isNull);
+      expect(lead({'albumArtist': 'Various Artists'}).raw['albumArtist'], 'Various Artists',
+          reason: 'and kept in the raw row the plug-ins are sent');
+    });
+
+    test('plug-ins off: the default jobs controller asks nothing', () async {
+      server.discoveryPluginsAvailable = false;
+      ServerManager().serverList.addAll([server, peer(7)]);
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      expect(c.jobs.pluginsOn, isFalse);
+      expect(c.jobs.leads, hasLength(c.peerRows.length));
+      expect(c.jobs.rows.every((r) => r.badge == null), isTrue);
+      c.dispose();
     });
   });
 }

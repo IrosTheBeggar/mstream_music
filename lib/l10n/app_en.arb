@@ -4697,5 +4697,868 @@
   "homeWidgetPinUnsupported": "This launcher can't add widgets from here. Use its own widget picker.",
   "@homeWidgetPinUnsupported": {
     "description": "Snackbar / sheet text when the Android launcher refuses pin requests."
+  },
+  "discoverSheetPeerOnline": "{name} online",
+  "@discoverSheetPeerOnline": {
+    "description": "Connected-server song/album sheet: the status line under the header while that server answers (a green dot before it). {name} is the connected server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetPeerNotAnswering": "{name} not answering",
+  "@discoverSheetPeerNotAnswering": {
+    "description": "Connected-server sheet: the status line when that server did not answer (a grey dot before it). {name} is the server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetSongCount": "{count, plural, =1{1 song} other{{count} songs}}",
+  "@discoverSheetSongCount": {
+    "description": "Connected-server sheets: how many songs an album has on that server (the album line, the Album choice's size).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetAlbumCount": "{count, plural, =1{1 album} other{{count} albums}}",
+  "@discoverSheetAlbumCount": {
+    "description": "Connected-server sheets: a number of albums (the artist line, the Artist choice's size, a finished copy's line).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetNotInLibrary": "not in your library",
+  "@discoverSheetNotInLibrary": {
+    "description": "Connected-server song sheet, album line: the user's own library has no album of this name by the artist."
+  },
+  "discoverSheetInLibrary": "in your library",
+  "@discoverSheetInLibrary": {
+    "description": "Connected-server song sheet, album line: the user's own library already has an album of this name by the artist."
+  },
+  "discoverSheetYouHaveAlbums": "{count, plural, =1{you have 1 album} other{you have {count} albums}}",
+  "@discoverSheetYouHaveAlbums": {
+    "description": "Connected-server song sheet, artist line when that server did not answer: how many albums by the artist the user's own library has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetOpenAlbum": "Open album",
+  "@discoverSheetOpenAlbum": {
+    "description": "Connected-server sheets: button/row that opens the album (through that server)."
+  },
+  "discoverSheetQueueAlbum": "Queue album",
+  "@discoverSheetQueueAlbum": {
+    "description": "Connected-server sheets: button/row that adds the album's songs to the end of the queue."
+  },
+  "discoverSheetPlayAlbum": "Play album",
+  "@discoverSheetPlayAlbum": {
+    "description": "Connected-server album sheet: row that plays the album now."
+  },
+  "discoverSheetOpenArtist": "Open artist",
+  "@discoverSheetOpenArtist": {
+    "description": "Connected-server song sheet, artist line: button that opens the artist's albums on that server."
+  },
+  "discoverSheetListen": "Listen",
+  "@discoverSheetListen": {
+    "description": "Connected-server album sheet: small-caps label over the play/queue/open rows."
+  },
+  "discoverSheetKeepCopy": "Keep a copy",
+  "@discoverSheetKeepCopy": {
+    "description": "Connected-server sheets: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone)."
+  },
+  "discoverSheetOpenElsewhere": "Open elsewhere",
+  "@discoverSheetOpenElsewhere": {
+    "description": "Connected-server song sheet: row that lists links to this song on other services (MusicBrainz, Deezer, …)."
+  },
+  "discoverSheetBrowsePeer": "Browse {name}",
+  "@discoverSheetBrowsePeer": {
+    "description": "Connected-server song sheet: row that switches the app to browsing that server's library. {name} is the server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetDownloadToPhone": "Download to this phone",
+  "@discoverSheetDownloadToPhone": {
+    "description": "Connected-server song sheet, last row: saves the song file onto THIS phone for offline play (the old Download, renamed so it is never confused with Keep a copy, which copies to the server)."
+  },
+  "discoverSheetDownloadToPhoneSub": "For offline play on this device",
+  "@discoverSheetDownloadToPhoneSub": {
+    "description": "Second line under 'Download to this phone'."
+  },
+  "discoverSheetAlbumFailed": "Couldn't load this album from {name}",
+  "@discoverSheetAlbumFailed": {
+    "description": "Toast when Play album / Queue album could not get the album's songs from the connected server. {name} is that server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverAlbumCardMore": "More for {album}",
+  "@discoverAlbumCardMore": {
+    "description": "Accessible name of the ⋯ button on a connected server's album card on Discover (opens the album sheet). {album} is the album name.",
+    "placeholders": {
+      "album": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepThisSong": "This song",
+  "@discoverKeepThisSong": {
+    "description": "Keep a copy card: choice that copies only this song."
+  },
+  "discoverKeepAlbum": "Album",
+  "@discoverKeepAlbum": {
+    "description": "Keep a copy card: choice that copies the song's whole album."
+  },
+  "discoverKeepArtist": "Artist",
+  "@discoverKeepArtist": {
+    "description": "Keep a copy card: choice that copies the artist's albums."
+  },
+  "discoverKeepWhat": "What to keep",
+  "@discoverKeepWhat": {
+    "description": "Accessible name of the Keep a copy choices (This song / Album / Artist)."
+  },
+  "discoverKeepYouHave": "you have {count}",
+  "@discoverKeepYouHave": {
+    "description": "Keep a copy card, under the Artist choice after the album count ('1 album · you have 3'): albums by the artist the user's own library already has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepOnlyMissing": "{count, plural, =1{Only the 1 album you don't have} other{Only the {count} albums you don't have}}",
+  "@discoverKeepOnlyMissing": {
+    "description": "Keep a copy card, checkbox under the Artist choice: copy only the artist's albums the user's library lacks (matched by album name).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepFilesGoTo": "Files go to",
+  "@discoverKeepFilesGoTo": {
+    "description": "Keep a copy card: start of the line naming where the copied files land ('Files go to copies › Artist › Album')."
+  },
+  "discoverKeepFolderPerAlbum": "one folder per album",
+  "@discoverKeepFolderPerAlbum": {
+    "description": "Keep a copy card: end of the destination line for an artist copy (each album lands in its own folder)."
+  },
+  "discoverKeepChange": "Change",
+  "@discoverKeepChange": {
+    "description": "Keep a copy card: link after the destination line that opens the destination picker."
+  },
+  "discoverKeepChangeHint": "Change where copies go",
+  "@discoverKeepChangeHint": {
+    "description": "Accessible name of the Keep a copy card's Change link."
+  },
+  "discoverKeepAddSong": "Add song",
+  "@discoverKeepAddSong": {
+    "description": "Keep a copy card's main button with This song chosen: copies the song to the user's server."
+  },
+  "discoverKeepAddAlbum": "Add album",
+  "@discoverKeepAddAlbum": {
+    "description": "Keep a copy card's main button with Album chosen."
+  },
+  "discoverKeepAddEveryAlbum": "Add every album",
+  "@discoverKeepAddEveryAlbum": {
+    "description": "Keep a copy card's main button with Artist chosen (every album by the artist on that server)."
+  },
+  "discoverKeepAddAlbums": "{count, plural, =1{Add 1 album} other{Add {count} albums}}",
+  "@discoverKeepAddAlbums": {
+    "description": "Keep a copy card's main button with Artist chosen and 'only the albums you don't have' ticked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepAddMissing": "Add the albums you don't have",
+  "@discoverKeepAddMissing": {
+    "description": "Keep a copy card's main button when only the missing albums can be copied and their number is not known yet."
+  },
+  "discoverKeepUploadsOff": "Your account can't add files to this server",
+  "@discoverKeepUploadsOff": {
+    "description": "Keep a copy card's only line when the user's account may not upload to their server."
+  },
+  "discoverKeepNoLibrary": "No library on your server takes new files",
+  "@discoverKeepNoLibrary": {
+    "description": "Keep a copy card's only line when uploads are allowed but no library on the user's server accepts new files."
+  },
+  "discoverKeepStartFailed": "Couldn't reach your server. Try again.",
+  "@discoverKeepStartFailed": {
+    "description": "Keep a copy card: the copy could not be started and the server gave no words of its own (a network failure)."
+  },
+  "discoverKeepConfirmTitle": "{count, plural, =1{Copy 1 album from {peer}?} other{Copy {count} albums from {peer}?}}",
+  "@discoverKeepConfirmTitle": {
+    "description": "Confirmation title before copying several albums by an artist from a connected server. {peer} is that server's name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmEveryTitle": "Copy every album by {artist} from {peer}?",
+  "@discoverKeepConfirmEveryTitle": {
+    "description": "Confirmation title before copying every album by an artist when their number is not known yet. {artist} is the artist, {peer} the connected server.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmBody": "They land on your server in {path}, one folder per album. Songs you already have are skipped.",
+  "@discoverKeepConfirmBody": {
+    "description": "Body of the confirmation before an artist copy. {path} is where the files land on the user's server, like 'copies › Boukmanflow'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmAction": "{count, plural, =1{Copy 1 album} other{Copy {count} albums}}",
+  "@discoverKeepConfirmAction": {
+    "description": "The confirmation's yes button.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepConfirmEveryAction": "Copy every album",
+  "@discoverKeepConfirmEveryAction": {
+    "description": "The every-album confirmation's yes button (count not known)."
+  },
+  "discoverJobQueued": "Waiting for a free slot",
+  "@discoverJobQueued": {
+    "description": "Keep a copy card: the copy is queued behind another one on the server."
+  },
+  "discoverJobQueuedSub": "Starts on its own",
+  "@discoverJobQueuedSub": {
+    "description": "Under 'Waiting for a free slot': nothing to do, it starts by itself."
+  },
+  "discoverJobCopying": "Copying",
+  "@discoverJobCopying": {
+    "description": "Keep a copy card: the copy is running (a progress bar and the server's status line follow)."
+  },
+  "discoverJobStarting": "Starting…",
+  "@discoverJobStarting": {
+    "description": "Keep a copy card: running but the server has not said anything yet."
+  },
+  "discoverJobStopping": "Stopping…",
+  "@discoverJobStopping": {
+    "description": "Keep a copy card: the user cancelled a running copy; it stops at its next check."
+  },
+  "discoverJobInCollection": "In your collection",
+  "@discoverJobInCollection": {
+    "description": "Keep a copy card: the copy landed in a library on the user's server."
+  },
+  "discoverJobOwned": "Already yours",
+  "@discoverJobOwned": {
+    "description": "Keep a copy card: nothing was copied because the user's library already had it."
+  },
+  "discoverJobOwnedSub": "Your library has this song",
+  "@discoverJobOwnedSub": {
+    "description": "Under 'Already yours' for one song (the library file's path may follow)."
+  },
+  "discoverJobSkipped": "Skipped · a file is already there",
+  "@discoverJobSkipped": {
+    "description": "Keep a copy card: the song was not copied because a file already exists where it would land."
+  },
+  "discoverJobExistsSub": "A file is already at {path} · nothing was overwritten",
+  "@discoverJobExistsSub": {
+    "description": "Under the skipped line. {path} is where the song would have landed.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobFailed": "Copy failed",
+  "@discoverJobFailed": {
+    "description": "Keep a copy card: the copy failed (the server's own words follow)."
+  },
+  "discoverJobFailedSub": "The copy did not finish",
+  "@discoverJobFailedSub": {
+    "description": "Under 'Copy failed' when the server said nothing more."
+  },
+  "discoverJobNothingCopiedLead": "Nothing copied",
+  "@discoverJobNothingCopiedLead": {
+    "description": "Start of a failed album copy's line ('Nothing copied · 3 failed')."
+  },
+  "discoverJobNothingCopied": "nothing copied",
+  "@discoverJobNothingCopied": {
+    "description": "End of a stopped copy's line after its reason ('… · nothing copied')."
+  },
+  "discoverJobStopped": "Stopped",
+  "@discoverJobStopped": {
+    "description": "Keep a copy card: the copy ended early (its reason follows)."
+  },
+  "discoverJobStoppedQuota": "{peer}'s transfer limit stopped it",
+  "@discoverJobStoppedQuota": {
+    "description": "Why a copy stopped: the connected server's daily transfer limit. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedBusy": "{peer} is serving too many streams right now",
+  "@discoverJobStoppedBusy": {
+    "description": "Why a copy stopped: the connected server is busy. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedPeer": "{peer} went away",
+  "@discoverJobStoppedPeer": {
+    "description": "Why a copy stopped: the connected server stopped answering. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedRefused": "{peer} does not allow copies with your server's key",
+  "@discoverJobStoppedRefused": {
+    "description": "Why a copy stopped: the connected server refuses copies to the user's server (no Retry). {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobCancelledNothing": "Stopped · nothing was copied",
+  "@discoverJobCancelledNothing": {
+    "description": "Keep a copy card: the user cancelled the copy before anything landed."
+  },
+  "discoverJobCancelledSome": "{count, plural, =1{Stopped · 1 copied} other{Stopped · {count} copied}}",
+  "@discoverJobCancelledSome": {
+    "description": "Keep a copy card: the user cancelled an album copy after some songs landed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobCancelledSub": "You cancelled it",
+  "@discoverJobCancelledSub": {
+    "description": "Under a cancelled copy."
+  },
+  "discoverJobCancelledStay": "{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}",
+  "@discoverJobCancelledStay": {
+    "description": "Under a cancelled album copy: the songs that already landed stay.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobNothingAll": "You have it all",
+  "@discoverJobNothingAll": {
+    "description": "Keep a copy card: an album/artist copy found nothing to copy — the user already has everything."
+  },
+  "discoverJobNothingFrom": "Nothing to copy from {peer}",
+  "@discoverJobNothingFrom": {
+    "description": "Under 'You have it all'. {peer} is the connected server.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobOnlyGuest": "Nothing of theirs to copy",
+  "@discoverJobOnlyGuest": {
+    "description": "Keep a copy card: an artist copy found the artist only as a guest on that server's albums."
+  },
+  "discoverJobOnlyGuestSub": "{artist} only appears as a guest on {peer}'s albums",
+  "@discoverJobOnlyGuestSub": {
+    "description": "Under 'Nothing of theirs to copy'. {artist} is the artist, {peer} the connected server.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobFromOther": "Copying from {peer}",
+  "@discoverJobFromOther": {
+    "description": "Keep a copy card: the same album/artist is being copied from ANOTHER connected server. {peer} is that other server.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobComesBack": "{action} comes back when that copy ends",
+  "@discoverJobComesBack": {
+    "description": "Under 'Copying from …'. {action} is the card's button label ('Add album').",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobDone": "Finished",
+  "@discoverJobDone": {
+    "description": "Keep a copy card: a copy finished in a way this app cannot read in detail."
+  },
+  "discoverJobCopiedCount": "{count, plural, other{{count} copied}}",
+  "@discoverJobCopiedCount": {
+    "description": "Part of a finished album copy's line: songs copied.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobOwnedCount": "{count, plural, other{{count} already yours}}",
+  "@discoverJobOwnedCount": {
+    "description": "Part of a finished album copy's line: songs skipped because the library already had them.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobFailedCount": "{count, plural, other{{count} failed}}",
+  "@discoverJobFailedCount": {
+    "description": "Part of a finished album copy's line: songs that failed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobAlbumsFailed": "{count, plural, =1{1 album failed} other{{count} albums failed}}",
+  "@discoverJobAlbumsFailed": {
+    "description": "Part of a finished artist copy's line: albums whose listing failed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobAlbumsLeftOut": "{count, plural, =1{1 album left out} other{{count} albums left out}}",
+  "@discoverJobAlbumsLeftOut": {
+    "description": "Part of a finished artist copy's line: albums not copied (already owned, or the artist only guests on them).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobRetry": "Retry",
+  "@discoverJobRetry": {
+    "description": "Keep a copy card: start the same copy again (it takes only what is still missing)."
+  },
+  "discoverJobAddAgain": "Add again",
+  "@discoverJobAddAgain": {
+    "description": "Keep a copy card: start a cancelled copy again."
+  },
+  "discoverJobAddToQueue": "Add to queue",
+  "@discoverJobAddToQueue": {
+    "description": "Keep a copy card: queue the copied song (the new library file)."
+  },
+  "discoverMarkWaiting": "waiting",
+  "@discoverMarkWaiting": {
+    "description": "Discover, on a connected server's song row or album card: the user's copy of it is queued. Lowercase, a word only."
+  },
+  "discoverMarkCopying": "copying…",
+  "@discoverMarkCopying": {
+    "description": "Discover row/card marker: the copy is running."
+  },
+  "discoverMarkCopyingCount": "copying {done} of {total}",
+  "@discoverMarkCopyingCount": {
+    "description": "Discover album card marker while its album copies: songs done of the album's total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverMarkStopping": "stopping…",
+  "@discoverMarkStopping": {
+    "description": "Discover row/card marker: the copy was cancelled and is stopping."
+  },
+  "discoverMarkInCollection": "in your collection",
+  "@discoverMarkInCollection": {
+    "description": "Discover row/card marker: the copy landed on the user's server."
+  },
+  "discoverMarkAlreadyYours": "already yours",
+  "@discoverMarkAlreadyYours": {
+    "description": "Discover row/card marker: nothing was copied, the library already had it."
+  },
+  "discoverMarkStopped": "stopped",
+  "@discoverMarkStopped": {
+    "description": "Discover row/card marker: the copy ended early (limit, busy, server gone)."
+  },
+  "discoverMarkRefused": "refused",
+  "@discoverMarkRefused": {
+    "description": "Discover row/card marker: the connected server refuses copies to the user's server."
+  },
+  "discoverMarkFailed": "failed",
+  "@discoverMarkFailed": {
+    "description": "Discover row/card marker: the copy failed."
+  },
+  "discoverMarkSkipped": "skipped",
+  "@discoverMarkSkipped": {
+    "description": "Discover row/card marker: not copied because a file already exists where it would land."
+  },
+  "discoverCopiesCopying": "{count, plural, other{Copying {count}}}",
+  "@discoverCopiesCopying": {
+    "description": "Discover's Copies strip under the configuration bar: copies running or waiting on the user's server.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverCopiesFailed": "{count, plural, other{{count} failed}}",
+  "@discoverCopiesFailed": {
+    "description": "Discover's Copies strip: copies that failed or stopped and still want the user (Retry / Clear finished).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverCopiesLabel": "Copies: {summary}",
+  "@discoverCopiesLabel": {
+    "description": "Accessible name of Discover's Copies strip (opens the Copies list). {summary} is the strip's text, e.g. 'Copying 2, 1 failed'.",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesTitle": "Copies",
+  "@discoverCopiesTitle": {
+    "description": "Title of the Copies sheet, and the name of the home SERVER card listing what the user's own server is copying for them from connected servers (Discover's Keep a copy)."
+  },
+  "discoverCopiesSectionCopying": "Copying",
+  "@discoverCopiesSectionCopying": {
+    "description": "Copies sheet section header (drawn in capitals): copies running or waiting for a free slot."
+  },
+  "discoverCopiesSectionAttention": "Stopped or failed",
+  "@discoverCopiesSectionAttention": {
+    "description": "Copies sheet section header (drawn in capitals): copies that failed or stopped early and still want Retry or Clear finished."
+  },
+  "discoverCopiesSectionFinished": "Just finished",
+  "@discoverCopiesSectionFinished": {
+    "description": "Copies sheet section header (drawn in capitals): copies the phone saw end since it opened (landed, already yours, cancelled)."
+  },
+  "discoverCopiesClearFinished": "Clear finished",
+  "@discoverCopiesClearFinished": {
+    "description": "Copies sheet button pinned at the bottom: removes the finished copies from the list (on the user's server)."
+  },
+  "discoverCopiesEmpty": "Nothing copying",
+  "@discoverCopiesEmpty": {
+    "description": "Copies sheet empty state: the server is copying nothing and nothing failed."
+  },
+  "discoverCopiesEmptySub": "Long-press a connected server's song or album on Discover to keep a copy.",
+  "@discoverCopiesEmptySub": {
+    "description": "Copies sheet empty state: how a copy starts."
+  },
+  "discoverCopiesOpenDiscover": "Open Discover",
+  "@discoverCopiesOpenDiscover": {
+    "description": "Copies sheet empty state (opened from the home): a pill that opens the Discover page."
+  },
+  "discoverCopiesLoadFailed": "Couldn't load your copies",
+  "@discoverCopiesLoadFailed": {
+    "description": "Copies sheet error state: the list of copies could not be read from the user's server."
+  },
+  "discoverCopiesLoadFailedSub": "Your server didn't answer. Copies keep running there.",
+  "@discoverCopiesLoadFailedSub": {
+    "description": "Copies sheet error state's second line when the server sent no words of its own (copies run on the server, not the phone)."
+  },
+  "discoverCopiesLoading": "Loading your copies",
+  "@discoverCopiesLoading": {
+    "description": "Accessible label of the Copies sheet's loading placeholders."
+  },
+  "discoverCopiesKindSong": "Song",
+  "@discoverCopiesKindSong": {
+    "description": "Copies sheet row: what a copy takes (first part of 'Song · Artist · from Server')."
+  },
+  "discoverCopiesKindAlbum": "Album",
+  "@discoverCopiesKindAlbum": {
+    "description": "Copies sheet row: what a copy takes (first part of 'Album · Artist · from Server')."
+  },
+  "discoverCopiesKindEvery": "Every album",
+  "@discoverCopiesKindEvery": {
+    "description": "Copies sheet row: a copy of every album by an artist (first part of 'Every album · from Server')."
+  },
+  "discoverCopiesKindMissing": "What you're missing",
+  "@discoverCopiesKindMissing": {
+    "description": "Copies sheet row: a copy of only the artist's albums the library lacks (first part of 'What you're missing · from Server')."
+  },
+  "discoverCopiesFrom": "from {peer}",
+  "@discoverCopiesFrom": {
+    "description": "Copies sheet row: the connected server a copy comes from (last part of 'Song · Artist · from Server').",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesEveryAlbumBy": "Every album by {artist}",
+  "@discoverCopiesEveryAlbumBy": {
+    "description": "Copies sheet row title for a copy of every album by an artist.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesMissingOf": "{artist} · albums you don't have",
+  "@discoverCopiesMissingOf": {
+    "description": "Copies sheet row title for a copy of only the artist's albums the library lacks.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesAlreadyFinished": "Already finished · nothing to cancel",
+  "@discoverCopiesAlreadyFinished": {
+    "description": "Toast when Cancel reached the server after the copy had already ended (the row turns into its outcome)."
+  },
+  "discoverCopiesCancelFailed": "Couldn't cancel. Try again.",
+  "@discoverCopiesCancelFailed": {
+    "description": "Toast when a copy's Cancel could not reach the user's server."
+  },
+  "discoverToastCopying": "Copying {title} from {peer}",
+  "@discoverToastCopying": {
+    "description": "Toast once the sheet that started a copy closes: the song or album title, and the connected server it is copied from.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastCopyingEvery": "Copying every album by {artist} from {peer}",
+  "@discoverToastCopyingEvery": {
+    "description": "Toast once the sheet that started an every-album copy closes.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastCopyingMissing": "Copying the albums by {artist} you don't have from {peer}",
+  "@discoverToastCopyingMissing": {
+    "description": "Toast once the sheet that started an only-the-albums-you-don't-have copy closes.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastAdded": "Added to your collection",
+  "@discoverToastAdded": {
+    "description": "Toast when a copy the phone saw running ends with something copied into the user's library."
+  },
+  "discoverToastAlreadyYours": "Already in your library",
+  "@discoverToastAlreadyYours": {
+    "description": "Toast when a copy ends having copied nothing because the library already had it all."
+  },
+  "discoverToastFailed": "Copy failed: {reason}",
+  "@discoverToastFailed": {
+    "description": "Toast when a copy fails; {reason} is the server's own words (or what the counts say).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastStopped": "Stopped early: {reason}",
+  "@discoverToastStopped": {
+    "description": "Toast when a copy ends early (the connected server's transfer limit, busy, gone, or refusing copies); {reason} says which.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastLinkFailed": "Couldn't open that link",
+  "@discoverToastLinkFailed": {
+    "description": "Toast when an Open elsewhere link could not be opened outside the app."
+  },
+  "discoverToastSaved": "Saved · copies land in {path}",
+  "@discoverToastSaved": {
+    "description": "Toast after the destination picker saved: {path} is the library and base folder, e.g. 'copies › from-peers'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestTitle": "Where copies land",
+  "@discoverDestTitle": {
+    "description": "Title of the destination picker sheet (where on the user's server copies from connected servers are put)."
+  },
+  "discoverDestSub": "One setting for your account · every copy uses it",
+  "@discoverDestSub": {
+    "description": "Destination picker subtitle: the destination is one setting per account, shared by every copy."
+  },
+  "discoverDestTagDefault": "library default",
+  "@discoverDestTagDefault": {
+    "description": "Destination picker tag beside the title: the library's own default destination is in force."
+  },
+  "discoverDestTagYours": "yours",
+  "@discoverDestTagYours": {
+    "description": "Destination picker tag beside the title: the account's own saved destination is in force."
+  },
+  "discoverDestLandsAt": "{title} lands at",
+  "@discoverDestLandsAt": {
+    "description": "Destination picker preview label above the path where this song would be copied; {title} is the song's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestFixBase": "Fix the base folder to see where files land",
+  "@discoverDestFixBase": {
+    "description": "Destination picker preview while the typed base folder would be refused."
+  },
+  "discoverDestFixLayout": "Fix the layout to see where files land",
+  "@discoverDestFixLayout": {
+    "description": "Destination picker preview while the chosen layout would be refused."
+  },
+  "discoverDestLibrary": "Library",
+  "@discoverDestLibrary": {
+    "description": "Destination picker section label (drawn in capitals): the libraries this account can add files to."
+  },
+  "discoverDestBase": "Base folder",
+  "@discoverDestBase": {
+    "description": "Destination picker section label (drawn in capitals) and the accessible name of its text field: a folder inside the library."
+  },
+  "discoverDestBaseHint": "library root",
+  "@discoverDestBaseHint": {
+    "description": "Destination picker base folder field placeholder: empty means the root of the library."
+  },
+  "discoverDestBaseHelp": "Inside {library}. Leave empty for the library root.",
+  "@discoverDestBaseHelp": {
+    "description": "Destination picker help under the base folder field; {library} is the chosen library's name.",
+    "placeholders": {
+      "library": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestLayout": "Layout",
+  "@discoverDestLayout": {
+    "description": "Destination picker section label (drawn in capitals): how folders are made from the tags."
+  },
+  "discoverDestPresetArtistAlbum": "Artist / Album",
+  "@discoverDestPresetArtistAlbum": {
+    "description": "Destination picker layout preset: a folder per artist, then per album."
+  },
+  "discoverDestPresetServer": "Server / Artist / Album",
+  "@discoverDestPresetServer": {
+    "description": "Destination picker layout preset: a folder named after the connected server, then artist, then album."
+  },
+  "discoverDestPresetLibrary": "Library layout",
+  "@discoverDestPresetLibrary": {
+    "description": "Destination picker layout preset: the chosen library's own path template (shown only when it has one)."
+  },
+  "discoverDestPresetCurrent": "Your current layout",
+  "@discoverDestPresetCurrent": {
+    "description": "Destination picker layout choice: the layout in force when it is none of the presets (set elsewhere)."
+  },
+  "discoverDestUseDefault": "Use the library default",
+  "@discoverDestUseDefault": {
+    "description": "Destination picker text button: drops the account's saved destination and goes back to the library default."
+  },
+  "discoverDestSaving": "Saving…",
+  "@discoverDestSaving": {
+    "description": "Destination picker Save button while the save is in flight."
+  },
+  "discoverDestLoadFailed": "Couldn't load where copies land",
+  "@discoverDestLoadFailed": {
+    "description": "Destination picker error state: the destination could not be read."
+  },
+  "discoverDestLoading": "Loading where copies land",
+  "@discoverDestLoading": {
+    "description": "Accessible label of the destination picker's loading placeholders."
+  },
+  "discoverKeepFirstUse": "Copies go to your server, not this phone. Check where they land before the first one.",
+  "@discoverKeepFirstUse": {
+    "description": "Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved."
+  },
+  "discoverElsewhereExact": "Exact pages",
+  "@discoverElsewhereExact": {
+    "description": "Open elsewhere section label (drawn in capitals): pages for this exact recording on MusicBrainz."
+  },
+  "discoverElsewhereSearch": "Search",
+  "@discoverElsewhereSearch": {
+    "description": "Open elsewhere section label (drawn in capitals): searches on other catalogues (the rows are the catalogues' own names)."
+  },
+  "discoverElsewhereMbRecording": "MusicBrainz recording",
+  "@discoverElsewhereMbRecording": {
+    "description": "Open elsewhere row: the MusicBrainz page of this recording."
+  },
+  "discoverElsewhereMbReleaseGroup": "MusicBrainz release group",
+  "@discoverElsewhereMbReleaseGroup": {
+    "description": "Open elsewhere row: the MusicBrainz page of the release group (the album)."
+  },
+  "discoverElsewhereMbIsrc": "MusicBrainz ISRC",
+  "@discoverElsewhereMbIsrc": {
+    "description": "Open elsewhere row: the MusicBrainz page of the recording's ISRC code."
+  },
+  "discoverElsewhereEmpty": "No links for this song",
+  "@discoverElsewhereEmpty": {
+    "description": "Open elsewhere empty state."
+  },
+  "discoverElsewhereEmptySub": "It has no MusicBrainz ids, and no title or artist to search for.",
+  "@discoverElsewhereEmptySub": {
+    "description": "Open elsewhere empty state: why there are no links."
+  },
+  "discoverElsewhereFailed": "Couldn't look up links right now",
+  "@discoverElsewhereFailed": {
+    "description": "Open elsewhere error state; the server's own words, when it sent some, show under it."
+  },
+  "discoverElsewhereLoading": "Looking up links",
+  "@discoverElsewhereLoading": {
+    "description": "Accessible label of Open elsewhere's loading placeholders."
+  },
+  "discoverElsewhereOpensOutside": "Opens outside the app",
+  "@discoverElsewhereOpensOutside": {
+    "description": "Accessibility hint on an Open elsewhere row."
   }
 }

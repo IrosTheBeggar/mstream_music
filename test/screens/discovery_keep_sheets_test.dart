@@ -1,0 +1,1157 @@
+// Keep a copy on Discover's connected servers, drawn through the real
+// Browser (the design canvas's PhoneSongSheet, PhoneAlbumSheet,
+// PhoneKeepStates, PhoneDiscover and PhoneLargeText boards): the song
+// sheet a long-press on a connected server's row opens, the album sheet a
+// long-press or the ⋯ on its album card opens, the Keep card in every
+// state, the markers on rows and cards, the Copies strip with its counts,
+// what hides it all, and large text / German.
+//
+// The plug-in API is the scripted fake behind the real
+// DiscoveryPluginsApi; the sheets' facts (album-songs, artists-albums) are
+// a scripted fetch; nothing touches the network or the audio service.
+
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
+import 'package:mstream_music/objects/discovery.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_card.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_facts.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
+import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/singletons/settings.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
+
+import 'discovery_keep_fixtures.dart';
+
+const _jobs = '/plugins/federation-copy/jobs';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  final h = KeepHarness();
+
+  setUpAll(mockPathProvider);
+  setUp(() => h.setUp());
+  tearDown(() {
+    BrowserManager().closeAlbumDetail();
+    ServerManager().currentServer = null;
+    h.tearDown();
+  });
+
+  Future<void> frames(WidgetTester tester, [int n = 6]) =>
+      KeepHarness.pumpFor(tester, n);
+
+  Future<void> openSongSheet(WidgetTester tester, String title) async {
+    await tester.longPress(find.text(title));
+    await frames(tester, 8);
+  }
+
+  Future<void> tapText(WidgetTester tester, String text) async {
+    final f = find.text(text);
+    await tester.ensureVisible(f.last);
+    await tester.pump();
+    await tester.tap(f.last);
+    await frames(tester);
+  }
+
+  Map<String, dynamic> lastStart() =>
+      jsonDecode(h.fake.calls('POST', _jobs).last.body) as Map<String, dynamic>;
+
+  double topOf(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
+
+  /// A line as read, its no-break spaces (a path segment never breaks
+  /// inside itself) read as spaces.
+  Finder line(String text) => find.byWidgetPredicate(
+    (w) =>
+        w is RichText && w.text.toPlainText().replaceAll('\u00A0', ' ') == text,
+  );
+
+  group('the song sheet: long-press a connected server\'s row', () {
+    testWidgets('the listen verbs, the album and the artist, Keep a copy, Open '
+        'elsewhere, Browse the server, and Download to this phone last', (
+      tester,
+    ) async {
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Corner Store Loop');
+      expect(tester.takeException(), isNull);
+
+      // Header: the row, its format and length, its server answering.
+      expect(find.text('Boukmanflow  ·  Borrowed Tapes'), findsOneWidget);
+      expect(find.text('MP3  ·  0:09'), findsOneWidget);
+      expect(find.text('Stage Peer B online'), findsOneWidget);
+      // Listen.
+      expect(find.text('Add next'), findsOneWidget);
+      expect(find.text('Play now'), findsOneWidget);
+      // The album and the artist, asked through the connected server.
+      expect(
+        find.text('2019 · 3 songs · 0:29 · not in your library'),
+        findsOneWidget,
+      );
+      expect(find.text('Open album'), findsOneWidget);
+      expect(find.text('Queue album'), findsOneWidget);
+      expect(find.text('1 album · 3 songs'), findsOneWidget);
+      expect(find.text('Open artist'), findsOneWidget);
+      // Keep a copy: three choices with their sizes, where files land, one
+      // pill named for the choice.
+      expect(find.text('KEEP A COPY'), findsOneWidget);
+      expect(find.text('This song'), findsOneWidget);
+      expect(find.text('0:09 · MP3'), findsOneWidget);
+      expect(find.text('3 songs'), findsOneWidget);
+      expect(find.text('1 album · you have 3'), findsOneWidget);
+      expect(
+        line('Files go to copies › Boukmanflow › Borrowed Tapes'),
+        findsOneWidget,
+      );
+      expect(find.text('Add song'), findsOneWidget);
+      // Then Open elsewhere, Browse, and the phone download last.
+      expect(find.text('Open elsewhere'), findsOneWidget);
+      expect(find.text('Browse Stage Peer B'), findsOneWidget);
+      expect(find.text('Download to this phone'), findsOneWidget);
+      expect(find.text('For offline play on this device'), findsOneWidget);
+      expect(
+        find.text('Download'),
+        findsNothing,
+        reason: 'the old Download is renamed',
+      );
+      expect(
+        topOf(tester, find.text('Add song')),
+        lessThan(topOf(tester, find.text('Open elsewhere'))),
+      );
+      expect(
+        topOf(tester, find.text('Browse Stage Peer B')),
+        lessThan(topOf(tester, find.text('Download to this phone'))),
+      );
+      // No previews on a connected server's row.
+      expect(find.textContaining('preview', findRichText: true), findsNothing);
+
+      // The facts went through the peer, the library's list to the own server.
+      final asked = h.facts.asked.map((a) => '${a.$1} ${a.$2}').toList();
+      expect(
+        asked,
+        containsAll([
+          'peer-1 /api/v1/db/album-songs',
+          'peer-1 /api/v1/db/artists-albums',
+          'home /api/v1/db/artists-albums',
+        ]),
+      );
+      final album = h.facts.asked.firstWhere(
+        (a) => a.$2.endsWith('album-songs'),
+      );
+      expect(album.$3, {'album': 'Borrowed Tapes', 'artist': 'Boukmanflow'});
+
+      // Open elsewhere hands the row to its sheet.
+      await tapText(tester, 'Open elsewhere');
+      expect(h.openedElsewhere, ['Corner Store Loop']);
+      // Change opens the destination picker.
+      await tester.tap(find.byKey(const ValueKey('keep-change')));
+      await frames(tester);
+      expect(h.openedDestination, ['change']);
+    });
+
+    testWidgets("a library row keeps the track sheet", (tester) async {
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Cirrus');
+      expect(find.text('Download'), findsOneWidget);
+      expect(find.text('KEEP A COPY'), findsNothing);
+      expect(find.text('Download to this phone'), findsNothing);
+    });
+
+    testWidgets(
+      'Add song sends the row unchanged, then the card follows its job: '
+      'waiting, Cancel, stopped with Add again',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tapText(tester, 'Add song');
+        final body = lastStart();
+        expect(body['recommendation'], equals(h.lead('Late Train Verse').raw));
+        expect(
+          body.containsKey('scope'),
+          isFalse,
+          reason: 'a song job has none',
+        );
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+        expect(find.text('Starts on its own'), findsOneWidget);
+        expect(
+          find.text('Add song'),
+          findsNothing,
+          reason: "the job's line replaces the pill",
+        );
+
+        await tester.tap(find.byKey(const ValueKey('keep-cancel')));
+        await frames(tester);
+        expect(h.fake.count('POST', '/cancel'), 1);
+        expect(find.text('Stopped · nothing was copied'), findsOneWidget);
+        expect(find.text('You cancelled it'), findsOneWidget);
+        await tapText(tester, 'Add again');
+        expect(h.fake.calls('POST', _jobs), hasLength(2));
+        expect(
+          lastStart()['recommendation'],
+          equals(h.lead('Late Train Verse').raw),
+        );
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets('starting: the pill is busy and ignores taps', (tester) async {
+      h.fake.startGate = Completer<void>();
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await tapText(tester, 'Add song');
+      final pill = find.byKey(const ValueKey('keep-start'));
+      expect(
+        find.descendant(
+          of: pill,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Add song'));
+      await tester.pump();
+      expect(h.fake.calls('POST', _jobs), hasLength(1));
+      h.fake.startGate!.complete();
+      await frames(tester);
+      expect(find.text('Waiting for a free slot'), findsOneWidget);
+    });
+
+    testWidgets("refused at start: the server's words inline, the pill stays", (
+      tester,
+    ) async {
+      h.fake.refuse[_jobs] = (403, 'Uploading Disabled');
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await tapText(tester, 'Add song');
+      expect(find.text('Uploading Disabled'), findsOneWidget);
+      expect(find.text('Add song'), findsOneWidget);
+
+      h.fake.refuse[_jobs] = (
+        429,
+        'you have 20 jobs queued or running — wait for some to finish (the limit is 20)',
+      );
+      await tapText(tester, 'Add song');
+      expect(
+        find.text(
+          'you have 20 jobs queued or running — wait for some to finish (the limit is 20)',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Uploading Disabled'), findsNothing);
+    });
+
+    testWidgets('Album: its pill, sent with scope album', (tester) async {
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await tapText(tester, 'Album');
+      expect(find.text('Add album'), findsOneWidget);
+      await tapText(tester, 'Add album');
+      final body = lastStart();
+      expect(body['scope'], 'album');
+      expect(body['recommendation'], equals(h.lead('Late Train Verse').raw));
+    });
+
+    testWidgets(
+      "Artist: only the albums you don't have (by name), no question for "
+      'one; unticked, every album asks first',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tapText(tester, 'Artist');
+        expect(find.text("Only the 1 album you don't have"), findsOneWidget);
+        // One album missing: "Files go to" names it (state 09).
+        expect(
+          line('Files go to copies › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+        );
+        expect(find.text('Add 1 album'), findsOneWidget);
+
+        // Unticked: every album, asked first.
+        await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+        await frames(tester);
+        expect(find.text('Add every album'), findsOneWidget);
+        expect(
+          line('Files go to copies › Boukmanflow › one folder per album'),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Add every album');
+        expect(find.text('Copy 1 album from Stage Peer B?'), findsOneWidget);
+        expect(
+          find.text(
+            'They land on your server in copies › Boukmanflow, one folder per album. Songs you already have are skipped.',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Cancel').last);
+        await frames(tester);
+        expect(
+          h.fake.calls('POST', _jobs),
+          isEmpty,
+          reason: 'Cancel asks nothing',
+        );
+        await tapText(tester, 'Add every album');
+        await tester.tap(find.text('Copy 1 album'));
+        await frames(tester);
+        expect(lastStart()['scope'], 'artist');
+      },
+    );
+
+    testWidgets("Add 1 album starts at once with scope artist-missing", (
+      tester,
+    ) async {
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await tapText(tester, 'Artist');
+      await tapText(tester, 'Add 1 album');
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(lastStart()['scope'], 'artist-missing');
+    });
+
+    testWidgets(
+      'choosing Artist past the fold brings the pill back into view',
+      (tester) async {
+        // A phone's height: the sheet (87 %) no longer holds it all.
+        await h.pumpDiscover(tester, height: 844);
+        await tester.scrollUntilVisible(
+          find.text('Late Train Verse'),
+          200,
+          scrollable: find
+              .byWidgetPredicate(
+                (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+              )
+              .first,
+        );
+        await tester.pump();
+        await openSongSheet(tester, 'Late Train Verse');
+        final scroll = find
+            .ancestor(
+              of: find.byKey(const ValueKey('keep-copy')),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final view = tester.getRect(scroll);
+        final pos = tester.state<ScrollableState>(scroll).position;
+        // The chips' bottom edge on the sheet's: the pill out of sight.
+        final chip = find.byKey(const ValueKey('keep-chip-artist'));
+        pos.jumpTo(
+          (pos.pixels + tester.getRect(chip).bottom - view.bottom).clamp(
+            pos.minScrollExtent,
+            pos.maxScrollExtent,
+          ),
+        );
+        await tester.pump();
+        final pill = find.byKey(const ValueKey('keep-start'));
+        expect(
+          tester.getRect(pill).top,
+          greaterThanOrEqualTo(view.bottom),
+          reason: 'the pill starts below the fold',
+        );
+        await tester.tap(chip);
+        await frames(tester, 8);
+        expect(find.text("Only the 1 album you don't have"), findsOneWidget);
+        expect(find.text('Add 1 album'), findsOneWidget);
+        expect(
+          tester.getRect(pill).bottom,
+          lessThanOrEqualTo(view.bottom + 0.5),
+          reason: 'the sheet scrolled the pill back into view',
+        );
+      },
+    );
+
+    testWidgets(
+      "a compilation's song: Album lands under the album's credit, Artist "
+      "under the song's own artist",
+      (tester) async {
+        h.peersAnswer = () => keepPeersPayload(extraB: compilationRows());
+        await h.pumpDiscover(tester);
+        await tester.ensureVisible(find.text('Block Rocker'));
+        await tester.pump();
+        await openSongSheet(tester, 'Block Rocker');
+        await tapText(tester, 'Album');
+        expect(
+          line('Files go to copies › Various Artists › Block Party Comp'),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Artist');
+        // The artist walk copies Peer Kim's own albums, by their own tags.
+        expect(
+          line('Files go to copies › Peer Kim › one folder per album'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('only-missing of several albums asks first, with the count', (
+      tester,
+    ) async {
+      h.facts.peerAlbums['boukmanflow'] = [
+        'Borrowed Tapes',
+        'Second Wind',
+        'Old Gold',
+      ];
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await tapText(tester, 'Artist');
+      // Old Gold is in the library by name: two are missing.
+      expect(find.text('3 albums · you have 3'), findsOneWidget);
+      expect(find.text("Only the 2 albums you don't have"), findsOneWidget);
+      await tapText(tester, 'Add 2 albums');
+      expect(find.text('Copy 2 albums from Stage Peer B?'), findsOneWidget);
+      await tester.tap(find.text('Copy 2 albums'));
+      await frames(tester);
+      expect(lastStart()['scope'], 'artist-missing');
+    });
+
+    testWidgets(
+      'the server not answering: its line says so, the sizes stay blank, '
+      'Keep still starts',
+      (tester) async {
+        h.facts.peerDown = true;
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(find.text('Stage Peer B not answering'), findsOneWidget);
+        expect(find.text('3 songs'), findsNothing);
+        expect(
+          find.text('0:08 · MP3'),
+          findsNothing,
+          reason: 'This song keeps no size either (state 05)',
+        );
+        expect(find.text('you have 3 albums'), findsOneWidget);
+        expect(find.text('2019 · not in your library'), findsOneWidget);
+        await tapText(tester, 'Add song');
+        expect(h.fake.calls('POST', _jobs), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'loading facts: the sizes wait as placeholders, the pill works',
+      (tester) async {
+        h.facts.gate = Completer<void>();
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(
+          find.byKey(const ValueKey('keep-skeleton')),
+          findsNWidgets(3),
+          reason: 'This song, Album and Artist wait alike (state 04)',
+        );
+        expect(find.text('0:08 · MP3'), findsNothing);
+        expect(find.text('3 songs'), findsNothing);
+        expect(find.text('Add song'), findsOneWidget);
+        h.facts.gate!.complete();
+        await frames(tester);
+        expect(find.byKey(const ValueKey('keep-skeleton')), findsNothing);
+        expect(find.text('3 songs'), findsOneWidget);
+        expect(find.text('0:08 · MP3'), findsOneWidget);
+      },
+    );
+  });
+
+  group('hidden, never greyed', () {
+    testWidgets(
+      "plug-ins off: the sheet keeps its verbs; no Keep a copy, no Open "
+      'elsewhere, no strip, nothing asked',
+      (tester) async {
+        h.setUp(plugins: false);
+        await h.pumpDiscover(tester);
+        expect(
+          find.byKey(const ValueKey('discovery-copies-strip')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('discovery-copies-held')),
+          findsNothing,
+        );
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(find.text('Add next'), findsOneWidget);
+        expect(find.text('Download to this phone'), findsOneWidget);
+        expect(find.text('KEEP A COPY'), findsNothing);
+        expect(find.text('Open elsewhere'), findsNothing);
+        expect(h.fake.requests, isEmpty);
+      },
+    );
+
+    testWidgets("uploads off: one line instead of the card", (tester) async {
+      h.setUp(noUpload: true);
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      expect(find.text('KEEP A COPY'), findsOneWidget);
+      expect(
+        find.text("Your account can't add files to this server"),
+        findsOneWidget,
+      );
+      expect(find.text('Add song'), findsNothing);
+      expect(find.text('This song'), findsNothing);
+    });
+
+    testWidgets('no library takes new files: its line', (tester) async {
+      h.fake.destination = {
+        ...h.fake.destination,
+        'destination': null,
+        'libraries': [],
+      };
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      expect(
+        find.text('No library on your server takes new files'),
+        findsOneWidget,
+      );
+      expect(find.text('Add song'), findsNothing);
+    });
+
+    testWidgets('jobs not allowed: no card and no label', (tester) async {
+      h.fake.listing = {
+        ...h.fake.listing,
+        'jobs': {'allowed': false},
+      };
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      expect(find.text('KEEP A COPY'), findsNothing);
+      expect(
+        find.text('Open elsewhere'),
+        findsOneWidget,
+        reason: 'the links plug-in is not a copy',
+      );
+    });
+
+    testWidgets('only the scopes the server lists: song only; never Folder', (
+      tester,
+    ) async {
+      h.fake.listing = {
+        'plugins': [
+          {
+            'name': 'federation-copy',
+            'title': 'Add to your collection',
+            'capabilities': ['acquire'],
+            'scopes': ['song', 'folder'],
+          },
+        ],
+        'jobs': {'allowed': true},
+      };
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      expect(find.text('This song'), findsOneWidget);
+      expect(find.byKey(const ValueKey('keep-chip-album')), findsNothing);
+      expect(find.byKey(const ValueKey('keep-chip-artist')), findsNothing);
+      expect(
+        find.text('Open elsewhere'),
+        findsNothing,
+        reason: 'the links plug-in is not listed',
+      );
+    });
+  });
+
+  group('the Keep card, every state', () {
+    testWidgets('each state its line and its verbs', (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 9000 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final states = keepStates(h.fake);
+      final page = h.makePage();
+      addTearDown(page.dispose);
+      final leads = [
+        for (final s in states) DiscoveryLead.fromServerMap(s.row)!,
+      ];
+      await page.jobs.activate();
+      await page.jobs.setRows(leads);
+      final peer = h.peer(1, 'Stage Peer B');
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: appSupportedLocales,
+          home: Scaffold(
+            body: ListView(
+              children: [
+                for (var i = 0; i < states.length; i++)
+                  KeyedSubtree(
+                    key: ValueKey('state-${states[i].name}'),
+                    child: KeepCopySection(
+                      jobs: page.jobs,
+                      lead: leads[i],
+                      facts: KeepFactsLoader.forLead(
+                        leads[i],
+                        peer: peer,
+                        own: h.server,
+                      )..load(),
+                      peerName: 'Stage Peer B',
+                      initialChoice: states[i].choice,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+
+      Finder inState(String state, Finder f) => find.descendant(
+        of: find.byKey(ValueKey('state-$state')),
+        matching: f,
+      );
+      void has(
+        String state,
+        List<String> texts, {
+        List<String> buttons = const [],
+        List<String> not = const [],
+      }) {
+        for (final t in [...texts, ...buttons]) {
+          expect(
+            inState(state, find.text(t)),
+            findsOneWidget,
+            reason: '$state: "$t"',
+          );
+        }
+        for (final t in not) {
+          expect(
+            inState(state, find.text(t)),
+            findsNothing,
+            reason: '$state: no "$t"',
+          );
+        }
+      }
+
+      const verbs = [
+        'Retry',
+        'Add again',
+        'Play',
+        'Add to queue',
+        'Cancel',
+        'New seeds',
+      ];
+      List<String> others(List<String> keep) => [
+        for (final v in verbs)
+          if (!keep.contains(v)) v,
+      ];
+      void state(
+        String name,
+        List<String> texts, [
+        List<String> buttons = const [],
+      ]) => has(name, texts, buttons: buttons, not: others(buttons));
+
+      state(
+        'queued',
+        ['Waiting for a free slot', 'Starts on its own'],
+        ['Cancel'],
+      );
+      state(
+        'running',
+        ['Copying', '1 of 3 songs · 7.4 MB · Late Train Verse'],
+        ['Cancel'],
+      );
+      expect(
+        inState('running', find.byKey(const ValueKey('keep-bar'))),
+        findsOneWidget,
+      );
+      state('stopping', [
+        'Stopping…',
+        '1 of 3 songs · 7.4 MB · Late Train Verse',
+      ]);
+      state(
+        'done one song',
+        [
+          'In your collection',
+          'copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3',
+        ],
+        ['Play', 'Add to queue'],
+      );
+      state(
+        'done many',
+        [
+          'In your collection',
+          '1 album · 1 copied · 1 already yours · 1 failed · 2 albums left out',
+        ],
+        ['Retry'],
+      );
+      state(
+        'already yours',
+        [
+          'Already yours',
+          'Your library has this song · copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3',
+        ],
+        ['Play', 'Add to queue'],
+      );
+      state(
+        'skipped exists',
+        [
+          'Skipped · a file is already there',
+          'A file is already at copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3 · nothing was overwritten',
+        ],
+        ['Retry'],
+      );
+      state(
+        'stopped quota',
+        ['Stopped', "Stage Peer B's transfer limit stopped it · 1 copied"],
+        ['Retry'],
+      );
+      state(
+        'stopped busy',
+        [
+          'Stopped',
+          'Stage Peer B is serving too many streams right now · 1 copied · 1 already yours',
+        ],
+        ['Retry'],
+      );
+      state(
+        'stopped peer',
+        ['Stopped', 'Stage Peer B went away · 1 copied · 1 failed'],
+        ['Retry'],
+      );
+      state('stopped refused', [
+        'Stopped',
+        "Stage Peer B does not allow copies with your server's key · nothing copied",
+      ]);
+      state(
+        'failed',
+        ['Copy failed', 'Stage Peer B no longer has this file'],
+        ['Retry'],
+      );
+      state(
+        'failed nothing copied',
+        ['Copy failed', 'Nothing copied · 3 failed'],
+        ['Retry'],
+      );
+      state('failed re-paired', ['Copy failed'], ['New seeds']);
+      state(
+        'cancelled nothing',
+        ['Stopped · nothing was copied', 'You cancelled it'],
+        ['Add again'],
+      );
+      state(
+        'cancelled some',
+        [
+          'Stopped · 2 copied',
+          'You cancelled it · the 2 songs stay in your collection',
+        ],
+        ['Add again'],
+      );
+      state('nothing to copy', [
+        'You have it all',
+        'Nothing to copy from Stage Peer B',
+      ]);
+      state('only a guest', [
+        'Nothing of theirs to copy',
+        "Artist 18 only appears as a guest on Stage Peer B's albums",
+      ]);
+      state('from another server', [
+        'Copying from Stage Peer C',
+        '1 of 1 songs · Rooftop Cypher',
+        'Add album comes back when that copy ends',
+      ]);
+      // No pill while a job speaks for the choice.
+      expect(find.byKey(const ValueKey('keep-start')), findsNothing);
+
+      // Retry sends the same row and scope again.
+      final before = h.fake.calls('POST', _jobs).length;
+      await tester.tap(inState('stopped quota', find.text('Retry')));
+      await frames(tester);
+      expect(h.fake.calls('POST', _jobs), hasLength(before + 1));
+      expect(lastStart()['scope'], 'album');
+      expect(lastStart()['recommendation'], equals(states[7].row));
+    });
+  });
+
+  group('the album sheet: long-press or ⋯ on a connected server\'s album', () {
+    testWidgets(
+      'album focus: Play / Queue / Open album, Album | Artist with Album '
+      'chosen, Add album sends the best row with scope album',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        expect(tester.takeException(), isNull);
+        expect(
+          find.text('Boukmanflow · 2019 · 3 songs · 0:29'),
+          findsOneWidget,
+        );
+        expect(find.text('Stage Peer B online'), findsOneWidget);
+        expect(find.text('LISTEN'), findsOneWidget);
+        expect(find.text('Play album'), findsOneWidget);
+        expect(find.text('Queue album'), findsOneWidget);
+        expect(find.text('Open album'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('keep-chip-song')),
+          findsNothing,
+          reason: 'no This song from a card',
+        );
+        expect(find.byKey(const ValueKey('keep-chip-album')), findsOneWidget);
+        expect(find.byKey(const ValueKey('keep-chip-artist')), findsOneWidget);
+        expect(find.text('Download to this phone'), findsNothing);
+        await tapText(tester, 'Add album');
+        final body = lastStart();
+        expect(body['scope'], 'album');
+        expect(
+          body['recommendation'],
+          equals(h.lead('Late Train Verse').raw),
+          reason: "the card's best row, unchanged",
+        );
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "the ⋯ opens the same sheet; the cover's tap still opens the album",
+      (tester) async {
+        await h.pumpDiscover(tester);
+        final more = find
+            .byKey(const ValueKey('album-card-more-Borrowed Tapes'))
+            .first;
+        expect(
+          tester.getTopLeft(more).dy,
+          greaterThanOrEqualTo(
+            tester.getBottomLeft(find.text('Borrowed Tapes').first).dy - 30,
+          ),
+          reason: 'the ⋯ sits in the text block, not over the cover',
+        );
+        await tester.tap(more);
+        await frames(tester, 8);
+        expect(find.text('Play album'), findsOneWidget);
+        Navigator.of(tester.element(find.text('Play album'))).pop();
+        await frames(tester);
+        // A tap on the cover opens the album.
+        final card = find
+            .ancestor(
+              of: find.text('Borrowed Tapes').first,
+              matching: find.byType(InkWell),
+            )
+            .first;
+        await tester.tapAt(tester.getTopLeft(card) + const Offset(40, 40));
+        await frames(tester);
+        expect(BrowserManager().albumDetail?.name, 'Borrowed Tapes');
+        expect(BrowserManager().albumDetail?.server?.federationPeerId, 1);
+      },
+    );
+
+    testWidgets(
+      'a compilation is one card under its album artist; its sheet offers '
+      'the album only, whole, and sends the row unchanged',
+      (tester) async {
+        h.peersAnswer = () => keepPeersPayload(extraB: compilationRows());
+        await h.pumpDiscover(tester);
+        expect(find.text('Block Party Comp'), findsOneWidget);
+        expect(find.text('Various Artists'), findsOneWidget);
+        await tester.longPress(find.text('Block Party Comp'));
+        await frames(tester, 8);
+        expect(find.byKey(const ValueKey('keep-chip-artist')), findsNothing);
+        expect(find.text('4 songs'), findsOneWidget, reason: 'the whole album');
+        final asked = h.facts.asked.firstWhere(
+          (a) =>
+              a.$2.endsWith('album-songs') &&
+              a.$3['album'] == 'Block Party Comp',
+        );
+        expect(asked.$3['album_artist'], 'Various Artists');
+        expect(asked.$3.containsKey('artist'), isFalse);
+        await tapText(tester, 'Add album');
+        final body = lastStart();
+        expect(body['scope'], 'album');
+        expect(body['recommendation'], equals(h.lead('Block Rocker').raw));
+        expect(
+          (body['recommendation'] as Map)['albumArtist'],
+          'Various Artists',
+        );
+      },
+    );
+
+    testWidgets('every album with its count unknown asks with the artist', (
+      tester,
+    ) async {
+      h.facts.peerDown = true;
+      await h.pumpDiscover(tester);
+      await tester.longPress(find.text('Borrowed Tapes').first);
+      await frames(tester, 8);
+      expect(find.text('Stage Peer B not answering'), findsOneWidget);
+      await tapText(tester, 'Artist');
+      await tapText(tester, 'Add every album');
+      expect(
+        find.text('Copy every album by Boukmanflow from Stage Peer B?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Copy every album'));
+      await frames(tester);
+      expect(lastStart()['scope'], 'artist');
+    });
+  });
+
+  group('album rows (the album grid off)', () {
+    tearDown(
+      () => unawaited(
+        SettingsManager().setAlbumGrid(true).catchError((Object _) {}),
+      ),
+    );
+
+    testWidgets(
+      "a connected server's album row: its copy's word leads its line, a "
+      'long-press opens the album sheet',
+      (tester) async {
+        unawaited(
+          SettingsManager().setAlbumGrid(false).catchError((Object _) {}),
+        );
+        h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          scope: 'album',
+          state: 'queued',
+        );
+        await h.pumpDiscover(tester);
+        expect(
+          find.byKey(const ValueKey('album-card-more-Borrowed Tapes')),
+          findsNothing,
+        );
+        expect(find.text('waiting'), findsWidgets);
+        await tester.longPress(find.text('Peer Sessions'));
+        await frames(tester, 8);
+        expect(find.text('Play album'), findsOneWidget);
+        expect(find.text('Add album'), findsOneWidget);
+      },
+    );
+
+    testWidgets("an album row's copy says how far it is: 'copying 2 of 3'", (
+      tester,
+    ) async {
+      unawaited(
+        SettingsManager().setAlbumGrid(false).catchError((Object _) {}),
+      );
+      h.fake.addJob(
+        keepRow('Late Train Verse', track: '02 - '),
+        scope: 'album',
+        state: 'running',
+        progress: 0.45,
+        statusText: '2 of 3 songs · 7.4 MB · Late Train Verse',
+      );
+      await h.pumpDiscover(tester);
+      expect(find.text('copying 2 of 3'), findsOneWidget, reason: 'the row');
+      expect(
+        find.text('copying…'),
+        findsNWidgets(2),
+        reason: 'its song rows never count',
+      );
+    });
+  });
+
+  group('the page: markers and the Copies strip', () {
+    testWidgets(
+      "a row's glyph and word with its strip; a card's 'copying 2 of 3'; "
+      "another server's copy marks nothing",
+      (tester) async {
+        h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          scope: 'album',
+          state: 'running',
+          progress: 0.45,
+          statusText: '2 of 3 songs · 7.4 MB · Late Train Verse',
+        );
+        h.fake.addJob(
+          keepRow(
+            'Afterimage',
+            artist: 'Color Out',
+            album: 'Peer Sessions',
+            duration: 11,
+          ),
+          state: 'failed',
+        )['error'] = 'Stage Peer B no longer has this file';
+        await h.pumpDiscover(tester);
+        expect(
+          find.byKey(const ValueKey('discovery-row-marker-copying')),
+          findsNWidgets(2),
+          reason: 'both of B\'s Borrowed Tapes rows',
+        );
+        expect(
+          find.byKey(const ValueKey('discovery-row-copy-strip')),
+          findsNWidgets(2),
+        );
+        expect(
+          find.byKey(const ValueKey('discovery-row-marker-failed')),
+          findsOneWidget,
+        );
+        expect(find.text('failed'), findsOneWidget);
+        expect(
+          find.textContaining('%'),
+          findsNothing,
+          reason: 'no percentages on the page',
+        );
+        // Stage Peer C's Rooftop Cypher shares the album key: no marker.
+        final c = find.ancestor(
+          of: find.text('Rooftop Cypher'),
+          matching: find.byType(ListTile),
+        );
+        expect(
+          find.descendant(of: c, matching: find.textContaining('copying')),
+          findsNothing,
+        );
+        // The marker word leads in the primary text; the row's own
+        // "Artist · Album" stays secondary, as on its unmarked neighbours.
+        final marked = find
+            .byKey(const ValueKey('discovery-row-marker-copying'))
+            .first;
+        final word = tester.widget<Text>(
+          find.descendant(of: marked, matching: find.text('copying…')),
+        );
+        expect(word.style!.color, VelvetColors.textPrimary);
+        expect(word.style!.fontWeight, FontWeight.w500);
+        final rest = tester.widget<Text>(
+          find.descendant(
+            of: marked,
+            matching: find.text('· Boukmanflow · Borrowed Tapes'),
+          ),
+        );
+        expect(rest.style!.color, VelvetColors.textSecondary);
+        // The cards: B's says how far it is; C's says nothing.
+        expect(find.text('copying 2 of 3'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('discovery-card-badge-copying')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'the strip counts what runs or waits and what failed; a tap opens '
+      'Copies',
+      (tester) async {
+        h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'running',
+          progress: 0.2,
+          statusText: 'copying',
+        );
+        h.fake.addJob(
+          keepRow('Corner Store Loop', track: '03 - '),
+          state: 'queued',
+        );
+        h.fake.addJob(
+          keepRow('Afterimage', artist: 'Color Out', album: 'Peer Sessions'),
+          state: 'failed',
+        );
+        await h.pumpDiscover(tester);
+        expect(find.text('Copying 2'), findsOneWidget);
+        expect(find.text('1 failed'), findsOneWidget);
+        final strip = find.byKey(const ValueKey('discovery-copies-strip'));
+        expect(
+          topOf(tester, strip),
+          greaterThan(
+            topOf(tester, find.byKey(const ValueKey('discovery-config-bar'))),
+          ),
+        );
+        await tester.tap(strip);
+        await frames(tester);
+        expect(h.openedCopies, ['copies']);
+      },
+    );
+
+    testWidgets('only failures: their part alone', (tester) async {
+      h.fake.addJob(
+        keepRow('Afterimage', artist: 'Color Out', album: 'Peer Sessions'),
+        state: 'failed',
+      );
+      await h.pumpDiscover(tester);
+      expect(find.text('1 failed'), findsOneWidget);
+      expect(find.textContaining('Copying'), findsNothing);
+    });
+
+    testWidgets('nothing live or failed: no strip', (tester) async {
+      h.fake.addJob(
+        keepRow('Late Train Verse', track: '02 - '),
+        state: 'done',
+        result: {
+          'copied': {'filepath': 'copies/Boukmanflow/Borrowed Tapes/02.mp3'},
+        },
+      );
+      await h.pumpDiscover(tester);
+      expect(
+        find.byKey(const ValueKey('discovery-copies-strip')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('discovery-copies-held')), findsNothing);
+      expect(
+        find.text('in your collection'),
+        findsOneWidget,
+        reason: 'the kept row reads so until the next ask drops it',
+      );
+    });
+
+    testWidgets(
+      "while the visit's first job list is out the strip's place is held: "
+      'it lands without moving the page',
+      (tester) async {
+        h.fake.listGate = Completer<void>();
+        h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'running',
+          progress: 0.2,
+          statusText: 'copying',
+        );
+        await h.pumpDiscover(tester);
+        expect(
+          find.byKey(const ValueKey('discovery-copies-held')),
+          findsOneWidget,
+        );
+        final header = find.text('ALBUMS FROM YOUR LIBRARY');
+        final before = topOf(tester, header);
+        h.fake.listGate!.complete();
+        await frames(tester);
+        expect(
+          find.byKey(const ValueKey('discovery-copies-held')),
+          findsNothing,
+        );
+        expect(find.text('Copying 1'), findsOneWidget);
+        expect(topOf(tester, header), before);
+      },
+    );
+  });
+
+  group('large text and German', () {
+    testWidgets(
+      'the song sheet at 1.3× in German on 360 px: everything wraps or '
+      'ellipsizes, nothing overflows',
+      (tester) async {
+        await h.pumpDiscover(
+          tester,
+          width: 360,
+          height: 2400,
+          textScale: 1.3,
+          locale: const Locale('de'),
+        );
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(tester.takeException(), isNull);
+        expect(find.text('KOPIE BEHALTEN'), findsOneWidget);
+        expect(find.text('Titel hinzufügen'), findsOneWidget);
+        expect(find.text('Auf dieses Telefon laden'), findsOneWidget);
+        await tapText(tester, 'Künstler');
+        expect(tester.takeException(), isNull);
+        expect(find.text('Nur das 1 Album, das dir fehlt'), findsOneWidget);
+        expect(find.text('1 Album hinzufügen'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the album sheet and the strip at 1.3× in German', (
+      tester,
+    ) async {
+      h.fake.addJob(
+        keepRow('Late Train Verse', track: '02 - '),
+        scope: 'album',
+        state: 'running',
+        progress: 0.3,
+        statusText: '1 of 3 songs · 7.4 MB',
+      );
+      h.fake.addJob(
+        keepRow('Afterimage', artist: 'Color Out', album: 'Peer Sessions'),
+        state: 'failed',
+      );
+      await h.pumpDiscover(
+        tester,
+        width: 360,
+        height: 2400,
+        textScale: 1.3,
+        locale: const Locale('de'),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('1 wird kopiert'), findsOneWidget);
+      expect(find.text('1 fehlgeschlagen'), findsOneWidget);
+      expect(find.text('kopiert 1 von 3'), findsOneWidget);
+      await tester.longPress(find.text('Borrowed Tapes').first);
+      await frames(tester, 8);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Album abspielen'), findsOneWidget);
+      expect(find.text('Wird kopiert'), findsOneWidget);
+    });
+  });
+}

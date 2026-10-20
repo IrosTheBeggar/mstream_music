@@ -225,6 +225,10 @@ class SettingsManager {
   // all time. Remembered on this phone only and sent with every taste call
   // — the server stores nothing about the page (mStream plan §2.13).
   int discoverWindow = kTasteDefaultWindow;
+  // Keep a copy's first-use note ("Copies go to your server, not this
+  // phone…") was seen through: the first copy started or a destination was
+  // saved on this phone. Until then the Keep card shows it.
+  bool discoverKeepNoteSeen = false;
   // A phone notification when a federation request lands in an admin's
   // inbox (FederationInboxAlerts). On by default; the OS permission is only
   // asked for when there is something to show.
@@ -366,6 +370,7 @@ class SettingsManager {
       discoverWindow = window is int && kTasteWindows.contains(window)
           ? window
           : kTasteDefaultWindow;
+      discoverKeepNoteSeen = m['discoverKeepNoteSeen'] == true;
       notifyFederationRequests = m['notifyFederationRequests'] ?? true;
       historyEnabled = m['historyEnabled'] ?? true;
       historySendToServer = m['historySendToServer'] ?? true;
@@ -575,6 +580,7 @@ class SettingsManager {
       'autoDownloadCap': autoDownloadCap,
       'discoverNewArtistsOnly': discoverNewArtistsOnly,
       'discoverWindow': discoverWindow,
+      'discoverKeepNoteSeen': discoverKeepNoteSeen,
       'notifyFederationRequests': notifyFederationRequests,
       'historyEnabled': historyEnabled,
       'historySendToServer': historySendToServer,
@@ -679,6 +685,17 @@ class SettingsManager {
     if (!kTasteWindows.contains(v)) return;
     discoverWindow = v;
     await _save();
+  }
+
+  /// The first copy started, or a destination was saved: the Keep card's
+  /// first-use note goes for good. A failed write only means it shows again
+  /// next launch.
+  Future<void> markDiscoverKeepNoteSeen() async {
+    if (discoverKeepNoteSeen) return;
+    discoverKeepNoteSeen = true;
+    try {
+      await _save();
+    } catch (_) {}
   }
 
   Future<void> setNotifyFederationRequests(bool v) async {

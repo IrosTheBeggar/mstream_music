@@ -178,4 +178,54 @@ void main() {
       expect(back.discoveryPluginsAvailable, isNull);
     });
   });
+  // Keep a copy words a null collection destination by the ACCOUNT's upload
+  // right: "your account can't add files" against "no library takes new
+  // files". Caller-scoped: `user.noUpload` on /api, `noUpload` on ping.
+  group('noUpload (the upload right)', () {
+    Map<String, dynamic> withUser(Map<String, dynamic> user) => {
+          'server': '6.32.0',
+          'features': {'discovery': true, 'discoveryPlugins': true},
+          'user': {'vpaths': ['music'], ...user},
+        };
+
+    test('/api reads it from user, never from features', () {
+      final s = _plain();
+      manager.applyServerInfoForTest(s, withUser({'noUpload': true}));
+      expect(s.noUpload, isTrue);
+      manager.applyServerInfoForTest(s, withUser({'noUpload': false}));
+      expect(s.noUpload, isFalse);
+      manager.applyServerInfoForTest(s, {
+        'server': '6.32.0',
+        'features': {'noUpload': true},
+        'user': {'vpaths': []},
+      });
+      expect(s.noUpload, isNull, reason: 'a server too old to say: unknown, not allowed');
+      manager.applyServerInfoForTest(s, withUser({'noUpload': 'yes'}));
+      expect(s.noUpload, isNull);
+    });
+
+    test('ping reads it flat', () {
+      final s = _plain();
+      manager.applyPingForTest(s, _ping({'noUpload': true}));
+      expect(s.noUpload, isTrue);
+      manager.applyPingForTest(s, _ping({}));
+      expect(s.noUpload, isNull);
+    });
+
+    test('a federated peer is pinned unknown: a copy lands on the parent', () {
+      final peer = Server('federated://home/3', null, null, null, 'peer-basement')
+        ..federationParent = 'home'
+        ..federationPeerId = 3
+        ..parentServer = _plain();
+      manager.applyServerInfoForTest(peer, withUser({'noUpload': false}));
+      expect(peer.noUpload, isNull);
+    });
+
+    test('round-trips through servers.json; junk loads as unknown', () {
+      final back = Server.fromJson((_plain()..noUpload = true).toJson());
+      expect(back.noUpload, isTrue);
+      final j = _plain().toJson()..['noUpload'] = 'no';
+      expect(Server.fromJson(j).noUpload, isNull);
+    });
+  });
 }

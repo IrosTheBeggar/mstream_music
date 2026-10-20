@@ -10,6 +10,7 @@ import '../../singletons/api.dart';
 import '../../singletons/server_list.dart';
 import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
+import 'discovery_jobs_controller.dart';
 
 typedef TasteFetch = Future<DiscoveryFetchResult<TasteResponse>> Function(
     Server server, TasteRequest req);
@@ -56,13 +57,22 @@ const int kDiscoveryPeerAlbumsMax = 12;
 /// reshuffles the listing under the user's thumb (plan §2.3).
 class DiscoveryPageController extends ChangeNotifier {
   final Server server;
+
+  /// The visit's plug-in jobs (Keep a copy): the listing and destination,
+  /// the caller's jobs, and a batch lookup of the connected servers' rows
+  /// after every answer of theirs (and their Try again) and after a job
+  /// ends. Inert while the server's plug-ins are off. Its changes are this
+  /// controller's (the markers are drawn from the listing).
+  final DiscoveryJobsController jobs;
+  final bool _ownsJobs;
   final TasteFetch _fetch;
   final Future<void> Function(Server) _reping;
   final void Function(int) _saveWindow;
   final DateTime Function() now;
 
   /// [readWindow] / [saveWindow] are the phone's remembered window
-  /// (SettingsManager by default; tests inject their own).
+  /// (SettingsManager by default; tests inject their own). [jobs] is
+  /// injected by tests (an injected one is the caller's to dispose).
   DiscoveryPageController({
     required this.server,
     TasteFetch? fetch,
@@ -71,7 +81,10 @@ class DiscoveryPageController extends ChangeNotifier {
     void Function(int)? saveWindow,
     DateTime Function()? now,
     String? pinAtOpen,
-  })  : _fetch = fetch ?? ApiManager().fetchDiscoveryTaste,
+    DiscoveryJobsController? jobs,
+  })  : jobs = jobs ?? DiscoveryJobsController(server: server),
+        _ownsJobs = jobs == null,
+        _fetch = fetch ?? ApiManager().fetchDiscoveryTaste,
         _reping = reping ?? ServerManager().getServerPaths,
         _saveWindow = saveWindow ?? _defaultSaveWindow,
         now = now ?? DateTime.now {
@@ -80,7 +93,10 @@ class DiscoveryPageController extends ChangeNotifier {
     if (pinAtOpen != null && pinAtOpen.trim().isNotEmpty) {
       _pins.add(_appPath(pinAtOpen));
     }
+    this.jobs.addListener(_onJobs);
   }
+
+  void _onJobs() => notifyListeners();
 
   static int _defaultReadWindow() => SettingsManager().discoverWindow;
   static void _defaultSaveWindow(int w) =>
@@ -297,6 +313,8 @@ class DiscoveryPageController extends ChangeNotifier {
       return;
     }
     final rid = ++_mainRid;
+    // The plug-in listing, the destination and the job list: once a visit.
+    unawaited(jobs.activate());
     // The peers section shows its loading state from the start: its call
     // only waits on the library's answer.
     if (asksPeers && !peersDisabled) loadingPeers = true;
@@ -425,6 +443,12 @@ class DiscoveryPageController extends ChangeNotifier {
     peers = p;
     peerRows = discoveryPeerRows(p, peerTrackItem);
     peerAlbumItems = discoveryPeerAlbumItems(peerRows);
+    // Every connected-servers answer — its Try again's too — is looked up
+    // (what the caller already copied); a batch let go of lets go of its
+    // lookup. The rows go exactly as received.
+    unawaited(jobs.setRows([
+      for (final r in peerRows) ?discoveryLeadOf(r),
+    ]));
   }
 
   static bool _answered(TastePeerGroup g) => g.reachable && !g.mismatched;
@@ -562,6 +586,7 @@ class DiscoveryPageController extends ChangeNotifier {
     // The lead carries a handful of fields; db/metadata is on the federation
     // allowlist, so the queue fetches the peer's full block before playing.
     row.partialMetadata = true;
+    _leadOfRow[row] = lead;
     return row;
   }
 
@@ -576,8 +601,34 @@ class DiscoveryPageController extends ChangeNotifier {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    jobs.removeListener(_onJobs);
+    if (_ownsJobs) jobs.dispose();
     super.dispose();
   }
+}
+
+/// The lead a connected server's row was built from ([DiscoveryPageController
+/// .peerTrackItem]) — its raw row is the recommendation every plug-in call
+/// sends unchanged. Null for any other row.
+DiscoveryLead? discoveryLeadOf(DisplayItem row) => _leadOfRow[row];
+final Expando<DiscoveryLead> _leadOfRow = Expando('discovery lead');
+
+/// A connected server's album card's rows' leads, best first
+/// ([discoveryPeerAlbumItems]): the first is what its album copy sends
+/// (scope album). Empty for any other item.
+List<DiscoveryLead> discoveryCardLeads(DisplayItem card) =>
+    _leadsOfCard[card] ?? const [];
+final Expando<List<DiscoveryLead>> _leadsOfCard = Expando('discovery card');
+
+/// Whether a connected server's album card is a compilation: grouped by an
+/// album artist that is not its best row's track artist ("Various
+/// Artists"). Its copy is the album only — the rows' artists are guests.
+bool discoveryCardIsCompilation(DisplayItem card) {
+  final leads = discoveryCardLeads(card);
+  if (leads.isEmpty) return false;
+  final credit = leads.first.albumArtist?.trim().toLowerCase() ?? '';
+  return credit.isNotEmpty &&
+      credit != leads.first.artist.trim().toLowerCase();
 }
 
 /// The virtual Server ServerManager mirrors from [parent]'s peer list for
@@ -656,16 +707,25 @@ List<DisplayItem> discoveryPeerRows(
   ];
 }
 
-/// "Albums from …": [rows] (best first) grouped by server + album + artist
-/// — rows without an album tag are left out — so an album ranks by its best
-/// row; capped at [kDiscoveryPeerAlbumsMax]. Each card is an album
+/// "Albums from …": [rows] (best first) grouped by server + album + the
+/// album's credit — its album artist when the row names one, else the track
+/// artist — rows without an album tag are left out — so an album ranks by
+/// its best row; capped at [kDiscoveryPeerAlbumsMax]. Each card is an album
 /// DisplayItem on the peer's virtual Server, so a tap opens it in the album
 /// detail through that peer (album-songs is on the federation allowlist),
-/// exactly as browsing the peer's Albums does. The rows carry the TRACK
-/// artist, which is not always the album's credit, so the card opens by name
-/// plus that artist as album-songs' `artist` filter ([DisplayItem.
-/// trackArtist], as the webapp's discoveryOpenPeerAlbum does): a peer
-/// holding several same-named albums ("Greatest Hits") does not merge them.
+/// exactly as browsing the peer's Albums does.
+///
+/// A row that names its album artist (`albumArtist`) groups under it, so a
+/// compilation is ONE card whose artist line is that credit ("Various
+/// Artists"), opened by name + `album_artist` ([DisplayItem.albumArtist]) —
+/// the whole album, which is what its album copy takes. A row without one
+/// carries only the TRACK artist, which is not always the album's credit,
+/// so that card opens by name plus the artist as album-songs' `artist`
+/// filter ([DisplayItem.trackArtist], as the webapp's
+/// discoveryOpenPeerAlbum does): a peer holding several same-named albums
+/// ("Greatest Hits") does not merge them.
+///
+/// Each card keeps its rows' leads, best first ([discoveryCardLeads]).
 List<DisplayItem> discoveryPeerAlbumItems(List<DisplayItem> rows) {
   String fold(String? v) => (v ?? '').trim().toLowerCase();
   final byKey = <(String, String, String), DisplayItem>{};
@@ -673,19 +733,32 @@ List<DisplayItem> discoveryPeerAlbumItems(List<DisplayItem> rows) {
     final album = r.metadata?.album?.trim() ?? '';
     final server = r.server;
     if (album.isEmpty || server == null) continue;
+    final lead = discoveryLeadOf(r);
     final artist = r.metadata?.artist?.trim();
-    final key = (server.localname, fold(album), fold(artist));
+    final albumArtist = lead?.albumArtist?.trim();
+    final credit =
+        (albumArtist ?? '').isNotEmpty ? albumArtist : artist;
+    final key = (server.localname, fold(album), fold(credit));
     var card = byKey[key];
     if (card == null) {
       if (byKey.length >= kDiscoveryPeerAlbumsMax) continue;
       card = byKey[key] = DisplayItem(server, album, 'album', album,
           Icon(Icons.album, color: VelvetColors.textSecondary),
-          (artist ?? '').isEmpty ? null : artist);
-      card.trackArtist = (artist ?? '').isEmpty ? null : artist;
+          (credit ?? '').isEmpty ? null : credit);
+      if ((albumArtist ?? '').isNotEmpty) {
+        card.albumArtist = albumArtist;
+      } else {
+        card.trackArtist = (artist ?? '').isEmpty ? null : artist;
+      }
+      _leadsOfCard[card] = <DiscoveryLead>[];
     }
+    if (lead != null) _leadsOfCard[card]!.add(lead);
     // The first row that has art lends it to the card (through the same
     // proxy: the card is on the peer's virtual Server too).
     card.altAlbumArt ??= r.metadata?.albumArt;
+  }
+  for (final card in byKey.values) {
+    _leadsOfCard[card] = List.unmodifiable(_leadsOfCard[card]!);
   }
   return byKey.values.toList();
 }
