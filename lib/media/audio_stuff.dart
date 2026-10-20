@@ -350,6 +350,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // unlimited (window = whole queue, already swept on the queue change),
         // or everything in range is on disk.
         unawaited(DownloadManager().autoDownloadQueue(queue.value));
+        _playFromLocalCopy(index, item);
       }
       _emitCurrentMediaItem();
     });
@@ -3445,9 +3446,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// the next cast session play from disk — and if an already-loaded
   /// streaming source dies offline, the retry re-seed lands on the file
   /// within seconds. Sources already loaded (local playlist, live cast item
-  /// list) simply finish their session streaming. Synchronous — no awaits
-  /// between reading and publishing the queue, so it can't interleave with
-  /// anything.
+  /// list) finish their session streaming — except an upcoming local one,
+  /// which _playFromLocalCopy reloads from disk the moment its turn comes.
+  /// Synchronous — no awaits between reading and publishing the queue, so it
+  /// can't interleave with anything.
   void onTrackDownloaded(String serverName, String path, String localPath) {
     final patched = patchDownloadedTrack(queue.value,
         serverName: serverName, path: path, localPath: localPath);
@@ -3474,6 +3476,47 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     queue.add(patched);
     _updateWifiLock();
+  }
+
+  // A download that landed after the playlist was built left this track's
+  // source streaming (onTrackDownloaded patches extras only). Its turn is
+  // the one moment a reload costs nothing audible — the track has barely
+  // begun — so it reloads from disk here (a track on disk for nine minutes
+  // streamed and stalled seven times, 2026-10-20). Not under shuffle: a
+  // fresh playlist re-rolls the order and brings played tracks back.
+  bool _localSwapPending = false;
+
+  void _playFromLocalCopy(int index, MediaItem item) {
+    if (!identical(_backend, _localBackend) ||
+        _localSwapPending ||
+        _recoveringPlayback ||
+        _skipPending ||
+        _localBackend.shuffleEnabled ||
+        !_localBackend.streamsDespiteLocalCopy(index, item)) {
+      return;
+    }
+    _localSwapPending = true;
+    appLog('[play] ${item.title} is on disk — reloading from the local copy');
+    _switchChain = _switchChain.then((_) async {
+      if (!identical(_backend, _localBackend) ||
+          _localBackend.currentIndex != index ||
+          !_localBackend.streamsDespiteLocalCopy(index, item)) {
+        return;
+      }
+      // A copy that turns out unplayable takes the bad-file path on its
+      // next error instead of another reload (see _recoverFromLocalCopy).
+      _localRetryKey = _trackKey(item);
+      _reordering = true;
+      try {
+        await _reseedLocalAtSpot();
+      } finally {
+        _reordering = false;
+      }
+      _emitCurrentMediaItem();
+      _broadcastState();
+    }).catchError((Object e) {
+      appLog('[play] local-copy reload failed: $e');
+    }).whenComplete(() => _localSwapPending = false);
   }
 
   // True while the CURRENT item's extras say "local" but its loaded source
