@@ -107,8 +107,9 @@ class DownloadManager {
           dt.progress = 1.0;
           terminal = true;
           // Flip already-queued copies of this track from streaming to the
-          // fresh local file (extras patch + upcoming-source swap; the
-          // playing track is never interrupted). Cheap no-op if not queued.
+          // fresh local file (an extras patch; the playing track is never
+          // interrupted, an upcoming one reloads from disk at its turn).
+          // Cheap no-op if not queued.
           if (dt.localPath != null &&
               dt.serverName != null &&
               dt.dataPath != null) {

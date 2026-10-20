@@ -94,6 +94,17 @@ class LocalPlaybackBackend implements PlaybackBackend {
         : Uri.parse(item.id);
   }
 
+  /// True when [item] has its file on disk but the source loaded at [index]
+  /// still streams: the download landed after the playlist was built, and a
+  /// source's URI is fixed when it is built.
+  bool streamsDespiteLocalCopy(int index, MediaItem item) {
+    if (_uriFor(item).scheme != 'file') return false;
+    final sources = _player.audioSources;
+    if (index < 0 || index >= sources.length) return false;
+    final source = sources[index];
+    return source is UriAudioSource && source.uri.scheme != 'file';
+  }
+
   @override
   Future<void> removeSourceAt(int index) => _player.removeAudioSourceAt(index);
 
