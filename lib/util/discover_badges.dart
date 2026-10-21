@@ -412,6 +412,156 @@ JobBadge? _cardBadge(
 bool anyLiveBadge(Iterable<BadgeRow?> rows) =>
     rows.any((r) => r?.badge?.live == true);
 
+// ── the Keep card's narrower choices ─────────────────────────────────────
+// The Keep card shows, for each choice (This song | Album | Artist), the
+// row's job of THAT scope. A wider copy that finished speaks for a
+// narrower choice as well — the way the markers read it — when it is this
+// server's (never another connected server's) and newer than the choice's
+// own job:
+//   Album      the newest finished artist / artist-missing job, as its walk
+//              came out for this album (jobForAlbum): walked → that album's
+//              own account, left out as 'owned' → already yours,
+//              'appearance' or never walked → nothing
+//   This song  a finished album job, or a finished artist job's account of
+//              the row's album, whose song lists name this song's file on
+//              the connected server (`from`): copied → in your collection,
+//              skipped 'owned' → already yours, skipped 'exists' → skipped;
+//              failed or not listed → nothing
+// A live job of the choice's own always wins, and so does a finished one
+// newer than the wider copy; a live wider job stays on its own choice.
+
+/// [a] ended after [b]: their finish times, else their update times (ms),
+/// else the newer id.
+bool jobNewer(DiscoveryJob a, DiscoveryJob b) {
+  final fa = a.finishedAt, fb = b.finishedAt;
+  if (fa != null && fb != null && fa != fb) return fa > fb;
+  final ua = a.updatedAt, ub = b.updatedAt;
+  if (ua != null && ub != null && ua != ub) return ua > ub;
+  return a.id > b.id;
+}
+
+String _peerPath(Object? p) =>
+    p is String ? p.trim().replaceFirst(RegExp(r'^/+'), '') : '';
+
+/// A many-song account ([view]: an album job, or an artist job's account of
+/// one album) as it speaks for the one song whose file on the connected
+/// server is [filepath] — its entry in the song lists, made the shape a song
+/// copy answers. Null unless an entry names that file.
+DiscoveryJob? _songView(DiscoveryJob view, String filepath) {
+  final res = view.result ?? const <String, dynamic>{};
+  final songs = res['songs'];
+  final want = _peerPath(filepath);
+  if (songs is! Map || want.isEmpty) return null;
+  Map? entry(String list) {
+    for (final e in _arr(songs[list])) {
+      if (e is Map && _peerPath(e['from']) == want) return e;
+    }
+    return null;
+  }
+
+  final copied = entry('copied');
+  if (copied != null) {
+    final at = copied['filepath'];
+    if (at is! String || at.trim().isEmpty) return null;
+    return view.withResult(Map.unmodifiable(<String, dynamic>{
+      'copied': {
+        for (final e in copied.entries)
+          if (e.key != 'from') '${e.key}': e.value,
+      },
+      'peer': res['peer'],
+    }));
+  }
+  final skipped = entry('skipped');
+  if (skipped == null) return null;
+  final at = skipped['at'] is String && (skipped['at'] as String).trim().isNotEmpty
+      ? skipped['at'] as String
+      : null;
+  return switch (skipped['why']) {
+    'owned' => view.withResult(Map.unmodifiable(<String, dynamic>{
+        'skipped': 'owned',
+        if (at != null) 'existing': {'filepath': at},
+        'peer': res['peer'],
+      })),
+    'exists' => view.withResult(Map.unmodifiable(<String, dynamic>{
+        'skipped': 'exists',
+        'filepath': ?at,
+        'peer': res['peer'],
+      })),
+    _ => null,
+  };
+}
+
+/// The newest finished copy wider than [scope] (album or song) among
+/// [held], from server [peerId], as it speaks for this choice — the album
+/// [album], the song whose file on that server is [filepath] — or null when
+/// none does.
+DiscoveryJob? widerChoiceView(
+  String scope,
+  Iterable<DiscoveryJob> held, {
+  int? peerId,
+  String? album,
+  String? filepath,
+}) {
+  if (scope != kScopeAlbum && scope != kScopeSong) return null;
+  DiscoveryJob? best;
+  for (final job in held) {
+    if (job.plugin != kCopyPlugin || job.state != JobState.done) continue;
+    if (otherPeerJob(job, peerId)) continue;
+    final s = jobScope(job);
+    final artist = s == kScopeArtist || s == kScopeArtistMissing;
+    if (!artist && !(scope == kScopeSong && s == kScopeAlbum)) continue;
+    final forAlbum = artist ? jobForAlbum(job, album) : job;
+    if (forAlbum == null) continue;
+    final DiscoveryJob? view;
+    if (scope == kScopeAlbum) {
+      view = forAlbum;
+    } else {
+      view = filepath == null ? null : _songView(forAlbum, filepath);
+    }
+    if (view == null) continue;
+    if (best == null || jobNewer(view, best)) best = view;
+  }
+  return best;
+}
+
+/// What one Keep card choice shows: [job] (another server's when
+/// [fromOtherPeer]), and whether it is a wider copy's account ([wider]:
+/// its Retry starts the choice's own scope, not the wider copy again).
+class KeepChoiceJob {
+  final DiscoveryJob job;
+  final bool fromOtherPeer;
+  final bool wider;
+  const KeepChoiceJob(this.job, {this.fromOtherPeer = false, this.wider = false});
+}
+
+/// The job the Keep card's [scope] choice shows: [own] — the row's job of
+/// that scope ([ownFromOtherPeer]: another server's copy of the same album
+/// or artist, shown only while it runs) — or, for the Album and This song
+/// choices, the account a finished wider copy among [held] gives
+/// ([widerChoiceView]) when [own] is not live and not newer. Null: the
+/// choice's own pill.
+KeepChoiceJob? keepChoiceJob(
+  String scope, {
+  DiscoveryJob? own,
+  bool ownFromOtherPeer = false,
+  Iterable<DiscoveryJob> held = const [],
+  int? peerId,
+  String? album,
+  String? filepath,
+}) {
+  if (own != null && own.live) {
+    return KeepChoiceJob(own, fromOtherPeer: ownFromOtherPeer);
+  }
+  // Another server's copy that ended says nothing here.
+  final mine = own == null || ownFromOtherPeer ? null : own;
+  final wider = widerChoiceView(scope, held,
+      peerId: peerId, album: album, filepath: filepath);
+  if (wider != null && (mine == null || jobNewer(wider, mine))) {
+    return KeepChoiceJob(wider, wider: true);
+  }
+  return mine == null ? null : KeepChoiceJob(mine);
+}
+
 // ── the phone's markers ──────────────────────────────────────────────────
 // Words and glyphs only on the page (no percentages): a song row's glyph +
 // word lead its subtitle and its 4 px strip fills with the copy's fraction;

@@ -160,8 +160,18 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   /// copy of either artist scope wins (the box may have been ticked the
   /// other way when it started). Another server's copy of the same album or
   /// artist shows only while it runs ("Copying from …"); once it ends the
-  /// button is back.
+  /// button is back. Under Album and This song a finished wider copy of
+  /// this server speaks too, as it came out for this album or this song,
+  /// unless the choice's own job is live or newer
+  /// ([DiscoveryJobsController.choiceJob]).
   SheetJob? _jobFor(String chip, String scope) {
+    if (chip == kScopeSong || chip == kScopeAlbum) {
+      return jobs.choiceJob(
+        lead,
+        scope,
+        cardLeads: widget.albumFocus ? widget.cardLeads : const [],
+      );
+    }
     final mine = jobs.sheetJob(lead, scope);
     if (chip == _kChipArtist) {
       final other = jobs.sheetJob(
@@ -433,7 +443,9 @@ class _KeepCopySectionState extends State<KeepCopySection> {
                 peerName: widget.peerName,
                 pillLabel: _pillLabel(l, scope),
                 onCancel: _cancel,
-                onRetry: _retry,
+                // A wider copy's account: Retry copies this choice (the
+                // album, the song), never the whole artist again.
+                onRetry: shown.wider ? (_) => _start(scope) : _retry,
                 onNewSeeds: widget.onNewSeeds,
                 onPlay: (fp) => unawaited(playNow(_ownFile(fp))),
                 onQueue: (fp) async {
@@ -763,8 +775,15 @@ class _JobLine extends StatelessWidget {
     final text2 = VelvetColors.textSecondary;
     String part(JobText t) =>
         keepJobText(l, t, peer: peer, artist: lead.artist);
-    List<String> parts(Map<String, dynamic>? many) =>
-        many == null ? const [] : [for (final t in manyParts(many)) part(t)];
+    // An artist copy's account of this one album: the walk leaving this
+    // album out (already yours) is no "album left out" here.
+    List<String> parts(Map<String, dynamic>? many) => many == null
+        ? const []
+        : [
+            for (final t in manyParts(many))
+              if (!sheetJob.wider || t.phrase != JobPhrase.albumsLeftOut)
+                part(t),
+          ];
 
     Widget glyph;
     String title;

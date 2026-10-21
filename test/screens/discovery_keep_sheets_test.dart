@@ -1154,4 +1154,343 @@ void main() {
       expect(find.text('Wird kopiert'), findsOneWidget);
     });
   });
+
+  // A finished wider copy speaks for the narrower choices (the user's
+  // report, 2026-10-20): "Add 1 album" — only the albums you don't have —
+  // copied Borrowed Tapes, and the Album choice still offered "Add album".
+  group('a finished wider copy speaks for Album and This song', () {
+    const tapes = 'peerlib/Boukmanflow/Borrowed Tapes';
+    const threeSongs = [
+      '01 - Rooftop Cypher.mp3',
+      '02 - Late Train Verse.mp3',
+      '03 - Corner Store Loop.mp3',
+    ];
+    Map<String, dynamic> landed(String file) => {
+      'from': '$tapes/$file',
+      'vpath': 'copies',
+      'filepath': 'copies/Boukmanflow/Borrowed Tapes/$file',
+      'trackId': 1,
+      'bytes': 1000,
+    };
+    Map<String, dynamic> failedSong(String file) => {
+      'from': '$tapes/$file',
+      'error': 'Stage Peer B answered 500',
+    };
+
+    /// federation-copy's artist result: Borrowed Tapes walked with these
+    /// songs (or not walked at all), and the albums it left out.
+    Map<String, dynamic> walkResult(
+      String scope, {
+      List<Map<String, dynamic>> copied = const [],
+      List<Map<String, dynamic>> failed = const [],
+      List<Map<String, dynamic>> left = const [],
+      bool walked = true,
+      Map<String, Object> peer = peerB,
+    }) {
+      final songs = {
+        'total': copied.length + failed.length,
+        'copied': copied,
+        'skipped': <Map<String, dynamic>>[],
+        'failed': failed,
+      };
+      List<Map<String, dynamic>> tag(List<Map<String, dynamic>> l) => [
+        for (final e in l) {'album': 'Borrowed Tapes', ...e},
+      ];
+      return {
+        'scope': scope,
+        'artist': {'name': 'Boukmanflow'},
+        'albums': [
+          if (walked)
+            {
+              'name': 'Borrowed Tapes',
+              'year': 2019,
+              'songs': songs,
+              'bytes': 0,
+              'stopped': null,
+            },
+        ],
+        'skippedAlbums': left,
+        'songs': walked
+            ? {...songs, 'copied': tag(copied), 'failed': tag(failed)}
+            : {'total': 0, 'copied': [], 'skipped': [], 'failed': []},
+        'counts': {
+          'total': walked ? copied.length + failed.length : 0,
+          'copied': walked ? copied.length : 0,
+          'skipped': 0,
+          'failed': walked ? failed.length : 0,
+        },
+        'stopped': null,
+        'peer': {'id': peer['id'], 'name': peer['name']},
+      };
+    }
+
+    Map<String, dynamic> lateRow() =>
+        keepRow('Late Train Verse', track: '02 - ', similarity: 0.95);
+
+    Finder inCard(Finder f) =>
+        find.descendant(of: find.byKey(const ValueKey('keep-copy')), matching: f);
+    Future<void> chip(WidgetTester tester, String scope) async {
+      final f = find.byKey(ValueKey('keep-chip-$scope'));
+      await tester.ensureVisible(f);
+      await tester.pump();
+      await tester.tap(f);
+      await frames(tester);
+    }
+
+    testWidgets(
+      "the report: once 'Add 1 album' copied Borrowed Tapes, Album reads "
+      'in your collection (no Add album), and so does This song',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'artist');
+        await tapText(tester, 'Add 1 album');
+        expect(lastStart()['scope'], 'artist-missing');
+        final job = h.fake.jobs.first;
+        job['state'] = 'done';
+        job['progress'] = 1.0;
+        job['finishedAt'] = 1760900009000;
+        job['result'] = walkResult(
+          'artist-missing',
+          copied: [for (final f in threeSongs) landed(f)],
+          left: [
+            {'name': 'Night Market', 'year': 2018, 'why': 'owned'},
+          ],
+        );
+        h.timers.active!.fire();
+        await frames(tester, 10);
+        expect(tester.takeException(), isNull);
+
+        await chip(tester, 'album');
+        expect(inCard(find.text('In your collection')), findsOneWidget);
+        expect(inCard(find.text('3 copied')), findsOneWidget);
+        expect(inCard(find.text('Add album')), findsNothing);
+        expect(find.byKey(const ValueKey('keep-start')), findsNothing);
+
+        await chip(tester, 'song');
+        expect(inCard(find.text('In your collection')), findsOneWidget);
+        expect(
+          inCard(
+            find.text(
+              'copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('keep-play')), findsOneWidget);
+        expect(inCard(find.text('Add song')), findsNothing);
+        final starts = h.fake.calls('POST', _jobs).length;
+
+        // The album sheet (the card) reads the same.
+        Navigator.of(tester.element(find.byKey(const ValueKey('keep-copy')))).pop();
+        await frames(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        expect(find.text('Play album'), findsOneWidget);
+        expect(inCard(find.text('In your collection')), findsOneWidget);
+        expect(inCard(find.text('3 copied')), findsOneWidget);
+        expect(inCard(find.text('Add album')), findsNothing);
+        expect(h.fake.calls('POST', _jobs), hasLength(starts));
+        // The start's toast (shown once the song sheet closed) runs out.
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
+
+    testWidgets(
+      'left out as already owned: Album reads "Already yours" alone; This '
+      'song still offers Add song (an album by name is not this song)',
+      (tester) async {
+        h.fake.addJob(
+          lateRow(),
+          scope: 'artist-missing',
+          state: 'done',
+          result: walkResult(
+            'artist-missing',
+            walked: false,
+            left: [
+              {'name': 'Borrowed Tapes', 'year': 2019, 'why': 'owned'},
+            ],
+          ),
+        );
+        await h.pumpDiscover(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        expect(inCard(find.text('Already yours')), findsOneWidget);
+        expect(inCard(find.textContaining('left out')), findsNothing);
+        expect(inCard(find.text('Add album')), findsNothing);
+        Navigator.of(tester.element(find.byKey(const ValueKey('keep-copy')))).pop();
+        await frames(tester);
+
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(inCard(find.text('Add song')), findsOneWidget);
+        await chip(tester, 'album');
+        expect(inCard(find.text('Already yours')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "a wider copy's failure for this album: its Retry copies the album, "
+      'never the whole artist again',
+      (tester) async {
+        h.fake.addJob(
+          lateRow(),
+          scope: 'artist',
+          state: 'done',
+          result: walkResult(
+            'artist',
+            failed: [for (final f in threeSongs) failedSong(f)],
+          ),
+        );
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'album');
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        expect(inCard(find.text('Nothing copied · 3 failed')), findsOneWidget);
+        await tapText(tester, 'Retry');
+        expect(lastStart()['scope'], 'album');
+        expect(lastStart()['recommendation'], equals(h.lead('Late Train Verse').raw));
+        expect(inCard(find.text('Waiting for a free slot')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "another server's finished artist copy says nothing here: Album "
+      'offers Add album',
+      (tester) async {
+        h.fake.addJob(
+          keepRow('Rooftop Cypher', track: '01 - ', similarity: 0.6, peer: peerC),
+          scope: 'artist-missing',
+          state: 'done',
+          result: walkResult(
+            'artist-missing',
+            copied: [for (final f in threeSongs) landed(f)],
+            peer: peerC,
+          ),
+        );
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'album');
+        expect(inCard(find.text('Add album')), findsOneWidget);
+        expect(inCard(find.text('In your collection')), findsNothing);
+        await chip(tester, 'song');
+        expect(inCard(find.text('Add song')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "the choice's own album job wins when newer; the wider copy's word "
+      'when the album job ended first, whatever its id',
+      (tester) async {
+        final wider = h.fake.addJob(
+          lateRow(),
+          scope: 'artist-missing',
+          state: 'done',
+          result: walkResult(
+            'artist-missing',
+            copied: [for (final f in threeSongs) landed(f)],
+          ),
+        );
+        final own = h.fake.addJob(
+          lateRow(),
+          scope: 'album',
+          state: 'done',
+          result: {
+            'scope': 'album',
+            'songs': {
+              'total': 3,
+              'copied': [],
+              'skipped': [
+                for (final f in threeSongs)
+                  {'from': '$tapes/$f', 'why': 'owned', 'at': 'copies/x/$f'},
+              ],
+              'failed': [],
+            },
+            'counts': {'total': 3, 'copied': 0, 'skipped': 3, 'failed': 0},
+            'stopped': null,
+            'peer': peerB,
+          },
+        );
+        wider['finishedAt'] = 1760900001000;
+        own['finishedAt'] = 1760900002000;
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'album');
+        expect(inCard(find.text('Already yours')), findsOneWidget);
+        expect(inCard(find.text('3 already yours')), findsOneWidget);
+        expect(inCard(find.text('3 copied')), findsNothing);
+        Navigator.of(tester.element(find.byKey(const ValueKey('keep-copy')))).pop();
+        await frames(tester);
+
+        // The album job ended before the artist copy did: its word.
+        own['finishedAt'] = 1760900000500;
+        await h.jobs.refreshLookups();
+        await frames(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'album');
+        expect(inCard(find.text('In your collection')), findsOneWidget);
+        expect(inCard(find.text('3 copied')), findsOneWidget);
+      },
+    );
+
+    testWidgets('a live album job of its own always wins', (tester) async {
+      h.fake.addJob(
+        lateRow(),
+        scope: 'artist-missing',
+        state: 'done',
+        result: walkResult(
+          'artist-missing',
+          copied: [for (final f in threeSongs) landed(f)],
+        ),
+      )['finishedAt'] = 1760900009000;
+      h.fake.addJob(lateRow(), scope: 'album', state: 'queued');
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      await chip(tester, 'album');
+      expect(inCard(find.text('Waiting for a free slot')), findsOneWidget);
+      expect(find.byKey(const ValueKey('keep-cancel')), findsOneWidget);
+      expect(inCard(find.text('In your collection')), findsNothing);
+    });
+
+    testWidgets(
+      "the album sheet reads every row of its card: an artist copy another "
+      "row holds speaks for the card's Album choice, as the card's marker does",
+      (tester) async {
+        // The card's best row names a featured artist: its artist key is
+        // not the copy's, so only the card's other rows hold the copy.
+        h.peersAnswer = () => keepPeersPayload(
+          extraB: [
+            keepRow(
+              'Borrowed Intro',
+              artist: 'Boukmanflow feat. Ola',
+              albumArtist: 'Boukmanflow',
+              track: '00 - ',
+              similarity: 0.99,
+            ),
+          ],
+        );
+        addTearDown(() => h.peersAnswer = keepPeersPayload);
+        h.fake.addJob(
+          lateRow(),
+          scope: 'artist-missing',
+          state: 'done',
+          result: walkResult(
+            'artist-missing',
+            copied: [for (final f in threeSongs) landed(f)],
+          ),
+        );
+        await h.pumpDiscover(tester);
+        expect(
+          h.jobs.choiceJob(h.lead('Borrowed Intro'), 'album'),
+          isNull,
+          reason: 'the best row alone holds no such copy',
+        );
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        expect(find.text('Play album'), findsOneWidget);
+        expect(inCard(find.text('In your collection')), findsOneWidget);
+        expect(inCard(find.text('3 copied')), findsOneWidget);
+        expect(inCard(find.text('Add album')), findsNothing);
+      },
+    );
+  });
 }

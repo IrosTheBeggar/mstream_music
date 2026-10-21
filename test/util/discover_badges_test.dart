@@ -531,4 +531,226 @@ void main() {
       expect(copyingCounts(copy(35, late, 'album', 'done', albumDone(3))), isNull, reason: 'only while running');
     });
   });
+
+  // The Keep card's choices: a finished wider copy of the same server speaks
+  // for a narrower choice — as its walk came out for the album, as its song
+  // lists name the song's file — unless the choice's own job is live or
+  // newer (the user's Boukmanflow report, 2026-10-20: "Only the albums you
+  // don't have" copied Borrowed Tapes, and the Album choice still offered
+  // "Add album").
+  group("the Keep card's choices: a finished wider copy speaks for a narrower one", () {
+    final late = tape(pb, 'Late Train Verse', 0.9);
+    final lateFile = late['filepath'] as String;
+    final cornerFile = 'peerlib/Boukmanflow/Borrowed Tapes/Corner Store Loop.mp3';
+    final roof = tape(pc, 'Rooftop Cypher', 0.8);
+
+    Map<String, dynamic> landed(String from) => {
+          'from': from,
+          'vpath': 'copies',
+          'filepath': 'copies/Boukmanflow/Borrowed Tapes/${from.split('/').last}',
+          'trackId': 7,
+          'bytes': 1234,
+        };
+    Map<String, dynamic> songsOf({List<Map<String, dynamic>> copied = const [], List<Map<String, dynamic>> skipped = const [], List<Map<String, dynamic>> failed = const []}) =>
+        {'total': copied.length + skipped.length + failed.length, 'copied': copied, 'skipped': skipped, 'failed': failed};
+    Map<String, dynamic> walk(String name, Map<String, dynamic> songs, {String? error}) =>
+        {'name': name, 'year': 2021, 'songs': songs, 'bytes': 0, 'stopped': null, 'error': ?error};
+    // federation-copy's artist result: the walk, what it left out, the songs
+    // of every album gathered (each with its album's name).
+    Map<String, dynamic> artistResult(String scope, List<Map<String, dynamic>> albums, [List<Map<String, dynamic>> left = const []]) {
+      List<Map<String, dynamic>> all(String k) => [
+            for (final a in albums)
+              for (final e in ((a['songs'] as Map)[k] as List)) {'album': a['name'], ...(e as Map<String, dynamic>)},
+          ];
+      final total = albums.fold<int>(0, (n, a) => n + ((a['songs'] as Map)['total'] as int));
+      return {
+        'scope': scope,
+        'artist': {'name': 'Boukmanflow'},
+        'albums': albums,
+        'skippedAlbums': left,
+        'songs': {'total': total, 'copied': all('copied'), 'skipped': all('skipped'), 'failed': all('failed')},
+        'counts': {'total': total, 'copied': all('copied').length, 'skipped': all('skipped').length, 'failed': all('failed').length},
+        'stopped': null,
+        'peer': pb,
+      };
+    }
+
+    Map<String, dynamic> albumResult(Map<String, dynamic> songs) => {
+          'scope': 'album',
+          'album': {'name': 'Borrowed Tapes', 'artist': 'Boukmanflow', 'albumArtist': null, 'year': 2021},
+          'songs': songs,
+          'counts': {
+            'total': songs['total'],
+            'copied': (songs['copied'] as List).length,
+            'skipped': (songs['skipped'] as List).length,
+            'failed': (songs['failed'] as List).length,
+          },
+          'stopped': null,
+          'peer': pb,
+        };
+
+    // The user's run: only the albums they lacked — Borrowed Tapes, all three songs copied.
+    final missingCopied = artistResult('artist-missing', [
+      walk('Borrowed Tapes', songsOf(copied: [landed(lateFile), landed(cornerFile), landed('peerlib/Boukmanflow/Borrowed Tapes/Rooftop Cypher.mp3')])),
+    ], [
+      {'name': 'Night Market', 'year': 2018, 'why': 'owned'},
+    ]);
+
+    KeepChoiceJob? album(List<DiscoveryJob> held, {DiscoveryJob? own, bool ownFromOtherPeer = false, String? albumName = 'Borrowed Tapes'}) =>
+        keepChoiceJob('album', own: own, ownFromOtherPeer: ownFromOtherPeer, held: held, peerId: 1, album: albumName, filepath: lateFile);
+    KeepChoiceJob? song(List<DiscoveryJob> held, {DiscoveryJob? own, String filepath = ''}) =>
+        keepChoiceJob('song', own: own, held: held, peerId: 1, album: 'Borrowed Tapes', filepath: filepath.isEmpty ? lateFile : filepath);
+    List<Object?> read(KeepChoiceJob? pick) {
+      if (pick == null) return [null];
+      final row = jobRowState(pick.job, plugin: kCopyPlugin);
+      return [pick.job.id, row.kind, row.tag, pick.wider, row.sub, row.filepath];
+    }
+
+    test('jobNewer: the finish times, else the update times, else the ids', () {
+      DiscoveryJob j(int id, {int? finished, int? updated}) =>
+          copy(id, late, 'album', 'done', null, {'finishedAt': finished, 'updatedAt': updated});
+      expect(jobNewer(j(1, finished: 2000), j(2, finished: 1000)), isTrue, reason: 'finished later, though older');
+      expect(jobNewer(j(2, finished: 1000), j(1, finished: 2000)), isFalse);
+      expect(jobNewer(j(1, finished: 5, updated: 2000), j(2, finished: 5, updated: 1000)), isTrue, reason: 'the same finish: the update');
+      expect(jobNewer(j(1, updated: 2000), j(2, finished: 3000, updated: 1000)), isTrue, reason: 'one lacks a finish time: the updates');
+      expect(jobNewer(j(2), j(1)), isTrue, reason: 'no times: the ids');
+      expect(jobNewer(j(1), j(2)), isFalse);
+      expect(jobNewer(j(1, finished: 7), j(2, finished: 7)), isFalse, reason: 'a tie all the way: the ids');
+    });
+
+    test('Album: an only-missing copy that copied this album reads "in your collection · 3 copied", from that job', () {
+      for (final scope in ['artist-missing', 'artist']) {
+        final res = scope == 'artist' ? {...missingCopied, 'scope': 'artist'} : missingCopied;
+        final pick = album([copy(70, late, scope, 'done', res, {'finishedAt': 2000})]);
+        expect(read(pick), [70, JobRowKind.copiedMany, JobPhrase.inCollection, true, [const JobText(JobPhrase.copiedCount, count: 3)], null], reason: scope);
+        expect(pick!.fromOtherPeer, isFalse);
+        expect(jobScope(pick.job), scope, reason: 'still that job (its scope, its id)');
+      }
+    });
+
+    test('Album: left out as owned reads "already yours"; a guest spot or an album never walked offers Add album', () {
+      final owned = artistResult('artist-missing', [walk('Second Wind', songsOf(copied: [landed('peerlib/x/1.mp3')]))], [
+        {'name': 'Borrowed Tapes', 'year': 2021, 'why': 'owned'},
+      ]);
+      final pick = album([copy(71, late, 'artist-missing', 'done', owned)]);
+      expect(read(pick).sublist(0, 4), [71, JobRowKind.owned, JobPhrase.owned, true]);
+      final guest = artistResult('artist', [walk('Second Wind', songsOf(copied: [landed('peerlib/x/1.mp3')]))], [
+        {'name': 'Borrowed Tapes', 'year': 2021, 'why': 'appearance'},
+      ]);
+      expect(album([copy(72, late, 'artist', 'done', guest)]), isNull, reason: 'appearance: nothing');
+      final elsewhere = artistResult('artist-missing', [walk('Second Wind', songsOf(copied: [landed('peerlib/x/1.mp3')]))]);
+      expect(album([copy(73, late, 'artist-missing', 'done', elsewhere)]), isNull, reason: 'never walked: nothing');
+      expect(album([copy(70, late, 'artist-missing', 'done', missingCopied)], albumName: null), isNull, reason: 'a row with no album');
+    });
+
+    test('Album: only a FINISHED wider copy — a live or failed one stays on Artist; a listing that failed says nothing', () {
+      expect(album([copy(74, late, 'artist-missing', 'running')]), isNull);
+      expect(album([copy(75, late, 'artist', 'queued')]), isNull);
+      expect(album([copy(76, late, 'artist', 'failed', null, {'error': 'Stage Peer B is unreachable'})]), isNull);
+      expect(album([copy(77, late, 'artist', 'cancelled', missingCopied)]), isNull);
+      final listingFailed = artistResult('artist', [walk('Borrowed Tapes', songsOf(), error: 'Stage Peer B answered 500'), walk('Second Wind', songsOf(copied: [landed('peerlib/x/1.mp3')]))]);
+      expect(album([copy(78, late, 'artist', 'done', listingFailed)]), isNull);
+      // the run stopped on this album: jobForAlbum's own "stopped"
+      final stopped = {
+        ...artistResult('artist', [walk('Borrowed Tapes', songsOf(), error: 'transfer limit')]),
+        'stopped': 'quota',
+      };
+      expect(read(album([copy(79, late, 'artist', 'done', stopped)])).sublist(0, 4), [79, JobRowKind.stopped, JobPhrase.stopped, true]);
+    });
+
+    test("Album: another server's finished artist copy is ignored", () {
+      final fromC = copy(80, roof, 'artist-missing', 'done', {...missingCopied, 'peer': pc});
+      expect(fromC.peerId, 4);
+      expect(album([fromC]), isNull);
+      // ... and with this server's own beside it, this server's speaks
+      expect(read(album([fromC, copy(81, late, 'artist', 'done', missingCopied)]))[0], 81);
+    });
+
+    test("Album: the choice's own album job wins when it is live, or newer", () {
+      final wider = copy(82, late, 'artist-missing', 'done', missingCopied, {'finishedAt': 2000});
+      // the user's second press: an album job after the artist job, "already yours"
+      final ownNewer = copy(83, late, 'album', 'done', albumResult(songsOf(skipped: [{'from': lateFile, 'why': 'owned', 'at': 'copies/x.mp3'}])), {'finishedAt': 3000});
+      expect(read(album([wider, ownNewer], own: ownNewer)).sublist(0, 4), [83, JobRowKind.owned, JobPhrase.owned, false]);
+      // an older album job: the artist copy's account is the newer word
+      final ownOlder = copy(84, late, 'album', 'done', albumResult(songsOf(failed: [{'from': lateFile, 'error': 'x'}])), {'finishedAt': 1000});
+      expect(read(album([wider, ownOlder], own: ownOlder)).sublist(0, 4), [82, JobRowKind.copiedMany, JobPhrase.inCollection, true]);
+      // newer by id when no times are known
+      final noTimesWider = copy(85, late, 'artist-missing', 'done', missingCopied);
+      final noTimesOwn = copy(86, late, 'album', 'done', albumResult(songsOf(copied: [landed(lateFile)])));
+      expect(read(album([noTimesWider, noTimesOwn], own: noTimesOwn))[0], 86);
+      expect(read(album([copy(87, late, 'artist-missing', 'done', missingCopied), copy(86, late, 'album', 'done', albumResult(songsOf()))], own: copy(86, late, 'album', 'done', albumResult(songsOf()))))[0], 87);
+      // a live album job always wins, however new the wider copy
+      final live = copy(88, late, 'album', 'running', null, {'updatedAt': 1});
+      final pick = album([copy(89, late, 'artist-missing', 'done', missingCopied, {'finishedAt': 9999, 'updatedAt': 9999}), live], own: live);
+      expect(read(pick).sublist(0, 4), [88, JobRowKind.running, JobPhrase.copying, false]);
+      // no wider word: the own job as before
+      expect(read(album([ownOlder], own: ownOlder))[0], 84);
+      expect(album(const []), isNull);
+    });
+
+    test("Album: another server's album copy shows only while it runs; a wider copy of this server stands in once it ends", () {
+      final cLive = copy(90, roof, 'album', 'running');
+      final cDone = copy(91, roof, 'album', 'done', albumResult(songsOf(copied: [landed(lateFile)])), {'finishedAt': 9000});
+      final wider = copy(92, late, 'artist-missing', 'done', missingCopied, {'finishedAt': 1000});
+      final live = album([cLive, wider], own: cLive, ownFromOtherPeer: true)!;
+      expect([live.job.id, live.fromOtherPeer, live.wider], [90, true, false]);
+      expect(read(album([cDone, wider], own: cDone, ownFromOtherPeer: true)).sublist(0, 4), [92, JobRowKind.copiedMany, JobPhrase.inCollection, true], reason: "C's finished copy is not B's word, however new");
+      expect(album([cDone], own: cDone, ownFromOtherPeer: true), isNull);
+    });
+
+    test("This song: a finished album copy that names this song's file — copied, already yours, skipped; failed or unlisted says nothing", () {
+      final copied = song([copy(100, late, 'album', 'done', albumResult(songsOf(copied: [landed(cornerFile), landed(lateFile)])))]);
+      expect(read(copied), [100, JobRowKind.copied, JobPhrase.inCollection, true, [const JobText.server('copies / Boukmanflow / Borrowed Tapes / Late Train Verse.mp3')], 'copies/Boukmanflow/Borrowed Tapes/Late Train Verse.mp3']);
+      expect(copied!.job.view.isMany, isFalse, reason: "a song copy's shape");
+      final owned = song([copy(101, late, 'album', 'done', albumResult(songsOf(skipped: [{'from': lateFile, 'why': 'owned', 'at': 'music/Boukmanflow/Late Train Verse.flac'}])))]);
+      expect(read(owned), [101, JobRowKind.owned, JobPhrase.owned, true, [const JobText.server('music / Boukmanflow / Late Train Verse.flac')], 'music/Boukmanflow/Late Train Verse.flac']);
+      final ownedNowhere = song([copy(102, late, 'album', 'done', albumResult(songsOf(skipped: [{'from': lateFile, 'why': 'owned', 'at': null}])))]);
+      expect(read(ownedNowhere), [102, JobRowKind.owned, JobPhrase.owned, true, [const JobText(JobPhrase.ownedSub)], null]);
+      // a file already at the path is not "yours": the song copy's own "skipped"
+      final exists = song([copy(103, late, 'album', 'done', albumResult(songsOf(skipped: [{'from': lateFile, 'why': 'exists', 'at': 'copies/Boukmanflow/Borrowed Tapes/Late Train Verse.mp3'}])))]);
+      expect(read(exists).sublist(0, 4), [103, JobRowKind.exists, JobPhrase.skipped, true]);
+      expect(song([copy(104, late, 'album', 'done', albumResult(songsOf(copied: [landed(cornerFile)], failed: [{'from': lateFile, 'error': 'x'}])))]), isNull, reason: 'its copy failed');
+      expect(song([copy(105, late, 'album', 'done', albumResult(songsOf(copied: [landed(cornerFile)])))]), isNull, reason: 'not listed');
+      expect(song([copy(106, late, 'album', 'done', albumResult(songsOf(copied: [{'from': lateFile, 'vpath': 'copies'}])))]), isNull, reason: 'no landed file named');
+      // the paths compare without a leading slash
+      expect(read(song([copy(107, late, 'album', 'done', albumResult(songsOf(copied: [landed('/$lateFile')])))]))[1], JobRowKind.copied);
+    });
+
+    test("This song: an artist copy's account of the row's album names the song too; an album left out as owned proves nothing of one song", () {
+      final pick = song([copy(110, late, 'artist-missing', 'done', missingCopied)]);
+      expect(read(pick).sublist(0, 4), [110, JobRowKind.copied, JobPhrase.inCollection, true]);
+      expect(pick!.job.view.copiedFilepath, 'copies/Boukmanflow/Borrowed Tapes/Late Train Verse.mp3');
+      final owned = artistResult('artist-missing', const [], [
+        {'name': 'Borrowed Tapes', 'year': 2021, 'why': 'owned'},
+      ]);
+      expect(song([copy(111, late, 'artist-missing', 'done', owned)]), isNull);
+      // the walk copied the album under another name: not this row's album
+      final other = artistResult('artist', [walk('Second Wind', songsOf(copied: [landed(lateFile)]))]);
+      expect(song([copy(112, late, 'artist', 'done', other)]), isNull);
+    });
+
+    test("This song: the song's own job wins when live or newer; another server's album copy never speaks", () {
+      final albumJob = copy(120, late, 'album', 'done', albumResult(songsOf(copied: [landed(lateFile)])), {'finishedAt': 2000});
+      final ownNewer = copy(121, late, 'song', 'done', {'skipped': 'owned', 'existing': {'filepath': 'music/a.mp3'}}, {'finishedAt': 3000});
+      expect(read(song([albumJob, ownNewer], own: ownNewer)).sublist(0, 4), [121, JobRowKind.owned, JobPhrase.owned, false]);
+      final ownOlder = copy(122, late, 'song', 'failed', null, {'finishedAt': 1000, 'error': 'gone'});
+      expect(read(song([albumJob, ownOlder], own: ownOlder)).sublist(0, 4), [120, JobRowKind.copied, JobPhrase.inCollection, true]);
+      final live = copy(123, late, 'song', 'queued');
+      expect(read(song([albumJob, live], own: live)).sublist(0, 4), [123, JobRowKind.queued, JobPhrase.queued, false]);
+      final fromC = copy(124, roof, 'album', 'done', {...albumResult(songsOf(copied: [landed(lateFile)])), 'peer': pc});
+      expect(song([fromC]), isNull);
+      // the newest of two wider words
+      final artistJob = copy(125, late, 'artist-missing', 'done', {
+        ...artistResult('artist-missing', [walk('Borrowed Tapes', songsOf(skipped: [{'from': lateFile, 'why': 'owned', 'at': 'copies/x.mp3'}]))]),
+      }, {'finishedAt': 5000});
+      expect(read(song([albumJob, artistJob]))[0], 125);
+      expect(read(song([albumJob, copy(126, late, 'artist', 'done', artistJob.result, {'finishedAt': 100})]))[0], 120);
+    });
+
+    test('Artist and other scopes: no wider word', () {
+      expect(widerChoiceView('artist', [copy(130, late, 'artist-missing', 'done', missingCopied)], peerId: 1, album: 'Borrowed Tapes'), isNull);
+      expect(widerChoiceView('album', [copy(131, late, 'album', 'done', albumResult(songsOf(copied: [landed(lateFile)])))], peerId: 1, album: 'Borrowed Tapes'), isNull, reason: 'an album job is the album choice\'s own');
+      expect(widerChoiceView('song', [copy(132, late, 'song', 'done', {'copied': {'filepath': 'a.mp3'}})], peerId: 1, album: 'Borrowed Tapes', filepath: lateFile), isNull);
+    });
+  });
 }

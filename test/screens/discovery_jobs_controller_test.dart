@@ -590,4 +590,59 @@ void main() {
       expect(const JobResultView(null).counts.total, 0);
     });
   });
+
+  group("the Keep card's choices (choiceJob)", () {
+    Map<String, dynamic> walked(String album, List<String> files) => {
+          'scope': 'artist-missing',
+          'albums': [
+            {
+              'name': album,
+              'songs': {
+                'total': files.length,
+                'copied': [for (final f in files) {'from': f, 'vpath': 'copies', 'filepath': 'copies/$album/${f.split('/').last}'}],
+                'skipped': [],
+                'failed': [],
+              },
+              'stopped': null,
+            },
+          ],
+          'skippedAlbums': [],
+          'songs': {'total': files.length, 'copied': [], 'skipped': [], 'failed': []},
+          'counts': {'total': files.length, 'copied': files.length, 'skipped': 0, 'failed': 0},
+          'stopped': null,
+          'peer': pb,
+        };
+
+    test("Album and This song borrow a finished artist copy's account; Artist keeps its own", () async {
+      fake.addJob(late.raw, scope: 'artist-missing', state: 'done', result: walked('Borrowed Tapes', [late.filepath!]));
+      final c = make();
+      await c.activate();
+      await c.setRows(rows);
+      expect(c.sheetJob(late, 'album'), isNull, reason: 'no album job of its own');
+      final album = c.choiceJob(late, 'album')!;
+      expect([album.wider, album.fromOtherPeer, album.job.scope], [true, false, 'artist-missing']);
+      final song = c.choiceJob(late, 'song')!;
+      expect([song.wider, song.job.view.copiedFilepath], [true, 'copies/Borrowed Tapes/Late Train Verse.mp3']);
+      expect(c.choiceJob(corner, 'song'), isNull, reason: "its file is not in the walk's lists");
+      expect(c.choiceJob(corner, 'album')!.wider, isTrue, reason: 'the same album');
+      expect(c.choiceJob(roof, 'album'), isNull, reason: "Stage Peer C's row: B's copy is not C's");
+      expect(c.choiceJob(glass, 'album'), isNull);
+      // Artist: the job itself, its whole walk
+      final own = c.sheetJob(late, 'artist-missing')!;
+      expect([own.wider, (own.job.result!['albums'] as List).length], [false, 1]);
+    });
+
+    test("an album card's rows lend their jobs: an artist copy on another row of the card speaks for the card", () async {
+      // The card's best row names a featured artist: its artist key is not the copy's.
+      final feat = lead(pb, 'Late Train Verse', artist: 'Boukmanflow feat. Ola', albumArtist: 'Boukmanflow', similarity: 0.95);
+      final plain = lead(pb, 'Corner Store Loop', albumArtist: 'Boukmanflow', similarity: 0.7);
+      fake.addJob(plain.raw, scope: 'artist-missing', state: 'done', result: walked('Borrowed Tapes', [plain.filepath!]));
+      final c = make();
+      await c.activate();
+      await c.setRows([feat, plain]);
+      expect(c.choiceJob(feat, 'album'), isNull, reason: 'the best row alone holds no such copy');
+      final card = c.choiceJob(feat, 'album', cardLeads: [feat, plain])!;
+      expect([card.wider, card.job.scope], [true, 'artist-missing']);
+    });
+  });
 }

@@ -60,11 +60,13 @@ class StartOutcome {
 
 /// What a sheet shows for one scope of a row: the row's job for it, and
 /// whether that job is another connected server's copy of the same album
-/// or artist ("Copying from Stage Peer C").
+/// or artist ("Copying from Stage Peer C"), or a finished wider copy's
+/// account of this choice ([wider], [choiceJob]).
 class SheetJob {
   final DiscoveryJob job;
   final bool fromOtherPeer;
-  const SheetJob(this.job, {this.fromOtherPeer = false});
+  final bool wider;
+  const SheetJob(this.job, {this.fromOtherPeer = false, this.wider = false});
 }
 
 /// The Discover visit's plug-in jobs (Keep a copy): the plug-in listing,
@@ -409,6 +411,36 @@ class DiscoveryJobsController extends ChangeNotifier
     final job = row?.jobFor(kCopyPlugin, scope);
     if (row == null || job == null) return null;
     return SheetJob(job, fromOtherPeer: row.isOtherPeer(kCopyPlugin, scope));
+  }
+
+  /// The job the Keep card's Album or This song choice shows on [lead]'s
+  /// row: its own job of [scope], or the account a finished wider copy of
+  /// the same server gives of it — an artist copy of this album, an album
+  /// or artist copy that names this song's file ([keepChoiceJob]). An album
+  /// card's [cardLeads] lend their rows' jobs too (the card's marker reads
+  /// them all).
+  SheetJob? choiceJob(DiscoveryLead lead, String scope,
+      {List<DiscoveryLead> cardLeads = const []}) {
+    final own = sheetJob(lead, scope);
+    final held = <int, DiscoveryJob>{};
+    for (final l in [lead, ...cardLeads]) {
+      for (final j in rowOf(l)?.jobs.values ?? const <DiscoveryJob>[]) {
+        held[j.id] = j;
+      }
+    }
+    final pick = keepChoiceJob(
+      scope,
+      own: own?.job,
+      ownFromOtherPeer: own?.fromOtherPeer ?? false,
+      held: held.values,
+      peerId: lead.peerId,
+      album: lead.album,
+      filepath: lead.filepath,
+    );
+    return pick == null
+        ? null
+        : SheetJob(pick.job,
+            fromOtherPeer: pick.fromOtherPeer, wider: pick.wider);
   }
 
   // ── verbs ────────────────────────────────────────────────────────────
