@@ -93,12 +93,27 @@ class KeepCopySection extends StatefulWidget {
 /// What the chips choose between (artist covers both artist scopes).
 const String _kChipArtist = kScopeArtist;
 
+/// A path segment never breaks inside itself: a line of crumbs breaks only
+/// between the › separators.
+String _hold(String s) => s.replaceAll(' ', '\u00A0');
+
 class _KeepCopySectionState extends State<KeepCopySection> {
   late String? _chip = widget.initialChoice == kScopeArtistMissing
       ? _kChipArtist
       : widget.initialChoice;
   bool _onlyMissing = true;
   String? _error;
+
+  /// [_error] is the start refused because where files land moved (the
+  /// warning colour): the "Files go to" line above is already the new one
+  /// (drawn under a job's line too while the warning stands). It goes once
+  /// the gate closes (nowhere takes files: no path to point at) and when
+  /// Change is tapped (the user is checking that path).
+  bool _moved = false;
+
+  /// Where the card showed the files going on its last build — what a
+  /// start sends ([DiscoveryJobsController.start]'s `shown`).
+  CollectionDestination? _drawn;
 
   /// The pill's place, and the job line's when it stands in for the pill,
   /// for [_revealPill].
@@ -114,6 +129,15 @@ class _KeepCopySectionState extends State<KeepCopySection> {
 
   DiscoveryJobsController get jobs => widget.jobs;
   DiscoveryLead get lead => widget.lead;
+
+  @override
+  void initState() {
+    super.initState();
+    // Where files land, read again with every card that opens (it may have
+    // changed on another device): the last one known is drawn meanwhile and
+    // the answer replaces it.
+    if (jobs.pluginsOn) unawaited(jobs.loadDestination());
+  }
 
   List<String> get _scopes => widget.albumFocus
       ? jobs.scopesForCard(
@@ -299,19 +323,36 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   }
 
   Future<void> _start(String scope) async {
+    // The place on show as the pill is pressed (the question names it too):
+    // the start sends it, so one moved since is refused, never quietly used.
+    final shown = ShownPlace(_drawn);
     if (!await _confirm(scope)) return;
     if (!mounted) return;
-    setState(() => _error = null);
-    final out = await jobs.start(lead.raw, scope: scope);
+    _clearError();
+    final out = await jobs.start(lead.raw, scope: scope, shown: shown);
     if (!mounted) return;
     _started(out);
+    _refused(out);
+  }
+
+  void _clearError() => setState(() {
+    _error = null;
+    _moved = false;
+  });
+
+  /// A start the server refused: a moved place in its own warning line
+  /// (nothing started; the path above is redrawn from the answer), else the
+  /// server's words.
+  void _refused(StartOutcome out) {
     final err = out.error;
-    if (err != null) {
-      setState(
-        () =>
-            _error = _startWords(AppLocalizations.of(context), err, out.status),
-      );
-    }
+    if (err == null) return;
+    final l = AppLocalizations.of(context);
+    setState(() {
+      _moved = out.destinationChanged;
+      _error = _moved
+          ? l.discoverKeepDestChanged
+          : _startWords(l, err, out.status);
+    });
   }
 
   /// A copy the server took as new: the first-use note is done with, and
@@ -352,26 +393,38 @@ class _KeepCopySectionState extends State<KeepCopySection> {
       jobs.destination?.saved == null &&
       !jobs.jobs.any((j) => j.plugin == kCopyPlugin);
 
+  /// Retry and Add again land where files land now — what the card shows,
+  /// naming it first when the copy ran somewhere else ([_againPlace]).
   Future<void> _retry(DiscoveryJob job) async {
-    setState(() => _error = null);
-    final out = await jobs.retry(job);
+    final shown = ShownPlace(_drawn);
+    _clearError();
+    final out = await jobs.retry(job, shown: shown);
     if (!mounted) return;
     _started(out);
-    final err = out.error;
-    if (err != null) {
-      setState(
-        () =>
-            _error = _startWords(AppLocalizations.of(context), err, out.status),
-      );
-    }
+    _refused(out);
   }
 
   Future<void> _cancel(DiscoveryJob job) async {
     final r = await jobs.cancel(job);
     if (!mounted) return;
     if (r.outcome == CancelOutcome.failed) {
-      setState(() => _error = r.message);
+      setState(() {
+        _error = r.message;
+        _moved = false;
+      });
     }
+  }
+
+  /// Where Retry or Add again on [job] lands now when that is not where the
+  /// copy ran — the account's place moved since (the webapp's retryPath),
+  /// or the copy names none (pinned to nowhere, or from before the pin and
+  /// never landed): the card names it before the verb is pressed, since
+  /// the job's line hides "Files go to". Null when it is the same place, or
+  /// where files land now is unknown.
+  String? _againPlace(DiscoveryJob job, String scope) {
+    final now = jobs.destination?.destination;
+    if (now == null || sameDestination(job.destination, now)) return null;
+    return _crumbs(scope).map(_hold).join(' › ');
   }
 
   DisplayItem _ownFile(String filepath) {
@@ -398,11 +451,18 @@ class _KeepCopySectionState extends State<KeepCopySection> {
 
   Widget _build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    _drawn = jobs.destination?.destination;
     final scopes = _scopes;
     final chips = _chips(scopes);
     final chip = _chipNow(chips);
     if (chip == null) return const SizedBox.shrink();
     final gate = jobs.gate(_scopeOf(chip, scopes));
+    // Nowhere takes files any more: the moved-place warning has no path to
+    // point at, and does not come back with a place a later read brings.
+    if (!gate.ready && _moved) {
+      _error = null;
+      _moved = false;
+    }
     if (!gate.shown) return const SizedBox.shrink();
 
     final Widget body;
@@ -446,6 +506,9 @@ class _KeepCopySectionState extends State<KeepCopySection> {
                 // A wider copy's account: Retry copies this choice (the
                 // album, the song), never the whole artist again.
                 onRetry: shown.wider ? (_) => _start(scope) : _retry,
+                // While the moved-place warning stands, "Files go to"
+                // under the line says where instead.
+                againPlace: _moved ? null : _againPlace(shown.job, scope),
                 onNewSeeds: widget.onNewSeeds,
                 onPlay: (fp) => unawaited(playNow(_ownFile(fp))),
                 onQueue: (fp) async {
@@ -462,7 +525,7 @@ class _KeepCopySectionState extends State<KeepCopySection> {
                 child: _FirstUseNote(l.discoverKeepFirstUse),
               ),
             _destination(l, scope),
-            if (_error != null) _errorLine(_error!),
+            if (_error != null) _errorLine(_error!, warn: _moved),
             Padding(
               key: _pillAnchor,
               padding: const EdgeInsets.only(top: 6),
@@ -480,7 +543,14 @@ class _KeepCopySectionState extends State<KeepCopySection> {
               ),
             ),
           ],
-          if (shown != null && _error != null) _errorLine(_error!),
+          if (shown != null && _error != null) ...[
+            // The path the warning points at: the job's line hides it.
+            if (_moved) _destination(l, scope),
+            _errorLine(
+              _moved ? l.discoverKeepDestChangedTryAgain : _error!,
+              warn: _moved,
+            ),
+          ],
         ],
       );
     }
@@ -579,6 +649,7 @@ class _KeepCopySectionState extends State<KeepCopySection> {
           _chip = chip;
           _chipChosen = true;
           _error = null;
+          _moved = false;
         });
         _revealPill();
       },
@@ -628,9 +699,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
 
   Widget _destination(AppLocalizations l, String scope) {
     final crumbs = _crumbs(scope);
-    // A segment never breaks inside itself: the line breaks only between
-    // the › separators.
-    String hold(String s) => s.replaceAll(' ', '\u00A0');
     final strong = TextStyle(
       color: VelvetColors.textPrimary,
       fontSize: 13,
@@ -647,12 +715,12 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     ];
     for (var i = 0; i < crumbs.length; i++) {
       if (i > 0) spans.add(TextSpan(text: ' › ', style: soft));
-      spans.add(TextSpan(text: hold(crumbs[i]), style: strong));
+      spans.add(TextSpan(text: _hold(crumbs[i]), style: strong));
     }
     if (_folderPerAlbum(scope)) {
       spans.add(TextSpan(text: ' › ', style: soft));
       spans.add(
-        TextSpan(text: hold(l.discoverKeepFolderPerAlbum), style: soft),
+        TextSpan(text: _hold(l.discoverKeepFolderPerAlbum), style: soft),
       );
     }
     return Row(
@@ -681,12 +749,16 @@ class _KeepCopySectionState extends State<KeepCopySection> {
           child: InkWell(
             key: const ValueKey('keep-change'),
             borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-            onTap: () => DiscoveryKeepRoutes.changeDestination(
-              context,
-              jobs,
-              _previewSong(),
-              widget.peerName,
-            ),
+            onTap: () {
+              // The user is checking the path the warning points at.
+              if (_moved) _clearError();
+              DiscoveryKeepRoutes.changeDestination(
+                context,
+                jobs,
+                _previewSong(),
+                widget.peerName,
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 13, 4, 13),
               child: Text(
@@ -705,37 +777,35 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     );
   }
 
-  Widget _errorLine(String words) => Padding(
-    padding: const EdgeInsets.only(top: 6),
-    child: Semantics(
-      liveRegion: true,
-      child: Row(
-        key: const ValueKey('keep-error'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.warning_amber_rounded,
-              size: 16,
-              color: keepTone(VelvetColors.error),
+  /// The card's one refusal line, in the error colour — or, with [warn],
+  /// the warning colour (where files land moved: nothing went wrong, the
+  /// user checks the path and adds again).
+  Widget _errorLine(String words, {bool warn = false}) {
+    final tone = keepTone(warn ? VelvetColors.warning : VelvetColors.error);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Semantics(
+        liveRegion: true,
+        child: Row(
+          key: ValueKey(warn ? 'keep-moved' : 'keep-error'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(Icons.warning_amber_rounded, size: 16, color: tone),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              words,
-              style: TextStyle(
-                color: keepTone(VelvetColors.error),
-                fontSize: 13,
-                height: 1.35,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                words,
+                style: TextStyle(color: tone, fontSize: 13, height: 1.35),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A job's line inside the Keep card: the state's glyph and word (and
@@ -752,6 +822,11 @@ class _JobLine extends StatelessWidget {
   final void Function(String filepath) onPlay;
   final void Function(String filepath) onQueue;
 
+  /// Where Retry or Add again lands now, when the copy ran somewhere else
+  /// ("Retry adds to copies › …, your saved place now"); null when it is
+  /// the same place.
+  final String? againPlace;
+
   const _JobLine({
     super.key,
     required this.sheetJob,
@@ -763,6 +838,7 @@ class _JobLine extends StatelessWidget {
     required this.onNewSeeds,
     required this.onPlay,
     required this.onQueue,
+    this.againPlace,
   });
 
   @override
@@ -794,20 +870,28 @@ class _JobLine extends StatelessWidget {
     var cancel = false;
     final actions = <Widget>[];
 
+    // The sentence naming where a start again lands ([againPlace]), set
+    // with the verb that starts it.
+    String Function(String place)? againAddsTo;
     Widget icon(IconData i, Color c) => Icon(i, size: 20, color: c);
-    Widget retry() => job.state == JobState.failed && jobNeedsNewSeeds(job)
-        ? KeepPill(
-            l.discoverPageNewSeeds,
-            key: const ValueKey('keep-new-seeds'),
-            icon: Icons.refresh,
-            onTap: onNewSeeds,
-          )
-        : KeepPill(
-            l.discoverJobRetry,
-            key: const ValueKey('keep-retry'),
-            icon: Icons.refresh,
-            onTap: () => unawaited(onRetry(job)),
-          );
+    Widget retry() {
+      if (job.state == JobState.failed && jobNeedsNewSeeds(job)) {
+        return KeepPill(
+          l.discoverPageNewSeeds,
+          key: const ValueKey('keep-new-seeds'),
+          icon: Icons.refresh,
+          onTap: onNewSeeds,
+        );
+      }
+      againAddsTo = l.discoverKeepRetryAddsTo;
+      return KeepPill(
+        l.discoverJobRetry,
+        key: const ValueKey('keep-retry'),
+        icon: Icons.refresh,
+        onTap: () => unawaited(onRetry(job)),
+      );
+    }
+
     final many = job.view.isMany ? job.result : null;
     final status = (job.statusText ?? '').trim();
 
@@ -970,6 +1054,7 @@ class _JobLine extends StatelessWidget {
             title = l.discoverJobCancelledNothing;
             subs.add(l.discoverJobCancelledSub);
           }
+          againAddsTo = l.discoverKeepAddAgainAddsTo;
           actions.add(
             KeepPill(
               l.discoverJobAddAgain,
@@ -1000,6 +1085,11 @@ class _JobLine extends StatelessWidget {
           titleColor = keepTone(VelvetColors.success);
       }
     }
+    // Retry and Add again land where files land now: when the copy ran
+    // somewhere else, the card says where before the verb is pressed.
+    final place = againPlace;
+    final addsTo = againAddsTo;
+    if (place != null && addsTo != null) subs.add(addsTo(place));
 
     return Padding(
       key: const ValueKey('keep-job'),

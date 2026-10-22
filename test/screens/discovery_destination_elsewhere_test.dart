@@ -114,8 +114,9 @@ void main() {
           find.text('One setting for your account · every copy uses it'),
           findsOneWidget,
         );
-        // The picker reads the destination afresh.
-        expect(k.fake.count('GET', _dest), 2);
+        // The picker reads the destination afresh (after Discover's visit
+        // and the Keep card's open).
+        expect(k.fake.count('GET', _dest), 3);
         expect(find.text('Late Train Verse lands at'), findsOneWidget);
         expect(
           preview(tester),

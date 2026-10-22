@@ -4668,6 +4668,24 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo contactar con tu servidor. Inténtalo de nuevo.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'El lugar donde se guardan los archivos cambió desde que abriste esto. Revisa la ruta de arriba y añade de nuevo.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'El lugar donde se guardan los archivos cambió desde que abriste esto. Revisa la ruta de arriba e inténtalo de nuevo.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Reintentar guarda en $path, tu lugar guardado ahora';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Añadir de nuevo guarda en $path, tu lugar guardado ahora';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5017,6 +5035,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get discoverCopiesCancelFailed =>
       'No se pudo cancelar. Inténtalo de nuevo.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'No se pudo iniciar: cambió dónde se guardan los archivos — reinténtalo desde Guardar una copia';
 
   @override
   String discoverToastCopying(String title, String peer) {

@@ -4756,6 +4756,24 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось связаться с вашим сервером. Попробуйте ещё раз.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'Место для файлов изменилось с момента открытия. Проверьте путь выше и добавьте снова.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'Место для файлов изменилось с момента открытия. Проверьте путь выше и попробуйте ещё раз.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Повтор сохранит в $path — ваше текущее сохранённое место';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Повторное добавление сохранит в $path — ваше текущее сохранённое место';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5129,6 +5147,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get discoverCopiesCancelFailed =>
       'Не удалось отменить. Попробуйте ещё раз.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Не удалось начать: место для файлов изменилось — повторите из «Сохранить копию»';
 
   @override
   String discoverToastCopying(String title, String peer) {

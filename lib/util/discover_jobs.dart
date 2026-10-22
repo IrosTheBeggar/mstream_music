@@ -209,6 +209,22 @@ BaseCheck normalizeBase(Object? base) {
   return check.valid ? BaseCheck.ok(raw) : BaseCheck.bad(check.error);
 }
 
+/// Whether two destinations put files in the same place — the jobs route's
+/// own test for a start's `destination_changed` (destination.js
+/// sameDestination, the webapp's discover-jobs.js): the library, the base
+/// folder as [normalizeBase] reads it, the layout character for character.
+/// `source` is not compared; null matches only null.
+bool sameDestination(CollectionDestination? a, CollectionDestination? b) {
+  if (a == null || b == null) return a == null && b == null;
+  final x = normalizeBase(a.base);
+  final y = normalizeBase(b.base);
+  return a.vpath == b.vpath &&
+      x.valid &&
+      y.valid &&
+      x.base == y.base &&
+      a.layout == b.layout;
+}
+
 String safeFileName(Object? filePath) {
   final parts = _jsString(filePath ?? '').split('/').where((s) => s.isNotEmpty);
   final last = parts.isEmpty ? '' : parts.last;

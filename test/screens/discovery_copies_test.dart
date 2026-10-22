@@ -326,6 +326,112 @@ void main() {
       expect(h.toasts, ['you have 20 jobs queued or running']);
     });
 
+    testWidgets(
+      'Retry sends the place the copy ran with; moved since, nothing starts '
+      'and a toast says to retry it from Keep a copy',
+      (tester) async {
+        const layout = '{{ALBUMARTIST}}/{{ALBUM}}';
+        final failed = h.fake.addJob(
+          transmission,
+          scope: 'album',
+          state: 'done',
+          result: many(failed: 2),
+        );
+        failed['params'] = {
+          'scope': 'album',
+          'destination': {'vpath': 'copies', 'base': 'Old', 'layout': layout},
+        };
+        await h.pumpCopies(tester);
+        final reads = h.fake.count('GET', '/collection/destination');
+        await tester.tap(inRow(failed, find.text('Retry')));
+        await frames(tester);
+        final body =
+            jsonDecode(
+                  h.fake
+                      .calls('POST', '/plugins/federation-copy/jobs')
+                      .last
+                      .body,
+                )
+                as Map;
+        expect(body['destination'], {
+          'vpath': 'copies',
+          'base': 'Old',
+          'layout': layout,
+        });
+        expect(body['scope'], 'album');
+        expect(h.fake.jobs, hasLength(1), reason: 'nothing started');
+        expect(h.toasts, [
+          "Couldn't start: where files land changed — retry it from Keep a copy",
+        ]);
+        expect(
+          h.fake.count('GET', '/collection/destination'),
+          greaterThan(reads),
+          reason: 'where files land is read again',
+        );
+        expect(inRow(failed, find.text('Retry')), findsOneWidget);
+        expect(find.text('Waiting for a free slot'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a copy from before the pin: Retry reads where files land first and '
+      'sends that',
+      (tester) async {
+        final failed = h.fake.addJob(lullaby, state: 'failed');
+        await h.pumpCopies(tester);
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': {
+            'vpath': 'copies',
+            'base': 'Now',
+            'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+            'source': 'user',
+          },
+        };
+        await tester.tap(inRow(failed, find.text('Retry')));
+        await frames(tester);
+        final body =
+            jsonDecode(
+                  h.fake
+                      .calls('POST', '/plugins/federation-copy/jobs')
+                      .single
+                      .body,
+                )
+                as Map;
+        expect((body['destination'] as Map)['base'], 'Now');
+        expect(h.toasts, isEmpty);
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a copy pinned to nowhere: Retry sends nowhere, never no place — the '
+      'account has a place now, so nothing starts and the toast says so',
+      (tester) async {
+        final failed = h.fake.addJob(lullaby, state: 'failed');
+        failed['error'] = 'no library to copy into';
+        failed['params'] = {'destination': null};
+        await h.pumpCopies(tester);
+        await tester.tap(inRow(failed, find.text('Retry')));
+        await frames(tester);
+        final body =
+            jsonDecode(
+                  h.fake
+                      .calls('POST', '/plugins/federation-copy/jobs')
+                      .single
+                      .body,
+                )
+                as Map;
+        expect(body.containsKey('destination'), isTrue);
+        expect(body['destination'], isNull);
+        expect(h.fake.jobs, hasLength(1), reason: 'nothing started');
+        expect(h.toasts, [
+          "Couldn't start: where files land changed — retry it from Keep a copy",
+        ]);
+        expect(inRow(failed, find.text('Retry')), findsOneWidget);
+      },
+    );
+
     testWidgets('Clear finished drops the finished rows on the server', (
       tester,
     ) async {

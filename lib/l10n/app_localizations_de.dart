@@ -4674,6 +4674,24 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Server war nicht erreichbar. Versuch es noch einmal.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'Wo Dateien landen, hat sich seit dem Öffnen geändert. Prüf den Pfad oben und füge erneut hinzu.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'Wo Dateien landen, hat sich seit dem Öffnen geändert. Prüf den Pfad oben und versuch es noch einmal.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return '„Erneut versuchen“ landet jetzt in $path, deinem gespeicherten Ort';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return '„Erneut hinzufügen“ landet jetzt in $path, deinem gespeicherten Ort';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5022,6 +5040,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get discoverCopiesCancelFailed =>
       'Abbrechen hat nicht geklappt. Versuch es noch einmal.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Start nicht möglich: Wo Dateien landen, hat sich geändert — versuch es über „Kopie behalten“ erneut';
 
   @override
   String discoverToastCopying(String title, String peer) {

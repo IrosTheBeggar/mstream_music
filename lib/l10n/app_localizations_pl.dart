@@ -4747,6 +4747,24 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się połączyć z twoim serwerem. Spróbuj ponownie.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'Miejsce zapisu plików zmieniło się od otwarcia. Sprawdź ścieżkę powyżej i dodaj ponownie.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'Miejsce zapisu plików zmieniło się od otwarcia. Sprawdź ścieżkę powyżej i spróbuj ponownie.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Ponowienie trafi do $path, twojego obecnie zapisanego miejsca';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Ponowne dodanie trafi do $path, twojego obecnie zapisanego miejsca';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5119,6 +5137,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get discoverCopiesCancelFailed =>
       'Nie udało się anulować. Spróbuj ponownie.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Nie udało się rozpocząć: miejsce zapisu plików się zmieniło — ponów z Zachowaj kopię';
 
   @override
   String discoverToastCopying(String title, String peer) {

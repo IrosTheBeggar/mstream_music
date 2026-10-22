@@ -172,6 +172,94 @@ void main() {
     });
   });
 
+  group('a start sends the place it showed', () {
+    const shown = ShownPlace(CollectionDestination(vpath: 'copies', base: 'From peers', layout: '{{ALBUMARTIST}}/{{ALBUM}}', source: 'user'));
+    const words = 'your collection destination has changed — check where this will land and ask again';
+    Map<String, dynamic> moved(Object? destination) =>
+        {'error': 'destination_changed', 'message': words, 'destination': destination};
+
+    test('{vpath, base, layout} beside the row, its source dropped; no place shown sends none', () async {
+      handler = (_) async => json({'job': jobWire(), 'created': true}, 202);
+      await api().startJob(row, scope: 'album', destination: shown);
+      expect(jsonDecode(seen.single.body), {
+        'recommendation': jsonDecode(jsonEncode(row)),
+        'scope': 'album',
+        'destination': {'vpath': 'copies', 'base': 'From peers', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'},
+      });
+      await api().startJob(row);
+      expect((jsonDecode(seen.last.body) as Map).keys, ['recommendation'], reason: 'nothing shown, nothing checked');
+    });
+
+    test('a place that showed nowhere is an explicit null — the key is there, so the server checks it', () async {
+      handler = (_) async => json({'error': 'destination_changed', 'message': words, 'destination': shown.toJson()}, 409);
+      await expectLater(api().startJob(row, scope: 'album', destination: const ShownPlace(null)),
+          throwsA(isA<DestinationChangedException>().having((e) => e.destination?.base, 'destination', 'From peers')));
+      final body = jsonDecode(seen.single.body) as Map;
+      expect(body, {'recommendation': jsonDecode(jsonEncode(row)), 'scope': 'album', 'destination': null});
+      expect(body.containsKey('destination'), isTrue);
+    });
+
+    test("409 destination_changed: nothing started, and where files land now — null is nowhere, an answer that names none (or none this client reads) names none", () async {
+      handler = (_) async => json(moved({'vpath': 'music', 'base': 'Peers', 'layout': '{{ARTIST}}/{{ALBUM}}', 'source': 'user'}), 409);
+      await expectLater(
+          api().startJob(row, destination: shown),
+          throwsA(isA<DestinationChangedException>()
+              .having((e) => e.status, 'status', 409)
+              .having((e) => e.message, 'message', words)
+              .having((e) => e.fromServer, 'fromServer', true)
+              .having((e) => e.named, 'named', true)
+              .having((e) => [e.destination?.vpath, e.destination?.base, e.destination?.layout], 'destination', ['music', 'Peers', '{{ARTIST}}/{{ALBUM}}'])));
+      expect(seen, hasLength(1), reason: 'a moved place is not asked again');
+
+      handler = (_) async => json(moved(null), 409);
+      await expectLater(api().startJob(row, destination: shown),
+          throwsA(isA<DestinationChangedException>().having((e) => e.named, 'named', true).having((e) => e.destination, 'destination', isNull)));
+
+      handler = (_) async => json({'error': 'destination_changed'}, 409);
+      await expectLater(api().startJob(row, destination: shown),
+          throwsA(isA<DestinationChangedException>().having((e) => e.named, 'named', false).having((e) => e.message, 'message', 'destination_changed')));
+      handler = (_) async => json(moved({'vpath': 7}), 409);
+      await expectLater(api().startJob(row, destination: shown),
+          throwsA(isA<DestinationChangedException>().having((e) => e.named, 'named', false)));
+    });
+
+    test("another account's live job is the other 409: its own words, no moved place", () async {
+      handler = (_) async => json({'error': 'someone else on this server is already getting this — try again in a moment'}, 409);
+      await expectLater(
+          api().startJob(row, destination: shown),
+          throwsA(isA<DiscoveryPluginsException>()
+              .having((e) => e is DestinationChangedException, 'a moved place', isFalse)
+              .having((e) => e.message, 'message', 'someone else on this server is already getting this — try again in a moment')));
+    });
+
+    test('a server from before the key (400 "destination" is not allowed) is asked once more without it', () async {
+      handler = (req) async => (jsonDecode(req.body) as Map).containsKey('destination')
+          ? json({'error': '"destination" is not allowed'}, 400)
+          : json({'job': jobWire(), 'created': true}, 202);
+      final r = await api().startJob(row, scope: 'album', destination: shown);
+      expect([r.created, r.job.id], [true, 7]);
+      expect(seen, hasLength(2));
+      expect(jsonDecode(seen.last.body), {'recommendation': jsonDecode(jsonEncode(row)), 'scope': 'album'});
+      // Nowhere is dropped the same way.
+      seen.clear();
+      await api().startJob(row, destination: const ShownPlace(null));
+      expect([for (final s in seen) (jsonDecode(s.body) as Map).containsKey('destination')], [true, false]);
+
+      // Once only: the same refusal again is the answer.
+      seen.clear();
+      handler = (_) async => json({'error': '"destination" is not allowed'}, 400);
+      await expectLater(api().startJob(row, destination: shown),
+          throwsA(isA<DiscoveryPluginsException>().having((e) => e.status, 'status', 400)));
+      expect(seen, hasLength(2));
+      // Any other 400 is the server's no, as it stands.
+      seen.clear();
+      handler = (_) async => json({'error': "a album job needs the recommendation's album"}, 400);
+      await expectLater(api().startJob(row, scope: 'album', destination: shown),
+          throwsA(isA<DiscoveryPluginsException>().having((e) => e.message, 'message', "a album job needs the recommendation's album")));
+      expect(seen, hasLength(1));
+    });
+  });
+
   group('the job list, one job, cancel, clear', () {
     test('GET plugin-jobs, with a state and a limit when asked', () async {
       handler = (_) async => json({

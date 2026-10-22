@@ -4361,6 +4361,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverKeepStartFailed => '无法连接到你的服务器，请重试。';
 
   @override
+  String get discoverKeepDestChanged => '打开后文件存放位置已变。请检查上方路径后重新添加。';
+
+  @override
+  String get discoverKeepDestChangedTryAgain => '打开后文件存放位置已变。请检查上方路径后重试。';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return '重试将存放到 $path，即你现在保存的位置';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return '重新添加将存放到 $path，即你现在保存的位置';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4696,6 +4712,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverCopiesCancelFailed => '无法取消，请重试。';
+
+  @override
+  String get discoverCopiesDestChanged => '无法开始：文件存放位置已变 — 请从“保留副本”重试';
 
   @override
   String discoverToastCopying(String title, String peer) {

@@ -4674,6 +4674,24 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de joindre votre serveur. Réessayez.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'L’emplacement des fichiers a changé depuis l’ouverture. Vérifiez le chemin ci-dessus et ajoutez à nouveau.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'L’emplacement des fichiers a changé depuis l’ouverture. Vérifiez le chemin ci-dessus et réessayez.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Réessayer range dans $path, votre emplacement enregistré actuel';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Ajouter à nouveau range dans $path, votre emplacement enregistré actuel';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5023,6 +5041,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverCopiesCancelFailed => 'Impossible d’annuler. Réessayez.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Impossible de démarrer : l’emplacement des fichiers a changé — réessayez depuis Garder une copie';
 
   @override
   String discoverToastCopying(String title, String peer) {

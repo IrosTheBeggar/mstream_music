@@ -30,6 +30,39 @@ class DiscoveryPluginsException implements Exception {
   String toString() => 'DiscoveryPluginsException($status: $message)';
 }
 
+/// A start's 409 `destination_changed`: the place the client showed is no
+/// longer where the account's files land, and nothing started. [message]
+/// is the server's sentence. (The other 409 — another account's live job
+/// for the key — stays a plain [DiscoveryPluginsException] with its own
+/// words.)
+class DestinationChangedException extends DiscoveryPluginsException {
+  /// The answer named the destination in force now: [destination] is it,
+  /// null = nowhere (no library takes the account's files). False — no
+  /// `destination` in the answer, or one this client cannot read — names
+  /// none: what is drawn stays until the destination is read again.
+  final bool named;
+  final CollectionDestination? destination;
+
+  const DestinationChangedException(String message,
+      {required this.named, this.destination})
+      : super(409, message, fromServer: true);
+
+  /// The server's code, in the answer's `error`.
+  static const String code = 'destination_changed';
+
+  /// [body] is that answer: its words, and the destination it names.
+  factory DestinationChangedException.of(Map body) {
+    final message = body['message'];
+    final now = CollectionDestination.fromServerMap(body['destination']);
+    return DestinationChangedException(
+      message is String && message.trim().isNotEmpty ? message : code,
+      named: now != null ||
+          (body.containsKey('destination') && body['destination'] == null),
+      destination: now,
+    );
+  }
+}
+
 /// The user's OWN server for [server]: itself, or — for a connected
 /// server's virtual Server — its parent. Every plug-in route is the
 /// parent's (the plug-ins act on a recommendation the parent's taste route
@@ -90,19 +123,39 @@ class DiscoveryPluginsApi {
 
   // ── jobs ────────────────────────────────────────────────────────────
 
-  /// `POST /api/v1/discovery/plugins/:name/jobs` {recommendation, scope?}:
-  /// 202 with a new job, or 200 with the caller's own live job for the same
-  /// key (for an album or artist scope that may be another connected
-  /// server's copy — the keys carry no server). A song job sends no scope.
+  /// `POST /api/v1/discovery/plugins/:name/jobs` {recommendation, scope?,
+  /// destination?}: 202 with a new job, or 200 with the caller's own live
+  /// job for the same key (for an album or artist scope that may be another
+  /// connected server's copy — the keys carry no server). A song job sends
+  /// no scope. [destination] is the place the client showed (its `source`
+  /// left out; one that showed nowhere sends `null`): the job is pinned to
+  /// it, or — when it is no longer the account's — refused with 409
+  /// `destination_changed` ([DestinationChangedException]) and nothing
+  /// starts; none sends no key (no check). A server from before the key
+  /// refuses it (400 '"destination" is not allowed'): asked once more
+  /// without it, the copy runs unpinned.
   /// Refused with 400 (a scope's field missing), 403 (jobs gate, "Uploading
   /// Disabled"), 404 (plug-in missing or unavailable), 409 (another
   /// account's live job for the key) or 429 (the queue cap).
   Future<StartedJob> startJob(Map<String, dynamic> recommendation,
-      {String plugin = kCopyPlugin, String? scope}) async {
-    final res = _map(await _send('POST', '/api/v1/discovery/plugins/$plugin/jobs', {
+      {String plugin = kCopyPlugin,
+      String? scope,
+      ShownPlace? destination}) async {
+    final location = '/api/v1/discovery/plugins/$plugin/jobs';
+    final body = <String, dynamic>{
       'recommendation': recommendation,
       if (scope != null && scope != kScopeSong) 'scope': scope,
-    }));
+      if (destination != null) 'destination': destination.toJson(),
+    };
+    dynamic answer;
+    try {
+      answer = await _send('POST', location, body);
+    } on DiscoveryPluginsException catch (e) {
+      if (destination == null || !_destinationUnknown(e)) rethrow;
+      body.remove('destination');
+      answer = await _send('POST', location, body);
+    }
+    final res = _map(answer);
     final job = DiscoveryJob.fromServerMap(res['job']);
     if (job == null) {
       throw const DiscoveryPluginsException(0, 'the server answered no job');
@@ -244,6 +297,11 @@ class DiscoveryPluginsApi {
     }
   }
 
+  /// A server from before a start's `destination` (mStream before
+  /// 2026-10-21, its jobs route's body strict): Joi's 400 for the key.
+  static bool _destinationUnknown(DiscoveryPluginsException e) =>
+      e.status == 400 && e.message.contains('"destination" is not allowed');
+
   static dynamic _decode(http.Response res) {
     dynamic body;
     if (res.body.isNotEmpty) {
@@ -255,6 +313,9 @@ class DiscoveryPluginsApi {
     }
     if (res.statusCode < 200 || res.statusCode > 299) {
       final error = body is Map ? body['error'] : null;
+      if (res.statusCode == 409 && error == DestinationChangedException.code) {
+        throw DestinationChangedException.of(body as Map);
+      }
       if (error is String && error.trim().isNotEmpty) {
         throw DiscoveryPluginsException(res.statusCode, error, fromServer: true);
       }

@@ -4658,6 +4658,24 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível acessar seu servidor. Tente novamente.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'O destino dos arquivos mudou desde que isto foi aberto. Confira o caminho acima e adicione de novo.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'O destino dos arquivos mudou desde que isto foi aberto. Confira o caminho acima e tente novamente.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Tentar novamente salva em $path, seu local salvo agora';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Adicionar de novo salva em $path, seu local salvo agora';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5008,6 +5026,10 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverCopiesCancelFailed =>
       'Não foi possível cancelar. Tente novamente.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Não foi possível iniciar: o destino dos arquivos mudou — tente de novo em Guardar uma cópia';
 
   @override
   String discoverToastCopying(String title, String peer) {

@@ -327,6 +327,232 @@ void main() {
     });
   });
 
+  group('where files land: what a start sends, what a refusal draws, which answer wins', () {
+    const layout = '{{ALBUMARTIST}}/{{ALBUM}}';
+    Map<String, dynamic> place(String base) => {'vpath': 'copies', 'base': base, 'layout': layout, 'source': 'user'};
+    CollectionDestination saved(String base) => CollectionDestination(vpath: 'copies', base: base, layout: layout);
+    Map startBody() => jsonDecode(fake.calls('POST', '/plugins/federation-copy/jobs').last.body) as Map;
+    String? drawnBase(DiscoveryJobsController c) => c.destination?.destination?.base;
+    Future<void> releaseReads() async {
+      fake.holdReads = false;
+      for (final r in fake.heldReads) {
+        if (!r.isCompleted) r.complete();
+      }
+      await settle();
+    }
+
+    test('a start sends the place shown, its source dropped; the job is pinned to it', () async {
+      final c = make();
+      await c.activate();
+      final shown = c.destination!.destination!;
+      expect(shown.source, 'default');
+      final r = await c.start(late.raw, scope: 'album', shown: ShownPlace(shown));
+      expect(startBody(), {
+        'recommendation': jsonDecode(jsonEncode(late.raw)),
+        'scope': 'album',
+        'destination': {'vpath': 'copies', 'base': '', 'layout': layout},
+      });
+      expect([r.ok, r.created, r.destinationChanged], [true, true, false]);
+      expect(r.job!.destination!.vpath, 'copies');
+      // nothing shown: no place sent, nothing checked
+      await c.start(glass.raw);
+      expect(startBody().containsKey('destination'), isFalse);
+    });
+
+    test("409 destination_changed: nothing started, the answer's place drawn at once, the view read again", () async {
+      final c = make();
+      await c.activate();
+      final shown = c.destination!.destination!;
+      // saved on another device since the card drew its place
+      fake.destination = {...fake.destination, 'destination': place('From peers')};
+      fake.holdReads = true;
+      final r = await c.start(late.raw, shown: ShownPlace(shown));
+      expect([r.ok, r.destinationChanged, r.status], [false, true, 409]);
+      expect(fake.jobs, isEmpty, reason: 'nothing started');
+      expect(c.jobs, isEmpty);
+      expect(drawnBase(c), 'From peers', reason: "the answer's own place, before the read answers");
+      expect(c.destination!.libraries.single.vpath, 'copies', reason: 'the rest of the view stays');
+      expect(c.gate().ready, isTrue);
+      await settle();
+      expect(fake.heldReads, hasLength(1), reason: 'the view is read again');
+      expect(drawnBase(c), 'From peers');
+
+      // another account's live job is the other 409: its words, nothing redrawn or read
+      fake.startAnswer = (409, {'error': 'someone else on this server is already getting this — try again in a moment'});
+      final other = await c.start(corner.raw, shown: ShownPlace(c.destination!.destination));
+      expect([other.destinationChanged, other.error, other.status],
+          [false, 'someone else on this server is already getting this — try again in a moment', 409]);
+      await settle();
+      expect(fake.heldReads, hasLength(1), reason: 'nothing read again');
+      await releaseReads();
+      expect(drawnBase(c), 'From peers');
+    });
+
+    test('a 409 naming nowhere closes the gate as "no library takes new files"; one naming none keeps what is drawn', () async {
+      final c = make();
+      await c.activate();
+      final shown = c.destination!.destination!;
+      fake.holdReads = true;
+      fake.startAnswer = (409, {'error': 'destination_changed', 'message': 'moved'});
+      expect((await c.start(late.raw, shown: ShownPlace(shown))).destinationChanged, isTrue);
+      expect(drawnBase(c), '', reason: 'no place named: what is drawn stays until the read answers');
+      fake.startAnswer = (409, {'error': 'destination_changed', 'message': 'moved', 'destination': null});
+      expect((await c.start(late.raw, shown: ShownPlace(shown))).destinationChanged, isTrue);
+      expect(c.destination!.destination, isNull);
+      expect([c.gate().status, c.gate().block], [CopyGateStatus.line, CopyGateBlock.noLibrary]);
+      await releaseReads();
+    });
+
+    test('re-reads draw the last one known meanwhile; an older answer landing after a newer one draws nothing', () async {
+      final c = make();
+      await c.activate();
+      fake.holdReads = true;
+      fake.destination = {...fake.destination, 'destination': place('first')};
+      final a = c.loadDestination();
+      await settle();
+      fake.destination = {...fake.destination, 'destination': place('second')};
+      final b = c.loadDestination();
+      await settle();
+      expect(fake.heldReads, hasLength(2));
+      expect(drawnBase(c), '', reason: 'nothing new yet: the last one known');
+      fake.heldReads[1].complete();
+      await b;
+      expect(drawnBase(c), 'second');
+      fake.heldReads[0].complete();
+      await a;
+      expect(drawnBase(c), 'second', reason: 'the older answer is dropped');
+      // a failed read keeps what is drawn
+      fake.holdReads = false;
+      fake.refuse['/collection/destination'] = (502, 'bad gateway');
+      await c.loadDestination();
+      expect([drawnBase(c), c.destinationFailed], ['second', false]);
+    });
+
+    test('a save always wins: a read or a refusal asked before it landed draws nothing', () async {
+      final c = make();
+      await c.activate();
+      fake.holdReads = true;
+      final read = c.loadDestination();
+      await settle();
+      expect(await c.saveDestination(saved('Saved')), isTrue);
+      expect(drawnBase(c), 'Saved');
+      fake.heldReads.single.complete();
+      await read;
+      expect(drawnBase(c), 'Saved', reason: 'the read went out before the save landed');
+
+      // a start out before a save, refused after it: its place is not drawn
+      fake.startGate = Completer<void>();
+      fake.startAnswer = (409, {'error': 'destination_changed', 'destination': place('Stale')});
+      final pending = c.start(late.raw, shown: ShownPlace(c.destination!.destination));
+      await settle();
+      expect(await c.saveDestination(saved('Saved again')), isTrue);
+      fake.startGate!.complete();
+      expect((await pending).destinationChanged, isTrue);
+      expect(drawnBase(c), 'Saved again');
+      await releaseReads();
+      expect(drawnBase(c), 'Saved again');
+    });
+
+    test("Retry: the card's sends the place it shows now; the Copies sheet's the one the copy ran with — its pin, else its result's, else where files land now, read first", () async {
+      final pinned = fake.addJob(late.raw, scope: 'album', state: 'failed');
+      pinned['params'] = {'scope': 'album', 'destination': place('Pinned')};
+      final older = fake.addJob(corner.raw, state: 'failed', result: {'destination': place('Ran')});
+      final bare = fake.addJob(glass.raw, state: 'failed');
+      final c = make();
+      await c.activate();
+      DiscoveryJob job(Map<String, dynamic> wire) => c.jobs.firstWhere((j) => j.id == wire['id']);
+      Map? sent() => startBody()['destination'] as Map?;
+
+      // The place it ran with — moved since, so the server's 409 says so.
+      final r = await c.retryWhereItRan(job(pinned));
+      expect(sent(), {'vpath': 'copies', 'base': 'Pinned', 'layout': layout});
+      expect([r.destinationChanged, startBody()['scope']], [true, 'album']);
+      await c.retryWhereItRan(job(older));
+      expect(sent()!['base'], 'Ran');
+
+      // No place of its own: the destination is read first, and that is sent.
+      await settle();
+      fake.destination = {...fake.destination, 'destination': place('Now')};
+      final reads = fake.count('GET', '/collection/destination');
+      final now = await c.retryWhereItRan(job(bare));
+      expect(fake.count('GET', '/collection/destination'), reads + 1);
+      expect(sent()!['base'], 'Now');
+      expect([now.ok, now.created], [true, true]);
+
+      // The card's Retry sends what the card shows.
+      await c.retry(job(pinned), shown: ShownPlace(c.destination!.destination));
+      expect(sent()!['base'], 'Now');
+    });
+
+    test("the Copies sheet's Retry never sends no place: a copy pinned to nowhere sends null, which the server refuses while the account has a place", () async {
+      final nowhere = fake.addJob(late.raw, scope: 'album', state: 'failed');
+      // Its pin outranks a place its result names.
+      nowhere['params'] = {'scope': 'album', 'destination': null};
+      nowhere['result'] = {'destination': place('Ran')};
+      final c = make();
+      await c.activate();
+      final job = c.jobs.single;
+      expect([job.pinnedNowhere, job.destination, job.ranWith?.destination], [true, null, null]);
+      final r = await c.retryWhereItRan(job);
+      expect(startBody().containsKey('destination'), isTrue);
+      expect(startBody()['destination'], isNull);
+      expect([r.ok, r.destinationChanged], [false, true]);
+      expect(fake.jobs, hasLength(1), reason: 'nothing started');
+    });
+
+    test('a copy that names no place, the read failing and no place ever known: it sends nowhere, never no key', () async {
+      fake.addJob(glass.raw, state: 'failed');
+      fake.refuse['/collection/destination'] = (502, 'bad gateway');
+      final c = make();
+      await c.activate();
+      expect(c.destination, isNull);
+      final r = await c.retryWhereItRan(c.jobs.single);
+      expect(startBody().containsKey('destination'), isTrue);
+      expect(startBody()['destination'], isNull);
+      expect(r.destinationChanged, isTrue, reason: 'the account has a place: the server says so');
+      expect(fake.jobs, hasLength(1), reason: 'nothing started');
+    });
+
+    test("the Copies sheet's Retry is busy while the read it waits on is out: a second tap sends nothing", () async {
+      fake.addJob(glass.raw, state: 'failed');
+      final c = make();
+      await c.activate();
+      final job = c.jobs.single;
+      final reads = fake.count('GET', '/collection/destination');
+      fake.holdReads = true;
+      final first = c.retryWhereItRan(job);
+      await settle();
+      expect(c.isStarting(glass.raw), isTrue, reason: 'its pills are busy');
+      expect((await c.retryWhereItRan(job)).ignored, isTrue);
+      expect(fake.count('GET', '/collection/destination'), reads + 1, reason: 'one read');
+      await releaseReads();
+      final r = await first;
+      expect([r.ok, r.created], [true, true]);
+      expect(fake.calls('POST', '/plugins/federation-copy/jobs'), hasLength(1));
+      expect(c.isStarting(glass.raw), isFalse);
+    });
+
+    test('a live job already covering the key answers 200 created:false even to a place that moved: followed, never a refusal', () async {
+      final c = make();
+      await c.activate();
+      fake.existing = fake.addJob(late.raw, scope: 'album', state: 'running');
+      final r = await c.start(late.raw, scope: 'album', shown: ShownPlace(saved('Stale')));
+      expect([r.ok, r.created, r.destinationChanged, r.error], [true, false, false, null]);
+      expect(r.job!.id, fake.existing!['id']);
+      expect(drawnBase(c), '', reason: 'nothing redrawn');
+    });
+
+    test('an older server refuses the key: the start goes through without it', () async {
+      final c = make();
+      await c.activate();
+      fake.rejectsDestination = true;
+      final r = await c.start(late.raw, shown: ShownPlace(c.destination!.destination));
+      expect([r.ok, r.created, r.error], [true, true, null]);
+      final starts = fake.calls('POST', '/plugins/federation-copy/jobs');
+      expect([for (final s in starts) (jsonDecode(s.body) as Map).containsKey('destination')], [true, false]);
+    });
+  });
+
   group('the poll', () {
     test('nothing live: no poll at all', () async {
       fake.addJob(late.raw, state: 'done', result: {'copied': {'filepath': 'x.mp3'}});

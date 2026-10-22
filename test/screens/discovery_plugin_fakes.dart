@@ -31,6 +31,20 @@ Map<String, String> fakeKeysOf(Map rec, [String? scope]) {
   return keys;
 }
 
+/// The server's sameDestination, in shape: the library, the base folder's
+/// names, the layout; `source` ignored; null matches only null.
+bool fakeSamePlace(Map? a, Map? b) {
+  if (a == null || b == null) return a == null && b == null;
+  String base(Object? v) => '${v ?? ''}'
+      .split(RegExp(r'[/\\]'))
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .join('/');
+  return a['vpath'] == b['vpath'] &&
+      base(a['base']) == base(b['base']) &&
+      a['layout'] == b['layout'];
+}
+
 class FakePluginServer {
   final List<http.Request> requests = [];
 
@@ -69,6 +83,19 @@ class FakePluginServer {
 
   /// Holds every destination read or save until the test completes it.
   Completer<void>? destinationGate;
+
+  /// Holds each destination read on its own until the test completes its
+  /// entry in [heldReads] (in any order); it answers the destination as it
+  /// was when asked.
+  bool holdReads = false;
+  final List<Completer<void>> heldReads = [];
+
+  /// A server from before a start's `destination` (mStream before
+  /// 2026-10-21): a start that sends one is refused with Joi's 400.
+  bool rejectsDestination = false;
+
+  /// Answers every start with this status and body instead.
+  (int, Map<String, dynamic>)? startAnswer;
 
   /// The links plug-in's answer (wire link maps, in the server's order).
   List<Map<String, dynamic>> links = [];
@@ -148,6 +175,13 @@ class FakePluginServer {
     }
     if (req.method == 'GET' && path.endsWith('/api/v1/discovery/plugins')) return _json(listing);
     if (path.endsWith('/api/v1/discovery/collection/destination')) {
+      if (req.method == 'GET' && holdReads) {
+        final asked = destination;
+        final hold = Completer<void>();
+        heldReads.add(hold);
+        await hold.future;
+        return _json(asked);
+      }
       if (destinationGate != null) await destinationGate!.future;
       if (req.method == 'PUT') {
         final d = (jsonDecode(req.body) as Map)['destination'];
@@ -171,8 +205,25 @@ class FakePluginServer {
     if (req.method == 'POST' && path.endsWith('/plugins/federation-copy/jobs')) {
       if (startGate != null) await startGate!.future;
       final body = jsonDecode(req.body) as Map;
+      final answer = startAnswer;
+      if (answer != null) return _json(answer.$2, answer.$1);
+      final shown = body.containsKey('destination');
+      if (shown && rejectsDestination) {
+        return _json({'error': '"destination" is not allowed'}, 400);
+      }
       if (existing != null) return _json({'job': existing, 'created': false});
+      // The jobs route's check: the place the client showed must still be
+      // where files land; every new job is pinned to the one in force.
+      final effective = destination['destination'] as Map?;
+      if (shown && !fakeSamePlace(body['destination'] as Map?, effective)) {
+        return _json({
+          'error': 'destination_changed',
+          'message': 'your collection destination has changed — check where this will land and ask again',
+          'destination': effective,
+        }, 409);
+      }
       final j = addJob(body['recommendation'] as Map, scope: body['scope'] as String?);
+      j['params'] = {...?j['params'] as Map?, 'destination': effective};
       return _json({'job': j, 'created': true}, 202);
     }
     final cancel = RegExp(r'/plugin-jobs/(\d+)/cancel$').firstMatch(path);

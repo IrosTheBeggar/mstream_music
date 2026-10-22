@@ -306,6 +306,44 @@ void main() {
     expect(isDiscoverCopy(null), isFalse);
   });
 
+  group('where a copy lands', () {
+    const place = CollectionDestination(vpath: 'copies', base: 'From peers/Stage', layout: '{{ALBUMARTIST}}/{{ALBUM}}', source: 'user');
+
+    test("sameDestination is the jobs route's: the library, the base folder normalised, the layout exactly; source ignored", () {
+      CollectionDestination d({String vpath = 'copies', String base = 'From peers/Stage', String layout = '{{ALBUMARTIST}}/{{ALBUM}}', String? source}) =>
+          CollectionDestination(vpath: vpath, base: base, layout: layout, source: source);
+      expect(sameDestination(place, d()), isTrue, reason: 'source is not compared');
+      expect(sameDestination(place, d(base: r' From peers \ Stage/ ')), isTrue, reason: 'either separator, names trimmed, empty ones gone');
+      expect(sameDestination(place, d(base: 'From peers')), isFalse);
+      expect(sameDestination(place, d(vpath: 'music')), isFalse);
+      expect(sameDestination(place, d(layout: '{{ARTIST}}/{{ALBUM}}')), isFalse);
+      expect(sameDestination(place, d(layout: '{{ALBUMARTIST}}/{{ALBUM}} ')), isFalse, reason: 'the layout character for character');
+      expect(sameDestination(d(base: '../up'), d(base: '../up')), isFalse, reason: 'a base the server refuses matches nothing');
+      expect(sameDestination(null, null), isTrue);
+      expect(sameDestination(place, null), isFalse);
+      expect(sameDestination(null, place), isFalse);
+    });
+
+    test("a job's place: its pin, else its result's (a job from before the pin), else none", () {
+      Map<String, dynamic> wire(String base) => {'vpath': 'copies', 'base': base, 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'};
+      expect(copyJob({'params': {'scope': 'album', 'destination': wire('Pinned')}, 'result': {'destination': wire('Ran')}}).destination!.base, 'Pinned');
+      expect(copyJob({'params': {'scope': 'album'}, 'result': {'destination': wire('Ran')}}).destination!.base, 'Ran');
+      expect(copyJob().destination, isNull);
+      expect(copyJob({'params': {'destination': null}}).destination, isNull, reason: 'pinned to nowhere');
+      expect(copyJob({'params': {'destination': null}, 'result': {'destination': wire('Ran')}}).destination, isNull, reason: 'the pin outranks its result');
+    });
+
+    test("the place a restart sends: the pin — nowhere included — else the result's; none when it names neither", () {
+      Map<String, dynamic> wire(String base) => {'vpath': 'copies', 'base': base, 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'};
+      final nowhere = copyJob({'params': {'destination': null}, 'result': {'destination': wire('Ran')}});
+      expect([nowhere.pinnedNowhere, nowhere.ranWith != null, nowhere.ranWith?.toJson()], [true, true, null]);
+      expect(copyJob({'params': {'scope': 'album'}, 'result': {'destination': wire('Ran')}}).ranWith!.toJson(),
+          {'vpath': 'copies', 'base': 'Ran', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'});
+      expect([copyJob().pinnedNowhere, copyJob().ranWith], [false, null]);
+      expect(copyJob({'params': {'scope': 'album'}}).pinnedNowhere, isFalse, reason: 'no destination key is no pin');
+    });
+  });
+
   group('the Copies list (the webapp\'s downloads strip)', () {
     final jobs = [
       job({'id': 1, 'state': 'done', 'createdAt': now - 50, 'result': {'copied': {'filepath': 'music/a.flac'}}}),

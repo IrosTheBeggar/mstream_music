@@ -154,7 +154,8 @@ class DiscoveryJob {
   final String? key;
   final Map<String, dynamic> recommendation;
 
-  /// `params` as sent: `scope` (absent for a song job), `choice`, `landing`.
+  /// `params` as sent: `scope` (absent for a song job), `choice`, `landing`
+  /// — and `destination`, the place the server pinned the job to at start.
   final Map<String, dynamic>? params;
   final JobState? state;
 
@@ -226,6 +227,32 @@ class DiscoveryJob {
   }
 
   bool get live => state?.live == true;
+
+  /// Where the copy lands: the destination pinned on it at start
+  /// (`params.destination`, mStream since 2026-10-21), else the one its
+  /// result names (a job from before the pin). Null when it names neither,
+  /// or was pinned to nowhere.
+  CollectionDestination? get destination => pinnedNowhere
+      ? null
+      : CollectionDestination.fromServerMap(params?['destination']) ??
+          CollectionDestination.fromServerMap(result?['destination']);
+
+  /// Pinned to nowhere at start (`params.destination` null): no library
+  /// took the account's files then.
+  bool get pinnedNowhere {
+    final p = params;
+    return p != null && p.containsKey('destination') && p['destination'] == null;
+  }
+
+  /// The place the copy ran with, as a start again from a list that shows
+  /// no place sends it: its pin — nowhere included — else its result's;
+  /// null when it names neither (a copy from before the pin that never
+  /// landed).
+  ShownPlace? get ranWith {
+    if (pinnedNowhere) return const ShownPlace(null);
+    final d = destination;
+    return d == null ? null : ShownPlace(d);
+  }
 
   /// The connected server the recommendation came from
   /// (`recommendation.peer.id`), or null for a job that names none.
@@ -532,9 +559,23 @@ class CollectionDestination {
 
   bool get isDefault => source == 'default';
 
-  /// The PUT body's `destination`.
+  /// The PUT body's `destination`, and a start's (the place it showed).
   Map<String, dynamic> toJson() =>
       {'vpath': vpath, 'base': base, 'layout': layout};
+}
+
+/// Where a surface showed the files going, as a start sends it (its
+/// `destination`): [destination], or null — it showed nowhere, sent as an
+/// explicit `null`, which the server refuses with 409
+/// `destination_changed` whenever the account has a place. A start given
+/// no [ShownPlace] sends no key, and nothing is checked.
+class ShownPlace {
+  final CollectionDestination? destination;
+  const ShownPlace(this.destination);
+
+  /// The start's `destination`: `{vpath, base, layout}` (its `source` left
+  /// out), or null.
+  Map<String, dynamic>? toJson() => destination?.toJson();
 }
 
 /// A library the caller may put files into, with its admin Path Template.
@@ -577,6 +618,17 @@ class DestinationView {
         defaultLayout:
             _str(m['defaultLayout'], max: 500) ?? kDefaultCopyLayout,
         variables: _strings(m['variables']),
+      );
+
+  /// The same view with another effective [destination] (a start's 409
+  /// `destination_changed` names only that; the rest is read again).
+  DestinationView withDestination(CollectionDestination? destination) =>
+      DestinationView(
+        destination: destination,
+        saved: saved,
+        libraries: libraries,
+        defaultLayout: defaultLayout,
+        variables: variables,
       );
 }
 

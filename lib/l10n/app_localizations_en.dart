@@ -4621,6 +4621,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t reach your server. Try again.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'Where files land changed since this opened. Check the path above and add again.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'Where files land changed since this opened. Check the path above and try again.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Retry adds to $path, your saved place now';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Add again adds to $path, your saved place now';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4965,6 +4983,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverCopiesCancelFailed => 'Couldn\'t cancel. Try again.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Couldn\'t start: where files land changed — retry it from Keep a copy';
 
   @override
   String discoverToastCopying(String title, String peer) {

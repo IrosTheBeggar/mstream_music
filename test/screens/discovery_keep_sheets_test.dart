@@ -19,6 +19,7 @@ import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_card.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_facts.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/settings.dart';
@@ -1354,6 +1355,47 @@ void main() {
     );
 
     testWidgets(
+      'a wider copy that ran somewhere else: its Retry names where this '
+      'album goes now, and sends that place',
+      (tester) async {
+        const layout = '{{ALBUMARTIST}}/{{ALBUM}}';
+        h.fake.addJob(
+          lateRow(),
+          scope: 'artist',
+          state: 'done',
+          result: walkResult(
+            'artist',
+            failed: [for (final f in threeSongs) failedSong(f)],
+          ),
+        )['params'] = {
+          'scope': 'artist',
+          'destination': {'vpath': 'copies', 'base': 'Old', 'layout': layout},
+        };
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await chip(tester, 'album');
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        expect(
+          inCard(
+            line(
+              'Retry adds to copies › Boukmanflow › Borrowed Tapes, your saved place now',
+            ),
+          ),
+          findsOneWidget,
+          reason: "the album choice's path, not the artist copy's",
+        );
+        await tapText(tester, 'Retry');
+        expect(lastStart()['scope'], 'album');
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': '',
+          'layout': layout,
+        });
+        expect(inCard(find.text('Waiting for a free slot')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       "another server's finished artist copy says nothing here: Album "
       'offers Add album',
       (tester) async {
@@ -1490,6 +1532,452 @@ void main() {
         expect(inCard(find.text('In your collection')), findsOneWidget);
         expect(inCard(find.text('3 copied')), findsOneWidget);
         expect(inCard(find.text('Add album')), findsNothing);
+      },
+    );
+  });
+
+  // Where files land moved while the card was open (another device, the
+  // webapp): the card reads it again as it opens, every start sends the
+  // place it showed, and the server's 409 destination_changed starts
+  // nothing — the card redraws the path and says so in one line.
+  group('where files land moved while the card was open', () {
+    const layout = '{{ALBUMARTIST}}/{{ALBUM}}';
+    const moved =
+        'Where files land changed since this opened. Check the path above and add again.';
+    const movedRetry =
+        'Where files land changed since this opened. Check the path above and try again.';
+    const here = {'vpath': 'copies', 'base': '', 'layout': layout};
+    Map<String, dynamic> place(String base) => {
+      'vpath': 'copies',
+      'base': base,
+      'layout': layout,
+      'source': 'user',
+    };
+    void saveElsewhere(Map<String, dynamic>? destination) =>
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': destination,
+        };
+    Finder inCard(Finder f) => find.descendant(
+      of: find.byKey(const ValueKey('keep-copy')),
+      matching: f,
+    );
+
+    testWidgets(
+      'the card reads it again as it opens: the last one known at once, the '
+      'answer once it lands, and Add sends that place',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        final reads = h.fake.count('GET', '/collection/destination');
+        h.fake.holdReads = true;
+        saveElsewhere(place('From peers'));
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(h.fake.count('GET', '/collection/destination'), reads + 1);
+        expect(
+          line('Files go to copies › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+          reason: 'drawn at once from the last one known',
+        );
+        h.fake.heldReads.single.complete();
+        await frames(tester);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Add song');
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': 'From peers',
+          'layout': layout,
+        });
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a start refused because the place moved: the path redrawn, one '
+      'warning line, nothing started; Add then sends the new place',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(
+          line('Files go to copies › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+        );
+        saveElsewhere(place('From peers'));
+        await tapText(tester, 'Add song');
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': '',
+          'layout': layout,
+        });
+        expect(h.fake.jobs, isEmpty, reason: 'nothing started');
+        expect(find.text('Waiting for a free slot'), findsNothing);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+        expect(inCard(find.text(moved)), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text(moved)).style!.color,
+          keepTone(VelvetColors.warning),
+        );
+        expect(find.byKey(const ValueKey('keep-error')), findsNothing);
+        expect(
+          find.textContaining('destination', findRichText: true),
+          findsNothing,
+          reason: "the server's code is never shown",
+        );
+        expect(find.text('Add song'), findsOneWidget);
+
+        await tapText(tester, 'Add song');
+        expect(lastStart()['destination']['base'], 'From peers');
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+        expect(find.text(moved), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a refusal that says nowhere: the card gives way to "no library takes '
+      'new files"',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        saveElsewhere(null);
+        await tapText(tester, 'Add song');
+        expect(h.fake.jobs, isEmpty);
+        expect(
+          find.text('No library on your server takes new files'),
+          findsOneWidget,
+        );
+        expect(find.text('Add song'), findsNothing);
+        expect(find.text(moved), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a copy that ran somewhere else: the card names where Retry adds now, '
+      'and Retry sends that place; one that ran here names nothing',
+      (tester) async {
+        final failed = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'failed',
+        );
+        failed['error'] = 'Stage Peer B went away';
+        failed['params'] = {'destination': place('Old')};
+        final cancelled = h.fake.addJob(
+          keepRow('Corner Store Loop', track: '03 - '),
+          state: 'cancelled',
+        );
+        cancelled['params'] = {
+          'destination': {'vpath': 'copies', 'base': '', 'layout': layout},
+        };
+        await h.pumpDiscover(tester);
+
+        await openSongSheet(tester, 'Corner Store Loop');
+        expect(inCard(find.text('Add again')), findsOneWidget);
+        expect(find.textContaining('adds to'), findsNothing);
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('keep-copy'))),
+        ).pop();
+        await frames(tester);
+
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        // Its crumbs hold together as "Files go to"'s do.
+        expect(
+          inCard(
+            line(
+              'Retry adds to copies › Boukmanflow › Borrowed Tapes, your saved place now',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('Borrowed\u00A0Tapes, your saved place now'),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Retry');
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': '',
+          'layout': layout,
+        });
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a copy pinned to nowhere ran somewhere else too: the card names where '
+      'Retry adds now, and Retry sends that place',
+      (tester) async {
+        final failed = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'failed',
+        );
+        failed['error'] = 'no library to copy into';
+        failed['params'] = {'destination': null};
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        expect(
+          inCard(
+            line(
+              'Retry adds to copies › Boukmanflow › Borrowed Tapes, your saved place now',
+            ),
+          ),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Retry');
+        expect(lastStart()['destination'], here);
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a cancelled copy that ran somewhere else: the card names where Add '
+      'again adds now, and Add again sends that place',
+      (tester) async {
+        final cancelled = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'cancelled',
+        );
+        cancelled['params'] = {'destination': place('Old')};
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(inCard(find.text('Add again')), findsOneWidget);
+        expect(
+          inCard(
+            line(
+              'Add again adds to copies › Boukmanflow › Borrowed Tapes, your saved place now',
+            ),
+          ),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Add again');
+        expect(lastStart()['destination'], here);
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "Retry on a job's line refused because the place moved: nothing "
+      'started, the new path drawn above one warning line, never the '
+      "server's words; the next Retry sends the new place",
+      (tester) async {
+        final failed = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'failed',
+        );
+        failed['error'] = 'Stage Peer B went away';
+        failed['params'] = {'destination': here};
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(find.textContaining('adds to'), findsNothing, reason: 'it ran here');
+        expect(
+          find.byKey(const ValueKey('keep-destination')),
+          findsNothing,
+          reason: "the job's line stands in for it",
+        );
+        saveElsewhere(place('From peers'));
+        await tapText(tester, 'Retry');
+        expect(lastStart()['destination'], here);
+        expect(h.fake.jobs, hasLength(1), reason: 'nothing started');
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        final warning = find.byKey(const ValueKey('keep-moved'));
+        expect(
+          find.descendant(of: warning, matching: find.text(movedRetry)),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<Text>(find.text(movedRetry)).style!.color,
+          keepTone(VelvetColors.warning),
+        );
+        expect(find.byKey(const ValueKey('keep-error')), findsNothing);
+        expect(
+          find.textContaining('destination', findRichText: true),
+          findsNothing,
+          reason: "the server's words are never shown",
+        );
+        // The path the warning points at, just above it.
+        final path = line(
+          'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+        );
+        expect(path, findsOneWidget);
+        expect(topOf(tester, path), lessThan(topOf(tester, warning)));
+        expect(
+          find.textContaining('adds to'),
+          findsNothing,
+          reason: '"Files go to" says where while the warning stands',
+        );
+
+        await tapText(tester, 'Retry');
+        expect(lastStart()['destination']['base'], 'From peers');
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+        expect(warning, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a refusal that said nowhere leaves no warning behind: a place a later '
+      'read brings back is drawn without it',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        saveElsewhere(null);
+        await tapText(tester, 'Add song');
+        expect(
+          find.text('No library on your server takes new files'),
+          findsOneWidget,
+        );
+        // Another card opening, say: the place is back.
+        saveElsewhere(place('From peers'));
+        await h.jobs.loadDestination();
+        await frames(tester);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Add song'), findsOneWidget);
+        expect(find.byKey(const ValueKey('keep-moved')), findsNothing);
+        expect(find.text(moved), findsNothing);
+      },
+    );
+
+    testWidgets('Change, on the path the warning points at, lets it go', (
+      tester,
+    ) async {
+      await h.pumpDiscover(tester);
+      await openSongSheet(tester, 'Late Train Verse');
+      saveElsewhere(place('From peers'));
+      await tapText(tester, 'Add song');
+      expect(find.text(moved), findsOneWidget);
+      final opened = h.openedDestination.length;
+      await tester.tap(find.byKey(const ValueKey('keep-change')));
+      await frames(tester);
+      expect(h.openedDestination, hasLength(opened + 1));
+      expect(find.text(moved), findsNothing);
+      expect(find.text('Add song'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Add every album sends the place its question named, even when a read '
+      'lands while the question is open: refused, nothing started',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        h.fake.holdReads = true;
+        saveElsewhere(place('From peers'));
+        await openSongSheet(tester, 'Late Train Verse');
+        await tapText(tester, 'Artist');
+        await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › Boukmanflow › one folder per album'),
+          findsOneWidget,
+          reason: 'the last one known, the read still out',
+        );
+        await tapText(tester, 'Add every album');
+        expect(
+          find.text(
+            'They land on your server in copies › Boukmanflow, one folder per album. Songs you already have are skipped.',
+          ),
+          findsOneWidget,
+        );
+        // The card's read lands behind the question.
+        h.fake.holdReads = false;
+        for (final r in h.fake.heldReads) {
+          r.complete();
+        }
+        await frames(tester);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › one folder per album',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Copy 1 album'));
+        await frames(tester);
+        expect(lastStart()['scope'], 'artist');
+        expect(lastStart()['destination'], here, reason: 'what the question named');
+        expect(h.fake.jobs, isEmpty, reason: 'nothing started');
+        expect(inCard(find.text(moved)), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "the album sheet's Album, and a compilation card's, send the place the "
+      'card drew',
+      (tester) async {
+        h.peersAnswer = () => keepPeersPayload(extraB: compilationRows());
+        addTearDown(() => h.peersAnswer = keepPeersPayload);
+        saveElsewhere(place('From peers'));
+        await h.pumpDiscover(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Add album');
+        expect(lastStart()['scope'], 'album');
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': 'From peers',
+          'layout': layout,
+        });
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('keep-copy'))),
+        ).pop();
+        await frames(tester);
+
+        await tester.longPress(find.text('Block Party Comp'));
+        await frames(tester, 8);
+        expect(
+          line(
+            'Files go to copies › From peers › Various Artists › Block Party Comp',
+          ),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Add album');
+        expect(
+          (lastStart()['recommendation'] as Map)['albumArtist'],
+          'Various Artists',
+        );
+        expect(lastStart()['destination'], {
+          'vpath': 'copies',
+          'base': 'From peers',
+          'layout': layout,
+        });
+        // The first start's toast (shown once its sheet closed) runs out.
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
+
+    testWidgets(
+      'a live copy already covering the song answers even a place that '
+      'moved: the card follows it, no warning',
+      (tester) async {
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        saveElsewhere(place('From peers'));
+        h.fake.existing = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - '),
+          state: 'running',
+          progress: 0.3,
+        );
+        await tapText(tester, 'Add song');
+        expect(lastStart()['destination'], here);
+        expect(inCard(find.text('Copying')), findsOneWidget);
+        expect(find.byKey(const ValueKey('keep-moved')), findsNothing);
+        expect(find.byKey(const ValueKey('keep-error')), findsNothing);
       },
     );
   });

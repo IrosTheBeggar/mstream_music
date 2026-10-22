@@ -4660,6 +4660,24 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile raggiungere il tuo server. Riprova.';
 
   @override
+  String get discoverKeepDestChanged =>
+      'La destinazione dei file è cambiata da quando l’hai aperto. Controlla il percorso sopra e aggiungi di nuovo.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'La destinazione dei file è cambiata da quando l’hai aperto. Controlla il percorso sopra e riprova.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Riprova salva in $path, la tua posizione salvata ora';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Aggiungi di nuovo salva in $path, la tua posizione salvata ora';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5009,6 +5027,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get discoverCopiesCancelFailed => 'Impossibile annullare. Riprova.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Impossibile avviare: la destinazione dei file è cambiata — riprova da Tieni una copia';
 
   @override
   String discoverToastCopying(String title, String peer) {

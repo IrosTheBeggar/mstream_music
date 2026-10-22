@@ -4440,6 +4440,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverKeepStartFailed => 'サーバーに接続できませんでした。もう一度お試しください。';
 
   @override
+  String get discoverKeepDestChanged =>
+      '開いてからファイルの保存先が変わりました。上のパスを確認して、もう一度追加してください。';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      '開いてからファイルの保存先が変わりました。上のパスを確認して、もう一度お試しください。';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return '再試行の保存先は $path（現在保存されている場所）です';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'もう一度追加の保存先は $path（現在保存されている場所）です';
+  }
+
+  @override
   String discoverKeepConfirmTitle(int count, String peer) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4776,6 +4794,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverCopiesCancelFailed => 'キャンセルできませんでした。もう一度お試しください。';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      '開始できませんでした：保存先が変わりました — 「コピーを保存」から再試行してください';
 
   @override
   String discoverToastCopying(String title, String peer) {

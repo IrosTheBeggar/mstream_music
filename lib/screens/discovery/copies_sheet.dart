@@ -112,12 +112,20 @@ class _CopiesSheetState extends State<CopiesSheet> {
     }
   }
 
+  /// Retry and Add again start the copy again where it ran (the sheet shows
+  /// no place); one moved since starts nothing and says to retry it from
+  /// Keep a copy, which shows where files land now.
   Future<void> _retry(DiscoveryJob job) async {
     final l = AppLocalizations.of(context);
-    final out = await jobs.retry(job);
+    final out = await jobs.retryWhereItRan(job);
     if (!mounted) return;
     final err = out.error;
-    if (err != null) _toast(_startWords(l, err, out.status));
+    if (err == null) return;
+    _toast(
+      out.destinationChanged
+          ? l.discoverCopiesDestChanged
+          : _startWords(l, err, out.status),
+    );
   }
 
   Future<void> _clear() async {

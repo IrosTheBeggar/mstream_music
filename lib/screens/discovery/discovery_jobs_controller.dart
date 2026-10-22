@@ -31,12 +31,20 @@ class StartOutcome {
   final String? error;
   final int? status;
 
+  /// The 409 `destination_changed`: the place the start sent is no longer
+  /// where files land and nothing started;
+  /// [DiscoveryJobsController.destination] already holds the one in force.
+  /// A surface says so in its own words, not [error]'s.
+  final bool destinationChanged;
+
   const StartOutcome(DiscoveryJob this.job,
       {required this.created, this.fromOtherPeer = false})
       : error = null,
         status = null,
+        destinationChanged = false,
         ignored = false;
-  const StartOutcome.refused(String this.error, {this.status})
+  const StartOutcome.refused(String this.error,
+      {this.status, this.destinationChanged = false})
       : job = null,
         created = false,
         fromOtherPeer = false,
@@ -50,6 +58,7 @@ class StartOutcome {
         fromOtherPeer = false,
         error = null,
         status = null,
+        destinationChanged = false,
         ignored = true;
 
   /// True only for [StartOutcome.ignored].
@@ -112,7 +121,11 @@ class DiscoveryJobsController extends ChangeNotifier
   PluginListing? listing;
   bool listingFailed = false;
 
-  /// `GET /discovery/collection/destination`; null until it answers.
+  /// `GET /discovery/collection/destination`; null until it answers. The
+  /// one place every surface reads where files land — Keep a copy's "Files
+  /// go to", the picker, what a start sends — read again with every Keep a
+  /// copy card that opens ([loadDestination]), and replaced by a save and
+  /// by a start's 409 `destination_changed`.
   DestinationView? destination;
   bool destinationFailed = false;
   bool savingDestination = false;
@@ -154,6 +167,14 @@ class DiscoveryJobsController extends ChangeNotifier
   final Set<String> _starting = {};
 
   int _lookupRid = 0;
+
+  /// Every ask that can answer with where files land (a read, a start that
+  /// sends the place shown) takes the next stamp as it goes out;
+  /// [destination] holds the answer of the newest one that answered
+  /// ([_destinationDrawn]), so an older answer landing later draws nothing.
+  /// A save that went through outranks every ask out before it landed.
+  int _destinationAsks = 0;
+  int _destinationDrawn = 0;
   int _failures = 0;
   int _fastHolds = 0;
   bool _discoverVisible = true;
@@ -262,17 +283,24 @@ class DiscoveryJobsController extends ChangeNotifier
     _notify();
   }
 
-  /// Read the destination again (the picker's open, Try again).
+  /// Read the destination again: Discover's visit, every Keep a copy card
+  /// that opens, the picker's open and its Try again, a Copies Retry about
+  /// to run, a start refused because the place moved. What is drawn stays
+  /// while the read is out and when it fails; an answer older than the one
+  /// drawn is dropped (a save that landed since always wins).
   Future<void> loadDestination() async {
+    if (_disposed) return;
+    final ask = ++_destinationAsks;
     try {
       final d = await api.destination();
-      if (_disposed) return;
+      if (_disposed || ask <= _destinationDrawn) return;
+      _destinationDrawn = ask;
       destination = d;
       destinationFailed = false;
       destinationError = null;
       destinationErrorFromServer = false;
     } on DiscoveryPluginsException catch (e) {
-      if (_disposed) return;
+      if (_disposed || ask <= _destinationDrawn) return;
       destinationFailed = destination == null;
       destinationError = e.message;
       destinationErrorFromServer = e.fromServer;
@@ -292,6 +320,9 @@ class DiscoveryJobsController extends ChangeNotifier
     try {
       final d = await api.saveDestination(value);
       if (_disposed) return false;
+      // What the user just saved: no read or refusal asked before this
+      // landed draws over it.
+      _destinationDrawn = _destinationAsks;
       destination = d;
       destinationFailed = false;
       return true;
@@ -463,16 +494,27 @@ class DiscoveryJobsController extends ChangeNotifier
   /// recommendation UNCHANGED and [scope] (none for the song). A card's
   /// album job sends its best row with scope album — never a song job from
   /// a card.
-  Future<StartOutcome> start(Map<String, dynamic> rec, {String? scope}) async {
+  ///
+  /// [shown] is where the surface showed the files going (nowhere
+  /// included): the server pins the job to it, or — when it is no longer
+  /// where files land — refuses with 409 `destination_changed` and starts
+  /// nothing; then [destination] takes the one the answer names at once
+  /// (null = nowhere: Keep a copy's gate closes), it is read again, and the
+  /// outcome says [StartOutcome.destinationChanged]. None sends no place
+  /// (no check).
+  Future<StartOutcome> start(Map<String, dynamic> rec,
+      {String? scope, ShownPlace? shown}) async {
     final s = scope == null || scope == kScopeSong ? null : scope;
     final key = _startKey(rec, s);
     if (_disposed || _starting.contains(key)) {
       return const StartOutcome.ignored();
     }
     _starting.add(key);
+    // A start that sends a place is an ask its refusal answers.
+    final ask = shown == null ? null : ++_destinationAsks;
     _notify();
     try {
-      final r = await api.startJob(rec, scope: s);
+      final r = await api.startJob(rec, scope: s, destination: shown);
       if (_disposed) return StartOutcome(r.job, created: r.created);
       _note(r.job);
       final peer = rec['peer'];
@@ -485,6 +527,10 @@ class DiscoveryJobsController extends ChangeNotifier
           r.job.peerId != null &&
           r.job.peerId != askedPeer;
       return StartOutcome(r.job, created: r.created, fromOtherPeer: other);
+    } on DestinationChangedException catch (e) {
+      if (!_disposed) _destinationMoved(e, ask);
+      return StartOutcome.refused(e.message,
+          status: e.status, destinationChanged: true);
     } on DiscoveryPluginsException catch (e) {
       return StartOutcome.refused(e.message, status: e.status);
     } finally {
@@ -494,15 +540,63 @@ class DiscoveryJobsController extends ChangeNotifier
     }
   }
 
+  /// A start refused because the place it sent is no longer where files
+  /// land: the answer's destination is drawn at once (unless an answer to a
+  /// later ask already is) — one it does not name leaves what is drawn — and
+  /// the whole view is read again.
+  void _destinationMoved(DestinationChangedException e, int? ask) {
+    if (e.named && ask != null && ask > _destinationDrawn) {
+      _destinationDrawn = ask;
+      destination =
+          (destination ?? const DestinationView()).withDestination(e.destination);
+      destinationFailed = false;
+    }
+    unawaited(loadDestination());
+  }
+
   /// Retry (and Add again): the same recommendation and scope again — a
   /// failed job is never deduped, so it is a new job; the copy skips what
-  /// already landed, so it takes only the gaps. Only a phone copy
-  /// ([isDiscoverCopy]): another plug-in's job, or a folder copy with its
-  /// landing, cannot be started again from here as it was started —
-  /// nothing is sent.
-  Future<StartOutcome> retry(DiscoveryJob job) async {
+  /// already landed, so it takes only the gaps. [shown] is the place the
+  /// surface shows now (Keep a copy's card: where files land now, which it
+  /// names first when the copy ran somewhere else), sent as [start] sends
+  /// it. Only a phone copy ([isDiscoverCopy]): another plug-in's job, or a
+  /// folder copy with its landing, cannot be started again from here as it
+  /// was started — nothing is sent.
+  Future<StartOutcome> retry(DiscoveryJob job, {ShownPlace? shown}) async {
     if (!isDiscoverCopy(job)) return const StartOutcome.ignored();
-    return start(job.recommendation, scope: job.scope);
+    return start(job.recommendation, scope: job.scope, shown: shown);
+  }
+
+  /// The Copies sheet's Retry and Add again: the sheet shows no place, so
+  /// the start sends the one the copy ran with ([DiscoveryJob.ranWith]: its
+  /// pin — nowhere included — else its result's) — a place moved since is
+  /// the server's 409 to say, never a quiet landing somewhere the list
+  /// never showed. The destination is read again first; a copy that names
+  /// no place (from before the pin) sends where that read finds files land
+  /// now (the last one known when it fails; nowhere when none is) — never
+  /// no place at all. Its pills are busy while that read is out, and a
+  /// second tap sends nothing.
+  Future<StartOutcome> retryWhereItRan(DiscoveryJob job) async {
+    if (!isDiscoverCopy(job)) return const StartOutcome.ignored();
+    final key = _startKey(
+      job.recommendation,
+      job.scope == kScopeSong ? null : job.scope,
+    );
+    if (_disposed || _starting.contains(key)) {
+      return const StartOutcome.ignored();
+    }
+    final read = loadDestination();
+    final ran = job.ranWith;
+    if (ran != null) return retry(job, shown: ran);
+    _starting.add(key);
+    _notify();
+    try {
+      await read;
+    } finally {
+      _starting.remove(key);
+    }
+    if (_disposed) return const StartOutcome.ignored();
+    return retry(job, shown: ShownPlace(destination?.destination));
   }
 
   /// Cancel: a queued job goes at once, a running one stops at its next

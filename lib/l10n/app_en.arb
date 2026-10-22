@@ -4901,6 +4901,32 @@
   "@discoverKeepStartFailed": {
     "description": "Keep a copy card: the copy could not be started and the server gave no words of its own (a network failure)."
   },
+  "discoverKeepDestChanged": "Where files land changed since this opened. Check the path above and add again.",
+  "@discoverKeepDestChanged": {
+    "description": "Keep a copy card: a copy was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). The 'Files go to' line above already shows the new place; the user checks it and presses Add again."
+  },
+  "discoverKeepDestChangedTryAgain": "Where files land changed since this opened. Check the path above and try again.",
+  "@discoverKeepDestChangedTryAgain": {
+    "description": "Keep a copy card, under a finished copy's line: its Retry or Add again was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). A 'Files go to' line with the new place is drawn just above; the user checks it and presses the verb again."
+  },
+  "discoverKeepRetryAddsTo": "Retry adds to {path}, your saved place now",
+  "@discoverKeepRetryAddsTo": {
+    "description": "Keep a copy card, under a finished copy that ran somewhere else than where copies land now: where its Retry would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepAddAgainAddsTo": "Add again adds to {path}, your saved place now",
+  "@discoverKeepAddAgainAddsTo": {
+    "description": "Keep a copy card, under a cancelled copy that ran somewhere else than where copies land now: where its Add again would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "discoverKeepConfirmTitle": "{count, plural, =1{Copy 1 album from {peer}?} other{Copy {count} albums from {peer}?}}",
   "@discoverKeepConfirmTitle": {
     "description": "Confirmation title before copying several albums by an artist from a connected server. {peer} is that server's name.",
@@ -5351,6 +5377,10 @@
   "discoverCopiesCancelFailed": "Couldn't cancel. Try again.",
   "@discoverCopiesCancelFailed": {
     "description": "Toast when a copy's Cancel could not reach the user's server."
+  },
+  "discoverCopiesDestChanged": "Couldn't start: where files land changed — retry it from Keep a copy",
+  "@discoverCopiesDestChanged": {
+    "description": "Toast when a Retry or Add again from the Copies list was not started because where the account's copies land changed since that copy ran. Keep a copy (on the song or album sheet) shows the new place."
   },
   "discoverToastCopying": "Copying {title} from {peer}",
   "@discoverToastCopying": {

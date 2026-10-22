@@ -7494,6 +7494,30 @@ abstract class AppLocalizations {
   /// **'Couldn\'t reach your server. Try again.'**
   String get discoverKeepStartFailed;
 
+  /// Keep a copy card: a copy was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). The 'Files go to' line above already shows the new place; the user checks it and presses Add again.
+  ///
+  /// In en, this message translates to:
+  /// **'Where files land changed since this opened. Check the path above and add again.'**
+  String get discoverKeepDestChanged;
+
+  /// Keep a copy card, under a finished copy's line: its Retry or Add again was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). A 'Files go to' line with the new place is drawn just above; the user checks it and presses the verb again.
+  ///
+  /// In en, this message translates to:
+  /// **'Where files land changed since this opened. Check the path above and try again.'**
+  String get discoverKeepDestChangedTryAgain;
+
+  /// Keep a copy card, under a finished copy that ran somewhere else than where copies land now: where its Retry would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry adds to {path}, your saved place now'**
+  String discoverKeepRetryAddsTo(String path);
+
+  /// Keep a copy card, under a cancelled copy that ran somewhere else than where copies land now: where its Add again would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.
+  ///
+  /// In en, this message translates to:
+  /// **'Add again adds to {path}, your saved place now'**
+  String discoverKeepAddAgainAddsTo(String path);
+
   /// Confirmation title before copying several albums by an artist from a connected server. {peer} is that server's name.
   ///
   /// In en, this message translates to:
@@ -7949,6 +7973,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t cancel. Try again.'**
   String get discoverCopiesCancelFailed;
+
+  /// Toast when a Retry or Add again from the Copies list was not started because where the account's copies land changed since that copy ran. Keep a copy (on the song or album sheet) shows the new place.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start: where files land changed — retry it from Keep a copy'**
+  String get discoverCopiesDestChanged;
 
   /// Toast once the sheet that started a copy closes: the song or album title, and the connected server it is copied from.
   ///
