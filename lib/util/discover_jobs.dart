@@ -708,6 +708,20 @@ JobRow jobRowState(DiscoveryJob? job, {String? plugin}) {
   }
 
   final view = job.view;
+  // A song the peer refuses to copy (mStream since 2026-10-21 ends its job
+  // done with `stopped: 'refused'` and nothing copied): it would be refused
+  // again, so no Retry.
+  if (view.stopped == 'refused') {
+    return row._with(
+      kind: JobRowKind.stopped,
+      tag: JobPhrase.stopped,
+      tagTone: JobTone.error,
+      icon: JobIcon.warn,
+      iconTone: JobTone.error,
+      sub: [JobText(JobPhrase.stoppedRefused, peer: view.peerName ?? '')],
+      actions: const [],
+    );
+  }
   // A download that landed in the collection.
   final at = view.downloadedFilepath;
   if (at != null) {

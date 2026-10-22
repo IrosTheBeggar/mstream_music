@@ -563,6 +563,15 @@ void main() {
       }));
       expect([refused.kind, refused.tag, refused.sub!.first, refused.actions],
           [JobRowKind.stopped, JobPhrase.stopped, p(JobPhrase.stoppedRefused, peer: "Sam's server"), <JobAction>[]]);
+      // A song the peer refuses ends done with `stopped: 'refused'` and no
+      // counts (mStream since 2026-10-21): the same refusal, never "done".
+      final song = jobRowState(copyJob({
+        'state': 'done',
+        'params': {'destination': null},
+        'result': {'stopped': 'refused', 'peer': {'id': 2, 'name': "Sam's server"}, 'destination': null},
+      }));
+      expect([song.kind, song.tag, song.tagTone, song.sub, song.actions],
+          [JobRowKind.stopped, JobPhrase.stopped, JobTone.error, [p(JobPhrase.stoppedRefused, peer: "Sam's server")], <JobAction>[]]);
       final cancelled = jobRowState(copyJob({'state': 'cancelled', 'params': {'scope': 'album'}, 'result': many({'stopped': 'cancelled', 'songs': songs(total: 4, copied: 1)})}));
       expect([cancelled.kind, cancelled.muted, cancelled.actions], [JobRowKind.cancelled, true, [JobAction.start]]);
       expect([for (final t in cancelled.sub!) t.phrase], [JobPhrase.cancelledMany, JobPhrase.copiedCount]);
