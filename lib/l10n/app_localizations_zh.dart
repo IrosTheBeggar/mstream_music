@@ -4805,7 +4805,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverDestPresetLibrary => '曲库布局';
 
   @override
-  String get discoverDestPresetCurrent => '你当前的布局';
+  String get discoverDestPresetCustom => '自定义';
+
+  @override
+  String get discoverDestCustomSub => '自己输入路径';
+
+  @override
+  String get discoverDestCustomField => '自定义布局';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return '例如 朋友分享 或 $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      '用 / 分隔文件夹。变量按艺人、专辑等整理副本；固定名称会把所有副本放进同一个文件夹。';
+
+  @override
+  String get discoverDestCustomEmpty => '输入路径即可查看文件存放位置';
+
+  @override
+  String get discoverDestInsertArtist => '插入艺人';
+
+  @override
+  String get discoverDestInsertAlbum => '插入专辑';
+
+  @override
+  String get discoverDestInsertYear => '插入年份';
+
+  @override
+  String get discoverDestInsertGenre => '插入流派';
+
+  @override
+  String get discoverDestInsertAlbumArtist => '插入专辑艺人';
+
+  @override
+  String get discoverDestInsertPeer => '插入服务器名称';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return '未知变量 $name。请使用 $vars。';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return '花括号位置不对——变量应写成 $example。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => '布局不能以 / 开头——它从基础文件夹内开始。';
+
+  @override
+  String get discoverDestErrTraversal => '路径不能包含“..”文件夹。';
+
+  @override
+  String get discoverDestErrEmpty => '这样不会生成任何文件夹——请添加名称或变量。';
+
+  @override
+  String get discoverDestErrHome => '路径不能包含 ~ 或 \$HOME。';
+
+  @override
+  String get discoverDestErrGeneric => '无法使用此路径。';
+
+  @override
+  String get discoverDestErrDrive => '路径不能使用 C: 这样的盘符。';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return '布局最多 $max 个字符。';
+  }
+
+  @override
+  String get discoverDestErrControl => '路径不能包含制表符或其他控制字符。';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return '这首歌没有该值，因此不计入路径：$vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => '流派';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot 取自每个文件的流派标签（文件没有时省略）。';
+  }
 
   @override
   String get discoverDestUseDefault => '使用曲库默认设置';

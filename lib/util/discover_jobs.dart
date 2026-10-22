@@ -34,7 +34,9 @@ const List<String> kLayoutVars = [
   'PEER',
 ];
 const String kDefaultLayout = kDefaultCopyLayout;
-const int _maxTemplateLen = 500;
+
+/// The longest layout the server takes (UTF-16 units, as JS counts).
+const int kMaxLayoutLength = 500;
 const int _maxResolvedLen = 500;
 const int _maxSegmentLen = 200;
 final RegExp _tokenRe = RegExp(r'\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}');
@@ -54,6 +56,7 @@ final RegExp _spaces = RegExp(r'\s+');
 final RegExp _edgeDots = RegExp(r'^[.\s]+|[.\s]+$');
 final RegExp _controlChars = RegExp(r'[\x00-\x1f]');
 final RegExp _driveLetter = RegExp(r'^[a-zA-Z]:');
+final RegExp _homeString = RegExp(r'\$\{HOME\}|\$HOME\b|~');
 
 /// JS `String(v)` for the values a tag carries.
 String _jsString(Object? v) {
@@ -71,6 +74,11 @@ String sanitizeSegment(Object? raw) {
   if (raw == null) return '';
   var s = _jsString(raw);
   s = s.replaceAll(_badSegmentChars, '-');
+  // A "~" or "$HOME" in a tag is a name, not a shell string: folded, as the
+  // server's own sanitizeSegment folds it (the rendered path would otherwise
+  // be refused). Here the phone departs from the webapp's copy, which does
+  // not fold them yet; the server has the last word.
+  s = s.replaceAll(_homeString, '-');
   s = s.replaceAll(_spaces, ' ');
   s = s.replaceAll(_edgeDots, '');
   if (s.length > _maxSegmentLen) s = s.substring(0, _maxSegmentLen);
@@ -118,16 +126,21 @@ ResolvedLayout resolveLayout(Object? layout, Map<String, Object?>? meta) {
 }
 
 /// valid, or the server's error code (one translation table serves both),
-/// with the offending variable for `unknown_variable`.
+/// with the offending variable for `unknown_variable`: its [variable] name
+/// upper-cased, and its [token] as it was typed (the server's message names
+/// that one).
 class LayoutCheck {
   final bool valid;
   final String? error;
   final String? variable;
+  final String? token;
   const LayoutCheck.ok()
       : valid = true,
         error = null,
-        variable = null;
-  const LayoutCheck.bad(this.error, {this.variable}) : valid = false;
+        variable = null,
+        token = null;
+  const LayoutCheck.bad(this.error, {this.variable, this.token})
+      : valid = false;
 }
 
 LayoutCheck validateResolvedPath(Object? path) {
@@ -156,7 +169,7 @@ LayoutCheck validateResolvedPath(Object? path) {
 LayoutCheck validateLayout(Object? layout) {
   if (layout is! String) return const LayoutCheck.bad('invalid_type');
   if (layout.isEmpty) return const LayoutCheck.bad('empty_template');
-  if (layout.length > _maxTemplateLen) {
+  if (layout.length > kMaxLayoutLength) {
     return const LayoutCheck.bad('template_too_long');
   }
   final tokens = [
@@ -172,7 +185,11 @@ LayoutCheck validateLayout(Object? layout) {
   }
   for (final tok in tokens) {
     if (!kLayoutVars.contains(tok.name)) {
-      return LayoutCheck.bad('unknown_variable', variable: tok.name);
+      return LayoutCheck.bad(
+        'unknown_variable',
+        variable: tok.name,
+        token: tok.raw,
+      );
     }
   }
   if (_controlChars.hasMatch(layout)) return const LayoutCheck.bad('invalid_chars');

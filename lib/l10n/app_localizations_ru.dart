@@ -5244,7 +5244,97 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Структура библиотеки';
 
   @override
-  String get discoverDestPresetCurrent => 'Ваша текущая структура';
+  String get discoverDestPresetCustom => 'Своя';
+
+  @override
+  String get discoverDestCustomSub => 'Введите свой путь';
+
+  @override
+  String get discoverDestCustomField => 'Своя структура папок';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'напр. От друзей или $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Разделяйте папки знаком /. Переменные раскладывают копии по исполнителю, альбому…; постоянное имя кладёт все копии в одну папку.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Введите путь, чтобы увидеть, куда попадут файлы';
+
+  @override
+  String get discoverDestInsertArtist => 'Вставить исполнителя';
+
+  @override
+  String get discoverDestInsertAlbum => 'Вставить альбом';
+
+  @override
+  String get discoverDestInsertYear => 'Вставить год';
+
+  @override
+  String get discoverDestInsertGenre => 'Вставить жанр';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Вставить исполнителя альбома';
+
+  @override
+  String get discoverDestInsertPeer => 'Вставить имя сервера';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Неизвестная переменная $name. Используйте $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Фигурная скобка не на месте — переменные пишутся так: $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Структура не может начинаться с / — она начинается внутри базовой папки.';
+
+  @override
+  String get discoverDestErrTraversal => 'Путь не может содержать папки «..».';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Так не получится ни одной папки — добавьте имя или переменную.';
+
+  @override
+  String get discoverDestErrHome => 'Путь не может содержать ~ или \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'Этот путь нельзя использовать.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Путь не может содержать букву диска, например C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Структура может содержать не более $max символов.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Путь не может содержать табуляцию и другие управляющие символы.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'У этого трека нет значения, поэтому не входит в путь: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'жанр';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot берётся из тега жанра каждого файла (пропускается, если его нет).';
+  }
 
   @override
   String get discoverDestUseDefault =>

@@ -5123,7 +5123,98 @@ class AppLocalizationsPt extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Layout da biblioteca';
 
   @override
-  String get discoverDestPresetCurrent => 'Seu layout atual';
+  String get discoverDestPresetCustom => 'Personalizado';
+
+  @override
+  String get discoverDestCustomSub => 'Digite seu próprio caminho';
+
+  @override
+  String get discoverDestCustomField => 'Layout personalizado';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'ex.: De amigos ou $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Separe as pastas com /. Variáveis organizam as cópias por artista, álbum…; um nome fixo coloca todas as cópias na mesma pasta.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Digite um caminho para ver para onde vão os arquivos';
+
+  @override
+  String get discoverDestInsertArtist => 'Inserir artista';
+
+  @override
+  String get discoverDestInsertAlbum => 'Inserir álbum';
+
+  @override
+  String get discoverDestInsertYear => 'Inserir ano';
+
+  @override
+  String get discoverDestInsertGenre => 'Inserir gênero';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Inserir artista do álbum';
+
+  @override
+  String get discoverDestInsertPeer => 'Inserir nome do servidor';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Variável desconhecida $name. Use $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Há uma chave fora do lugar — variáveis são escritas como $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Um layout não pode começar com / — ele começa dentro da pasta base.';
+
+  @override
+  String get discoverDestErrTraversal =>
+      'Um caminho não pode conter pastas “..”.';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Isso não cria nenhuma pasta — adicione um nome ou uma variável.';
+
+  @override
+  String get discoverDestErrHome => 'Um caminho não pode conter ~ nem \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'Esse caminho não pode ser usado.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Um caminho não pode usar uma letra de unidade como C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Um layout pode ter no máximo $max caracteres.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Um caminho não pode conter tabulações nem outros caracteres de controle.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'Sem valor para esta música, por isso fica fora do caminho: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'gênero';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot vem da etiqueta de gênero de cada arquivo (omitido quando o arquivo não tem).';
+  }
 
   @override
   String get discoverDestUseDefault => 'Usar o padrão da biblioteca';

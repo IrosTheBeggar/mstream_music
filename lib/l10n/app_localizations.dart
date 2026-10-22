@@ -8124,11 +8124,155 @@ abstract class AppLocalizations {
   /// **'Library layout'**
   String get discoverDestPresetLibrary;
 
-  /// Destination picker layout choice: the layout in force when it is none of the presets (set elsewhere).
+  /// Destination picker layout choice: a layout the user types by hand (its text field opens under it). Also chosen when the layout in force is none of the presets.
   ///
   /// In en, this message translates to:
-  /// **'Your current layout'**
-  String get discoverDestPresetCurrent;
+  /// **'Custom'**
+  String get discoverDestPresetCustom;
+
+  /// Destination picker: the line under the Custom layout choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your own path'**
+  String get discoverDestCustomSub;
+
+  /// Accessible name of the destination picker's custom layout text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom layout'**
+  String get discoverDestCustomField;
+
+  /// Destination picker custom layout field placeholder: a plain folder name (translate it) or {example}, a layout with variables kept as is (like {{ARTIST}}/{{ALBUM}}).
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. From friends or {example}'**
+  String discoverDestCustomHint(String example);
+
+  /// Destination picker help under the custom layout field: "/" makes folders; variables (the buttons above it) sort copies by their tags; plain text is the same folder for every copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Use / between folders. Variables sort copies by artist, album…; a plain name puts every copy in the same folder.'**
+  String get discoverDestCustomHelp;
+
+  /// Destination picker preview while the custom layout field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a path to see where files land'**
+  String get discoverDestCustomEmpty;
+
+  /// Accessible name of the destination picker button that inserts the artist variable into the custom layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert artist'**
+  String get discoverDestInsertArtist;
+
+  /// Accessible name of the destination picker button that inserts the album variable into the custom layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert album'**
+  String get discoverDestInsertAlbum;
+
+  /// Accessible name of the destination picker button that inserts the year variable into the custom layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert year'**
+  String get discoverDestInsertYear;
+
+  /// Accessible name of the destination picker button that inserts the genre variable into the custom layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert genre'**
+  String get discoverDestInsertGenre;
+
+  /// Accessible name of the destination picker button that inserts the album artist variable (the album's credit) into the custom layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert album artist'**
+  String get discoverDestInsertAlbumArtist;
+
+  /// Accessible name of the destination picker button that inserts the variable for the name of the connected server the copy comes from.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert server name'**
+  String get discoverDestInsertPeer;
+
+  /// Destination picker, under the custom layout field: it names a variable that does not exist; {name} is it in its braces (like {{ARTST}}), {vars} the variables there are (like ARTIST, ALBUM).
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown variable {name}. Use {vars}.'**
+  String discoverDestErrUnknownVar(String name, String vars);
+
+  /// Destination picker, under the custom layout field: a single or unmatched brace; {example} is a variable in its double braces (like {{ARTIST}}).
+  ///
+  /// In en, this message translates to:
+  /// **'A brace is out of place — variables are written like {example}.'**
+  String discoverDestErrBraces(String example);
+
+  /// Destination picker, under the custom layout field: it starts with a slash; a layout is relative to the base folder.
+  ///
+  /// In en, this message translates to:
+  /// **'A layout can\'t start with / — it begins inside the base folder.'**
+  String get discoverDestErrAbsolute;
+
+  /// Destination picker, under the custom layout field: it has a ".." segment (a folder that climbs out).
+  ///
+  /// In en, this message translates to:
+  /// **'A path can\'t contain .. folders.'**
+  String get discoverDestErrTraversal;
+
+  /// Destination picker, under the custom layout field: it renders to no folder at all (only spaces or slashes).
+  ///
+  /// In en, this message translates to:
+  /// **'That makes no folder — add a name or a variable.'**
+  String get discoverDestErrEmpty;
+
+  /// Destination picker, under the custom layout field: it contains a tilde or $HOME (a home folder reference), which the server refuses. Keep ~ and $HOME as they are.
+  ///
+  /// In en, this message translates to:
+  /// **'A path can\'t contain ~ or \$HOME.'**
+  String get discoverDestErrHome;
+
+  /// Destination picker, under the custom layout field: the server would refuse it for another reason.
+  ///
+  /// In en, this message translates to:
+  /// **'That path can\'t be used.'**
+  String get discoverDestErrGeneric;
+
+  /// Destination picker, under the custom layout field: it starts a folder with a Windows drive letter (like C:), which the server refuses.
+  ///
+  /// In en, this message translates to:
+  /// **'A path can\'t use a drive letter like C:.'**
+  String get discoverDestErrDrive;
+
+  /// Destination picker, under the custom layout field: it is longer than the server takes; {max} is the limit (500).
+  ///
+  /// In en, this message translates to:
+  /// **'A layout can be at most {max} characters.'**
+  String discoverDestErrTooLong(int max);
+
+  /// Destination picker, under the custom layout field: it contains a tab, a line break or another control character (usually pasted).
+  ///
+  /// In en, this message translates to:
+  /// **'A path can\'t contain tabs or other control characters.'**
+  String get discoverDestErrControl;
+
+  /// Destination picker preview, under the path: the layout's variables that this song has no tag for, so their part of the path is left out; {vars} lists them as typed (like {{YEAR}}, {{ALBUM}}).
+  ///
+  /// In en, this message translates to:
+  /// **'No value for this song, so left out of the path: {vars}'**
+  String discoverDestMissing(String vars);
+
+  /// Destination picker preview: the word that stands in for a file's genre in the path (the phone cannot read the file's genre tag), shown between ‹ › marks.
+  ///
+  /// In en, this message translates to:
+  /// **'genre'**
+  String get discoverDestGenreSlot;
+
+  /// Destination picker preview, under the path, when the layout uses the genre: {slot} is the stand-in (like ‹genre›); the server fills it from each file's own genre tag and leaves it out for a file without one.
+  ///
+  /// In en, this message translates to:
+  /// **'{slot} is filled from each file\'s genre tag (left out when a file has none).'**
+  String discoverDestGenreNote(String slot);
 
   /// Destination picker text button: drops the account's saved destination and goes back to the library default.
   ///

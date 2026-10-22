@@ -115,6 +115,10 @@ void main() {
       }
       final unknown = validateLayout('{{ARTIST}}/{{TRACK}}');
       expect([unknown.valid, unknown.error, unknown.variable], [false, 'unknown_variable', 'TRACK']);
+      // The token as it was typed, for the words under the field (the
+      // server's message names the raw token too).
+      final spaced = validateLayout('Inbox/{{ artst }}');
+      expect([spaced.error, spaced.variable, spaced.token], ['unknown_variable', 'ARTST', '{{ artst }}']);
       expect(validateLayout(null).valid, isFalse);
       expect([...kLayoutVars]..sort(), [...(gold['layoutVars'] as List).cast<String>()]..sort(),
           reason: 'the same variables are offered');
@@ -192,6 +196,26 @@ void main() {
           fileName: 'peerlib/Boukmanflow/Borrowed Tapes/02 - Late Train Verse.mp3');
       expect(t.crumbs, ['demo', 'Boukmanflow', 'Borrowed Tapes']);
       expect(t.relPath, 'Boukmanflow/Borrowed Tapes/02 - Late Train Verse.mp3');
+    });
+
+    test('a "~" or "\$HOME" in a tag is a name: folded to "-", as the server folds it', () {
+      // The server's own sanitizeSegment and resolveTemplate produced these.
+      expect(sanitizeSegment('Ayla~'), 'Ayla-');
+      expect(sanitizeSegment(r'$HOME Tapes'), '- Tapes');
+      expect(sanitizeSegment(r'${HOME}'), '-');
+      expect(sanitizeSegment(r'$HOMEWARD'), r'$HOMEWARD');
+      expect(resolveLayout('{{ARTIST}}/{{ALBUM}}', {'artist': 'Ayla~', 'album': '~ Tapes'}).path, 'Ayla-/- Tapes');
+      expect(resolveLayout('{{ARTIST}}/{{ALBUM}}', {'artist': r'$HOME', 'album': r'${HOME}/x'}).path, '-/--x');
+      // So the preview shows where such a song lands, as the server writes it.
+      final t = previewTarget(
+          vpath: 'copies',
+          base: '',
+          layout: '{{ARTIST}}/{{ALBUM}}',
+          tags: {'artist': 'Ayla~', 'album': '~ Tapes'},
+          fileName: 'x.mp3');
+      expect([t.valid, t.relPath], [true, 'Ayla-/- Tapes/x.mp3']);
+      // A "~" typed in the layout itself is still refused.
+      expect(validateLayout('~/{{ARTIST}}').error, 'home_string');
     });
   });
 

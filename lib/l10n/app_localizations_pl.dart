@@ -5234,7 +5234,98 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Układ biblioteki';
 
   @override
-  String get discoverDestPresetCurrent => 'Twój obecny układ';
+  String get discoverDestPresetCustom => 'Własny';
+
+  @override
+  String get discoverDestCustomSub => 'Wpisz własną ścieżkę';
+
+  @override
+  String get discoverDestCustomField => 'Własny układ';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'np. Od znajomych lub $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Foldery oddzielaj znakiem /. Zmienne sortują kopie według wykonawcy, albumu…; stała nazwa umieszcza każdą kopię w tym samym folderze.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Wpisz ścieżkę, aby zobaczyć, gdzie trafią pliki';
+
+  @override
+  String get discoverDestInsertArtist => 'Wstaw wykonawcę';
+
+  @override
+  String get discoverDestInsertAlbum => 'Wstaw album';
+
+  @override
+  String get discoverDestInsertYear => 'Wstaw rok';
+
+  @override
+  String get discoverDestInsertGenre => 'Wstaw gatunek';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Wstaw wykonawcę albumu';
+
+  @override
+  String get discoverDestInsertPeer => 'Wstaw nazwę serwera';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Nieznana zmienna $name. Użyj $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Nawias klamrowy jest w złym miejscu — zmienne zapisuje się jak $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Układ nie może zaczynać się od / — zaczyna się w folderze bazowym.';
+
+  @override
+  String get discoverDestErrTraversal =>
+      'Ścieżka nie może zawierać folderów „..”.';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Nie powstaje żaden folder — dodaj nazwę lub zmienną.';
+
+  @override
+  String get discoverDestErrHome => 'Ścieżka nie może zawierać ~ ani \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'Tej ścieżki nie można użyć.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Ścieżka nie może zawierać litery dysku, np. C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Układ może mieć najwyżej $max znaków.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Ścieżka nie może zawierać tabulatorów ani innych znaków sterujących.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'Brak wartości dla tego utworu, więc pominięte w ścieżce: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'gatunek';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot pochodzi ze znacznika gatunku każdego pliku (pomijany, gdy plik go nie ma).';
+  }
 
   @override
   String get discoverDestUseDefault => 'Użyj domyślnych ustawień biblioteki';

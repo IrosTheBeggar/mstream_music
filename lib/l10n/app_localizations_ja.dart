@@ -4888,7 +4888,92 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverDestPresetLibrary => 'ライブラリのレイアウト';
 
   @override
-  String get discoverDestPresetCurrent => '現在のレイアウト';
+  String get discoverDestPresetCustom => 'カスタム';
+
+  @override
+  String get discoverDestCustomSub => 'パスを自分で入力';
+
+  @override
+  String get discoverDestCustomField => 'カスタムレイアウト';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return '例: 友だちから、または $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'フォルダーは / で区切ります。変数を使うとアーティストやアルバムごとに分けられ、固定の名前だとすべてのコピーが同じフォルダーに入ります。';
+
+  @override
+  String get discoverDestCustomEmpty => 'パスを入力すると保存先が表示されます';
+
+  @override
+  String get discoverDestInsertArtist => 'アーティストを挿入';
+
+  @override
+  String get discoverDestInsertAlbum => 'アルバムを挿入';
+
+  @override
+  String get discoverDestInsertYear => '年を挿入';
+
+  @override
+  String get discoverDestInsertGenre => 'ジャンルを挿入';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'アルバムアーティストを挿入';
+
+  @override
+  String get discoverDestInsertPeer => 'サーバー名を挿入';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return '不明な変数 $name です。$vars を使ってください。';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return '波かっこの位置が正しくありません。変数は $example のように書きます。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => 'レイアウトは / で始められません。ベースフォルダーの中から始まります。';
+
+  @override
+  String get discoverDestErrTraversal => 'パスに「..」フォルダーは使えません。';
+
+  @override
+  String get discoverDestErrEmpty => 'フォルダーが作られません。名前か変数を追加してください。';
+
+  @override
+  String get discoverDestErrHome => 'パスに ~ や \$HOME は使えません。';
+
+  @override
+  String get discoverDestErrGeneric => 'このパスは使えません。';
+
+  @override
+  String get discoverDestErrDrive => 'パスに C: のようなドライブ文字は使えません。';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'レイアウトは $max 文字までです。';
+  }
+
+  @override
+  String get discoverDestErrControl => 'パスにタブなどの制御文字は使えません。';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'この曲には値がないため、パスから省かれます: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'ジャンル';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot は各ファイルのジャンルタグから入ります（タグがなければ省かれます）。';
+  }
 
   @override
   String get discoverDestUseDefault => 'ライブラリの既定を使う';

@@ -5138,7 +5138,99 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Disposition de la bibliothèque';
 
   @override
-  String get discoverDestPresetCurrent => 'Votre disposition actuelle';
+  String get discoverDestPresetCustom => 'Personnalisée';
+
+  @override
+  String get discoverDestCustomSub => 'Saisissez votre propre chemin';
+
+  @override
+  String get discoverDestCustomField => 'Disposition personnalisée';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'ex. De mes amis ou $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Séparez les dossiers par /. Les variables classent les copies par artiste, album… ; un nom fixe met toutes les copies dans le même dossier.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Saisissez un chemin pour voir où arrivent les fichiers';
+
+  @override
+  String get discoverDestInsertArtist => 'Insérer l’artiste';
+
+  @override
+  String get discoverDestInsertAlbum => 'Insérer l’album';
+
+  @override
+  String get discoverDestInsertYear => 'Insérer l’année';
+
+  @override
+  String get discoverDestInsertGenre => 'Insérer le genre';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Insérer l’artiste de l’album';
+
+  @override
+  String get discoverDestInsertPeer => 'Insérer le nom du serveur';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Variable inconnue $name. Utilisez $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Une accolade est mal placée : les variables s’écrivent comme $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Une disposition ne peut pas commencer par / : elle part du dossier de base.';
+
+  @override
+  String get discoverDestErrTraversal =>
+      'Un chemin ne peut pas contenir de dossier « .. ».';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Cela ne crée aucun dossier : ajoutez un nom ou une variable.';
+
+  @override
+  String get discoverDestErrHome =>
+      'Un chemin ne peut contenir ni ~ ni \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'Ce chemin ne peut pas être utilisé.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Un chemin ne peut pas utiliser une lettre de lecteur comme C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Une disposition peut compter au plus $max caractères.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Un chemin ne peut pas contenir de tabulations ni d’autres caractères de contrôle.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'Sans valeur pour ce morceau, donc absent du chemin : $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'genre';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot vient de l’étiquette de genre de chaque fichier (omis s’il n’en a pas).';
+  }
 
   @override
   String get discoverDestUseDefault =>

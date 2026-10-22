@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -17,9 +18,11 @@ import 'keep_toast.dart';
 /// copy (`PUT /discovery/collection/destination`): a library the account may
 /// add files to, a base folder inside it, and a layout — Artist / Album,
 /// Server / Artist / Album, the chosen library's own Path Template when it
-/// has one. The preview renders where the sheet's song would land as the
-/// user types (the server's own layout engine, ported). "Use the library
-/// default" saves none.
+/// has one, or Custom: one typed by hand (plain folders, the variables, or
+/// both), held to the server's own validator (ported) as it is typed. The
+/// preview renders where the sheet's song would land as the user types (the
+/// server's own layout engine, ported). "Use the library default" saves
+/// none.
 ///
 /// States: loading (still blocks; Save off), the default in force (tag
 /// "library default"), a saved one ("yours"), saving (inputs locked), a
@@ -107,6 +110,17 @@ class _DestinationSheetState extends State<DestinationSheet> {
   String? _layout;
   CollectionDestination? _from;
 
+  /// Custom is chosen: its field's text is the layout. What was typed stays
+  /// in the field while a preset is chosen.
+  bool _customChosen = false;
+  final TextEditingController _custom = TextEditingController();
+  final FocusNode _customFocus = FocusNode();
+
+  /// What Custom's field held when a library's own layout moved into it
+  /// (leaving that library): back in that library with the layout
+  /// untouched, the field holds it again.
+  String? _customBefore;
+
   /// The server's words for the last refused save, and the input they name.
   String? _saveError;
   _Field? _saveErrorField;
@@ -119,6 +133,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
     _sync(force: true);
     jobs.addListener(_onJobs);
     _base.addListener(_onTyping);
+    _custom.addListener(_onCustomTyping);
     // What the server holds now (it may have changed on another device).
     if (!jobs.savingDestination) unawaited(jobs.loadDestination());
   }
@@ -128,6 +143,9 @@ class _DestinationSheetState extends State<DestinationSheet> {
     jobs.removeListener(_onJobs);
     _base.removeListener(_onTyping);
     _base.dispose();
+    _custom.removeListener(_onCustomTyping);
+    _custom.dispose();
+    _customFocus.dispose();
     super.dispose();
   }
 
@@ -151,27 +169,179 @@ class _DestinationSheetState extends State<DestinationSheet> {
     });
   }
 
+  /// Custom's text as last seen.
+  String _customTyped = '';
+
+  void _onCustomTyping() {
+    if (!mounted || _custom.text == _customTyped) return;
+    _customTyped = _custom.text;
+    setState(() => _dropError(_Field.layout));
+  }
+
+  /// Puts [layout] in Custom's field as the form's own (not an edit: a
+  /// refusal under it stays).
+  void _setCustom(String layout) {
+    _customTyped = layout;
+    if (_custom.text != layout) _custom.text = layout;
+  }
+
+  void _dropError(_Field field) {
+    if (_saveErrorField != field) return;
+    _saveError = null;
+    _saveErrorField = null;
+  }
+
   /// The form takes the server's destination: the first time it is known,
   /// and again whenever it changes while nothing was edited (or [force]).
   void _sync({bool force = false}) {
-    final d = jobs.destination?.destination;
-    if (d == null || identical(d, _from)) return;
+    final view = jobs.destination;
+    final d = view?.destination;
+    if (view == null || d == null || identical(d, _from)) return;
     // An edit in progress is kept; Save or Close settles it.
     if (!force && _from != null && _dirty) return;
     _from = d;
     _vpath = d.vpath;
     _layout = d.layout;
+    // A layout that is none of the presets opens in Custom's field.
+    _customChosen = !_isPreset(view, d.vpath, d.layout);
+    if (_customChosen) _setCustom(d.layout);
     _typed = d.base;
     if (_base.text != d.base) _base.text = d.base;
   }
+
+  /// The layout the form holds: Custom's text while Custom is chosen, else
+  /// the chosen preset.
+  String? get _chosenLayout => _customChosen ? _custom.text : _layout;
 
   bool get _dirty {
     final d = _from;
     if (d == null) return false;
     return _vpath != d.vpath ||
-        _layout != d.layout ||
+        _chosenLayout != d.layout ||
         normalizeBase(_base.text).base != normalizeBase(d.base).base ||
         !normalizeBase(_base.text).valid;
+  }
+
+  /// Custom's text is empty or would be refused: Save waits for it.
+  bool get _customBlocks =>
+      _customChosen && !validateLayout(_custom.text).valid;
+
+  /// The layout presets for [vpath]'s library, in order: Artist / Album
+  /// (the server's own default, by the album's credit since the
+  /// compilations change, so a fresh account's layout is this one), Server
+  /// / Artist / Album, then the library's own Path Template when it has one
+  /// that is neither. Any other layout is Custom's.
+  static List<(String Function(AppLocalizations), String)> _presets(
+    DestinationView view,
+    String vpath,
+  ) {
+    final artistAlbum = view.defaultLayout.trim().isNotEmpty
+        ? view.defaultLayout
+        : kLayoutArtistAlbum;
+    final template = view.libraries
+        .firstWhere(
+          (w) => w.vpath == vpath,
+          orElse: () => WritableLibrary(vpath),
+        )
+        .template;
+    return [
+      ((l) => l.discoverDestPresetArtistAlbum, artistAlbum),
+      if (artistAlbum != kLayoutServerArtistAlbum)
+        ((l) => l.discoverDestPresetServer, kLayoutServerArtistAlbum),
+      if (template != null &&
+          template.trim().isNotEmpty &&
+          template != artistAlbum &&
+          template != kLayoutServerArtistAlbum)
+        ((l) => l.discoverDestPresetLibrary, template),
+    ];
+  }
+
+  static bool _isPreset(DestinationView view, String vpath, String? layout) =>
+      _presets(view, vpath).any((p) => p.$2 == layout);
+
+  /// The variables Custom offers: the server's, as far as the phone's
+  /// layout engine knows them (all of them when the server names none).
+  static List<String> _variables(DestinationView view) {
+    final known = [
+      for (final v in view.variables)
+        if (kLayoutVars.contains(v)) v,
+    ];
+    return known.isEmpty ? kLayoutVars : known;
+  }
+
+  static String _token(String name) => '{{$name}}';
+
+  /// Custom chosen: its field opens with the keyboard up, and scrolls into
+  /// view with the variables under it (its scrollPadding).
+  void _pickCustom() {
+    if (_customChosen) {
+      _customFocus.requestFocus();
+      return;
+    }
+    setState(() {
+      _customChosen = true;
+      _dropError(_Field.layout);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _customChosen) _customFocus.requestFocus();
+    });
+  }
+
+  /// A variable button: {{NAME}} where the caret is (over the selection,
+  /// at the end when the field never had one), the caret after it. A button
+  /// with no room left for its token is off (the field's own limit sees
+  /// only the keyboard).
+  void _insertVar(String name) {
+    final token = _token(name);
+    final v = _custom.value;
+    final s = v.selection;
+    final start = s.isValid ? s.start : v.text.length;
+    final end = s.isValid ? s.end : v.text.length;
+    _custom.value = TextEditingValue(
+      text: v.text.replaceRange(start, end, token),
+      selection: TextSelection.collapsed(offset: start + token.length),
+    );
+    _customFocus.requestFocus();
+  }
+
+  /// The validator's refusal in words (the server's codes, one table); an
+  /// unknown variable named as it was typed.
+  String _layoutProblem(
+    AppLocalizations l,
+    LayoutCheck check,
+    List<String> vars,
+  ) => switch (check.error) {
+    'unknown_variable' => l.discoverDestErrUnknownVar(
+      check.token ?? _token(check.variable ?? ''),
+      vars.join(', '),
+    ),
+    'unbalanced_braces' => l.discoverDestErrBraces(_token('ARTIST')),
+    'absolute_template' || 'absolute_path' => l.discoverDestErrAbsolute,
+    'traversal' => l.discoverDestErrTraversal,
+    'empty_path' => l.discoverDestErrEmpty,
+    'home_string' => l.discoverDestErrHome,
+    'drive_letter' || 'drive_letter_segment' => l.discoverDestErrDrive,
+    'template_too_long' => l.discoverDestErrTooLong(kMaxLayoutLength),
+    'invalid_chars' => l.discoverDestErrControl,
+    _ => l.discoverDestErrGeneric,
+  };
+
+  /// A variable button's name for a screen reader ("Insert artist"), with
+  /// the name it shows when the words do not already say it: Voice Control
+  /// finds a button by what it shows.
+  String _insertLabel(AppLocalizations l, String name) {
+    final words = switch (name) {
+      'ARTIST' => l.discoverDestInsertArtist,
+      'ALBUM' => l.discoverDestInsertAlbum,
+      'YEAR' => l.discoverDestInsertYear,
+      'GENRE' => l.discoverDestInsertGenre,
+      'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
+      'PEER' => l.discoverDestInsertPeer,
+      _ => _token(name),
+    };
+    return words.toLowerCase().contains(name.toLowerCase())
+        ? words
+        : '$words, $name';
   }
 
   /// The account's own destination is in force (not the library default).
@@ -229,6 +399,10 @@ class _DestinationSheetState extends State<DestinationSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    // The keyboard up: the header keeps to its title and the preview to the
+    // path (two lines at most), so the field being typed in keeps its room.
+    final typing = bottomInset > 0;
     final view = jobs.destination;
     final d = view?.destination;
     final Widget body;
@@ -274,12 +448,11 @@ class _DestinationSheetState extends State<DestinationSheet> {
     } else {
       tagMine = _mine(view);
       tag = tagMine ? l.discoverDestTagYours : l.discoverDestTagDefault;
-      preview = _preview(l);
+      preview = _preview(l, compact: typing);
       body = _form(l, view);
       footer = _footer(l, view);
     }
 
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
       // The sheet lifts above the keyboard; the header, the preview and the
       // footer stay, the form scrolls the field into view.
@@ -292,7 +465,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _GrabHandle(),
-            _header(l, tag, tagMine),
+            _header(l, tag, tagMine, compact: typing),
             Divider(height: 1, thickness: 1, color: VelvetColors.border),
             ?preview,
             Flexible(child: body),
@@ -303,8 +476,13 @@ class _DestinationSheetState extends State<DestinationSheet> {
     );
   }
 
-  Widget _header(AppLocalizations l, String? tag, bool mine) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 4, 10),
+  Widget _header(
+    AppLocalizations l,
+    String? tag,
+    bool mine, {
+    bool compact = false,
+  }) => Padding(
+    padding: EdgeInsets.fromLTRB(16, compact ? 0 : 4, 4, compact ? 2 : 10),
     child: Row(
       children: [
         Expanded(
@@ -372,14 +550,15 @@ class _DestinationSheetState extends State<DestinationSheet> {
                     ),
                 ],
               ),
-              Text(
-                l.discoverDestSub,
-                style: TextStyle(
-                  color: VelvetColors.textSecondary,
-                  fontSize: 13,
-                  height: 18 / 13,
+              if (!compact)
+                Text(
+                  l.discoverDestSub,
+                  style: TextStyle(
+                    color: VelvetColors.textSecondary,
+                    fontSize: 13,
+                    height: 18 / 13,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -393,39 +572,75 @@ class _DestinationSheetState extends State<DestinationSheet> {
     ),
   );
 
-  /// Where the sheet's song would land, or why the preview waits.
-  Widget? _preview(AppLocalizations l) {
+  /// Where the sheet's song would land, or why the preview waits. While
+  /// the keyboard is up ([compact]) it keeps to the path, two lines at most.
+  Widget? _preview(AppLocalizations l, {bool compact = false}) {
     final song = widget.song;
     if (song == null) return null;
+    // The phone never sees a file's genre tag: a slot stands where the
+    // server puts it, so the path is never shallower than the one written.
+    final genre = '‹${l.discoverDestGenreSlot}›';
     final t = previewTarget(
       vpath: _vpath,
       base: _base.text,
-      layout: _layout,
+      layout: _chosenLayout,
       tags: {
         'artist': song.artist,
         'album': song.album,
         'year': song.year,
+        'genre': genre,
         'albumartist': song.albumArtist,
       },
       peerName: widget.peerName,
       fileName: song.filepath ?? song.title,
     );
+    final quiet = TextStyle(
+      color: VelvetColors.textSecondary,
+      fontSize: 13,
+      height: 18 / 13,
+    );
+    final lines = compact ? 2 : null;
+    final cut = compact ? TextOverflow.ellipsis : null;
     final Widget content;
     final Widget icon;
-    if (!t.valid) {
+    if (!t.valid && t.field == 'base') {
       icon = Icon(
         Icons.warning_amber_rounded,
         size: 16,
         color: keepTone(VelvetColors.warning),
       );
       content = Text(
-        t.field == 'base' ? l.discoverDestFixBase : l.discoverDestFixLayout,
+        l.discoverDestFixBase,
         key: const ValueKey('destination-preview-invalid'),
-        style: TextStyle(
-          color: VelvetColors.textSecondary,
-          fontSize: 13,
-          height: 18 / 13,
-        ),
+        maxLines: lines,
+        overflow: cut,
+        style: quiet,
+      );
+    } else if (_customChosen && _custom.text.isEmpty) {
+      icon = Icon(
+        Icons.folder_outlined,
+        size: 16,
+        color: VelvetColors.textSecondary,
+      );
+      content = Text(
+        l.discoverDestCustomEmpty,
+        key: const ValueKey('destination-preview-empty'),
+        maxLines: lines,
+        overflow: cut,
+        style: quiet,
+      );
+    } else if (!t.valid) {
+      icon = Icon(
+        Icons.warning_amber_rounded,
+        size: 16,
+        color: keepTone(VelvetColors.warning),
+      );
+      content = Text(
+        l.discoverDestFixLayout,
+        key: const ValueKey('destination-preview-invalid'),
+        maxLines: lines,
+        overflow: cut,
+        style: quiet,
       );
     } else {
       icon = Icon(
@@ -435,22 +650,34 @@ class _DestinationSheetState extends State<DestinationSheet> {
       );
       final crumbs = [...t.crumbs, t.file];
       final soft = TextStyle(color: VelvetColors.textSecondary);
+      final slot = TextStyle(
+        color: VelvetColors.textSecondary,
+        fontStyle: FontStyle.italic,
+      );
+      final note = TextStyle(
+        color: VelvetColors.textSecondary,
+        fontSize: 12,
+        height: 16 / 12,
+      );
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            l.discoverDestLandsAt(song.title),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: VelvetColors.textSecondary,
-              fontSize: 12,
-              height: 16 / 12,
+          if (!compact)
+            Text(
+              l.discoverDestLandsAt(song.title),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 12,
+                height: 16 / 12,
+              ),
             ),
-          ),
           Text.rich(
             key: const ValueKey('destination-preview'),
+            maxLines: lines,
+            overflow: cut,
             TextSpan(
               style: TextStyle(
                 color: VelvetColors.textPrimary,
@@ -462,17 +689,35 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 // only between the › separators.
                 for (var i = 0; i < crumbs.length; i++) ...[
                   if (i > 0) TextSpan(text: ' › ', style: soft),
-                  TextSpan(text: _hold(crumbs[i])),
+                  ..._crumb(crumbs[i], genre, slot),
                 ],
               ],
             ),
           ),
+          if (!compact && t.rendered.contains(genre))
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.discoverDestGenreNote(genre),
+                key: const ValueKey('destination-preview-genre'),
+                style: note,
+              ),
+            ),
+          if (!compact && t.missingVars.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.discoverDestMissing(t.missingVars.map(_token).join(', ')),
+                key: const ValueKey('destination-preview-missing'),
+                style: note,
+              ),
+            ),
         ],
       );
     }
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      margin: EdgeInsets.fromLTRB(16, compact ? 8 : 12, 16, 4),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 8 : 10),
       decoration: BoxDecoration(
         color: VelvetColors.raised,
         borderRadius: BorderRadius.circular(10),
@@ -492,6 +737,18 @@ class _DestinationSheetState extends State<DestinationSheet> {
     );
   }
 
+  /// One segment of the path, unbreakable, the genre's [slot] in it set
+  /// apart in [style].
+  static List<InlineSpan> _crumb(String s, String slot, TextStyle style) {
+    final parts = s.split(slot);
+    return [
+      for (var i = 0; i < parts.length; i++) ...[
+        if (i > 0) TextSpan(text: _hold(slot), style: style),
+        if (parts[i].isNotEmpty) TextSpan(text: _hold(parts[i])),
+      ],
+    ];
+  }
+
   Widget _label(String text) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
     child: Text(
@@ -506,20 +763,25 @@ class _DestinationSheetState extends State<DestinationSheet> {
     ),
   );
 
-  Widget _errorLine(String words, Key key) => Padding(
+  /// A refusal under its input: the server's words in the error tone,
+  /// announced; or the validator's as typed in the [warning] tone, read in
+  /// its place after the field (announced, it would talk over the typing).
+  Widget _errorLine(String words, Key key, {bool warning = false}) => Padding(
     key: key,
     padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
     child: Semantics(
-      liveRegion: true,
+      liveRegion: !warning,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
             child: Icon(
-              Icons.error_outline,
+              warning ? Icons.warning_amber_rounded : Icons.error_outline,
               size: 14,
-              color: keepTone(VelvetColors.error),
+              color: keepTone(
+                warning ? VelvetColors.warning : VelvetColors.error,
+              ),
             ),
           ),
           const SizedBox(width: 6),
@@ -527,7 +789,9 @@ class _DestinationSheetState extends State<DestinationSheet> {
             child: Text(
               words,
               style: TextStyle(
-                color: keepTone(VelvetColors.error),
+                color: keepTone(
+                  warning ? VelvetColors.warning : VelvetColors.error,
+                ),
                 fontSize: 12,
                 height: 16 / 12,
               ),
@@ -538,39 +802,35 @@ class _DestinationSheetState extends State<DestinationSheet> {
     ),
   );
 
-  Widget _form(AppLocalizations l, DestinationView view) {
+  /// The form, knowing its own height: a field being typed in asks the
+  /// form to show no more around its line than fits ([_reveal]).
+  Widget _form(AppLocalizations l, DestinationView view) => LayoutBuilder(
+    builder: (context, box) =>
+        _formIn(l, view, _reveal(context, box.maxHeight)),
+  );
+
+  /// What a field being typed in brings into view around its line: its
+  /// box's top edge, and under it up to 120 px (the variables under
+  /// Custom's) — less when the form is short (the keyboard up, large text),
+  /// so the field itself is never cut.
+  static EdgeInsets _reveal(BuildContext context, double height) {
+    const top = 16.0;
+    final line = MediaQuery.textScalerOf(context).scale(24);
+    return EdgeInsets.only(
+      top: top,
+      bottom: (height - top - line).clamp(0.0, 120.0),
+    );
+  }
+
+  Widget _formIn(AppLocalizations l, DestinationView view, EdgeInsets reveal) {
     final saving = jobs.savingDestination;
     final vpath = _vpath ?? view.destination!.vpath;
     final libs = [
       ...view.libraries,
       if (!view.libraries.any((w) => w.vpath == vpath)) WritableLibrary(vpath),
     ];
-    final template = libs
-        .firstWhere(
-          (w) => w.vpath == vpath,
-          orElse: () => WritableLibrary(vpath),
-        )
-        .template;
     final layout = _layout ?? view.destination!.layout;
-    // "Artist / Album" is the server's own default (by the album's credit
-    // since the compilations change), so a fresh account's layout matches
-    // it and no "Your current layout" appears beside it.
-    final artistAlbum = view.defaultLayout.trim().isNotEmpty
-        ? view.defaultLayout
-        : kLayoutArtistAlbum;
-    final presets = <(String, String)>[
-      (l.discoverDestPresetArtistAlbum, artistAlbum),
-      if (artistAlbum != kLayoutServerArtistAlbum)
-        (l.discoverDestPresetServer, kLayoutServerArtistAlbum),
-      if (template != null &&
-          template.trim().isNotEmpty &&
-          template != artistAlbum &&
-          template != kLayoutServerArtistAlbum)
-        (l.discoverDestPresetLibrary, template),
-    ];
-    if (!presets.any((p) => p.$2 == layout)) {
-      presets.add((l.discoverDestPresetCurrent, layout));
-    }
+    final presets = _presets(view, vpath);
     final baseCheck = normalizeBase(_base.text);
     final baseBad = !baseCheck.valid || _saveErrorField == _Field.base;
     return SingleChildScrollView(
@@ -595,6 +855,22 @@ class _DestinationSheetState extends State<DestinationSheet> {
                         ? null
                         : () => setState(() {
                             _vpath = lib.vpath;
+                            if (!_customChosen &&
+                                !_isPreset(view, lib.vpath, layout)) {
+                              // A library's own layout that leaves with it
+                              // stays the layout, in Custom's field.
+                              _customBefore = _custom.text;
+                              _customChosen = true;
+                              _setCustom(layout);
+                            } else if (_customChosen &&
+                                _custom.text == layout &&
+                                _isPreset(view, lib.vpath, layout)) {
+                              // Back with it untouched: its preset again,
+                              // and Custom's field as it was.
+                              _customChosen = false;
+                              _setCustom(_customBefore ?? _custom.text);
+                              _customBefore = null;
+                            }
                             _saveError = null;
                             _saveErrorField = null;
                           }),
@@ -642,7 +918,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                           fontSize: 15,
                         ),
                         cursorColor: VelvetColors.primary,
-                        scrollPadding: const EdgeInsets.only(bottom: 120),
+                        scrollPadding: reveal,
                         // The box around it is the field's frame: none of
                         // the theme's own borders or fill inside it.
                         decoration: InputDecoration(
@@ -688,24 +964,166 @@ class _DestinationSheetState extends State<DestinationSheet> {
           for (final p in presets)
             _LayoutOption(
               key: ValueKey('destination-layout-${p.$2}'),
-              label: p.$1,
-              template: p.$2,
-              selected: p.$2 == layout,
+              label: p.$1(l),
+              sub: p.$2,
+              selected: !_customChosen && p.$2 == layout,
               onTap: saving
                   ? null
                   : () => setState(() {
                       _layout = p.$2;
-                      if (_saveErrorField == _Field.layout) {
-                        _saveError = null;
-                        _saveErrorField = null;
-                      }
+                      _customChosen = false;
+                      _dropError(_Field.layout);
                     }),
             ),
-          if (_saveErrorField == _Field.layout && _saveError != null)
+          _LayoutOption(
+            key: const ValueKey('destination-custom-option'),
+            label: l.discoverDestPresetCustom,
+            sub: l.discoverDestCustomSub,
+            mono: false,
+            hint: l.discoverDestCustomSub,
+            selected: _customChosen,
+            onTap: saving ? null : _pickCustom,
+          ),
+          // Custom's editor puts a refusal right under its field.
+          if (_customChosen)
+            _customEditor(l, view, saving, reveal)
+          else if (_saveErrorField == _Field.layout && _saveError != null)
             _errorLine(_saveError!, const ValueKey('destination-layout-error')),
           if (_saveErrorField == _Field.other && _saveError != null)
             _errorLine(_saveError!, const ValueKey('destination-save-error')),
           const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  /// Custom's field, under its row: the layout as typed (under it the
+  /// server's refusal, else the validator's words as typed), the variables
+  /// to insert at the caret, and how a layout reads.
+  Widget _customEditor(
+    AppLocalizations l,
+    DestinationView view,
+    bool saving,
+    EdgeInsets reveal,
+  ) {
+    final vars = _variables(view);
+    final check = validateLayout(_custom.text);
+    final problem = _custom.text.isEmpty || check.valid
+        ? null
+        : _layoutProblem(l, check, vars);
+    final refusal = _saveErrorField == _Field.layout ? _saveError : null;
+    final refused = refusal != null;
+    final bad = problem != null || refused;
+    final room = kMaxLayoutLength - _custom.text.length;
+    return Padding(
+      key: const ValueKey('destination-custom-editor'),
+      // Under the row's name: past the radio and its gap.
+      padding: const EdgeInsets.only(left: 34, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: EdgeInsets.symmetric(horizontal: bad ? 11 : 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+                border: Border.all(
+                  color: !bad
+                      ? VelvetColors.border2
+                      : keepTone(
+                          refused ? VelvetColors.error : VelvetColors.warning,
+                        ),
+                  width: bad ? 2 : 1,
+                ),
+              ),
+              child: Semantics(
+                label: l.discoverDestCustomField,
+                child: TextField(
+                  key: const ValueKey('destination-custom'),
+                  controller: _custom,
+                  focusNode: _customFocus,
+                  enabled: !saving,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
+                  textInputAction: TextInputAction.done,
+                  // The server's own cap on a layout.
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(kMaxLayoutLength),
+                  ],
+                  style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                  ),
+                  cursorColor: VelvetColors.primary,
+                  // Room for the variables under it when the keyboard is up.
+                  scrollPadding: reveal,
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    hintText: l.discoverDestCustomHint(
+                      '${_token('ARTIST')}/${_token('ALBUM')}',
+                    ),
+                    hintStyle: TextStyle(
+                      color: VelvetColors.textTertiary,
+                      fontSize: 14,
+                    ),
+                    // The example with variables comes last: never cut.
+                    hintMaxLines: 2,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (refused)
+            _errorLine(refusal, const ValueKey('destination-layout-error'))
+          else if (problem != null)
+            _errorLine(
+              problem,
+              const ValueKey('destination-custom-invalid'),
+              warning: true,
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final v in vars)
+                  _VarChip(
+                    key: ValueKey('destination-var-$v'),
+                    token: _token(v),
+                    label: _insertLabel(l, v),
+                    // Off while saving, or with no room left for it.
+                    onTap: saving || _token(v).length > room
+                        ? null
+                        : () => _insertVar(v),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+            child: Text(
+              l.discoverDestCustomHelp,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 12,
+                height: 16 / 12,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -718,7 +1136,8 @@ class _DestinationSheetState extends State<DestinationSheet> {
   }) {
     final saving = jobs.savingDestination;
     final d = view?.destination;
-    final canSave = !loading && !saving && d != null && _dirty;
+    final canSave =
+        !loading && !saving && d != null && _dirty && !_customBlocks;
     final ink = keepInk();
     return Container(
       decoration: BoxDecoration(
@@ -759,7 +1178,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
             enabled: canSave,
             onTap: () {
               final v = _vpath;
-              final layout = _layout;
+              final layout = _chosenLayout;
               if (v == null || layout == null) return;
               unawaited(
                 _save(
@@ -871,16 +1290,21 @@ class _LibraryChip extends StatelessWidget {
   }
 }
 
-/// One layout: a radio, its name, the template in monospace.
+/// One layout: a radio, its name, and under it the template in monospace
+/// (Custom's line in the plain face, read as its [hint]).
 class _LayoutOption extends StatelessWidget {
   final String label;
-  final String template;
+  final String sub;
+  final bool mono;
+  final String? hint;
   final bool selected;
   final VoidCallback? onTap;
   const _LayoutOption({
     super.key,
     required this.label,
-    required this.template,
+    required this.sub,
+    this.mono = true,
+    this.hint,
     required this.selected,
     this.onTap,
   });
@@ -891,6 +1315,8 @@ class _LayoutOption extends StatelessWidget {
     checked: selected,
     button: true,
     label: label,
+    hint: hint,
+    onTap: onTap,
     excludeSemantics: true,
     child: InkWell(
       onTap: onTap,
@@ -941,19 +1367,79 @@ class _LayoutOption extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      template,
-                      style: TextStyle(
-                        color: VelvetColors.textSecondary,
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        height: 16 / 11,
-                      ),
+                      sub,
+                      style: mono
+                          ? TextStyle(
+                              color: VelvetColors.textSecondary,
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              height: 16 / 11,
+                            )
+                          : TextStyle(
+                              color: VelvetColors.textSecondary,
+                              fontSize: 12,
+                              height: 16 / 12,
+                            ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// A variable Custom inserts at its caret: the token in monospace on a
+/// 32 px chip, a 44 px target, named for a screen reader ("Insert artist").
+class _VarChip extends StatelessWidget {
+  final String token;
+  final String label;
+  final VoidCallback? onTap;
+  const _VarChip({
+    super.key,
+    required this.token,
+    required this.label,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    enabled: onTap != null,
+    label: label,
+    onTap: onTap,
+    excludeSemantics: true,
+    child: KeepHitArea(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: VelvetColors.raised,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: VelvetColors.border2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                token,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: onTap == null
+                      ? VelvetColors.textTertiary
+                      : VelvetColors.textPrimary,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     ),

@@ -5137,7 +5137,100 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Layout der Bibliothek';
 
   @override
-  String get discoverDestPresetCurrent => 'Dein aktuelles Layout';
+  String get discoverDestPresetCustom => 'Eigenes';
+
+  @override
+  String get discoverDestCustomSub => 'Eigenen Pfad eingeben';
+
+  @override
+  String get discoverDestCustomField => 'Eigenes Layout';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'z. B. Von Freunden oder $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Ordner mit / trennen. Variablen sortieren Kopien nach Künstler, Album…; ein fester Name legt jede Kopie in denselben Ordner.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Gib einen Pfad ein, um zu sehen, wo Dateien landen';
+
+  @override
+  String get discoverDestInsertArtist => 'Künstler einfügen';
+
+  @override
+  String get discoverDestInsertAlbum => 'Album einfügen';
+
+  @override
+  String get discoverDestInsertYear => 'Jahr einfügen';
+
+  @override
+  String get discoverDestInsertGenre => 'Genre einfügen';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Albumkünstler einfügen';
+
+  @override
+  String get discoverDestInsertPeer => 'Servername einfügen';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Unbekannte Variable $name. Verwende $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Eine Klammer steht falsch – Variablen schreibt man wie $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Ein Layout darf nicht mit / beginnen – es startet im Basisordner.';
+
+  @override
+  String get discoverDestErrTraversal =>
+      'Ein Pfad darf keine „..“-Ordner enthalten.';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Daraus entsteht kein Ordner – füge einen Namen oder eine Variable hinzu.';
+
+  @override
+  String get discoverDestErrHome =>
+      'Ein Pfad darf weder ~ noch \$HOME enthalten.';
+
+  @override
+  String get discoverDestErrGeneric =>
+      'Dieser Pfad kann nicht verwendet werden.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Ein Pfad darf keinen Laufwerksbuchstaben wie C: enthalten.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Ein Layout darf höchstens $max Zeichen lang sein.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Ein Pfad darf keine Tabulatoren oder anderen Steuerzeichen enthalten.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'Für diesen Song leer, daher nicht im Pfad: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'Genre';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot kommt aus dem Genre-Tag jeder Datei (entfällt, wenn eine Datei keins hat).';
+  }
 
   @override
   String get discoverDestUseDefault => 'Bibliotheksstandard verwenden';

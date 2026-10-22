@@ -5527,9 +5527,138 @@
   "@discoverDestPresetLibrary": {
     "description": "Destination picker layout preset: the chosen library's own path template (shown only when it has one)."
   },
-  "discoverDestPresetCurrent": "Your current layout",
-  "@discoverDestPresetCurrent": {
-    "description": "Destination picker layout choice: the layout in force when it is none of the presets (set elsewhere)."
+  "discoverDestPresetCustom": "Custom",
+  "@discoverDestPresetCustom": {
+    "description": "Destination picker layout choice: a layout the user types by hand (its text field opens under it). Also chosen when the layout in force is none of the presets."
+  },
+  "discoverDestCustomSub": "Type your own path",
+  "@discoverDestCustomSub": {
+    "description": "Destination picker: the line under the Custom layout choice."
+  },
+  "discoverDestCustomField": "Custom layout",
+  "@discoverDestCustomField": {
+    "description": "Accessible name of the destination picker's custom layout text field."
+  },
+  "discoverDestCustomHint": "e.g. From friends or {example}",
+  "@discoverDestCustomHint": {
+    "description": "Destination picker custom layout field placeholder: a plain folder name (translate it) or {example}, a layout with variables kept as is (like {{ARTIST}}/{{ALBUM}}).",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestCustomHelp": "Use / between folders. Variables sort copies by artist, album…; a plain name puts every copy in the same folder.",
+  "@discoverDestCustomHelp": {
+    "description": "Destination picker help under the custom layout field: \"/\" makes folders; variables (the buttons above it) sort copies by their tags; plain text is the same folder for every copy."
+  },
+  "discoverDestCustomEmpty": "Type a path to see where files land",
+  "@discoverDestCustomEmpty": {
+    "description": "Destination picker preview while the custom layout field is empty."
+  },
+  "discoverDestInsertArtist": "Insert artist",
+  "@discoverDestInsertArtist": {
+    "description": "Accessible name of the destination picker button that inserts the artist variable into the custom layout."
+  },
+  "discoverDestInsertAlbum": "Insert album",
+  "@discoverDestInsertAlbum": {
+    "description": "Accessible name of the destination picker button that inserts the album variable into the custom layout."
+  },
+  "discoverDestInsertYear": "Insert year",
+  "@discoverDestInsertYear": {
+    "description": "Accessible name of the destination picker button that inserts the year variable into the custom layout."
+  },
+  "discoverDestInsertGenre": "Insert genre",
+  "@discoverDestInsertGenre": {
+    "description": "Accessible name of the destination picker button that inserts the genre variable into the custom layout."
+  },
+  "discoverDestInsertAlbumArtist": "Insert album artist",
+  "@discoverDestInsertAlbumArtist": {
+    "description": "Accessible name of the destination picker button that inserts the album artist variable (the album's credit) into the custom layout."
+  },
+  "discoverDestInsertPeer": "Insert server name",
+  "@discoverDestInsertPeer": {
+    "description": "Accessible name of the destination picker button that inserts the variable for the name of the connected server the copy comes from."
+  },
+  "discoverDestErrUnknownVar": "Unknown variable {name}. Use {vars}.",
+  "@discoverDestErrUnknownVar": {
+    "description": "Destination picker, under the custom layout field: it names a variable that does not exist; {name} is it in its braces (like {{ARTST}}), {vars} the variables there are (like ARTIST, ALBUM).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestErrBraces": "A brace is out of place — variables are written like {example}.",
+  "@discoverDestErrBraces": {
+    "description": "Destination picker, under the custom layout field: a single or unmatched brace; {example} is a variable in its double braces (like {{ARTIST}}).",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestErrAbsolute": "A layout can't start with / — it begins inside the base folder.",
+  "@discoverDestErrAbsolute": {
+    "description": "Destination picker, under the custom layout field: it starts with a slash; a layout is relative to the base folder."
+  },
+  "discoverDestErrTraversal": "A path can't contain .. folders.",
+  "@discoverDestErrTraversal": {
+    "description": "Destination picker, under the custom layout field: it has a \"..\" segment (a folder that climbs out)."
+  },
+  "discoverDestErrEmpty": "That makes no folder — add a name or a variable.",
+  "@discoverDestErrEmpty": {
+    "description": "Destination picker, under the custom layout field: it renders to no folder at all (only spaces or slashes)."
+  },
+  "discoverDestErrHome": "A path can't contain ~ or $HOME.",
+  "@discoverDestErrHome": {
+    "description": "Destination picker, under the custom layout field: it contains a tilde or $HOME (a home folder reference), which the server refuses. Keep ~ and $HOME as they are."
+  },
+  "discoverDestErrGeneric": "That path can't be used.",
+  "@discoverDestErrGeneric": {
+    "description": "Destination picker, under the custom layout field: the server would refuse it for another reason."
+  },
+  "discoverDestErrDrive": "A path can't use a drive letter like C:.",
+  "@discoverDestErrDrive": {
+    "description": "Destination picker, under the custom layout field: it starts a folder with a Windows drive letter (like C:), which the server refuses."
+  },
+  "discoverDestErrTooLong": "A layout can be at most {max} characters.",
+  "@discoverDestErrTooLong": {
+    "description": "Destination picker, under the custom layout field: it is longer than the server takes; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverDestErrControl": "A path can't contain tabs or other control characters.",
+  "@discoverDestErrControl": {
+    "description": "Destination picker, under the custom layout field: it contains a tab, a line break or another control character (usually pasted)."
+  },
+  "discoverDestMissing": "No value for this song, so left out of the path: {vars}",
+  "@discoverDestMissing": {
+    "description": "Destination picker preview, under the path: the layout's variables that this song has no tag for, so their part of the path is left out; {vars} lists them as typed (like {{YEAR}}, {{ALBUM}}).",
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestGenreSlot": "genre",
+  "@discoverDestGenreSlot": {
+    "description": "Destination picker preview: the word that stands in for a file's genre in the path (the phone cannot read the file's genre tag), shown between ‹ › marks."
+  },
+  "discoverDestGenreNote": "{slot} is filled from each file's genre tag (left out when a file has none).",
+  "@discoverDestGenreNote": {
+    "description": "Destination picker preview, under the path, when the layout uses the genre: {slot} is the stand-in (like ‹genre›); the server fills it from each file's own genre tag and leaves it out for a file without one.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
   },
   "discoverDestUseDefault": "Use the library default",
   "@discoverDestUseDefault": {

@@ -5079,7 +5079,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverDestPresetLibrary => 'Library layout';
 
   @override
-  String get discoverDestPresetCurrent => 'Your current layout';
+  String get discoverDestPresetCustom => 'Custom';
+
+  @override
+  String get discoverDestCustomSub => 'Type your own path';
+
+  @override
+  String get discoverDestCustomField => 'Custom layout';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'e.g. From friends or $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Use / between folders. Variables sort copies by artist, album…; a plain name puts every copy in the same folder.';
+
+  @override
+  String get discoverDestCustomEmpty => 'Type a path to see where files land';
+
+  @override
+  String get discoverDestInsertArtist => 'Insert artist';
+
+  @override
+  String get discoverDestInsertAlbum => 'Insert album';
+
+  @override
+  String get discoverDestInsertYear => 'Insert year';
+
+  @override
+  String get discoverDestInsertGenre => 'Insert genre';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Insert album artist';
+
+  @override
+  String get discoverDestInsertPeer => 'Insert server name';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Unknown variable $name. Use $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'A brace is out of place — variables are written like $example.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'A layout can\'t start with / — it begins inside the base folder.';
+
+  @override
+  String get discoverDestErrTraversal => 'A path can\'t contain .. folders.';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'That makes no folder — add a name or a variable.';
+
+  @override
+  String get discoverDestErrHome => 'A path can\'t contain ~ or \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'That path can\'t be used.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'A path can\'t use a drive letter like C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'A layout can be at most $max characters.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'A path can\'t contain tabs or other control characters.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'No value for this song, so left out of the path: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'genre';
+
+  @override
+  String discoverDestGenreNote(String slot) {
+    return '$slot is filled from each file\'s genre tag (left out when a file has none).';
+  }
 
   @override
   String get discoverDestUseDefault => 'Use the library default';

@@ -1,12 +1,13 @@
 // Where copies land, and Open elsewhere (the design canvas's
 // PhoneDestination and PhoneElsewhere boards): the destination picker from
 // the Keep card's Change — the library default, the live preview of where
-// this song lands, the writable libraries, the base folder, the layouts,
-// Save and "Use the library default", a refusal in the server's words,
-// saving, loading, no library, uploads off, a failed read, the keyboard,
-// German — and the links plug-in's sub-sheet over the song sheet: loading,
-// exact pages then searches, opening outside the app, a link that will not
-// open, empty, and the server's error.
+// this song lands, the writable libraries, the base folder, the layouts and
+// Custom (a layout typed by hand: its field, the variables, the validator's
+// words as typed), Save and "Use the library default", a refusal in the
+// server's words, saving, loading, no library, uploads off, a failed read,
+// the keyboard, German — and the links plug-in's sub-sheet over the song
+// sheet: loading, exact pages then searches, opening outside the app, a
+// link that will not open, empty, and the server's error.
 //
 // The plug-in API is the scripted fake; the URL launcher is the test's.
 
@@ -18,10 +19,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/screens/discovery/destination_sheet.dart';
 import 'package:mstream_music/screens/discovery/discovery_keep_routes.dart';
 import 'package:mstream_music/screens/discovery/elsewhere_sheet.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/settings.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
 
 import 'discovery_copies_fixtures.dart';
 import 'discovery_keep_fixtures.dart';
@@ -138,8 +141,9 @@ void main() {
         expect(find.text('{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}'), findsOneWidget);
         expect(find.text('Library layout'), findsNothing);
         // The server's own default is the Artist / Album preset: a fresh
-        // account's layout is no "current layout" of its own.
-        expect(find.text('Your current layout'), findsNothing);
+        // account's layout is no Custom one.
+        expect(find.text('Custom'), findsOneWidget);
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
         expect(find.text('Use the library default'), findsNothing);
         await tapKey(tester, 'destination-save');
         expect(k.fake.count('PUT', _dest), 0, reason: 'nothing changed yet');
@@ -223,7 +227,7 @@ void main() {
 
     testWidgets(
       "an older server's default ({{ARTIST}}/{{ALBUM}}) is its Artist / "
-      'Album preset: no "current layout" beside it',
+      'Album preset, not Custom',
       (tester) async {
         k.fake.destination = {
           ...k.fake.destination,
@@ -237,7 +241,7 @@ void main() {
         };
         await openPicker(tester);
         expect(find.text('{{ARTIST}}/{{ALBUM}}'), findsOneWidget);
-        expect(find.text('Your current layout'), findsNothing);
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
         expect(find.text('{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}'), findsOneWidget);
       },
     );
@@ -369,6 +373,732 @@ void main() {
     });
   });
 
+  group('the destination picker: Custom, a layout typed by hand', () {
+    TextField customField(WidgetTester tester) => tester.widget<TextField>(
+      find.byKey(const ValueKey('destination-custom')),
+    );
+
+    Future<void> typeCustom(WidgetTester tester, String text) async {
+      await tester.enterText(
+        find.byKey(const ValueKey('destination-custom')),
+        text,
+      );
+      await frames(tester, 2);
+    }
+
+    double top(WidgetTester tester, String text) =>
+        tester.getTopLeft(find.text(text)).dy;
+
+    /// The layout rows: the presets, then Custom.
+    int presetRows() => find
+        .byWidgetPredicate((w) {
+          final key = w.key;
+          return key is ValueKey<String> &&
+              key.value.startsWith('destination-layout-') &&
+              key.value != 'destination-layout-error';
+        })
+        .evaluate()
+        .length;
+
+    /// The colour of Custom's frame.
+    Color? frame(WidgetTester tester) {
+      final box = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('destination-custom')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      return ((box.decoration! as BoxDecoration).border! as Border).top.color;
+    }
+
+    /// The icon and the colour of the line under the field named [key].
+    (IconData?, Color?) tone(WidgetTester tester, String key) {
+      final line = find.byKey(ValueKey(key));
+      final icon = tester.widget<Icon>(
+        find.descendant(of: line, matching: find.byType(Icon)),
+      );
+      final text = tester.widget<Text>(
+        find.descendant(of: line, matching: find.byType(Text)),
+      );
+      return (icon.icon, text.style?.color);
+    }
+
+    testWidgets(
+      'Custom comes third, after the presets; choosing it opens an empty '
+      'field with the keyboard up, the variables under it; Save waits',
+      (tester) async {
+        await openPicker(tester);
+        expect(find.text('Type your own path'), findsOneWidget);
+        expect(
+          top(tester, 'Artist / Album'),
+          lessThan(top(tester, 'Server / Artist / Album')),
+        );
+        expect(
+          top(tester, 'Server / Artist / Album'),
+          lessThan(top(tester, 'Custom')),
+        );
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+
+        await tapKey(tester, 'destination-custom-option');
+        expect(tester.takeException(), isNull);
+        expect(customField(tester).controller!.text, isEmpty);
+        expect(
+          find.text('e.g. From friends or {{ARTIST}}/{{ALBUM}}'),
+          findsOneWidget,
+        );
+        expect(customField(tester).focusNode!.hasFocus, isTrue);
+        expect(tester.testTextInput.isVisible, isTrue);
+        expect(
+          tester.getSemantics(find.byKey(const ValueKey('destination-custom'))),
+          isSemantics(
+            // Its name, then the hint while it is empty.
+            label: 'Custom layout\ne.g. From friends or {{ARTIST}}/{{ALBUM}}',
+            isTextField: true,
+          ),
+        );
+        // Typed as typed: no autocorrect, no suggestions, no smart dashes
+        // or quotes turning "--" or quotes into other characters.
+        final typed = customField(tester);
+        expect(
+          [
+            typed.autocorrect,
+            typed.enableSuggestions,
+            typed.smartDashesType,
+            typed.smartQuotesType,
+          ],
+          [false, false, SmartDashesType.disabled, SmartQuotesType.disabled],
+        );
+        // The hint wraps rather than lose its example with variables.
+        expect(typed.decoration!.hintMaxLines, 2);
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-custom-option')),
+          ),
+          isSemantics(
+            label: 'Custom',
+            hint: 'Type your own path',
+            isChecked: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          isSemantics(label: 'Artist / Album', isChecked: false),
+        );
+        for (final v in [
+          'ARTIST',
+          'ALBUM',
+          'YEAR',
+          'GENRE',
+          'ALBUMARTIST',
+          'PEER',
+        ]) {
+          expect(find.text('{{$v}}'), findsOneWidget, reason: v);
+        }
+        expect(
+          find.text(
+            'Use / between folders. Variables sort copies by artist, '
+            'album…; a plain name puts every copy in the same folder.',
+          ),
+          findsOneWidget,
+        );
+        // Nothing typed: a quiet line where the path goes, and no warning.
+        expect(
+          find.text('Type a path to see where files land'),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('destination-preview')), findsNothing);
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'an empty layout');
+      },
+    );
+
+    testWidgets(
+      'a plain folder: the preview follows it, Save sends exactly that '
+      'layout, and the picker keeps Custom with it',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'From friends');
+        expect(
+          preview(tester),
+          'copies › From friends › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': 'From friends',
+          },
+        });
+        expect(toasts, ['Saved · copies land in copies']);
+        expect(find.text('yours'), findsOneWidget);
+        expect(customField(tester).controller!.text, 'From friends');
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 1, reason: 'saved: nothing new');
+      },
+    );
+
+    testWidgets(
+      'a saved layout that is no preset opens in Custom, its field holding '
+      'it',
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': 'From friends/{{ARTIST}}',
+        };
+        k.fake.destination = {
+          ...k.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        await openPicker(tester);
+        expect(find.text('yours'), findsOneWidget);
+        // No row of its own for the layout in force: the two presets, and
+        // Custom holding it.
+        expect(presetRows(), 2);
+        expect(
+          find.byKey(const ValueKey('destination-custom-option')),
+          findsOneWidget,
+        );
+        expect(customField(tester).controller!.text, 'From friends/{{ARTIST}}');
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-custom-option')),
+          ),
+          isSemantics(label: 'Custom', isChecked: true),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          isSemantics(label: 'Artist / Album', isChecked: false),
+        );
+        expect(customField(tester).focusNode!.hasFocus, isFalse);
+        expect(
+          preview(tester),
+          'copies › From friends › Boukmanflow › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'nothing changed');
+      },
+    );
+
+    testWidgets(
+      'a variable button puts its token at the caret; each is named for a '
+      'screen reader',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'Copies/ - {{ALBUM}}');
+        final c = customField(tester).controller!;
+        c.selection = const TextSelection.collapsed(offset: 7);
+        await frames(tester, 2);
+        expect(find.bySemanticsLabel('Insert artist'), findsOneWidget);
+        // The name it shows is in its name when the words do not say it.
+        expect(
+          find.bySemanticsLabel('Insert album artist, ALBUMARTIST'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('Insert server name, PEER'),
+          findsOneWidget,
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-var-ARTIST')),
+          ),
+          isSemantics(
+            label: 'Insert artist',
+            isButton: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        await tapKey(tester, 'destination-var-ARTIST');
+        expect(c.text, 'Copies/{{ARTIST}} - {{ALBUM}}');
+        expect(c.selection, const TextSelection.collapsed(offset: 17));
+        expect(customField(tester).focusNode!.hasFocus, isTrue);
+        expect(
+          preview(tester),
+          'copies › Copies › Boukmanflow - Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        // Over a selection: the token takes its place.
+        c.selection = const TextSelection(baseOffset: 0, extentOffset: 6);
+        await frames(tester, 2);
+        await tapKey(tester, 'destination-var-YEAR');
+        expect(c.text, '{{YEAR}}/{{ARTIST}} - {{ALBUM}}');
+        await tapKey(tester, 'destination-save');
+        expect(
+          (lastPut()['destination'] as Map)['layout'],
+          '{{YEAR}}/{{ARTIST}} - {{ALBUM}}',
+        );
+      },
+    );
+
+    testWidgets(
+      "what the server would refuse: the validator's words under the field "
+      'as typed, the preview waits, Save stays off',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+
+        Future<void> refused(String typed, String words) async {
+          await typeCustom(tester, typed);
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('destination-custom-invalid')),
+              matching: find.text(words),
+            ),
+            findsOneWidget,
+            reason: typed,
+          );
+          expect(
+            find.text('Fix the layout to see where files land'),
+            findsOneWidget,
+          );
+          await tapKey(tester, 'destination-save');
+          expect(k.fake.count('PUT', _dest), 0, reason: typed);
+        }
+
+        await refused(
+          '{{ARTST}}/{{ALBUM}}',
+          'Unknown variable {{ARTST}}. Use ARTIST, ALBUM, YEAR, GENRE, '
+              'ALBUMARTIST, PEER.',
+        );
+        await refused(
+          'Inbox/{ARTIST}',
+          'A brace is out of place — variables are written like {{ARTIST}}.',
+        );
+        await refused(
+          'Inbox/../{{ARTIST}}',
+          "A path can't contain .. folders.",
+        );
+        await refused(
+          '/Inbox',
+          "A layout can't start with / — it begins inside the base folder.",
+        );
+        await refused('~/Inbox', r"A path can't contain ~ or $HOME.");
+        await refused(r'$HOME/Inbox', r"A path can't contain ~ or $HOME.");
+        await refused('C:/Inbox', "A path can't use a drive letter like C:.");
+        await refused('Inbox/C:x', "A path can't use a drive letter like C:.");
+        await refused(
+          'Inbox\tFriends',
+          "A path can't contain tabs or other control characters.",
+        );
+        await refused(
+          '   ',
+          'That makes no folder — add a name or a variable.',
+        );
+        // As typed, braces and spaces kept: the server names it so.
+        await refused(
+          'Inbox/{{ artst }}',
+          'Unknown variable {{ artst }}. Use ARTIST, ALBUM, YEAR, GENRE, '
+              'ALBUMARTIST, PEER.',
+        );
+        // 300 emoji are 300 characters to the keyboard's limit and 600 to
+        // the server's (JS counts UTF-16 units, as the validator does).
+        await refused('🎵' * 300, 'A layout can be at most 500 characters.');
+        // In the warning tone, and not announced over the typing.
+        expect(tone(tester, 'destination-custom-invalid'), (
+          Icons.warning_amber_rounded,
+          keepTone(VelvetColors.warning),
+        ));
+        expect(frame(tester), keepTone(VelvetColors.warning));
+        expect(
+          tester.getSemantics(
+            find.text('A layout can be at most 500 characters.'),
+          ),
+          isSemantics(isLiveRegion: false),
+        );
+
+        await typeCustom(tester, '{{ARTIST}}/{{ALBUM}}');
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(
+          (lastPut()['destination'] as Map)['layout'],
+          '{{ARTIST}}/{{ALBUM}}',
+        );
+      },
+    );
+
+    testWidgets(
+      'a preset after typing keeps the typed text for Custom; Save sends '
+      'the preset',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'Inbox');
+        expect(preview(tester), 'copies › Inbox › 02 - Late Train Verse.mp3');
+        await tapText(tester, 'Server / Artist / Album');
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+        expect(
+          preview(tester),
+          'copies › Stage Peer B › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-custom-option');
+        expect(customField(tester).controller!.text, 'Inbox');
+        expect(preview(tester), 'copies › Inbox › 02 - Late Train Verse.mp3');
+        await tapText(tester, 'Server / Artist / Album');
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': '{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+          },
+        });
+        // Saved as the preset: Custom still holds what was typed.
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+        await tapKey(tester, 'destination-custom-option');
+        expect(customField(tester).controller!.text, 'Inbox');
+      },
+    );
+
+    testWidgets("a library's own layout that leaves with its library stays the "
+        'layout, in Custom', (tester) async {
+      k.fake.destination = {
+        ...k.fake.destination,
+        'libraries': [
+          {'vpath': 'copies', 'template': null},
+          {'vpath': 'demo', 'template': '{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}'},
+        ],
+      };
+      await openPicker(tester);
+      await tapKey(tester, 'destination-library-demo');
+      await tapText(tester, 'Library layout');
+      await tapKey(tester, 'destination-library-copies');
+      expect(find.text('Library layout'), findsNothing);
+      expect(
+        customField(tester).controller!.text,
+        '{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+      );
+      expect(
+        preview(tester),
+        'copies › Boukmanflow › 2019 - Borrowed Tapes › 02 - Late Train Verse.mp3',
+      );
+      await tapKey(tester, 'destination-save');
+      expect(lastPut(), {
+        'destination': {
+          'vpath': 'copies',
+          'base': '',
+          'layout': '{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+        },
+      });
+    });
+
+    testWidgets(
+      "Save's 400 puts the server's words right under Custom's field; "
+      'editing the field clears them',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'Inbox/{{PEER}}');
+        const words =
+            'destination layout: Unknown variable {{PEER}}. Supported: '
+            '{{ARTIST}}, {{ALBUM}}';
+        k.fake.refuseOn['PUT $_dest'] = (400, words);
+        await tapKey(tester, 'destination-save');
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('destination-layout-error')),
+            matching: find.text(words),
+          ),
+          findsOneWidget,
+        );
+        expect(toasts, isEmpty);
+        // In the error tone, announced, between the field and the variables
+        // (where the keyboard leaves it in view).
+        expect(tone(tester, 'destination-layout-error'), (
+          Icons.error_outline,
+          keepTone(VelvetColors.error),
+        ));
+        expect(frame(tester), keepTone(VelvetColors.error));
+        expect(
+          tester.getSemantics(find.text(words)),
+          isSemantics(isLiveRegion: true),
+        );
+        final line = tester.getRect(
+          find.byKey(const ValueKey('destination-layout-error')),
+        );
+        expect(
+          line.top,
+          greaterThanOrEqualTo(
+            tester
+                .getRect(find.byKey(const ValueKey('destination-custom')))
+                .bottom,
+          ),
+        );
+        expect(
+          line.bottom,
+          lessThanOrEqualTo(
+            tester
+                .getRect(find.byKey(const ValueKey('destination-var-ARTIST')))
+                .top,
+          ),
+        );
+        expect(customField(tester).controller!.text, 'Inbox/{{PEER}}');
+        await typeCustom(tester, 'Inbox');
+        expect(
+          find.byKey(const ValueKey('destination-layout-error')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      "a variable the phone can't see (the file's genre) stands as a slot "
+      'in the path, with a note; the path is never shallower than the '
+      "server's",
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, '{{GENRE}}/{{ARTIST}}');
+        expect(
+          preview(tester),
+          'copies › ‹genre› › Boukmanflow › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.text(
+            "‹genre› is filled from each file's genre tag (left out when a "
+            'file has none).',
+          ),
+          findsOneWidget,
+        );
+        // The slot reads apart from the folders the layout names.
+        final slot = tester
+            .widget<Text>(find.byKey(const ValueKey('destination-preview')))
+            .textSpan!;
+        TextSpan? genre;
+        slot.visitChildren((span) {
+          if (span is TextSpan && span.text == '‹genre›') genre = span;
+          return genre == null;
+        });
+        expect(genre?.style?.fontStyle, FontStyle.italic);
+        // Mixed into a folder's name too.
+        await typeCustom(tester, '{{ARTIST}} - {{GENRE}}');
+        expect(
+          preview(tester),
+          'copies › Boukmanflow - ‹genre› › 02 - Late Train Verse.mp3',
+        );
+        // No genre: no slot, no note.
+        await typeCustom(tester, '{{ARTIST}}');
+        expect(
+          find.byKey(const ValueKey('destination-preview-genre')),
+          findsNothing,
+        );
+        await tapKey(tester, 'destination-save');
+        expect((lastPut()['destination'] as Map)['layout'], '{{ARTIST}}');
+      },
+    );
+
+    testWidgets(
+      'an empty Custom under a base folder the server would refuse: the '
+      'preview asks to fix the base folder first',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-base')),
+          '../x',
+        );
+        await frames(tester, 2);
+        expect(
+          find.text('Fix the base folder to see where files land'),
+          findsOneWidget,
+        );
+        expect(find.text('Type a path to see where files land'), findsNothing);
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-base')),
+          'x',
+        );
+        await frames(tester, 2);
+        expect(
+          find.text('Type a path to see where files land'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets("a library's own layout carried into Custom and back again: its "
+        "preset again, and Custom's field as it was", (tester) async {
+      k.fake.destination = {
+        ...k.fake.destination,
+        'libraries': [
+          {'vpath': 'copies', 'template': null},
+          {'vpath': 'demo', 'template': '{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}'},
+        ],
+      };
+      await openPicker(tester);
+      await tapKey(tester, 'destination-custom-option');
+      await typeCustom(tester, 'Inbox');
+      await tapKey(tester, 'destination-library-demo');
+      await tapText(tester, 'Library layout');
+      await tapKey(tester, 'destination-library-copies');
+      expect(
+        customField(tester).controller!.text,
+        '{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+      );
+      await tapKey(tester, 'destination-library-demo');
+      const library = ValueKey(
+        'destination-layout-{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+      );
+      expect(
+        tester.getSemantics(find.byKey(library)),
+        isSemantics(label: 'Library layout', isChecked: true),
+      );
+      expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+      expect(
+        preview(tester),
+        'demo › Boukmanflow › 2019 - Borrowed Tapes › 02 - Late Train Verse.mp3',
+      );
+      await tapKey(tester, 'destination-custom-option');
+      expect(customField(tester).controller!.text, 'Inbox');
+      // Edited in the other library, it stays Custom's.
+      await tapText(tester, 'Library layout');
+      await tapKey(tester, 'destination-library-copies');
+      await typeCustom(tester, '{{ALBUMARTIST}}/{{YEAR}}');
+      await tapKey(tester, 'destination-library-demo');
+      expect(customField(tester).controller!.text, '{{ALBUMARTIST}}/{{YEAR}}');
+      expect(
+        tester.getSemantics(find.byKey(library)),
+        isSemantics(label: 'Library layout', isChecked: false),
+      );
+    });
+
+    testWidgets(
+      'Use the library default from a saved Custom layout: the preset in '
+      "force, Custom's field keeps the text, Save waits",
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': 'From friends/{{ALBUM}}',
+        };
+        k.fake.destination = {
+          ...k.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        await openPicker(tester);
+        await tapText(tester, 'Use the library default');
+        expect(lastPut(), {'destination': null});
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          isSemantics(label: 'Artist / Album', isChecked: true),
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 1, reason: 'nothing changed');
+        await tapKey(tester, 'destination-custom-option');
+        expect(customField(tester).controller!.text, 'From friends/{{ALBUM}}');
+      },
+    );
+
+    testWidgets(
+      'a variable button with no caret set appends at the end; after an '
+      'emoji it lands after the emoji',
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': 'From friends/{{ALBUM}}',
+        };
+        k.fake.destination = {
+          ...k.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        await openPicker(tester);
+        final c = customField(tester).controller!;
+        expect(customField(tester).focusNode!.hasFocus, isFalse);
+        expect(c.selection.isValid, isFalse, reason: 'never focused');
+        await tapKey(tester, 'destination-var-YEAR');
+        expect(c.text, 'From friends/{{ALBUM}}{{YEAR}}');
+        expect(c.selection, const TextSelection.collapsed(offset: 30));
+
+        await typeCustom(tester, '🎵/x');
+        c.selection = const TextSelection.collapsed(offset: 2);
+        await frames(tester, 2);
+        await tapKey(tester, 'destination-var-ARTIST');
+        expect(c.text, '🎵{{ARTIST}}/x');
+        expect(c.selection, const TextSelection.collapsed(offset: 12));
+      },
+    );
+
+    testWidgets(
+      "a variable button never takes the layout past the server's 500: "
+      'one with no room is off',
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'a' * 490);
+        void on(String v, bool enabled) => expect(
+          tester.getSemantics(find.byKey(ValueKey('destination-var-$v'))),
+          isSemantics(isButton: true, isEnabled: enabled),
+          reason: v,
+        );
+        on('ARTIST', true); // 490 + 10 = 500
+        on('ALBUMARTIST', false); // 490 + 15
+        await tapKey(tester, 'destination-var-ALBUMARTIST');
+        expect(customField(tester).controller!.text, 'a' * 490);
+        await tapKey(tester, 'destination-var-ARTIST');
+        expect(customField(tester).controller!.text, '${'a' * 490}{{ARTIST}}');
+        on('YEAR', false);
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('saving: the variable buttons are off with the field', (
+      tester,
+    ) async {
+      await openPicker(tester);
+      await tapKey(tester, 'destination-custom-option');
+      await typeCustom(tester, 'Inbox');
+      k.fake.destinationGate = Completer<void>();
+      await tapKey(tester, 'destination-save');
+      expect(find.text('Saving…'), findsOneWidget);
+      expect(customField(tester).enabled, isFalse);
+      expect(
+        tester.getSemantics(
+          find.byKey(const ValueKey('destination-var-ARTIST')),
+        ),
+        isSemantics(isButton: true, isEnabled: false),
+      );
+      await tester.tap(find.byKey(const ValueKey('destination-var-ARTIST')));
+      await tester.pump();
+      expect(customField(tester).controller!.text, 'Inbox');
+      k.fake.destinationGate!.complete();
+      k.fake.destinationGate = null;
+      await frames(tester);
+      expect(find.text('yours'), findsOneWidget);
+    });
+  });
+
   group('the destination picker on its own: its states', () {
     final h = SheetHarness();
     setUp(h.setUp);
@@ -388,10 +1118,15 @@ void main() {
       double height = 844,
       double textScale = 1,
       Locale? locale,
+      DestinationPreviewSong previewing = song,
     }) => h.pumpHost(
       tester,
-      (c) =>
-          showDestinationSheet(c, h.jobs, song: song, peerName: 'Stage Peer B'),
+      (c) => showDestinationSheet(
+        c,
+        h.jobs,
+        song: previewing,
+        peerName: 'Stage Peer B',
+      ),
       width: width,
       height: height,
       textScale: textScale,
@@ -489,6 +1224,216 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Custom with the keyboard up: its field and the variables under it '
+      'scroll into view above it',
+      (tester) async {
+        await pumpPicker(tester);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3);
+        addTearDown(tester.view.resetViewInsets);
+        await KeepHarness.pumpFor(tester);
+        // Custom's row at the bottom edge, where the thumb finds it: what
+        // opens under it starts out of view.
+        final option = find.byKey(const ValueKey('destination-custom-option'));
+        unawaited(
+          Scrollable.ensureVisible(tester.element(option), alignment: 1),
+        );
+        await KeepHarness.pumpFor(tester);
+        // What the form shows between the preview and the footer.
+        Rect form() =>
+            tester.getRect(find.byKey(const ValueKey('destination-form')));
+        expect(form().bottom, lessThanOrEqualTo(844 - 300));
+        expect(tester.getRect(option).bottom, moreOrLessEquals(form().bottom));
+        await tester.tap(option);
+        await KeepHarness.pumpFor(tester);
+        expect(tester.takeException(), isNull);
+        expect(form().bottom, lessThanOrEqualTo(844 - 300));
+        final field = tester.getRect(
+          find.byKey(const ValueKey('destination-custom')),
+        );
+        expect(field.top, greaterThanOrEqualTo(form().top));
+        expect(field.bottom, lessThanOrEqualTo(form().bottom));
+        final chip = tester.getRect(
+          find.byKey(const ValueKey('destination-var-ARTIST')),
+        );
+        expect(chip.bottom, lessThanOrEqualTo(form().bottom));
+        expect(chip.height, greaterThanOrEqualTo(44), reason: 'its target');
+        final save = tester.getRect(
+          find.byKey(const ValueKey('destination-save')),
+        );
+        expect(save.bottom, lessThanOrEqualTo(844 - 300));
+      },
+    );
+
+    testWidgets(
+      "a variable this song has no value for: the path without it, and a "
+      'note naming it',
+      (tester) async {
+        await pumpPicker(
+          tester,
+          previewing: const DestinationPreviewSong(
+            title: 'Rooftop Cypher',
+            artist: 'Boukmanflow',
+            album: 'Borrowed Tapes',
+            filepath: 'peerlib/Boukmanflow/01 - Rooftop Cypher.mp3',
+          ),
+        );
+        final option = find.byKey(const ValueKey('destination-custom-option'));
+        await tester.ensureVisible(option);
+        await tester.pump();
+        await tester.tap(option);
+        await KeepHarness.pumpFor(tester);
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-custom')),
+          '{{YEAR}}/{{ALBUM}}',
+        );
+        await KeepHarness.pumpFor(tester, 2);
+        tester.testTextInput.hide();
+        await KeepHarness.pumpFor(tester, 2);
+        expect(
+          find.text(
+            'No value for this song, so left out of the path: {{YEAR}}',
+          ),
+          findsOneWidget,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-custom')),
+          '{{ALBUM}}',
+        );
+        await KeepHarness.pumpFor(tester, 2);
+        expect(
+          find.byKey(const ValueKey('destination-preview-missing')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      "the server's variables only: its chips, and the unknown variable's "
+      'words name only them',
+      (tester) async {
+        h.fake.destination = {
+          ...h.fake.destination,
+          'variables': ['ARTIST', 'ALBUM'],
+        };
+        await pumpPicker(tester);
+        final option = find.byKey(const ValueKey('destination-custom-option'));
+        await tester.ensureVisible(option);
+        await tester.pump();
+        await tester.tap(option);
+        await KeepHarness.pumpFor(tester);
+        expect(find.byKey(const ValueKey('destination-var-ARTIST')), findsOne);
+        expect(find.byKey(const ValueKey('destination-var-ALBUM')), findsOne);
+        for (final v in ['YEAR', 'GENRE', 'ALBUMARTIST', 'PEER']) {
+          expect(
+            find.byKey(ValueKey('destination-var-$v')),
+            findsNothing,
+            reason: v,
+          );
+        }
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-custom')),
+          '{{ARTST}}',
+        );
+        await KeepHarness.pumpFor(tester, 2);
+        expect(
+          find.text('Unknown variable {{ARTST}}. Use ARTIST, ALBUM.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    // Real keyboards, at the sizes people use: the field being typed in
+    // stays in the form's view, and nothing overflows.
+    for (final (name, width, height, keyboard, scale, locale) in const [
+      ('390 × 844, a 336 px keyboard, 1.3×', 390.0, 844.0, 336.0, 1.3, null),
+      ('375 × 667, a 260 px keyboard', 375.0, 667.0, 260.0, 1.0, null),
+      (
+        '360 × 780 German, a 300 px keyboard, 1.3×',
+        360.0,
+        780.0,
+        300.0,
+        1.3,
+        Locale('de'),
+      ),
+    ]) {
+      testWidgets('the keyboard up on $name: Custom and the base folder in '
+          'view', (tester) async {
+        await pumpPicker(
+          tester,
+          width: width,
+          height: height,
+          textScale: scale,
+          locale: locale,
+        );
+        tester.view.viewInsets = FakeViewPadding(bottom: keyboard * 3);
+        addTearDown(tester.view.resetViewInsets);
+        await KeepHarness.pumpFor(tester);
+        expect(tester.takeException(), isNull);
+        Rect form() =>
+            tester.getRect(find.byKey(const ValueKey('destination-form')));
+        Future<void> inView(String key) async {
+          final field = tester.getRect(find.byKey(ValueKey(key)));
+          expect(
+            form().height,
+            greaterThanOrEqualTo(field.height),
+            reason: key,
+          );
+          expect(
+            field.top,
+            greaterThanOrEqualTo(form().top - 0.5),
+            reason: key,
+          );
+          expect(
+            field.bottom,
+            lessThanOrEqualTo(form().bottom + 0.5),
+            reason: key,
+          );
+          expect(form().bottom, lessThanOrEqualTo(height - keyboard));
+        }
+
+        final option = find.byKey(const ValueKey('destination-custom-option'));
+        await tester.ensureVisible(option);
+        await tester.pump();
+        await tester.tap(option);
+        await KeepHarness.pumpFor(tester);
+        expect(tester.takeException(), isNull);
+        await inView('destination-custom');
+        await tester.enterText(
+          find.byKey(const ValueKey('destination-custom')),
+          '{{ARTST}}',
+        );
+        await KeepHarness.pumpFor(tester);
+        expect(tester.takeException(), isNull);
+        await inView('destination-custom');
+
+        await tester.showKeyboard(
+          find.byKey(const ValueKey('destination-base')),
+        );
+        await KeepHarness.pumpFor(tester);
+        expect(tester.takeException(), isNull);
+        await inView('destination-base');
+        expect(
+          tester.getRect(find.byKey(const ValueKey('destination-save'))).bottom,
+          lessThanOrEqualTo(height - keyboard),
+        );
+      });
+    }
+
+    testWidgets('320 px at 1.3×: the variable buttons fit', (tester) async {
+      await pumpPicker(tester, width: 320, height: 700, textScale: 1.3);
+      final option = find.byKey(const ValueKey('destination-custom-option'));
+      await tester.ensureVisible(option);
+      await tester.pump();
+      await tester.tap(option);
+      await KeepHarness.pumpFor(tester);
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const ValueKey('destination-var-ALBUMARTIST')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('German at 1.3× on 360 px: nothing overflows', (tester) async {
       await pumpPicker(
         tester,
@@ -500,6 +1445,32 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Wo Kopien landen'), findsOneWidget);
       expect(find.text('Bibliotheksstandard'), findsOneWidget);
+      await tester.drag(
+        find.byKey(const ValueKey('destination-form')),
+        const Offset(0, -400),
+      );
+      await KeepHarness.pumpFor(tester);
+      expect(tester.takeException(), isNull);
+      // Custom open, a refusal under it.
+      final option = find.byKey(const ValueKey('destination-custom-option'));
+      await tester.ensureVisible(option);
+      await tester.pump();
+      await tester.tap(option);
+      await KeepHarness.pumpFor(tester);
+      expect(find.text('Eigenes'), findsOneWidget);
+      expect(find.text('Eigenen Pfad eingeben'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('destination-custom')),
+        'Von Freunden/{{ARTST}}',
+      );
+      await KeepHarness.pumpFor(tester);
+      expect(
+        find.text(
+          'Unbekannte Variable {{ARTST}}. Verwende ARTIST, ALBUM, YEAR, '
+          'GENRE, ALBUMARTIST, PEER.',
+        ),
+        findsOneWidget,
+      );
       await tester.drag(
         find.byKey(const ValueKey('destination-form')),
         const Offset(0, -400),
