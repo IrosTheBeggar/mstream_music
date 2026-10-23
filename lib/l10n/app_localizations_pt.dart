@@ -4614,6 +4614,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get discoverKeepFilesGoTo => 'Os arquivos vão para';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'O caminho desta cópia passaria de $max caracteres, mais do que o servidor aceita';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'uma pasta por álbum';
 
   @override
@@ -5098,6 +5103,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Corrija o layout para ver para onde vão os arquivos';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'O caminho desta música passaria de $max caracteres, mais do que o servidor aceita';
+  }
+
+  @override
   String get discoverDestLibrary => 'Biblioteca';
 
   @override
@@ -5108,6 +5118,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'Servidor / Artista / Álbum';
+
+  @override
+  String get discoverDestPresetServerFolders => 'As mesmas pastas do servidor';
 
   @override
   String get discoverDestPresetLibrary => 'Layout da biblioteca';
@@ -5151,6 +5164,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'Inserir nome do servidor';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Inserir pasta do servidor';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -5213,6 +5229,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get discoverDestYearSlot => 'ano';
 
   @override
+  String get discoverDestServerFolderSlot => 'pasta do servidor';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5241,6 +5260,45 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots vem das etiquetas da música (uma música sem gênero fica sem essa pasta).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server vem de onde cada música está no servidor, então estas músicas podem ir para mais de uma pasta.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots vêm das etiquetas de cada música e $server de onde ela está no servidor, então estas músicas podem ir para mais de uma pasta.',
+      one:
+          '$slots vem das etiquetas de cada música e $server de onde ela está no servidor, então estas músicas podem ir para mais de uma pasta.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots vêm das etiquetas de cada música e $server de onde ela está no servidor, então estas músicas podem ir para mais de uma pasta (uma música sem gênero fica sem essa pasta).',
+      one:
+          '$slots vem das etiquetas de cada música e $server de onde ela está no servidor, então estas músicas podem ir para mais de uma pasta (uma música sem gênero fica sem essa pasta).',
+    );
+    return '$_temp0';
   }
 
   @override

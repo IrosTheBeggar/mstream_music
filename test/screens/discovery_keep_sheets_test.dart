@@ -2305,6 +2305,42 @@ void main() {
     );
 
     testWidgets(
+      'every album under a layout the server takes that renders this artist '
+      'a path past 500 characters: the question warns in place of a path',
+      (tester) async {
+        // 492 characters as typed; 501 with Boukmanflow nine times.
+        useLayout('${'x' * 200}/${'y' * 200}/${'{{ARTIST}}' * 9}');
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+        await frames(tester);
+        await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+        await frames(tester);
+        const tooLong =
+            "This copy's path would pass 500 characters, more than the "
+            'server takes';
+        expect(line(tooLong), findsOneWidget);
+        await tester.ensureVisible(find.text('Add every album'));
+        await tester.pump();
+        await tester.tap(find.text('Add every album'));
+        await frames(tester);
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text(tooLong),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('They land on your server in'),
+          findsNothing,
+        );
+        await tester.tap(find.text('Cancel').last);
+        await frames(tester);
+      },
+    );
+
+    testWidgets(
       "an every-album copy's Retry names where it adds now as Files go to "
       'does: one folder per album under it',
       (tester) async {
@@ -2369,5 +2405,249 @@ void main() {
         );
       },
     );
+
+    group('{{SERVERFOLDER}}: where each song sits on the connected server', () {
+      const serverNote =
+          '‹server folder› comes from where each song sits on the server, so '
+          'these songs can land in more than one folder.';
+      const tapes =
+          'Files go to copies › From friends › Boukmanflow › Borrowed Tapes';
+
+      testWidgets(
+        'From friends/{{SERVERFOLDER}}: This song and Album land in the '
+        'folders the album sits in there; the one album an only-missing copy '
+        'takes is the slot; every album is one folder per album',
+        (tester) async {
+          useLayout('From friends/{{SERVERFOLDER}}');
+          await h.pumpDiscover(tester);
+          await openSongSheet(tester, 'Late Train Verse');
+          expect(line(tapes), findsOneWidget);
+          expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+          await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+          await frames(tester);
+          expect(line(tapes), findsOneWidget, reason: 'its songs sit there');
+          expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+          // Only the 1 album you don't have: each album sits in folders of
+          // its own there.
+          await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+          await frames(tester);
+          expect(find.text("Only the 1 album you don't have"), findsOneWidget);
+          expect(
+            line('Files go to copies › From friends › ‹server folder›'),
+            findsOneWidget,
+          );
+          expect(find.text(serverNote), findsOneWidget);
+          await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+          await frames(tester);
+          expect(
+            line('Files go to copies › From friends › one folder per album'),
+            findsOneWidget,
+          );
+          expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+        },
+      );
+
+      testWidgets(
+        "Night Market Sampler: its songs sit under three artists' folders "
+        "there — ‹server folder› and why; before they answer, the row's "
+        'folder; with ‹artist›, one note for both',
+        (tester) async {
+          useLayout('{{SERVERFOLDER}}');
+          h.facts.gate = Completer<void>();
+          await openSampler(tester);
+          await tester.longPress(find.text('Night Market Sampler').first);
+          await frames(tester, 8);
+          expect(
+            line('Files go to copies › Boukmanflow › Night Market Sampler'),
+            findsOneWidget,
+          );
+          expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+          h.facts.gate!.complete();
+          await frames(tester);
+          expect(line('Files go to copies › ‹server folder›'), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('keep-destination')),
+              matching: find.text(serverNote),
+            ),
+            findsOneWidget,
+          );
+          // Never one song's folders for them all.
+          expect(
+            inCard(find.textContaining('Night Market', findRichText: true)),
+            findsNothing,
+          );
+          // Quiet and italic, and held as one: it never breaks inside.
+          final slot = spanOf(
+            tester,
+            'keep-destination',
+            '‹server\u00A0folder›',
+          );
+          expect(slot?.style?.fontStyle, FontStyle.italic);
+          expect(slot?.style?.color, VelvetColors.textSecondary);
+
+          useLayout('From friends/{{ARTIST}}/{{SERVERFOLDER}}');
+          await h.jobs.loadDestination();
+          await frames(tester);
+          expect(
+            line(
+              'Files go to copies › From friends › ‹artist› › ‹server folder›',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              "‹artist› comes from each song's own tags and ‹server folder› "
+              'from where it sits on the server, so these songs can land in '
+              'more than one folder.',
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'Retry on a copy that ran somewhere else names where it adds now, '
+        '‹server folder› and its note with it',
+        (tester) async {
+          const layout = '{{SERVERFOLDER}}';
+          useLayout(layout);
+          final failed = h.fake.addJob(
+            nightMarketRows().first,
+            scope: 'album',
+            state: 'failed',
+          );
+          failed['error'] = 'Stage Peer B went away';
+          failed['params'] = {
+            'scope': 'album',
+            'destination': {'vpath': 'copies', 'base': 'Old', 'layout': layout},
+          };
+          await openSampler(tester);
+          await tester.longPress(find.text('Night Market Sampler').first);
+          await frames(tester, 8);
+          expect(inCard(find.text('Copy failed')), findsOneWidget);
+          expect(
+            inCard(
+              line(
+                'Retry adds to copies › ‹server folder›, your saved place now',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('keep-again-slot-note')),
+              matching: find.text(serverNote),
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        "a song at the connected server's library root sits in no folder "
+        "there: This song lands in the layout's own; its album where the "
+        'album sits',
+        (tester) async {
+          useLayout('From friends/{{SERVERFOLDER}}');
+          h.peersAnswer = () => keepPeersPayload(
+            extraB: [
+              {
+                ...keepRow('Loose End', track: '04 - ', similarity: 0.5),
+                'filepath': 'peerlib/04 - Loose End.mp3',
+              },
+            ],
+          );
+          await h.pumpDiscover(tester);
+          await tester.ensureVisible(find.text('Loose End'));
+          await tester.pump();
+          await openSongSheet(tester, 'Loose End');
+          expect(line('Files go to copies › From friends'), findsOneWidget);
+          expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+          await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+          await frames(tester);
+          expect(line(tapes), findsOneWidget);
+        },
+      );
+
+      group('a song in folders 544 characters deep there', () {
+        const tooLong =
+            "This copy's path would pass 500 characters, more than the "
+            'server takes';
+        Map<String, dynamic> deepRow() => {
+          ...keepRow('Long Way Down', similarity: 0.5),
+          'filepath':
+              'peerlib/${['a' * 180, 'b' * 180, 'c' * 180].join('/')}'
+              '/Long Way Down.mp3',
+        };
+
+        testWidgets(
+          'its path would pass the 500 the server takes: the card says so '
+          'where the path goes, never "Files go to copies"; its album sits '
+          'in folders the server takes',
+          (tester) async {
+            useLayout('{{SERVERFOLDER}}');
+            h.peersAnswer = () => keepPeersPayload(extraB: [deepRow()]);
+            await h.pumpDiscover(tester);
+            await tester.ensureVisible(find.text('Long Way Down'));
+            await tester.pump();
+            await openSongSheet(tester, 'Long Way Down');
+            expect(line(tooLong), findsOneWidget);
+            expect(
+              find.textContaining('Files go to', findRichText: true),
+              findsNothing,
+            );
+            expect(
+              find.descendant(
+                of: find.byKey(const ValueKey('keep-destination')),
+                matching: find.byIcon(Icons.warning_amber_rounded),
+              ),
+              findsOneWidget,
+            );
+            expect(find.byKey(const ValueKey('keep-change')), findsOneWidget);
+            await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+            await frames(tester);
+            expect(
+              line('Files go to copies › Boukmanflow › Borrowed Tapes'),
+              findsOneWidget,
+            );
+          },
+        );
+
+        testWidgets(
+          'a copy of it that ran somewhere else: Retry names no place to add '
+          'to, the same warning instead',
+          (tester) async {
+            const layout = '{{SERVERFOLDER}}';
+            useLayout(layout);
+            final row = deepRow();
+            final failed = h.fake.addJob(row, state: 'failed');
+            failed['error'] = 'Stage Peer B went away';
+            failed['params'] = {
+              'destination': {
+                'vpath': 'copies',
+                'base': 'Old',
+                'layout': layout,
+              },
+            };
+            h.peersAnswer = () => keepPeersPayload(extraB: [row]);
+            await h.pumpDiscover(tester);
+            await tester.ensureVisible(find.text('Long Way Down'));
+            await tester.pump();
+            await openSongSheet(tester, 'Long Way Down');
+            expect(inCard(find.text('Copy failed')), findsOneWidget);
+            expect(
+              tester
+                  .widget<Text>(
+                    find.byKey(const ValueKey('keep-again-too-long')),
+                  )
+                  .data,
+              tooLong,
+            );
+            expect(find.textContaining('adds to'), findsNothing);
+          },
+        );
+      });
+    });
   });
 }

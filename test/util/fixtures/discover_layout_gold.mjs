@@ -1,12 +1,14 @@
 // Golden values from the mStream server's own engines (src/torrent/path-template.js,
-// src/discovery-plugins/destination.js, src/db/name-key.js) for the phone's ports in
-// lib/util/discover_jobs.dart and lib/util/discover_badges.dart. Read-only: pure modules.
+// src/discovery-plugins/destination.js, src/db/name-key.js, and federation-copy.js's
+// serverFolderOf) for the phone's ports in lib/util/discover_jobs.dart and
+// lib/util/discover_badges.dart. Read-only: nothing here writes or listens.
 // node test/util/fixtures/discover_layout_gold.mjs <mStream checkout> > test/util/fixtures/discover_layout_gold.json
 const ROOT = process.argv[2];
 if (!ROOT) { console.error('usage: node discover_layout_gold.mjs <mStream checkout>'); process.exit(2); }
 const pathTemplate = await import(ROOT + '/src/torrent/path-template.js');
 const destination = await import(ROOT + '/src/discovery-plugins/destination.js');
 const { nameKey } = await import(ROOT + '/src/db/name-key.js');
+const { serverFolderOf } = await import(ROOT + '/src/discovery-plugins/plugins/federation-copy.js');
 
 const TAGS = [
   { artist: 'Marlowe Vale', album: 'Night Ferry', year: 2019, genre: 'Dream Pop', albumartist: null },
@@ -84,7 +86,12 @@ for (const base of FOLD_BASES) {
     const row = { base: FOLD_BASES.indexOf(base), layout: LAYOUTS.indexOf(layout), error: check.valid ? null : check.error, tags: [], relDir: [], same: [] };
     if (check.valid) {
       for (const t of long ? [...FOLD_TAGS, 4] : FOLD_TAGS) {
-        const at = (d) => destination.renderTarget({ destination: { vpath: 'music', ...d }, tags: TAGS[t], peerName: "Sam's server", fileName: 'f.mp3' }).relDir;
+        // null: refused (renderTarget renders whole and throws past 500 characters)
+        const at = (d) => {
+          try {
+            return destination.renderTarget({ destination: { vpath: 'music', ...d }, tags: TAGS[t], peerName: "Sam's server", fileName: 'f.mp3' }).relDir;
+          } catch { return null; }
+        };
         const after = at({ base: '', layout: folded });
         row.tags.push(t);
         row.relDir.push(after);
@@ -92,6 +99,56 @@ for (const base of FOLD_BASES) {
       }
     }
     out.fold.push(row);
+  }
+}
+// {{SERVERFOLDER}}: the folders a copied song sits in on the peer — a value that may
+// be several folders, each made safe on its own (sanitizeFolders) — from its path
+// there, the peer's library dropped (serverFolderOf); how layouts render it, and
+// which of them the server takes (its sample is two folders).
+const PEER_PATHS = [
+  'peerlib/Boukmanflow/Borrowed Tapes/02 - Late Train Verse.mp3', 'peerlib/01.mp3', '01.mp3', '', null,
+  '/peerlib//Boukmanflow/./Borrowed Tapes/x.mp3', 'peerlib\\Win\\Dir\\x.mp3', 'peerlib/../x/y.mp3', 'peerlib/a/../b.mp3',
+  ' peerlib / sp ace /  x.mp3 ', 'peerlib/AC:DC?/Live*/x.mp3', 'peerlib/~/$HOME/x.mp3', 'peerlib/..../...hidden/x.mp3',
+  'peerlib/nel\u0085/x.mp3', 'peerlib/' + 'x'.repeat(260) + '/y.mp3', 'peerlib/a/b/c/d/e.flac',
+  // A first folder that is no folder ('.', blank) is never the library; a NEL one is.
+  './peerlib/a/x.mp3', ' /peerlib/a/x.mp3', 'peerlib/ /a/x.mp3', '\u0085/peerlib/a/x.mp3',
+];
+const SERVER_FOLDERS = [
+  'Boukmanflow/Borrowed Tapes', '', null, 'a\\b', '../up/..', ' . /x//y/ ', 'AC:DC/Live?', '~/$HOME/x', 'x'.repeat(300) + '/y',
+  'a/./b', 'Été/日本語', 42, ('x'.repeat(150) + '/').repeat(4),
+];
+const SERVER_FOLDER_LAYOUTS = [
+  '{{SERVERFOLDER}}', 'From friends/{{SERVERFOLDER}}', 'Copy of {{SERVERFOLDER}}', '{{SERVERFOLDER}} ({{YEAR}})/{{ARTIST}}',
+  '{{PEER}}/{{SERVERFOLDER}}/{{ALBUM}}', '{{ serverfolder }}', '{{SERVERFOLDER}}{{SERVERFOLDER}}', '{{SERVERFOLDER}}/..',
+  'C:{{SERVERFOLDER}}', '{{SERVERFOLDER}}/{{TRACK}}',
+];
+out.peerPaths = PEER_PATHS;
+out.serverFolderOf = PEER_PATHS.map((p) => serverFolderOf(p));
+out.serverFolders = SERVER_FOLDERS;
+out.sanitizeFolders = SERVER_FOLDERS.map((v) => pathTemplate.sanitizeFolders(v));
+out.serverFolderLayouts = SERVER_FOLDER_LAYOUTS;
+out.serverFolderValidate = SERVER_FOLDER_LAYOUTS.map((l) => { const v = destination.validateLayout(l); return { valid: v.valid, error: v.valid ? null : v.error }; });
+out.serverFolderResolve = [];
+out.serverFolderRender = [];
+for (const layout of SERVER_FOLDER_LAYOUTS) {
+  const ok = destination.validateLayout(layout).valid;
+  for (const serverfolder of SERVER_FOLDERS) {
+    for (const t of [0, 3]) {
+      const r = pathTemplate.resolveTemplate(layout, { ...TAGS[t], peer: "Sam's server", serverfolder });
+      out.serverFolderResolve.push({ layout: SERVER_FOLDER_LAYOUTS.indexOf(layout), folder: SERVER_FOLDERS.indexOf(serverfolder), tags: t, path: r.path, missingVars: r.missingVars });
+      if (!ok) { continue; }
+      const row = { layout: SERVER_FOLDER_LAYOUTS.indexOf(layout), folder: SERVER_FOLDERS.indexOf(serverfolder), tags: t };
+      try {
+        const target = destination.renderTarget({
+          destination: { vpath: 'music', base: 'From peers', layout }, tags: TAGS[t], peerName: "Sam's server", serverFolder: serverfolder, fileName: 'f.mp3',
+        });
+        out.serverFolderRender.push({ ...row, relPath: target.relPath, missingVars: target.missingVars, error: null });
+      } catch {
+        // Refused: the code the whole render fails validateResolvedPath with.
+        const whole = pathTemplate.resolveTemplate(layout, { ...TAGS[t], peer: "Sam's server", serverfolder }, { truncate: false }).path;
+        out.serverFolderRender.push({ ...row, relPath: null, missingVars: null, error: pathTemplate.validateResolvedPath(whole).error });
+      }
+    }
   }
 }
 // Compact: layouts by index, long runs of 'x' as { x: length }.

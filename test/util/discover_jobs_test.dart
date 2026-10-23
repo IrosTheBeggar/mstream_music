@@ -125,6 +125,77 @@ void main() {
       expect(kDefaultLayout, gold['defaultLayout']);
     });
 
+    test('{{SERVERFOLDER}}: where a song sits on the peer, its library dropped, each folder made safe — '
+        'as serverFolderOf, sanitizeFolders, the validator and renderTarget make it', () {
+      final paths = list('peerPaths');
+      final folderOf = list('serverFolderOf');
+      for (var i = 0; i < paths.length; i++) {
+        expect(serverFolderOf(paths[i]), folderOf[i], reason: 'serverFolderOf ${paths[i]}');
+      }
+      final values = list('serverFolders');
+      final safe = list('sanitizeFolders');
+      for (var i = 0; i < values.length; i++) {
+        expect(sanitizeFolders(values[i]), safe[i], reason: 'sanitizeFolders ${values[i]}');
+      }
+      final layouts = list('serverFolderLayouts').cast<String>();
+      final want = gold['serverFolderValidate'] as List;
+      for (var i = 0; i < layouts.length; i++) {
+        final mine = validateLayout(layouts[i]);
+        expect([mine.valid, mine.valid ? null : mine.error], [want[i]['valid'], want[i]['error']], reason: layouts[i]);
+      }
+      for (final r in gold['serverFolderResolve'] as List) {
+        final layout = layouts[r['layout'] as int];
+        final folder = values[r['folder'] as int];
+        final mine = resolveLayout(layout, {...tags[r['tags'] as int], 'peer': "Sam's server", 'serverfolder': folder});
+        expect([mine.path, mine.missingVars], [unpack(r['path']), r['missingVars']], reason: 'resolve "$layout" with "$folder"');
+      }
+      for (final r in gold['serverFolderRender'] as List) {
+        final layout = layouts[r['layout'] as int];
+        final folder = values[r['folder'] as int];
+        final mine = previewTarget(
+          vpath: 'music',
+          base: 'From peers',
+          layout: layout,
+          tags: tags[r['tags'] as int],
+          peerName: "Sam's server",
+          serverFolder: folder,
+          fileName: 'f.mp3',
+        );
+        if (r['error'] != null) {
+          // Past 500 characters: refused whole, never cut mid-folder.
+          expect([mine.valid, mine.field, mine.error], [false, 'layout', r['error']], reason: 'render "$layout" with "$folder"');
+          continue;
+        }
+        expect(mine.valid, isTrue);
+        expect([mine.relPath, mine.missingVars], [unpack(r['relPath']), r['missingVars']], reason: 'render "$layout" with "$folder"');
+      }
+      expect((gold['serverFolderRender'] as List).where((r) => r['error'] != null), isNotEmpty,
+          reason: 'a server folder can take the path past 500 characters');
+      // The server's own words, in short: several folders; none at the
+      // library's root; '..' and empty folders gone; literal text in front
+      // makes more folders; the sample is two folders, so it alone is a
+      // layout.
+      expect(serverFolderOf('peerlib/Boukmanflow/Borrowed Tapes/02 - Late Train Verse.mp3'), 'Boukmanflow/Borrowed Tapes');
+      expect(serverFolderOf('peerlib/02 - Late Train Verse.mp3'), '');
+      expect(serverFolderOf('peerlib/../a//./b/x.mp3'), 'a/b');
+      expect(resolveLayout('Copy of {{SERVERFOLDER}}', {'serverfolder': 'Boukmanflow/Borrowed Tapes'}).path,
+          'Copy of Boukmanflow/Borrowed Tapes');
+      expect(resolveLayout('From friends/{{SERVERFOLDER}}', {'serverfolder': ''}).missingVars, ['SERVERFOLDER']);
+      expect(validateLayout('{{SERVERFOLDER}}').valid, isTrue);
+      expect(validateLayout('{{SERVERFOLDER}}/..').error, 'traversal');
+      expect(kLayoutVars, contains('SERVERFOLDER'));
+      // A layout the server takes, a song it renders past the cap: tooLong,
+      // and only then (a refused layout or base folder is not).
+      final deep = [for (final c in 'abc'.split('')) c * 180].join('/');
+      final long = previewTarget(vpath: 'copies', layout: '{{SERVERFOLDER}}', serverFolder: deep, fileName: 'x.mp3');
+      expect([long.valid, long.error, long.field, long.tooLong], [false, 'path_too_long', 'layout', true]);
+      expect(previewTarget(vpath: 'copies', layout: '{{SERVERFOLDER}}', serverFolder: 'a/b', fileName: 'x.mp3').tooLong,
+          isFalse);
+      expect(previewTarget(vpath: 'copies', layout: '/{{ARTIST}}', fileName: 'x.mp3').tooLong, isFalse);
+      final base = previewTarget(vpath: 'copies', base: 'x' * 600, layout: '{{ARTIST}}', fileName: 'x.mp3');
+      expect([base.error, base.field, base.tooLong], ['path_too_long', 'base', false]);
+    });
+
     test('the base folder and the file name follow the same rules', () {
       final bases = list('bases');
       final want = gold['normalizeBase'] as List;
@@ -207,9 +278,13 @@ void main() {
         for (var i = 0; i < tagsAt.length; i++) {
           PreviewTarget at(Object? b, String l) => previewTarget(
               vpath: 'music', base: b, layout: l, tags: tags[tagsAt[i]], peerName: "Sam's server", fileName: 'f.mp3');
+          // Refused (null): rendered whole past 500 characters, as the
+          // server's renderTarget refuses it.
+          String? relDir(PreviewTarget t) => t.valid ? t.relDir : null;
           final mine = at('', folded);
-          expect(mine.relDir, unpack((r['relDir'] as List)[i]), reason: 'fold "$base" + $layout #${tagsAt[i]}');
-          final same = mine.relDir == at(base, layout).relDir;
+          expect(relDir(mine), unpack((r['relDir'] as List)[i]), reason: 'fold "$base" + $layout #${tagsAt[i]}');
+          if (!mine.valid) expect(mine.error, 'path_too_long');
+          final same = relDir(mine) == relDir(at(base, layout));
           expect(same, (r['same'] as List)[i], reason: 'same place? "$base" + $layout #${tagsAt[i]}');
           if (!same) elsewhere.add(base);
         }
@@ -223,8 +298,9 @@ void main() {
         'x' * 480: {'template_too_long'},
       });
       // A known variable written in the base folder's name renders as the
-      // variable; a path past 500 characters is cut at another place. Every
-      // other base folder lands every song where it did.
+      // variable; a path past 500 characters is refused, where a base folder
+      // in front of a shorter render was not. Every other base folder lands
+      // every song where it did.
       expect(elsewhere, {'{{ARTIST}}', '{{ artist }}', '{{PEER}}', 'x' * 300});
 
       // No base folder: the layout as it is; one the server refuses comes
@@ -446,13 +522,17 @@ void main() {
       LayoutSong(artist: 'ALM', year: 2020),
     ];
     ScopeTarget at(String layout, String scope,
-            {Map<String, Object?> tags = borrowed, List<LayoutSong>? songs, ({String name, Object? year})? oneAlbum}) =>
+            {Map<String, Object?> tags = borrowed,
+            String? serverFolder,
+            List<LayoutSong>? songs,
+            ({String name, Object? year})? oneAlbum}) =>
         scopeTarget(
             vpath: 'copies',
             base: '',
             layout: layout,
             scope: scope,
             tags: tags,
+            serverFolder: serverFolder,
             albumSongs: songs,
             oneAlbum: oneAlbum,
             peerName: 'Stage Peer B',
@@ -546,7 +626,10 @@ void main() {
       expect(slotParts(t.crumbs.last), [(text: 'Boukmanflow - ', slot: null), (text: '', slot: LayoutSlot.genre)]);
       expect(read(at('From friends/{{ARTIST}} (live)', kScopeAlbum, tags: sampler)), 'copies › From friends › ‹artist› (live)');
       final two = at('{{ARTIST}}/{{YEAR}} {{GENRE}}', kScopeAlbum, tags: sampler);
-      expect([read(two), two.slots], ['copies › ‹artist› › ‹year› ‹genre›', LayoutSlot.values]);
+      expect([read(two), two.slots], [
+        'copies › ‹artist› › ‹year› ‹genre›',
+        [LayoutSlot.artist, LayoutSlot.year, LayoutSlot.genre],
+      ]);
       // A tag that reads like a slot is a name, not a slot; a cut mark is dropped.
       final named = at('{{ARTIST}}', kScopeSong, tags: {...borrowed, 'artist': '‹artist›'});
       expect([named.crumbs.last, named.slots], ['‹artist›', <LayoutSlot>[]]);
@@ -571,6 +654,86 @@ void main() {
       expect([read(one), one.perAlbum], ['copies › Boukmanflow › 2018 › B-Sides', false]);
       expect(read(at('{{ARTIST}}/{{ALBUM}}', kScopeArtist, oneAlbum: (name: 'B-Sides', year: 2018))), 'copies › Boukmanflow',
           reason: 'only an only-missing copy takes one album');
+    });
+
+    group('{{SERVERFOLDER}}: where each song sits on the server', () {
+      const tapes = 'Boukmanflow/Borrowed Tapes';
+      const inTapes = LayoutSong(artist: 'Boukmanflow', serverFolder: tapes);
+
+      test("a song: its own folders on the server, never a slot; at the library's root the folder drops", () {
+        final t = at('{{SERVERFOLDER}}', kScopeSong, serverFolder: tapes);
+        expect([read(t), t.slots], ['copies › Boukmanflow › Borrowed Tapes', <LayoutSlot>[]]);
+        expect(read(at('From friends/{{SERVERFOLDER}}', kScopeSong, serverFolder: tapes)),
+            'copies › From friends › Boukmanflow › Borrowed Tapes');
+        // Literal text around it: its folders follow the literal's.
+        expect(read(at('Copy of {{SERVERFOLDER}}', kScopeSong, serverFolder: tapes)),
+            'copies › Copy of Boukmanflow › Borrowed Tapes');
+        final root = at('From friends/{{SERVERFOLDER}}', kScopeSong, serverFolder: '');
+        expect([read(root), root.target.missingVars, root.slots], ['copies › From friends', ['SERVERFOLDER'], <LayoutSlot>[]]);
+        expect(read(at('{{SERVERFOLDER}}', kScopeSong)), 'copies', reason: 'no path on the server (a download): dropped');
+        // The peer's word made safe, folder by folder.
+        expect(read(at('{{SERVERFOLDER}}', kScopeSong, serverFolder: serverFolderOf('peerlib/../AC:DC//Live?/x.mp3'))),
+            'copies › AC-DC › Live-');
+      });
+
+      test("an album: the folders when every song of its listing sits in them, else the slot; the row's until it answers", () {
+        expect(read(at('{{SERVERFOLDER}}', kScopeAlbum, serverFolder: tapes)), 'copies › Boukmanflow › Borrowed Tapes',
+            reason: 'no listing yet: the row');
+        final same = at('{{SERVERFOLDER}}', kScopeAlbum, serverFolder: tapes, songs: const [inTapes, inTapes, inTapes]);
+        expect([read(same), same.slots], ['copies › Boukmanflow › Borrowed Tapes', <LayoutSlot>[]]);
+        // The compilation's songs sit under each artist's own folder.
+        const spread = [
+          LayoutSong(artist: 'Color Out', serverFolder: 'Color Out/Night Market Sampler'),
+          LayoutSong(artist: 'Boukmanflow', serverFolder: 'Boukmanflow/Night Market Sampler'),
+        ];
+        final many = at('From friends/{{SERVERFOLDER}}', kScopeAlbum,
+            tags: sampler, serverFolder: 'Boukmanflow/Night Market Sampler', songs: spread);
+        expect([read(many), many.slots, many.perAlbum], ['copies › From friends › ‹serverFolder›', [LayoutSlot.serverFolder], false]);
+        // Never one song's folders for them all — nor its first folder.
+        expect(many.crumbs.join(), isNot(contains('Night Market Sampler')));
+        // A song at the library's root makes a place of its own.
+        expect(read(at('{{SERVERFOLDER}}', kScopeAlbum, songs: const [inTapes, LayoutSong(artist: 'Boukmanflow')])),
+            'copies › ‹serverFolder›');
+        // All at the root: the folder drops, as the server drops it.
+        final rooted = at('From friends/{{SERVERFOLDER}}', kScopeAlbum,
+            songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow')]);
+        expect([read(rooted), rooted.target.missingVars], ['copies › From friends', ['SERVERFOLDER']]);
+        // "a/b" is two folders and "a-b" one: they do not agree.
+        expect(read(at('{{SERVERFOLDER}}', kScopeAlbum,
+                songs: const [LayoutSong(serverFolder: 'a/b'), LayoutSong(serverFolder: 'a-b')])),
+            'copies › ‹serverFolder›');
+        // Spellings the server makes one folder of agree.
+        expect(read(at('{{SERVERFOLDER}}', kScopeAlbum,
+                songs: const [LayoutSong(serverFolder: 'AC:DC/Live'), LayoutSong(serverFolder: r'AC-DC\Live')])),
+            'copies › AC-DC › Live');
+        // An empty answer names no album: the row's again.
+        expect(read(at('{{SERVERFOLDER}}', kScopeAlbum, serverFolder: tapes, songs: const [])), 'copies › Boukmanflow › Borrowed Tapes');
+        // With the artist's slot: both, in order.
+        final both = at('{{ARTIST}}/{{SERVERFOLDER}}', kScopeAlbum, tags: sampler, songs: spread);
+        expect([read(both), both.slots], ['copies › ‹artist› › ‹serverFolder›', [LayoutSlot.artist, LayoutSlot.serverFolder]]);
+      });
+
+      test('the artist scopes: the first folder naming it, and every one after, is one folder per album', () {
+        final t = at('From friends/{{SERVERFOLDER}}', kScopeArtist, serverFolder: tapes);
+        expect([read(t), t.perAlbum, t.slots], ['copies › From friends', true, <LayoutSlot>[]]);
+        final mixed = at('{{ARTIST}}/{{SERVERFOLDER}}/{{GENRE}}', kScopeArtistMissing, serverFolder: tapes);
+        expect([read(mixed), mixed.perAlbum, mixed.slots], ['copies › Boukmanflow', true, <LayoutSlot>[]]);
+        expect([read(at('{{SERVERFOLDER}}', kScopeArtist)), at('{{SERVERFOLDER}}', kScopeArtist).perAlbum], ['copies', true]);
+        // One album missing: its folder by its name and year — where its
+        // songs sit on the server is the slot, never this row's folders nor
+        // the row's album's listing.
+        final one = at('{{ARTIST}}/{{SERVERFOLDER}}', kScopeArtistMissing,
+            serverFolder: tapes, songs: const [inTapes, inTapes], oneAlbum: (name: 'B-Sides', year: 2018));
+        expect([read(one), one.perAlbum, one.slots], ['copies › Boukmanflow › ‹serverFolder›', false, [LayoutSlot.serverFolder]]);
+        expect(read(at('{{ALBUM}}/{{SERVERFOLDER}}', kScopeArtistMissing, oneAlbum: (name: 'B-Sides', year: 2018))),
+            'copies › B-Sides › ‹serverFolder›');
+      });
+
+      test("the slot's mark reads back as its slot", () {
+        final mark = slotMark(LayoutSlot.serverFolder);
+        expect(slotParts('Copy of $mark'), [(text: 'Copy of ', slot: null), (text: '', slot: LayoutSlot.serverFolder)]);
+        expect(slotsIn(['copies', mark, slotMark(LayoutSlot.artist)]), [LayoutSlot.artist, LayoutSlot.serverFolder]);
+      });
     });
 
     test('a layout or base folder the server would refuse: no path, no slots, previewTarget\'s error', () {

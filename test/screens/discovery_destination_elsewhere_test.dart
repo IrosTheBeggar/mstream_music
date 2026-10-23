@@ -165,6 +165,8 @@ void main() {
         expect(find.text('{{ALBUMARTIST}}/{{ALBUM}}'), findsOneWidget);
         expect(find.text('Server / Artist / Album'), findsOneWidget);
         expect(find.text('{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}'), findsOneWidget);
+        expect(find.text('Same folders as the server'), findsOneWidget);
+        expect(find.text('{{SERVERFOLDER}}'), findsOneWidget);
         expect(find.text('Library layout'), findsNothing);
         // The server's own default is the Artist / Album preset: a fresh
         // account's layout is no Custom one.
@@ -1074,6 +1076,210 @@ void main() {
     );
 
     testWidgets(
+      'Same folders as the server comes after Server / Artist / Album and '
+      "before Custom: chosen, the song lands in the folders it sits in on "
+      'the connected server; Save sends {{SERVERFOLDER}}',
+      (tester) async {
+        // A compilation's song sits under its own artist's folder there,
+        // not under the album's credit.
+        k.peersAnswer = () => keepPeersPayload(extraB: compilationRows());
+        await k.pumpDiscover(tester);
+        await tester.ensureVisible(find.text('Block Rocker'));
+        await tester.pump();
+        await tester.longPress(find.text('Block Rocker'));
+        await frames(tester, 8);
+        await tapKey(tester, 'keep-change');
+        await frames(tester, 4);
+        expect(
+          top(tester, 'Server / Artist / Album'),
+          lessThan(top(tester, 'Same folders as the server')),
+        );
+        expect(
+          top(tester, 'Same folders as the server'),
+          lessThan(top(tester, 'Custom')),
+        );
+        expect(find.text('{{SERVERFOLDER}}'), findsOneWidget);
+        expect(presetRows(), 3);
+        expect(
+          preview(tester),
+          'copies › Various Artists › Block Party Comp › Block Rocker.mp3',
+        );
+        await tapText(tester, 'Same folders as the server');
+        expect(
+          preview(tester),
+          'copies › Peer Kim › Block Party Comp › Block Rocker.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
+          findsNothing,
+          reason: "one song: its own folders, never a slot",
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-layout-{{SERVERFOLDER}}')),
+          ),
+          isSemantics(label: 'Same folders as the server', isChecked: true),
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': '{{SERVERFOLDER}}',
+          },
+        });
+        expect(toasts, ['Saved · copies land in copies']);
+        // Saved, it opens as that preset again: never Custom's.
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      "a library with its own Path Template: Same folders as the server "
+      'comes before that layout, Custom last',
+      (tester) async {
+        k.fake.destination = {
+          ...k.fake.destination,
+          'libraries': [
+            {'vpath': 'copies', 'template': '{{ARTIST}}/{{YEAR}}'},
+          ],
+        };
+        await openPicker(tester);
+        expect(presetRows(), 4);
+        expect(
+          top(tester, 'Server / Artist / Album'),
+          lessThan(top(tester, 'Same folders as the server')),
+        );
+        expect(
+          top(tester, 'Same folders as the server'),
+          lessThan(top(tester, 'Library layout')),
+        );
+        expect(top(tester, 'Library layout'), lessThan(top(tester, 'Custom')));
+      },
+    );
+
+    testWidgets(
+      'a library whose own Path Template is {{SERVERFOLDER}}: one row for it, '
+      'Same folders as the server — no Library layout beside it',
+      (tester) async {
+        k.fake.destination = {
+          ...k.fake.destination,
+          'libraries': [
+            {'vpath': 'copies', 'template': '{{SERVERFOLDER}}'},
+          ],
+        };
+        await openPicker(tester);
+        expect(tester.takeException(), isNull);
+        expect(presetRows(), 3);
+        expect(find.text('Same folders as the server'), findsOneWidget);
+        expect(find.text('Library layout'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a song in folders 544 characters deep on the connected server: Same '
+      'folders as the server would pass the 500 the server takes — the '
+      'preview says so, never "fix the layout", and Save still takes it',
+      (tester) async {
+        const tooLong =
+            "This song's path would pass 500 characters, more than the "
+            'server takes';
+        final deep = [for (final c in 'abc'.split('')) c * 180].join('/');
+        k.peersAnswer = () => keepPeersPayload(
+          extraB: [
+            {
+              ...keepRow('Long Way Down', similarity: 0.5),
+              'filepath': 'peerlib/$deep/Long Way Down.mp3',
+            },
+          ],
+        );
+        await k.pumpDiscover(tester);
+        await tester.ensureVisible(find.text('Long Way Down'));
+        await tester.pump();
+        await tester.longPress(find.text('Long Way Down'));
+        await frames(tester, 8);
+        await tapKey(tester, 'keep-change');
+        await frames(tester, 4);
+        // Artist / Album: a path like any other.
+        expect(
+          preview(tester),
+          'copies › Boukmanflow › Borrowed Tapes › Long Way Down.mp3',
+        );
+        await tapText(tester, 'Same folders as the server');
+        expect(find.text(tooLong), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('destination-preview-invalid')),
+          findsNothing,
+        );
+        expect(
+          find.text('Fix the layout to see where files land'),
+          findsNothing,
+        );
+        // Typed by hand, the same: the field itself names no problem.
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, 'From friends/{{SERVERFOLDER}}');
+        expect(find.text(tooLong), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': 'From friends/{{SERVERFOLDER}}',
+          },
+        });
+      },
+    );
+
+    testWidgets(
+      'the server folder button inserts {{SERVERFOLDER}}: behind a folder of '
+      "the user's, and inside one with text, its folders follow",
+      (tester) async {
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-var-SERVERFOLDER')),
+          ),
+          isSemantics(
+            label: 'Insert server folder, SERVERFOLDER',
+            isButton: true,
+            isEnabled: true,
+          ),
+        );
+        await typeCustom(tester, 'From friends/');
+        await tapKey(tester, 'destination-var-SERVERFOLDER');
+        expect(
+          customField(tester).controller!.text,
+          'From friends/{{SERVERFOLDER}}',
+        );
+        expect(
+          preview(tester),
+          'copies › From friends › Boukmanflow › Borrowed Tapes › '
+          '02 - Late Train Verse.mp3',
+        );
+        await typeCustom(tester, 'Copy of {{SERVERFOLDER}}');
+        expect(
+          preview(tester),
+          'copies › Copy of Boukmanflow › Borrowed Tapes › '
+          '02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(
+          (lastPut()['destination'] as Map)['layout'],
+          'Copy of {{SERVERFOLDER}}',
+        );
+      },
+    );
+
+    testWidgets(
       'a plain folder: the preview follows it, Save sends exactly that '
       'layout, and the picker keeps Custom with it',
       (tester) async {
@@ -1117,9 +1323,9 @@ void main() {
         };
         await openPicker(tester);
         expect(find.text('yours'), findsOneWidget);
-        // No row of its own for the layout in force: the two presets, and
+        // No row of its own for the layout in force: the three presets, and
         // Custom holding it.
-        expect(presetRows(), 2);
+        expect(presetRows(), 3);
         expect(
           find.byKey(const ValueKey('destination-custom-option')),
           findsOneWidget,
@@ -1229,7 +1435,7 @@ void main() {
         await refused(
           '{{ARTST}}/{{ALBUM}}',
           'Unknown variable {{ARTST}}. Use ARTIST, ALBUM, YEAR, GENRE, '
-              'ALBUMARTIST, PEER.',
+              'ALBUMARTIST, PEER, SERVERFOLDER.',
         );
         await refused(
           'Inbox/{ARTIST}',
@@ -1259,7 +1465,7 @@ void main() {
         await refused(
           'Inbox/{{ artst }}',
           'Unknown variable {{ artst }}. Use ARTIST, ALBUM, YEAR, GENRE, '
-              'ALBUMARTIST, PEER.',
+              'ALBUMARTIST, PEER, SERVERFOLDER.',
         );
         // 300 emoji are 300 characters to the keyboard's limit and 600 to
         // the server's (JS counts UTF-16 units, as the validator does).
@@ -1777,6 +1983,39 @@ void main() {
       locale: locale,
     );
 
+    testWidgets(
+      "a song at the connected server's library root sits in no folder "
+      'there: {{SERVERFOLDER}} drops out, and the preview says so',
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': 'From friends/{{SERVERFOLDER}}',
+        };
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        await pumpPicker(
+          tester,
+          previewing: const DestinationPreviewSong(
+            title: 'Loose End',
+            artist: 'Boukmanflow',
+            filepath: 'peerlib/04 - Loose End.mp3',
+          ),
+        );
+        expect(preview(tester), 'copies › From friends › 04 - Loose End.mp3');
+        expect(
+          find.text(
+            'No value for this song, so left out of the path: '
+            '{{SERVERFOLDER}}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('loading: still blocks, Save off; then the form in place', (
       tester,
     ) async {
@@ -1984,7 +2223,15 @@ void main() {
         await KeepHarness.pumpFor(tester);
         expect(find.byKey(const ValueKey('destination-var-ARTIST')), findsOne);
         expect(find.byKey(const ValueKey('destination-var-ALBUM')), findsOne);
-        for (final v in ['YEAR', 'GENRE', 'ALBUMARTIST', 'PEER']) {
+        // A server from before {{SERVERFOLDER}} would refuse its preset.
+        expect(find.text('Same folders as the server'), findsNothing);
+        for (final v in [
+          'YEAR',
+          'GENRE',
+          'ALBUMARTIST',
+          'PEER',
+          'SERVERFOLDER',
+        ]) {
           expect(
             find.byKey(ValueKey('destination-var-$v')),
             findsNothing,
@@ -2121,7 +2368,7 @@ void main() {
       expect(
         find.text(
           'Unbekannte Variable {{ARTST}}. Verwende ARTIST, ALBUM, YEAR, '
-          'GENRE, ALBUMARTIST, PEER.',
+          'GENRE, ALBUMARTIST, PEER, SERVERFOLDER.',
         ),
         findsOneWidget,
       );

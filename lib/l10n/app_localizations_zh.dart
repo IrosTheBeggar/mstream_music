@@ -4321,6 +4321,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverKeepFilesGoTo => '文件保存到';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return '这份副本的路径将超过 $max 个字符，超出服务器的上限';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => '每张专辑一个文件夹';
 
   @override
@@ -4781,6 +4786,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverDestFixLayout => '修正布局即可查看文件存放位置';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return '这首歌的路径将超过 $max 个字符，超出服务器的上限';
+  }
+
+  @override
   String get discoverDestLibrary => '曲库';
 
   @override
@@ -4791,6 +4801,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => '服务器 / 艺人 / 专辑';
+
+  @override
+  String get discoverDestPresetServerFolders => '与服务器相同的文件夹';
 
   @override
   String get discoverDestPresetLibrary => '曲库布局';
@@ -4833,6 +4846,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => '插入服务器名称';
+
+  @override
+  String get discoverDestInsertServerFolder => '插入服务器文件夹';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -4890,6 +4906,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverDestYearSlot => '年份';
 
   @override
+  String get discoverDestServerFolderSlot => '服务器文件夹';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4912,6 +4931,40 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots 取自这首歌自己的标签（没有流派的歌会省去该文件夹）。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server 取决于每首歌在服务器上的位置，因此这些歌可能会放进不止一个文件夹。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，$server 取决于它在服务器上的位置，因此这些歌可能会放进不止一个文件夹。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots 取自每首歌自己的标签，$server 取决于它在服务器上的位置，因此这些歌可能会放进不止一个文件夹（没有流派的歌会省去该文件夹）。',
+    );
+    return '$_temp0';
   }
 
   @override

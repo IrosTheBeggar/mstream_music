@@ -390,6 +390,7 @@ String keepSlotWord(AppLocalizations l, LayoutSlot slot) {
     LayoutSlot.artist => l.discoverDestArtistSlot,
     LayoutSlot.year => l.discoverDestYearSlot,
     LayoutSlot.genre => l.discoverDestGenreSlot,
+    LayoutSlot.serverFolder => l.discoverDestServerFolderSlot,
   };
   return '‹$word›';
 }
@@ -400,19 +401,32 @@ String keepPathText(AppLocalizations l, List<String> crumbs) =>
     crumbs.map((c) => slotText(c, (s) => keepSlotWord(l, s))).join(' › ');
 
 /// The one quiet line under a path that shows [slots] (null when it shows
-/// none): they come from each song's own tags, so the songs can land in
-/// more than one folder — and a song with no genre leaves its folder out.
-/// A copy of one song ([scope] [kScopeSong]: only its genre can be a slot)
-/// lands in one folder, and says so in its own words.
+/// none): they come from each song's own tags — ‹server folder› from where
+/// each song sits on the server — so the songs can land in more than one
+/// folder, and a song with no genre leaves its folder out. A copy of one
+/// song ([scope] [kScopeSong]: only its genre can be a slot) lands in one
+/// folder, and says so in its own words.
 String? keepSlotNote(
   AppLocalizations l,
   List<LayoutSlot> slots, {
   required String scope,
 }) {
   if (slots.isEmpty) return null;
-  final words = slots.map((s) => keepSlotWord(l, s)).join(', ');
+  final tags = [
+    for (final s in slots)
+      if (s != LayoutSlot.serverFolder) s,
+  ];
+  final words = tags.map((s) => keepSlotWord(l, s)).join(', ');
   if (scope == kScopeSong) return l.discoverKeepSlotNoteSong(words);
-  return slots.contains(LayoutSlot.genre)
+  final genre = tags.contains(LayoutSlot.genre);
+  if (tags.length < slots.length) {
+    final server = keepSlotWord(l, LayoutSlot.serverFolder);
+    if (tags.isEmpty) return l.discoverKeepSlotNoteServer(server);
+    return genre
+        ? l.discoverKeepSlotNoteServerTagsGenre(tags.length, words, server)
+        : l.discoverKeepSlotNoteServerTags(tags.length, words, server);
+  }
+  return genre
       ? l.discoverKeepSlotNoteGenre(slots.length, words)
       : l.discoverKeepSlotNote(slots.length, words);
 }

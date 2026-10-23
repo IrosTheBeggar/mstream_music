@@ -4852,6 +4852,15 @@
   "@discoverKeepFilesGoTo": {
     "description": "Keep a copy card: start of the line naming where the copied files land ('Files go to copies › Artist › Album')."
   },
+  "discoverKeepPathTooLong": "This copy's path would pass {max} characters, more than the server takes",
+  "@discoverKeepPathTooLong": {
+    "description": "Keep a copy card, in place of 'Files go to …' (and of 'Retry adds to …'): the layout would render a path longer than the server takes for this copy (long tags, deep folders on the connected server), so the server would refuse it; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "discoverKeepFolderPerAlbum": "one folder per album",
   "@discoverKeepFolderPerAlbum": {
     "description": "Keep a copy card: end of the destination line for an artist copy (each album lands in its own folder)."
@@ -5495,6 +5504,15 @@
   "@discoverDestFixLayout": {
     "description": "Destination picker preview while the chosen layout would be refused."
   },
+  "discoverDestPathTooLong": "This song's path would pass {max} characters, more than the server takes",
+  "@discoverDestPathTooLong": {
+    "description": "Destination picker preview: the layout is fine, but for this song (long tags, deep folders on the connected server) it would render a path longer than the server takes, so the server would refuse the copy; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "discoverDestLibrary": "Library",
   "@discoverDestLibrary": {
     "description": "Destination picker section label (drawn in capitals): the libraries this account can add files to."
@@ -5510,6 +5528,10 @@
   "discoverDestPresetServer": "Server / Artist / Album",
   "@discoverDestPresetServer": {
     "description": "Destination picker layout preset: a folder named after the connected server, then artist, then album."
+  },
+  "discoverDestPresetServerFolders": "Same folders as the server",
+  "@discoverDestPresetServerFolders": {
+    "description": "Destination picker layout preset: each copied song goes into the same folders it sits in on the connected server (that server's library itself left out), like 'Boukmanflow › Borrowed Tapes'."
   },
   "discoverDestPresetLibrary": "Library layout",
   "@discoverDestPresetLibrary": {
@@ -5567,6 +5589,10 @@
   "discoverDestInsertPeer": "Insert server name",
   "@discoverDestInsertPeer": {
     "description": "Accessible name of the destination picker button that inserts the variable for the name of the connected server the copy comes from."
+  },
+  "discoverDestInsertServerFolder": "Insert server folder",
+  "@discoverDestInsertServerFolder": {
+    "description": "Accessible name of the destination picker button that inserts the variable for the folders the song sits in on the connected server the copy comes from (it can be several folders)."
   },
   "discoverDestErrUnknownVar": "Unknown variable {name}. Use {vars}.",
   "@discoverDestErrUnknownVar": {
@@ -5656,6 +5682,10 @@
   "@discoverDestYearSlot": {
     "description": "Keep a copy paths not landed yet: the word that stands in for the year folder, shown between ‹ › marks ('copies › Boukmanflow › ‹year›'), when the songs a copy takes carry different years — each song files under its own year tag."
   },
+  "discoverDestServerFolderSlot": "server folder",
+  "@discoverDestServerFolderSlot": {
+    "description": "Keep a copy paths not landed yet: the words that stand in for the folders a song sits in on the connected server, shown between ‹ › marks ('copies › ‹server folder›'), when the songs a copy takes sit in different folders there — each song lands in its own server folder."
+  },
   "discoverKeepSlotNote": "{count, plural, =1{{slots} comes from each song's own tags, so these songs can land in more than one folder.} other{{slots} come from each song's own tags, so these songs can land in more than one folder.}}",
   "@discoverKeepSlotNote": {
     "description": "Keep a copy, one quiet line under a path not landed yet that shows stand-ins: {slots} lists them as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'); {count} is how many. The server files each song by its own tags, so the copy can land in several folders.",
@@ -5685,6 +5715,45 @@
     "description": "The same line as discoverKeepSlotNote for a copy of ONE song (This song, and the destination picker's preview of one song): only the genre can stand in there, and one song lands in one folder. {slots} is the stand-in as shown (like '‹genre›'); a song whose file has no genre tag files without the genre folder.",
     "placeholders": {
       "slots": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServer": "{server} comes from where each song sits on the server, so these songs can land in more than one folder.",
+  "@discoverKeepSlotNoteServer": {
+    "description": "The same line as discoverKeepSlotNote when the only stand-in is the server folder: {server} is it as shown (like '‹server folder›'). Each song lands in the folders it sits in on the connected server, so the copy can land in several folders.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServerTags": "{count, plural, =1{{slots} comes from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder.} other{{slots} come from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder.}}",
+  "@discoverKeepSlotNoteServerTags": {
+    "description": "The same line as discoverKeepSlotNote when the stand-ins are some of the tags AND the server folder: {slots} lists the tag ones as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'), {count} is how many of those; {server} is the server folder's stand-in as shown (like '‹server folder›').",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServerTagsGenre": "{count, plural, =1{{slots} comes from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).} other{{slots} come from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).}}",
+  "@discoverKeepSlotNoteServerTagsGenre": {
+    "description": "The same line as discoverKeepSlotNoteServerTags when the tag stand-ins include the genre: a song whose file has no genre tag files without the genre folder.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      },
+      "server": {
         "type": "String"
       }
     }

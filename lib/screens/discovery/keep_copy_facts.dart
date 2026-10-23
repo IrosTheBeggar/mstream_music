@@ -12,7 +12,7 @@ import '../../singletons/api.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/album_songs_body.dart';
 import '../../util/discover_badges.dart' show nameKey;
-import '../../util/discover_jobs.dart' show LayoutSong;
+import '../../util/discover_jobs.dart' show LayoutSong, serverFolderOf;
 
 /// The sizes a connected server's song and album sheets show beside the
 /// Keep a copy choices, and the Listen verbs' songs: the album on that
@@ -96,12 +96,13 @@ class KeepFacts {
   }
 
   /// The album's songs as a copy files them ([LayoutSong], what "Files go
-  /// to" reads an album copy's {{ARTIST}}, {{YEAR}} and {{GENRE}} from):
-  /// each one's ARTIST tag as written ("A feat. B" files under that, not
-  /// under A), its year, and its genre when the listing tells the file's —
-  /// a single one: the library splits a tag like "Hip-Hop/Rap" in two,
-  /// while a copy files under the tag as written. Null until the album
-  /// answered.
+  /// to" reads an album copy's {{ARTIST}}, {{YEAR}}, {{GENRE}} and
+  /// {{SERVERFOLDER}} from): each one's ARTIST tag as written ("A feat. B"
+  /// files under that, not under A), its year, its genre when the listing
+  /// tells the file's — a single one: the library splits a tag like
+  /// "Hip-Hop/Rap" in two, while a copy files under the tag as written —
+  /// and the folders its file sits in on the connected server (its path
+  /// there, the library dropped). Null until the album answered.
   List<LayoutSong>? get layoutSongs =>
       albumSongs == null ? null : [for (final s in albumSongs!) _layout(s)];
 
@@ -136,6 +137,7 @@ class KeepFacts {
       artist: m?.artistDisplay ?? m?.artist,
       year: m?.year,
       genre: genres.length == 1 ? genres.first : null,
+      serverFolder: serverFolderOf(s.data),
     );
   }
 

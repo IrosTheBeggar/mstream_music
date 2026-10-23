@@ -4710,6 +4710,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverKeepFilesGoTo => 'Файлы попадут в';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'Путь этой копии превысил бы $max символов — больше, чем принимает сервер';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'по папке на альбом';
 
   @override
@@ -5219,6 +5224,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Исправьте структуру папок, чтобы увидеть, куда попадут файлы';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'Путь этого трека превысил бы $max символов — больше, чем принимает сервер';
+  }
+
+  @override
   String get discoverDestLibrary => 'Библиотека';
 
   @override
@@ -5229,6 +5239,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'Сервер / Исполнитель / Альбом';
+
+  @override
+  String get discoverDestPresetServerFolders => 'Те же папки, что на сервере';
 
   @override
   String get discoverDestPresetLibrary => 'Структура библиотеки';
@@ -5272,6 +5285,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'Вставить имя сервера';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Вставить папку на сервере';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -5333,6 +5349,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverDestYearSlot => 'год';
 
   @override
+  String get discoverDestServerFolderSlot => 'папка на сервере';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5369,6 +5388,53 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots берётся из тегов трека (у трека без жанра эта папка пропускается).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server зависит от того, где каждый трек лежит на сервере, поэтому эти треки могут попасть в разные папки.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки.',
+      many:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки.',
+      few:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки.',
+      one:
+          '$slots берётся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      many:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      few:
+          '$slots берутся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      one:
+          '$slots берётся из тегов каждого трека, а $server — из того, где он лежит на сервере, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+    );
+    return '$_temp0';
   }
 
   @override

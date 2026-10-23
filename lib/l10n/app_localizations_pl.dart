@@ -4701,6 +4701,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverKeepFilesGoTo => 'Pliki trafią do';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'Ścieżka tej kopii przekroczyłaby $max znaków – więcej, niż przyjmuje serwer';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'osobny folder na każdy album';
 
   @override
@@ -5209,6 +5214,11 @@ class AppLocalizationsPl extends AppLocalizations {
       'Popraw układ, aby zobaczyć, gdzie trafią pliki';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'Ścieżka tego utworu przekroczyłaby $max znaków – więcej, niż przyjmuje serwer';
+  }
+
+  @override
   String get discoverDestLibrary => 'Biblioteka';
 
   @override
@@ -5219,6 +5229,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'Serwer / Wykonawca / Album';
+
+  @override
+  String get discoverDestPresetServerFolders =>
+      'Te same foldery co na serwerze';
 
   @override
   String get discoverDestPresetLibrary => 'Układ biblioteki';
@@ -5262,6 +5276,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'Wstaw nazwę serwera';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Wstaw folder z serwera';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -5324,6 +5341,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverDestYearSlot => 'rok';
 
   @override
+  String get discoverDestServerFolderSlot => 'folder z serwera';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5360,6 +5380,53 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots pochodzi ze znaczników utworu (dla utworu bez gatunku ten folder jest pomijany).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server zależy od tego, gdzie każdy utwór leży na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+    );
+    return '$_temp0';
   }
 
   @override

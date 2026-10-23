@@ -68,7 +68,7 @@ class FakePluginServer {
       {'vpath': 'copies', 'template': null}
     ],
     'defaultLayout': '{{ALBUMARTIST}}/{{ALBUM}}',
-    'variables': ['ARTIST', 'ALBUM', 'YEAR', 'GENRE', 'ALBUMARTIST', 'PEER'],
+    'variables': ['ARTIST', 'ALBUM', 'YEAR', 'GENRE', 'ALBUMARTIST', 'PEER', 'SERVERFOLDER'],
   };
 
   /// The caller's jobs, newest first (wire maps).

@@ -7428,6 +7428,12 @@ abstract class AppLocalizations {
   /// **'Files go to'**
   String get discoverKeepFilesGoTo;
 
+  /// Keep a copy card, in place of 'Files go to …' (and of 'Retry adds to …'): the layout would render a path longer than the server takes for this copy (long tags, deep folders on the connected server), so the server would refuse it; {max} is the limit (500).
+  ///
+  /// In en, this message translates to:
+  /// **'This copy\'s path would pass {max} characters, more than the server takes'**
+  String discoverKeepPathTooLong(int max);
+
   /// Keep a copy card: end of the destination line for an artist copy (each album lands in its own folder).
   ///
   /// In en, this message translates to:
@@ -8076,6 +8082,12 @@ abstract class AppLocalizations {
   /// **'Fix the layout to see where files land'**
   String get discoverDestFixLayout;
 
+  /// Destination picker preview: the layout is fine, but for this song (long tags, deep folders on the connected server) it would render a path longer than the server takes, so the server would refuse the copy; {max} is the limit (500).
+  ///
+  /// In en, this message translates to:
+  /// **'This song\'s path would pass {max} characters, more than the server takes'**
+  String discoverDestPathTooLong(int max);
+
   /// Destination picker section label (drawn in capitals): the libraries this account can add files to.
   ///
   /// In en, this message translates to:
@@ -8099,6 +8111,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server / Artist / Album'**
   String get discoverDestPresetServer;
+
+  /// Destination picker layout preset: each copied song goes into the same folders it sits in on the connected server (that server's library itself left out), like 'Boukmanflow › Borrowed Tapes'.
+  ///
+  /// In en, this message translates to:
+  /// **'Same folders as the server'**
+  String get discoverDestPresetServerFolders;
 
   /// Destination picker layout preset: the chosen library's own path template (shown only when it has one).
   ///
@@ -8177,6 +8195,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Insert server name'**
   String get discoverDestInsertPeer;
+
+  /// Accessible name of the destination picker button that inserts the variable for the folders the song sits in on the connected server the copy comes from (it can be several folders).
+  ///
+  /// In en, this message translates to:
+  /// **'Insert server folder'**
+  String get discoverDestInsertServerFolder;
 
   /// Destination picker, under the custom layout field: it names a variable that does not exist; {name} is it in its braces (like {{ARTST}}), {vars} the variables there are (like ARTIST, ALBUM).
   ///
@@ -8268,6 +8292,12 @@ abstract class AppLocalizations {
   /// **'year'**
   String get discoverDestYearSlot;
 
+  /// Keep a copy paths not landed yet: the words that stand in for the folders a song sits in on the connected server, shown between ‹ › marks ('copies › ‹server folder›'), when the songs a copy takes sit in different folders there — each song lands in its own server folder.
+  ///
+  /// In en, this message translates to:
+  /// **'server folder'**
+  String get discoverDestServerFolderSlot;
+
   /// Keep a copy, one quiet line under a path not landed yet that shows stand-ins: {slots} lists them as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'); {count} is how many. The server files each song by its own tags, so the copy can land in several folders.
   ///
   /// In en, this message translates to:
@@ -8285,6 +8315,28 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{slots} comes from the song\'s own tags (a song with none leaves that folder out).'**
   String discoverKeepSlotNoteSong(String slots);
+
+  /// The same line as discoverKeepSlotNote when the only stand-in is the server folder: {server} is it as shown (like '‹server folder›'). Each song lands in the folders it sits in on the connected server, so the copy can land in several folders.
+  ///
+  /// In en, this message translates to:
+  /// **'{server} comes from where each song sits on the server, so these songs can land in more than one folder.'**
+  String discoverKeepSlotNoteServer(String server);
+
+  /// The same line as discoverKeepSlotNote when the stand-ins are some of the tags AND the server folder: {slots} lists the tag ones as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'), {count} is how many of those; {server} is the server folder's stand-in as shown (like '‹server folder›').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{slots} comes from each song\'s own tags and {server} from where it sits on the server, so these songs can land in more than one folder.} other{{slots} come from each song\'s own tags and {server} from where it sits on the server, so these songs can land in more than one folder.}}'**
+  String discoverKeepSlotNoteServerTags(int count, String slots, String server);
+
+  /// The same line as discoverKeepSlotNoteServerTags when the tag stand-ins include the genre: a song whose file has no genre tag files without the genre folder.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{slots} comes from each song\'s own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).} other{{slots} come from each song\'s own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).}}'**
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  );
 
   /// Destination picker text button: drops the account's saved destination and goes back to the library default.
   ///

@@ -35,16 +35,21 @@ const List<String> kLayoutVars = [
   'GENRE',
   'ALBUMARTIST',
   'PEER',
+  'SERVERFOLDER',
 ];
 const String kDefaultLayout = kDefaultCopyLayout;
 
 /// The longest layout the server takes (UTF-16 units, as JS counts).
 const int kMaxLayoutLength = 500;
-const int _maxResolvedLen = 500;
+
+/// The longest path a layout may render for a song: past it the server
+/// refuses the copy (path_too_long).
+const int kMaxPathLength = 500;
 const int _maxSegmentLen = 200;
 final RegExp _tokenRe = RegExp(r'\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}');
 
-/// The sample the server validates a layout against (SAMPLE_METADATA + peer).
+/// The sample the server validates a layout against (SAMPLE_METADATA + peer
+/// + serverfolder).
 const Map<String, String> kSampleTags = {
   'artist': 'Pink Floyd',
   'album': 'The Dark Side of the Moon',
@@ -53,6 +58,10 @@ const Map<String, String> kSampleTags = {
   'albumartist': 'Pink Floyd',
 };
 const String kSamplePeer = "Sam's server";
+
+/// {{SERVERFOLDER}}'s sample: two folders, as a song in a peer's library
+/// usually sits, so a layout of just {{SERVERFOLDER}} validates.
+const String kSampleServerFolder = 'Pink Floyd/The Dark Side of the Moon';
 
 final RegExp _badSegmentChars = RegExp(r'[/\\:*?<>|"\x00-\x1f]+');
 final RegExp _spaces = RegExp(r'\s+');
@@ -92,6 +101,41 @@ String sanitizeSegment(Object? raw) {
   return s;
 }
 
+/// A value that is a path of folders ({{SERVERFOLDER}}): split on either
+/// separator, each folder made safe as [sanitizeSegment] makes a value, the
+/// ones that come out empty dropped ('', '.', '..'), joined with '/'. So it
+/// may add folders to a rendered path, never climb out of it.
+String sanitizeFolders(Object? raw) {
+  if (raw == null) return '';
+  return _jsString(raw)
+      .split(RegExp(r'[/\\]+'))
+      .map(sanitizeSegment)
+      .where((s) => s.isNotEmpty)
+      .join('/');
+}
+
+/// A path on a peer as the server reads it (recommendation.js
+/// normalizePeerPath): forward slashes, names trimmed, no empty or '.'
+/// folders, the case kept ('..' kept too: [sanitizeFolders] drops it).
+String _peerPath(Object? p) => (p == null ? '' : _jsString(p))
+    .replaceAll('\\', '/')
+    .split('/')
+    .map(_jsTrim)
+    .where((s) => s.isNotEmpty && s != '.')
+    .join('/');
+
+/// {{SERVERFOLDER}} of the song at [filepath], its path on the connected
+/// server (federation-copy.js serverFolderOf): the folder its file sits in,
+/// the peer's library (the first folder) dropped, each folder made safe. It
+/// may be several folders ("Boukmanflow/Borrowed Tapes"); '' for a song at
+/// the library's root (or no path: a download), which drops the variable's
+/// folder like any empty one.
+String serverFolderOf(Object? filepath) {
+  final segs = _peerPath(filepath).split('/');
+  if (segs.length < 3) return '';
+  return sanitizeFolders(segs.sublist(1, segs.length - 1).join('/'));
+}
+
 /// A rendered layout: the path, and the variables this song had no value
 /// for (their segments drop out).
 class ResolvedLayout {
@@ -100,8 +144,16 @@ class ResolvedLayout {
   const ResolvedLayout(this.path, this.missingVars);
 }
 
-/// [meta] keys: artist, album, year, genre, albumartist, peer.
-ResolvedLayout resolveLayout(Object? layout, Map<String, Object?>? meta) {
+/// [meta] keys: artist, album, year, genre, albumartist, peer, serverfolder
+/// (the one value that may be several folders: [sanitizeFolders]). A path
+/// past 500 characters is cut to them, as the server's resolveTemplate cuts
+/// it; [truncate] false returns it whole, for [previewTarget] to refuse as
+/// the server's renderTarget does.
+ResolvedLayout resolveLayout(
+  Object? layout,
+  Map<String, Object?>? meta, {
+  bool truncate = true,
+}) {
   if (layout is! String || layout.isEmpty) return const ResolvedLayout('', []);
   final m = meta ?? const {};
   final lookup = <String, String>{
@@ -112,6 +164,9 @@ ResolvedLayout resolveLayout(Object? layout, Map<String, Object?>? meta) {
     'ALBUMARTIST': sanitizeSegment(
         _truthy(m['albumartist']) ? m['albumartist'] : m['artist']),
     'PEER': sanitizeSegment(m['peer']),
+    // Several folders, each made safe: inside literal text ("Copy of
+    // {{SERVERFOLDER}}") the value's own folders follow the literal's.
+    'SERVERFOLDER': sanitizeFolders(m['serverfolder']),
   };
   final missing = <String>[];
   final substituted = layout.replaceAllMapped(_tokenRe, (match) {
@@ -128,7 +183,9 @@ ResolvedLayout resolveLayout(Object? layout, Map<String, Object?>? meta) {
       .map(_jsTrim)
       .where((s) => s.isNotEmpty);
   var path = segments.join('/');
-  if (path.length > _maxResolvedLen) path = path.substring(0, _maxResolvedLen);
+  if (truncate && path.length > kMaxPathLength) {
+    path = path.substring(0, kMaxPathLength);
+  }
   return ResolvedLayout(path, missing);
 }
 
@@ -153,7 +210,7 @@ class LayoutCheck {
 LayoutCheck validateResolvedPath(Object? path) {
   if (path is! String) return const LayoutCheck.bad('invalid_type');
   if (path.isEmpty) return const LayoutCheck.bad('empty_path');
-  if (path.length > _maxResolvedLen) return const LayoutCheck.bad('path_too_long');
+  if (path.length > kMaxPathLength) return const LayoutCheck.bad('path_too_long');
   if (_controlChars.hasMatch(path)) return const LayoutCheck.bad('invalid_chars');
   if (path.startsWith('/') || path.startsWith('\\')) {
     return const LayoutCheck.bad('absolute_path');
@@ -203,8 +260,11 @@ LayoutCheck validateLayout(Object? layout) {
   if (layout.startsWith('/') || layout.startsWith('\\')) {
     return const LayoutCheck.bad('absolute_template');
   }
-  final sample =
-      resolveLayout(layout, {...kSampleTags, 'peer': kSamplePeer}).path;
+  final sample = resolveLayout(layout, {
+    ...kSampleTags,
+    'peer': kSamplePeer,
+    'serverfolder': kSampleServerFolder,
+  }).path;
   return validateResolvedPath(sample);
 }
 
@@ -328,15 +388,25 @@ class PreviewTarget {
         if (library.isNotEmpty) library,
         ...pathCrumbs(relDir),
       ];
+
+  /// A layout the server takes renders this song a path past
+  /// [kMaxPathLength] (long tags, deep folders on the connected server):
+  /// the server refuses the copy, though nothing is wrong with the layout.
+  bool get tooLong => field == 'layout' && error == 'path_too_long';
 }
 
-/// [tags] keys: artist, album, year, genre, albumartist.
+/// [tags] keys: artist, album, year, genre, albumartist. [serverFolder] is
+/// {{SERVERFOLDER}}: the folders the song sits in on the connected server
+/// ([serverFolderOf]; none for a download), as destination.js renderTarget
+/// takes it. The layout renders whole, as there: a path past 500
+/// characters is refused (path_too_long), never cut mid-folder.
 PreviewTarget previewTarget({
   String? vpath,
   Object? base,
   Object? layout,
   Map<String, Object?>? tags,
   String? peerName,
+  Object? serverFolder,
   String? fileName,
 }) {
   final t = tags ?? const {};
@@ -374,7 +444,8 @@ PreviewTarget previewTarget({
     'genre': t['genre'],
     'albumartist': t['albumartist'],
     'peer': peerName,
-  });
+    'serverfolder': serverFolder,
+  }, truncate: false);
   if (r.path.isNotEmpty) {
     final check = validateResolvedPath(r.path);
     if (!check.valid) {
@@ -416,12 +487,16 @@ List<String> pathCrumbs(String? filepath) =>
 // fall back to the song the copy was handed, genre and albumartist do not,
 // and nor does the year: neither a song's copy nor an album's listing
 // hands one in, federation-copy listAlbumSongs), so {{ARTIST}}, {{YEAR}}
-// and {{GENRE}} are per song, while {{ALBUM}}, {{ALBUMARTIST}} (the album's
-// credit) and {{PEER}} are one value for every song of an album. A per-song variable this client cannot promise one
-// value for stands as a SLOT inside its folder ("From friends › ‹artist›"),
-// the folder's own text kept — never one song's value for them all:
-//   song            the song's own values; {{GENRE}} its genre only when
-//                   this client has it, else the slot
+// and {{GENRE}} are per song, and so is {{SERVERFOLDER}} (where the song's
+// file sits on the connected server, federation-copy serverFolderOf: no tag
+// changes it), while {{ALBUM}}, {{ALBUMARTIST}} (the album's credit) and
+// {{PEER}} are one value for every song of an album. A per-song variable
+// this client cannot promise one value for stands as a SLOT inside its
+// folder ("From friends › ‹artist›"), the folder's own text kept — never
+// one song's value for them all:
+//   song            the song's own values (its own folder on the server
+//                   too); {{GENRE}} its genre only when this client has
+//                   it, else the slot
 //   album           {{ARTIST}} / {{YEAR}} the value only when every song of
 //                   the album's listing agrees (a song with no artist tag
 //                   files under the album's credit; one with no year
@@ -429,26 +504,32 @@ List<String> pathCrumbs(String? filepath) =>
 //                   the listing answers, the row's own unless it is a
 //                   compilation (its credit is not its artist), else the
 //                   slot. {{GENRE}} the slot unless every song's genre is
-//                   known and agrees
+//                   known and agrees. {{SERVERFOLDER}} the folders when
+//                   every song of the listing sits in the same one, else
+//                   the slot; until the listing answers, the row's own
 //   artist          the artist as ARTIST and ALBUMARTIST, no album: the
 //                   first folder that names an album ({{ALBUM}}, or
-//                   {{YEAR}} — each album has its own) and every folder
-//                   after it are "one folder per album" ([perAlbum]); a
-//                   {{GENRE}} before it is the slot
+//                   {{YEAR}} or {{SERVERFOLDER}} — each album has its own)
+//                   and every folder after it are "one folder per album"
+//                   ([perAlbum]); a {{GENRE}} before it is the slot
 //   artist-missing  the same — or, when exactly one album is missing
-//                   ([oneAlbum]: its name and year), that album's folder
+//                   ([oneAlbum]: its name and year), that album's folder;
+//                   {{SERVERFOLDER}} the slot (each album sits in folders
+//                   of its own on the server)
 // A path that has landed (a finished copy's files) is the server's own
 // filepath: no slots there.
 
 /// A per-song variable a path cannot promise one value for.
-enum LayoutSlot { artist, year, genre }
+enum LayoutSlot { artist, year, genre, serverFolder }
 
 /// [slot]'s mark inside a rendered path: private-use characters no tag
 /// brings and the layout engine leaves alone. The UI draws the slot's word
 /// in its place ([slotParts], [slotText]).
 String slotMark(LayoutSlot slot) => '\uE000${slot.name}\uE001';
 
-final RegExp _slotRe = RegExp('\uE000(artist|year|genre)\uE001');
+final RegExp _slotRe = RegExp(
+  '\uE000(${LayoutSlot.values.map((s) => s.name).join('|')})\uE001',
+);
 final RegExp _strayMark = RegExp('[\uE000\uE001]');
 
 /// [s] cut at its slots, in order: plain text ([slot] null) and slots.
@@ -482,15 +563,23 @@ List<LayoutSlot> slotsIn(Iterable<String> crumbs) => [
     ];
 
 /// One song of an album copy as the album's listing tells it: its ARTIST
-/// tag as written, its year, and its genre when this client can tell the
-/// one its file carries (null when it cannot). A missing artist falls back
-/// to the album's credit, as the server's listing does; a missing year is
-/// none — the copy has nothing to fall back to.
+/// tag as written, its year, its genre when this client can tell the one
+/// its file carries (null when it cannot), and the folders its file sits in
+/// on the connected server ([serverFolderOf] of the listing's path; '' at
+/// the library's root). A missing artist falls back to the album's credit,
+/// as the server's listing does; a missing year is none — the copy has
+/// nothing to fall back to.
 class LayoutSong {
   final Object? artist;
   final Object? year;
   final String? genre;
-  const LayoutSong({this.artist, this.year, this.genre});
+  final String serverFolder;
+  const LayoutSong({
+    this.artist,
+    this.year,
+    this.genre,
+    this.serverFolder = '',
+  });
 }
 
 /// Where a copy of one scope lands: [target] holds previewTarget's checks
@@ -528,12 +617,14 @@ bool _compilation(Object? artist, Object? credit) {
 }
 
 /// The value every one of [values] files under (the first as given), or
-/// [slot]'s mark when two would make different folders.
-Object? _agreed(Iterable<Object?> values, LayoutSlot slot) {
+/// [slot]'s mark when two would make different folders ([folders]: as
+/// [sanitizeFolders] makes them — "a/b" is two folders, never "a-b").
+Object? _agreed(Iterable<Object?> values, LayoutSlot slot,
+    {String Function(Object?) folders = sanitizeSegment}) {
   Object? first;
   String? key;
   for (final v in values) {
-    final k = sanitizeSegment(v);
+    final k = folders(v);
     if (key == null) {
       key = k;
       first = v;
@@ -544,19 +635,24 @@ Object? _agreed(Iterable<Object?> values, LayoutSlot slot) {
   return first;
 }
 
-final RegExp _albumFolderRe =
-    RegExp(r'\{\{\s*(album|year)\s*\}\}', caseSensitive: false);
+final RegExp _albumFolderRe = RegExp(
+  r'\{\{\s*(album|year|serverfolder)\s*\}\}',
+  caseSensitive: false,
+);
 
 /// Where a copy of [scope] lands (see above). [tags] are the row's (artist,
 /// album, year, albumartist) and, for a song, its genre when this client has
-/// it; [albumSongs] the album's listing (null until it answers); [oneAlbum]
-/// the one album an artist-missing copy takes, when only one is missing.
+/// it; [serverFolder] the row's own folders on the connected server
+/// ([serverFolderOf] of its path); [albumSongs] the album's listing (null
+/// until it answers); [oneAlbum] the one album an artist-missing copy
+/// takes, when only one is missing.
 ScopeTarget scopeTarget({
   String? vpath,
   Object? base,
   Object? layout,
   String scope = kScopeSong,
   Map<String, Object?>? tags,
+  String? serverFolder,
   List<LayoutSong>? albumSongs,
   ({String name, Object? year})? oneAlbum,
   String? peerName,
@@ -568,7 +664,12 @@ ScopeTarget scopeTarget({
   final wide = artistScope && one == null;
   final genre = slotMark(LayoutSlot.genre);
   final Map<String, Object?> v;
+  final Object? onServer;
   if (artistScope) {
+    // Each album's songs sit in folders of their own on the server: the
+    // slot (an every-album copy cuts its path before it — "one folder per
+    // album").
+    onServer = slotMark(LayoutSlot.serverFolder);
     v = {
       'artist': t['artist'],
       'album': one?.name,
@@ -589,6 +690,16 @@ ScopeTarget scopeTarget({
     final songs = albumSongs;
     final listed = songs != null && songs.isNotEmpty;
     final various = _compilation(artist, credit);
+    // Where the listed songs sit on the server: their folders when they all
+    // sit in the same ones, else the slot; the row's own until the listing
+    // answers.
+    onServer = listed
+        ? _agreed(
+            songs.map((s) => s.serverFolder),
+            LayoutSlot.serverFolder,
+            folders: sanitizeFolders,
+          )
+        : serverFolder;
     v = {
       // A listed song with no artist tag files under the credit the listing
       // was asked by (federation-copy listAlbumSongs' fallbackArtist).
@@ -610,6 +721,7 @@ ScopeTarget scopeTarget({
       'albumartist': albumCredit,
     };
   } else {
+    onServer = serverFolder;
     v = {
       'artist': t['artist'],
       'album': t['album'],
@@ -624,6 +736,7 @@ ScopeTarget scopeTarget({
     layout: layout,
     tags: v,
     peerName: peerName,
+    serverFolder: onServer,
     fileName: fileName,
   );
   if (!target.valid || !wide) return ScopeTarget(target, target.rendered);

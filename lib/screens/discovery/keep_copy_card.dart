@@ -99,9 +99,15 @@ String _hold(String s) => s.replaceAll(' ', '\u00A0');
 
 /// A path not landed yet as the card draws it: its [crumbs] (library \u203A
 /// folders, slot marks inside), whether an artist copy's albums each take a
-/// folder under it ([perAlbum]: "\u203A one folder per album"), and the [scope]
-/// whose note it takes ([keepSlotNote]).
-typedef _Place = ({List<String> crumbs, bool perAlbum, String scope});
+/// folder under it ([perAlbum]: "\u203A one folder per album"), the [scope]
+/// whose note it takes ([keepSlotNote]), and whether it would pass the
+/// server's cap ([tooLong]: no crumbs, the warning in their place).
+typedef _Place = ({
+  List<String> crumbs,
+  bool perAlbum,
+  String scope,
+  bool tooLong,
+});
 
 class _KeepCopySectionState extends State<KeepCopySection> {
   late String? _chip = widget.initialChoice == kScopeArtistMissing
@@ -234,10 +240,11 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   }
 
   /// Where a copy of [scope] lands ([scopeTarget]): this row's tags, its
-  /// genre when the album's listing tells it, the listing itself (an album
-  /// copy's songs each file under their own artist, year and genre), and
-  /// the one album an only-missing copy takes when only one is missing.
-  /// Null while where files land is unknown.
+  /// genre when the album's listing tells it, its folder on the connected
+  /// server, the listing itself (an album copy's songs each file under their
+  /// own artist, year, genre and folder there), and the one album an
+  /// only-missing copy takes when only one is missing. Null while where
+  /// files land is unknown.
   ScopeTarget? _target(String scope) {
     final d = jobs.destination?.destination;
     if (d == null) return null;
@@ -259,6 +266,7 @@ class _KeepCopySectionState extends State<KeepCopySection> {
         'genre': facts.genreOf(lead.filepath),
         'albumartist': lead.albumArtist,
       },
+      serverFolder: serverFolderOf(lead.filepath),
       albumSongs: facts.layoutSongs,
       oneAlbum: one == null ? null : (name: one, year: _yearOf(one)),
       peerName: widget.peerName,
@@ -274,16 +282,22 @@ class _KeepCopySectionState extends State<KeepCopySection> {
 
   /// Where a copy of [scope] lands as the card draws it ([_Place]): library
   /// › folders (slot marks inside), the library alone when the layout or
-  /// the base folder would be refused. Null while where files land is
-  /// unknown.
+  /// the base folder would be refused — and no path at all when a layout
+  /// the server takes renders one past its cap for this copy (long tags,
+  /// deep folders on the connected server): no file lands there, the
+  /// library's root least of all. Null while where files land is unknown.
   _Place? _place(String scope) {
     final d = jobs.destination?.destination;
     final t = _target(scope);
     if (t == null || d == null) return null;
+    final tooLong = t.target.tooLong;
     return (
-      crumbs: t.valid ? t.crumbs : [if (d.vpath.isNotEmpty) d.vpath],
+      crumbs: t.valid
+          ? t.crumbs
+          : [if (!tooLong && d.vpath.isNotEmpty) d.vpath],
       perAlbum: t.perAlbum,
       scope: scope,
+      tooLong: tooLong,
     );
   }
 
@@ -336,8 +350,11 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     final place = _place(scope);
     final crumbs = place?.crumbs ?? const <String>[];
     final path = keepPathText(l, crumbs);
-    // A layout that names no album's folder puts every album in one.
-    final body = place != null && !place.perAlbum
+    // A layout that names no album's folder puts every album in one; a path
+    // past the server's cap is no place to name.
+    final body = place != null && place.tooLong
+        ? l.discoverKeepPathTooLong(kMaxPathLength)
+        : place != null && !place.perAlbum
         ? l.discoverKeepConfirmBodyFlat(path)
         : l.discoverKeepConfirmBody(path);
     final note = keepSlotNote(l, slotsIn(crumbs), scope: scope);
@@ -740,6 +757,10 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   Widget _destination(AppLocalizations l, String scope) {
     final place = _place(scope);
     final crumbs = place?.crumbs ?? const <String>[];
+    // A path past the server's cap: the warning where the path goes, Change
+    // beside it.
+    final tooLong = place?.tooLong == true;
+    final warn = keepTone(VelvetColors.warning);
     final strong = TextStyle(
       color: VelvetColors.textPrimary,
       fontSize: 13,
@@ -752,7 +773,12 @@ class _KeepCopySectionState extends State<KeepCopySection> {
       height: 1.4,
     );
     final spans = <InlineSpan>[
-      TextSpan(text: '${l.discoverKeepFilesGoTo} ', style: soft),
+      tooLong
+          ? TextSpan(
+              text: l.discoverKeepPathTooLong(kMaxPathLength),
+              style: soft.copyWith(color: warn),
+            )
+          : TextSpan(text: '${l.discoverKeepFilesGoTo} ', style: soft),
     ];
     for (var i = 0; i < crumbs.length; i++) {
       if (i > 0) spans.add(TextSpan(text: ' › ', style: soft));
@@ -772,11 +798,13 @@ class _KeepCopySectionState extends State<KeepCopySection> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 14),
-          child: Icon(
-            Icons.folder_outlined,
-            size: 16,
-            color: VelvetColors.textSecondary,
-          ),
+          child: tooLong
+              ? Icon(Icons.warning_amber_rounded, size: 16, color: warn)
+              : Icon(
+                  Icons.folder_outlined,
+                  size: 16,
+                  color: VelvetColors.textSecondary,
+                ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -894,13 +922,30 @@ class _JobLine extends StatelessWidget {
   /// "Retry adds to copies › …, your saved place now": the sentence [addsTo]
   /// makes, the path's segments held together and its slots set apart as
   /// "Files go to"'s are, an artist copy's "one folder per album" after it;
-  /// under it the slots' note when it shows any.
+  /// under it the slots' note when it shows any. A path past the server's
+  /// cap is no place to add to: the warning instead, as "Files go to" has.
   List<Widget> _againLines(
     AppLocalizations l,
     String Function(String place) addsTo,
     _Place place,
     Color text2,
   ) {
+    if (place.tooLong) {
+      return [
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            l.discoverKeepPathTooLong(kMaxPathLength),
+            key: const ValueKey('keep-again-too-long'),
+            style: TextStyle(
+              color: keepTone(VelvetColors.warning),
+              fontSize: 13,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ];
+    }
     const mark = '\uE002';
     final words = addsTo(mark).split(mark);
     final crumbs = place.crumbs;

@@ -137,7 +137,8 @@ void main() {
   });
 
   test("each album song as a copy files it: the ARTIST tag as written, the "
-      "year, a genre only when the listing tells the file's", () async {
+      "year, a genre only when the listing tells the file's, the folders it "
+      'sits in on the server', () async {
     facts.albums['Borrowed Tapes'] = [
       songOf(
         'peerlib/a/1.mp3',
@@ -164,9 +165,17 @@ void main() {
         9,
         year: null,
       ),
+      songOf('peerlib/b/c/4.mp3', 'Four', 'Boukmanflow', 'Borrowed Tapes', 9),
+      songOf('peerlib/5.mp3', 'Five', 'Boukmanflow', 'Borrowed Tapes', 9),
     ];
     final f = await load();
-    final songs = f.layoutSongs!;
+    // Where each sits on the connected server, its library left out; one at
+    // the library's root sits in none.
+    expect(
+      [for (final s in f.layoutSongs!) s.serverFolder],
+      ['a', 'a', 'a', 'b/c', ''],
+    );
+    final songs = f.layoutSongs!.take(3).toList();
     expect(
       [for (final s in songs) s.artist],
       ['Boukmanflow', 'Boukmanflow feat. ALM', 'Boukmanflow'],
@@ -191,6 +200,7 @@ void main() {
   test("a path's slot words and the one note under it", () {
     final en = lookupAppLocalizations(const Locale('en'));
     expect(keepSlotWord(en, LayoutSlot.artist), '‹artist›');
+    expect(keepSlotWord(en, LayoutSlot.serverFolder), '‹server folder›');
     expect(keepSlotNote(en, const [], scope: kScopeAlbum), isNull);
     expect(
       keepSlotNote(en, const [LayoutSlot.artist], scope: kScopeAlbum),
@@ -219,6 +229,41 @@ void main() {
       "‹genre› comes from each song's own tags, so these songs can land in "
       'more than one folder (a song with none leaves that folder out).',
     );
+    // Where each song sits on the server: its own reason, joined to the
+    // tags' when both stand in.
+    expect(
+      keepSlotNote(en, const [LayoutSlot.serverFolder], scope: kScopeAlbum),
+      '‹server folder› comes from where each song sits on the server, so '
+      'these songs can land in more than one folder.',
+    );
+    expect(
+      keepSlotNote(en, const [
+        LayoutSlot.artist,
+        LayoutSlot.serverFolder,
+      ], scope: kScopeAlbum),
+      "‹artist› comes from each song's own tags and ‹server folder› from "
+      'where it sits on the server, so these songs can land in more than '
+      'one folder.',
+    );
+    expect(
+      keepSlotNote(en, const [
+        LayoutSlot.artist,
+        LayoutSlot.year,
+        LayoutSlot.serverFolder,
+      ], scope: kScopeArtistMissing),
+      "‹artist›, ‹year› come from each song's own tags and ‹server folder› "
+      'from where it sits on the server, so these songs can land in more '
+      'than one folder.',
+    );
+    expect(
+      keepSlotNote(en, const [
+        LayoutSlot.genre,
+        LayoutSlot.serverFolder,
+      ], scope: kScopeArtist),
+      "‹genre› comes from each song's own tags and ‹server folder› from "
+      'where it sits on the server, so these songs can land in more than '
+      'one folder (a song with none leaves that folder out).',
+    );
     // One song lands in one folder: its own words.
     expect(
       keepSlotNote(en, const [LayoutSlot.genre], scope: kScopeSong),
@@ -237,7 +282,7 @@ void main() {
     for (final locale in AppLocalizations.supportedLocales) {
       final l = lookupAppLocalizations(locale);
       final words = [for (final s in LayoutSlot.values) keepSlotWord(l, s)];
-      expect(words.toSet(), hasLength(3), reason: '$locale');
+      expect(words.toSet(), hasLength(4), reason: '$locale');
       final note = keepSlotNote(l, LayoutSlot.values, scope: kScopeAlbum)!;
       for (final w in words) {
         expect(note, contains(w), reason: '$locale');
@@ -246,6 +291,27 @@ void main() {
         keepSlotNote(l, const [LayoutSlot.year], scope: kScopeAlbum),
         contains(words[1]),
       );
+      final server = keepSlotNote(l, const [
+        LayoutSlot.serverFolder,
+      ], scope: kScopeAlbum)!;
+      expect(server, contains(words[3]), reason: '$locale');
+      expect(
+        server,
+        isNot(keepSlotNote(l, const [LayoutSlot.year], scope: kScopeAlbum)),
+        reason: '$locale: its own reason, not the tags\'',
+      );
+      for (final tags in const [
+        [LayoutSlot.artist],
+        [LayoutSlot.year, LayoutSlot.genre],
+      ]) {
+        final both = keepSlotNote(l, [
+          ...tags,
+          LayoutSlot.serverFolder,
+        ], scope: kScopeAlbum)!;
+        for (final s in [...tags, LayoutSlot.serverFolder]) {
+          expect(both, contains(keepSlotWord(l, s)), reason: '$locale $tags');
+        }
+      }
       final song = keepSlotNote(l, const [LayoutSlot.genre], scope: kScopeSong);
       expect(song, contains(words[2]), reason: '$locale');
       expect(

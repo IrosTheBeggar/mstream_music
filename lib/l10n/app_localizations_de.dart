@@ -4630,6 +4630,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverKeepFilesGoTo => 'Dateien landen in';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'Der Pfad dieser Kopie wäre länger als $max Zeichen – mehr, als der Server annimmt';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'ein Ordner pro Album';
 
   @override
@@ -5112,6 +5117,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Korrigiere das Layout, um zu sehen, wo Dateien landen';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'Der Pfad dieses Songs wäre länger als $max Zeichen – mehr, als der Server annimmt';
+  }
+
+  @override
   String get discoverDestLibrary => 'Bibliothek';
 
   @override
@@ -5122,6 +5132,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'Server / Künstler / Album';
+
+  @override
+  String get discoverDestPresetServerFolders =>
+      'Dieselben Ordner wie auf dem Server';
 
   @override
   String get discoverDestPresetLibrary => 'Layout der Bibliothek';
@@ -5165,6 +5179,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'Servername einfügen';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Serverordner einfügen';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -5229,6 +5246,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverDestYearSlot => 'Jahr';
 
   @override
+  String get discoverDestServerFolderSlot => 'Serverordner';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5257,6 +5277,45 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots kommt aus den Tags des Songs (bei einem Song ohne Genre entfällt dieser Ordner).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server ergibt sich daraus, wo jeder Song auf dem Server liegt, daher können diese Songs in mehr als einem Ordner landen.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots kommen aus den Tags jedes Songs und $server daraus, wo er auf dem Server liegt, daher können diese Songs in mehr als einem Ordner landen.',
+      one:
+          '$slots kommt aus den Tags jedes Songs und $server daraus, wo er auf dem Server liegt, daher können diese Songs in mehr als einem Ordner landen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots kommen aus den Tags jedes Songs und $server daraus, wo er auf dem Server liegt, daher können diese Songs in mehr als einem Ordner landen (bei einem Song ohne Genre entfällt dieser Ordner).',
+      one:
+          '$slots kommt aus den Tags jedes Songs und $server daraus, wo er auf dem Server liegt, daher können diese Songs in mehr als einem Ordner landen (bei einem Song ohne Genre entfällt dieser Ordner).',
+    );
+    return '$_temp0';
   }
 
   @override

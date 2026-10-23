@@ -4400,6 +4400,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverKeepFilesGoTo => '保存先';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'このコピーのパスは $max 文字を超えるため、サーバーが受け付けません';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'アルバムごとにフォルダー';
 
   @override
@@ -4864,6 +4869,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverDestFixLayout => '保存先を確認するには、レイアウトを修正してください';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'この曲のパスは $max 文字を超えるため、サーバーが受け付けません';
+  }
+
+  @override
   String get discoverDestLibrary => 'ライブラリ';
 
   @override
@@ -4874,6 +4884,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'サーバー / アーティスト / アルバム';
+
+  @override
+  String get discoverDestPresetServerFolders => 'サーバーと同じフォルダー';
 
   @override
   String get discoverDestPresetLibrary => 'ライブラリのレイアウト';
@@ -4916,6 +4929,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'サーバー名を挿入';
+
+  @override
+  String get discoverDestInsertServerFolder => 'サーバーのフォルダーを挿入';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -4973,6 +4989,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverDestYearSlot => '年';
 
   @override
+  String get discoverDestServerFolderSlot => 'サーバーのフォルダー';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4996,6 +5015,41 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots は曲のタグから決まります（ジャンルのない曲ではそのフォルダーが省かれます）。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから、$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから、$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります（ジャンルのない曲ではそのフォルダーが省かれます）。',
+    );
+    return '$_temp0';
   }
 
   @override

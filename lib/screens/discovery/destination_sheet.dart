@@ -16,12 +16,14 @@ import 'keep_toast.dart';
 /// "Change" on the Keep card: where copies land (the design canvas's
 /// PhoneDestination board). One setting for the account, shared by every
 /// copy (`PUT /discovery/collection/destination`): a library the account may
-/// add files to, and a layout — Artist / Album, Server / Artist / Album, the
-/// chosen library's own Path Template when it has one, or Custom: one typed
-/// by hand (plain folders, the variables, or both), held to the server's own
-/// validator (ported) as it is typed. The preview renders where the sheet's
-/// song would land as the user types (the server's own layout engine,
-/// ported). "Use the library default" saves none.
+/// add files to, and a layout — Artist / Album, Server / Artist / Album, Same
+/// folders as the server, the chosen library's own Path Template when it has
+/// one, or Custom: one typed by hand (plain folders, the variables, or both),
+/// held to the server's own validator (ported) as it is typed. The preview
+/// renders where the sheet's song would land as the user types (the server's
+/// own layout engine, ported) — or says the server would refuse that song's
+/// path for its length, which a layout the server takes can still make.
+/// "Use the library default" saves none.
 ///
 /// No base folder here: a Custom layout's own folders do its work. The
 /// webapp and the terminal keep one on the same setting; the sheet holds it
@@ -51,7 +53,8 @@ class DestinationPreviewSong {
   /// listing on the connected server); null draws the genre's slot.
   final String? genre;
 
-  /// The file's path on the connected server (its name is kept).
+  /// The file's path on the connected server (its name is kept; its folders
+  /// there are {{SERVERFOLDER}}).
   final String? filepath;
   const DestinationPreviewSong({
     required this.title,
@@ -87,6 +90,10 @@ const String kLayoutArtistAlbum = kDefaultCopyLayout;
 
 /// The "Server / Artist / Album" preset, by the album's credit too.
 const String kLayoutServerArtistAlbum = '{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}';
+
+/// The "Same folders as the server" preset: each song in the folders it sits
+/// in on the connected server, that server's library left out.
+const String kLayoutServerFolders = '{{SERVERFOLDER}}';
 
 Future<void> showDestinationSheet(
   BuildContext context,
@@ -251,8 +258,10 @@ class _DestinationSheetState extends State<DestinationSheet> {
   /// The layout presets for [vpath]'s library, in order: Artist / Album
   /// (the server's own default, by the album's credit since the
   /// compilations change, so a fresh account's layout is this one), Server
-  /// / Artist / Album, then the library's own Path Template when it has one
-  /// that is neither. Any other layout is Custom's.
+  /// / Artist / Album, Same folders as the server (when the server offers
+  /// {{SERVERFOLDER}}: one from before it would refuse the layout), then the
+  /// library's own Path Template when it has one that is none of them. Any
+  /// other layout is Custom's.
   static List<(String Function(AppLocalizations), String)> _presets(
     DestinationView view,
     String vpath,
@@ -270,10 +279,14 @@ class _DestinationSheetState extends State<DestinationSheet> {
       ((l) => l.discoverDestPresetArtistAlbum, artistAlbum),
       if (artistAlbum != kLayoutServerArtistAlbum)
         ((l) => l.discoverDestPresetServer, kLayoutServerArtistAlbum),
+      if (artistAlbum != kLayoutServerFolders &&
+          _variables(view).contains('SERVERFOLDER'))
+        ((l) => l.discoverDestPresetServerFolders, kLayoutServerFolders),
       if (template != null &&
           template.trim().isNotEmpty &&
           template != artistAlbum &&
-          template != kLayoutServerArtistAlbum)
+          template != kLayoutServerArtistAlbum &&
+          template != kLayoutServerFolders)
         ((l) => l.discoverDestPresetLibrary, template),
     ];
   }
@@ -359,6 +372,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
       'GENRE' => l.discoverDestInsertGenre,
       'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
       'PEER' => l.discoverDestInsertPeer,
+      'SERVERFOLDER' => l.discoverDestInsertServerFolder,
       _ => _token(name),
     };
     return words.toLowerCase().contains(name.toLowerCase())
@@ -608,12 +622,13 @@ class _DestinationSheetState extends State<DestinationSheet> {
   Widget? _preview(AppLocalizations l, {bool compact = false}) {
     final song = widget.song;
     if (song == null) return null;
-    // The song's own values ([scopeTarget]'s song scope): a genre the phone
-    // cannot tell stands as a slot where the server puts the file's, so the
-    // path is never shallower than the one written. No base folder: one set
-    // elsewhere is the start of the layout — and the layout as it opened is
-    // drawn as the server holds it, so that folder reads as the Keep card
-    // reads it, whatever a layout would make of its name.
+    // The song's own values ([scopeTarget]'s song scope), its own folders on
+    // the connected server among them: a genre the phone cannot tell stands
+    // as a slot where the server puts the file's, so the path is never
+    // shallower than the one written. No base folder: one set elsewhere is
+    // the start of the layout — and the layout as it opened is drawn as the
+    // server holds it, so that folder reads as the Keep card reads it,
+    // whatever a layout would make of its name.
     final opened = _asOpened ? _from : null;
     final st = scopeTarget(
       vpath: _vpath,
@@ -626,6 +641,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
         'genre': song.genre,
         'albumartist': song.albumArtist,
       },
+      serverFolder: serverFolderOf(song.filepath),
       peerName: widget.peerName,
       fileName: song.filepath ?? song.title,
     );
@@ -658,9 +674,17 @@ class _DestinationSheetState extends State<DestinationSheet> {
         size: 16,
         color: keepTone(VelvetColors.warning),
       );
+      // A path too long for this song is no fault of the layout's (its
+      // field shows none, Save takes it): the preview says what is wrong.
       content = Text(
-        l.discoverDestFixLayout,
-        key: const ValueKey('destination-preview-invalid'),
+        t.tooLong
+            ? l.discoverDestPathTooLong(kMaxPathLength)
+            : l.discoverDestFixLayout,
+        key: ValueKey(
+          t.tooLong
+              ? 'destination-preview-too-long'
+              : 'destination-preview-invalid',
+        ),
         maxLines: lines,
         overflow: cut,
         style: quiet,

@@ -4630,6 +4630,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverKeepFilesGoTo => 'Les fichiers vont dans';
 
   @override
+  String discoverKeepPathTooLong(int max) {
+    return 'Le chemin de cette copie dépasserait $max caractères, plus que ce que le serveur accepte';
+  }
+
+  @override
   String get discoverKeepFolderPerAlbum => 'un dossier par album';
 
   @override
@@ -5113,6 +5118,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Corrigez la disposition pour voir où arrivent les fichiers';
 
   @override
+  String discoverDestPathTooLong(int max) {
+    return 'Le chemin de ce morceau dépasserait $max caractères, plus que ce que le serveur accepte';
+  }
+
+  @override
   String get discoverDestLibrary => 'Bibliothèque';
 
   @override
@@ -5123,6 +5133,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverDestPresetServer => 'Serveur / Artiste / Album';
+
+  @override
+  String get discoverDestPresetServerFolders =>
+      'Mêmes dossiers que sur le serveur';
 
   @override
   String get discoverDestPresetLibrary => 'Disposition de la bibliothèque';
@@ -5166,6 +5180,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get discoverDestInsertPeer => 'Insérer le nom du serveur';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Insérer le dossier du serveur';
 
   @override
   String discoverDestErrUnknownVar(String name, String vars) {
@@ -5229,6 +5246,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverDestYearSlot => 'année';
 
   @override
+  String get discoverDestServerFolderSlot => 'dossier du serveur';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5257,6 +5277,45 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String discoverKeepSlotNoteSong(String slots) {
     return '$slots vient des étiquettes du morceau (ce dossier est omis pour un morceau sans genre).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server vient de l\'emplacement de chaque morceau sur le serveur, donc ces morceaux peuvent arriver dans plusieurs dossiers.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots viennent des étiquettes de chaque morceau et $server de son emplacement sur le serveur, donc ces morceaux peuvent arriver dans plusieurs dossiers.',
+      one:
+          '$slots vient des étiquettes de chaque morceau et $server de son emplacement sur le serveur, donc ces morceaux peuvent arriver dans plusieurs dossiers.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots viennent des étiquettes de chaque morceau et $server de son emplacement sur le serveur, donc ces morceaux peuvent arriver dans plusieurs dossiers (ce dossier est omis pour un morceau sans genre).',
+      one:
+          '$slots vient des étiquettes de chaque morceau et $server de son emplacement sur le serveur, donc ces morceaux peuvent arriver dans plusieurs dossiers (ce dossier est omis pour un morceau sans genre).',
+    );
+    return '$_temp0';
   }
 
   @override
