@@ -24,7 +24,7 @@ const BAD_LAYOUTS = [
   '', '/{{ARTIST}}', '\\{{ARTIST}}', '{{ARTIST}}/{{TRACK}}', '{{ARTIST}/{{ALBUM}}', '{ARTIST}', '{{ARTIST}}/../{{ALBUM}}', '~/{{ARTIST}}',
   '$HOME/{{ARTIST}}', 'C:/{{ARTIST}}', '{{ARTIST}}/D:stuff', 'a\u0001b/{{ARTIST}}', 'x'.repeat(501), '{{YEAR}}{{GENRE}}',
 ];
-const BASES = ['', 'From peers', ' From peers / Sam ', 'a\\b\\c', '/lead/and/trail/', '..', 'ok/../up', '~home', 'C:/x', 'x'.repeat(600), 'tab\tin'];
+const BASES = ['', 'From peers', ' From peers / Sam ', 'a\\b\\c', '/lead/and/trail/', '..', 'ok/../up', '~home', 'C:/x', 'x'.repeat(600), 'tab\tin', ' nel\u0085 '];
 const SEGMENTS = [null, '', 'AC/DC', ' . dots . ', 'a:b*c?d<e>f|g"h', 'multi   space', 'x'.repeat(300), 42, 'new\nline'];
 const FILES = ['shared/03 Paper Lanterns.flac', 'a/b/..', '', 'dir/', 'bad:name?.mp3', '   .hidden. ', 'x/y\\z.mp3'];
 const PEERS = ["Sam's server", null, 'a/b'];
@@ -59,6 +59,39 @@ for (const layout of LAYOUTS) {
       });
       out.renderTarget.push({ layout, tags: t, base, relPath: r.relPath, missingVars: r.missingVars });
     }
+  }
+}
+// The phone keeps no base folder (the webapp and the terminal do): it holds a
+// destination's as the start of the layout, normalised base + '/' + layout
+// (discover_jobs.dart foldBase), and saves base ''. Whether the server takes
+// that layout, and where it files each song from it — `same` when that is
+// where the base folder and the layout put it. Every base here is one the
+// server keeps; the long ones go with one layout.
+const FOLD_BASES = [
+  'From peers', ' From peers / Sam ', '/lead/and/trail/', 'a\\b', 'My  Music', '.', '.hidden/v1.0', 'Été/日本語/🎵',
+  'Mix * ? < > | "', '$money', 'a$HOMEx', ' nel\u0085 /x', 'a{b', '}}', '{{FOO}}', '{{ARTIST}}', '{{ artist }}', '{{PEER}}',
+  'x'.repeat(300), 'x'.repeat(480),
+];
+const FOLD_TAGS = [0, 1, 2, 3, 5];
+out.foldBases = FOLD_BASES;
+out.fold = [];
+for (const base of FOLD_BASES) {
+  const long = base.length >= 100;
+  for (const layout of long ? [LAYOUTS[0]] : LAYOUTS) {
+    const b = destination.normalizeBase(base).base;
+    const folded = `${b}/${layout}`;
+    const check = destination.validateLayout(folded);
+    const row = { base: FOLD_BASES.indexOf(base), layout: LAYOUTS.indexOf(layout), error: check.valid ? null : check.error, tags: [], relDir: [], same: [] };
+    if (check.valid) {
+      for (const t of long ? [...FOLD_TAGS, 4] : FOLD_TAGS) {
+        const at = (d) => destination.renderTarget({ destination: { vpath: 'music', ...d }, tags: TAGS[t], peerName: "Sam's server", fileName: 'f.mp3' }).relDir;
+        const after = at({ base: '', layout: folded });
+        row.tags.push(t);
+        row.relDir.push(after);
+        row.same.push(after === at({ base: b, layout }));
+      }
+    }
+    out.fold.push(row);
   }
 }
 // Compact: layouts by index, long runs of 'x' as { x: length }.

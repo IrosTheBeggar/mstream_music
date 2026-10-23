@@ -4797,6 +4797,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'Они попадут на ваш сервер в $path. Треки, которые у вас уже есть, будут пропущены.';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5210,26 +5215,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase =>
-      'Исправьте базовую папку, чтобы увидеть, куда попадут файлы';
-
-  @override
   String get discoverDestFixLayout =>
       'Исправьте структуру папок, чтобы увидеть, куда попадут файлы';
 
   @override
   String get discoverDestLibrary => 'Библиотека';
-
-  @override
-  String get discoverDestBase => 'Базовая папка';
-
-  @override
-  String get discoverDestBaseHint => 'корень библиотеки';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return 'Внутри «$library». Оставьте пустым для корня библиотеки.';
-  }
 
   @override
   String get discoverDestLayout => 'Структура папок';
@@ -5294,8 +5284,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '«$folder» — папка, заданная на другом устройстве, но в структуре папок это имя читается как переменная. Переименуйте её здесь или выберите структуру.';
+  }
+
+  @override
   String get discoverDestErrAbsolute =>
-      'Структура не может начинаться с / — она начинается внутри базовой папки.';
+      'Структура не может начинаться с / — она начинается внутри библиотеки.';
 
   @override
   String get discoverDestErrTraversal => 'Путь не может содержать папки «..».';
@@ -5332,8 +5327,48 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverDestGenreSlot => 'жанр';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot берётся из тега жанра каждого файла (пропускается, если его нет).';
+  String get discoverDestArtistSlot => 'исполнитель';
+
+  @override
+  String get discoverDestYearSlot => 'год';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки.',
+      many:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки.',
+      few:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки.',
+      one:
+          '$slots берётся из тегов каждого трека, поэтому эти треки могут попасть в разные папки.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      many:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      few:
+          '$slots берутся из тегов каждого трека, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+      one:
+          '$slots берётся из тегов каждого трека, поэтому эти треки могут попасть в разные папки (у трека без жанра эта папка пропускается).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots берётся из тегов трека (у трека без жанра эта папка пропускается).';
   }
 
   @override

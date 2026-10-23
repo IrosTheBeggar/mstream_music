@@ -16,13 +16,20 @@ import 'keep_toast.dart';
 /// "Change" on the Keep card: where copies land (the design canvas's
 /// PhoneDestination board). One setting for the account, shared by every
 /// copy (`PUT /discovery/collection/destination`): a library the account may
-/// add files to, a base folder inside it, and a layout — Artist / Album,
-/// Server / Artist / Album, the chosen library's own Path Template when it
-/// has one, or Custom: one typed by hand (plain folders, the variables, or
-/// both), held to the server's own validator (ported) as it is typed. The
-/// preview renders where the sheet's song would land as the user types (the
-/// server's own layout engine, ported). "Use the library default" saves
-/// none.
+/// add files to, and a layout — Artist / Album, Server / Artist / Album, the
+/// chosen library's own Path Template when it has one, or Custom: one typed
+/// by hand (plain folders, the variables, or both), held to the server's own
+/// validator (ported) as it is typed. The preview renders where the sheet's
+/// song would land as the user types (the server's own layout engine,
+/// ported). "Use the library default" saves none.
+///
+/// No base folder here: a Custom layout's own folders do its work. The
+/// webapp and the terminal keep one on the same setting; the sheet holds it
+/// as the start of the layout ([foldBase]: "From peers" and Artist / Album
+/// open as Custom's "From peers/{{ALBUMARTIST}}/{{ALBUM}}", the files in the
+/// same place), and saves no base folder (base ''). A folder whose name a
+/// layout reads as a variable ("{{PEER}}", [bracedFolder]) is named under
+/// the field, and Save waits until it is renamed or a preset is chosen.
 ///
 /// States: loading (still blocks; Save off), the default in force (tag
 /// "library default"), a saved one ("yours"), saving (inputs locked), a
@@ -32,10 +39,17 @@ import 'keep_toast.dart';
 /// The song a preview renders.
 class DestinationPreviewSong {
   final String title;
+
+  /// The file's ARTIST tag as written ("A feat. B") when this phone can
+  /// tell it, else the row's artist.
   final String artist;
   final String? album;
   final String? albumArtist;
   final int? year;
+
+  /// The genre the file carries, when this phone can tell it (the album's
+  /// listing on the connected server); null draws the genre's slot.
+  final String? genre;
 
   /// The file's path on the connected server (its name is kept).
   final String? filepath;
@@ -45,18 +59,24 @@ class DestinationPreviewSong {
     this.album,
     this.albumArtist,
     this.year,
+    this.genre,
     this.filepath,
   });
 
-  factory DestinationPreviewSong.ofLead(DiscoveryLead lead) =>
-      DestinationPreviewSong(
-        title: lead.title,
-        artist: lead.artist,
-        album: lead.album,
-        albumArtist: lead.albumArtist,
-        year: lead.year,
-        filepath: lead.filepath,
-      );
+  /// [artist] and [genre]: the file's own, when this phone can tell them.
+  factory DestinationPreviewSong.ofLead(
+    DiscoveryLead lead, {
+    String? artist,
+    String? genre,
+  }) => DestinationPreviewSong(
+    title: lead.title,
+    artist: artist ?? lead.artist,
+    album: lead.album,
+    albumArtist: lead.albumArtist,
+    year: lead.year,
+    genre: genre,
+    filepath: lead.filepath,
+  );
 }
 
 /// The "Artist / Album" preset when the server names no default layout:
@@ -102,10 +122,9 @@ class DestinationSheet extends StatefulWidget {
 }
 
 /// Which input a refusal names.
-enum _Field { base, layout, other }
+enum _Field { layout, other }
 
 class _DestinationSheetState extends State<DestinationSheet> {
-  final TextEditingController _base = TextEditingController();
   String? _vpath;
   String? _layout;
   CollectionDestination? _from;
@@ -132,7 +151,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     super.initState();
     _sync(force: true);
     jobs.addListener(_onJobs);
-    _base.addListener(_onTyping);
     _custom.addListener(_onCustomTyping);
     // What the server holds now (it may have changed on another device).
     if (!jobs.savingDestination) unawaited(jobs.loadDestination());
@@ -141,8 +159,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
   @override
   void dispose() {
     jobs.removeListener(_onJobs);
-    _base.removeListener(_onTyping);
-    _base.dispose();
     _custom.removeListener(_onCustomTyping);
     _custom.dispose();
     _customFocus.dispose();
@@ -155,21 +171,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
     setState(() {});
   }
 
-  /// The text as last seen (a focus or selection change notifies too).
-  String _typed = '';
-
-  void _onTyping() {
-    if (!mounted || _base.text == _typed) return;
-    _typed = _base.text;
-    setState(() {
-      if (_saveErrorField == _Field.base) {
-        _saveError = null;
-        _saveErrorField = null;
-      }
-    });
-  }
-
-  /// Custom's text as last seen.
+  /// Custom's text as last seen (a focus or selection change notifies too).
   String _customTyped = '';
 
   void _onCustomTyping() {
@@ -201,30 +203,50 @@ class _DestinationSheetState extends State<DestinationSheet> {
     if (!force && _from != null && _dirty) return;
     _from = d;
     _vpath = d.vpath;
-    _layout = d.layout;
-    // A layout that is none of the presets opens in Custom's field.
-    _customChosen = !_isPreset(view, d.vpath, d.layout);
-    if (_customChosen) _setCustom(d.layout);
-    _typed = d.base;
-    if (_base.text != d.base) _base.text = d.base;
+    // A base folder set elsewhere comes in front of the layout.
+    final layout = foldBase(d.base, d.layout);
+    _layout = layout;
+    // A layout that is none of the presets opens in Custom's field, and so
+    // does one with a base folder in front: never a preset, even when the
+    // whole of it reads as one.
+    _customChosen = layout != d.layout || !_isPreset(view, d.vpath, layout);
+    if (_customChosen) _setCustom(layout);
   }
 
   /// The layout the form holds: Custom's text while Custom is chosen, else
-  /// the chosen preset.
+  /// the chosen preset. It is saved with no base folder.
   String? get _chosenLayout => _customChosen ? _custom.text : _layout;
 
+  /// A base folder set elsewhere, folded into the layout as it opened, is
+  /// no edit; a preset of the same text over one whose name a layout reads
+  /// as a variable is (the server's name, not that folder).
   bool get _dirty {
     final d = _from;
     if (d == null) return false;
     return _vpath != d.vpath ||
-        _chosenLayout != d.layout ||
-        normalizeBase(_base.text).base != normalizeBase(d.base).base ||
-        !normalizeBase(_base.text).valid;
+        _chosenLayout != foldBase(d.base, d.layout) ||
+        (!_customChosen && bracedFolder(d.base) != null);
   }
 
-  /// Custom's text is empty or would be refused: Save waits for it.
+  /// Custom's field holds the layout as the sheet opened it.
+  bool get _asOpened {
+    final d = _from;
+    return d != null &&
+        _customChosen &&
+        _custom.text == foldBase(d.base, d.layout);
+  }
+
+  /// The folder of a base folder set elsewhere that Custom's field still
+  /// holds as it opened, when its name has a brace ([bracedFolder]): a
+  /// layout reads it as a variable or refuses it, so saved as it is, the
+  /// files would land elsewhere.
+  String? get _heldBraces => _asOpened ? bracedFolder(_from!.base) : null;
+
+  /// Custom's text is empty or would be refused, or still holds a base
+  /// folder a layout cannot: Save waits for it.
   bool get _customBlocks =>
-      _customChosen && !validateLayout(_custom.text).valid;
+      _customChosen &&
+      (!validateLayout(_custom.text).valid || _heldBraces != null);
 
   /// The layout presets for [vpath]'s library, in order: Artist / Album
   /// (the server's own default, by the album's credit since the
@@ -353,13 +375,22 @@ class _DestinationSheetState extends State<DestinationSheet> {
 
   _Field _fieldOf(String words) {
     final w = words.toLowerCase();
-    if (w.contains('base')) return _Field.base;
     if (w.contains('layout') || w.contains('template')) return _Field.layout;
     return _Field.other;
   }
 
-  String _landing(CollectionDestination d) =>
-      [d.vpath, ...pathCrumbs(normalizeBase(d.base).base)].join(' › ');
+  /// Where every copy lands whatever its tags: the library and the
+  /// layout's own leading folders that name no variable — so a base folder
+  /// folded into the layout reads as it did ("copies › From peers"). [d] is
+  /// the server's answer to a save, and the phone saves no base folder.
+  String _landing(CollectionDestination d) => [
+    d.vpath,
+    ...d.layout
+        .split(RegExp(r'[/\\]+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .takeWhile((s) => !s.contains('{')),
+  ].join(' › ');
 
   Future<void> _save(CollectionDestination? value) async {
     final l = AppLocalizations.of(context);
@@ -577,23 +608,28 @@ class _DestinationSheetState extends State<DestinationSheet> {
   Widget? _preview(AppLocalizations l, {bool compact = false}) {
     final song = widget.song;
     if (song == null) return null;
-    // The phone never sees a file's genre tag: a slot stands where the
-    // server puts it, so the path is never shallower than the one written.
-    final genre = '‹${l.discoverDestGenreSlot}›';
-    final t = previewTarget(
+    // The song's own values ([scopeTarget]'s song scope): a genre the phone
+    // cannot tell stands as a slot where the server puts the file's, so the
+    // path is never shallower than the one written. No base folder: one set
+    // elsewhere is the start of the layout — and the layout as it opened is
+    // drawn as the server holds it, so that folder reads as the Keep card
+    // reads it, whatever a layout would make of its name.
+    final opened = _asOpened ? _from : null;
+    final st = scopeTarget(
       vpath: _vpath,
-      base: _base.text,
-      layout: _chosenLayout,
+      base: opened?.base,
+      layout: opened?.layout ?? _chosenLayout,
       tags: {
         'artist': song.artist,
         'album': song.album,
         'year': song.year,
-        'genre': genre,
+        'genre': song.genre,
         'albumartist': song.albumArtist,
       },
       peerName: widget.peerName,
       fileName: song.filepath ?? song.title,
     );
+    final t = st.target;
     final quiet = TextStyle(
       color: VelvetColors.textSecondary,
       fontSize: 13,
@@ -603,20 +639,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
     final cut = compact ? TextOverflow.ellipsis : null;
     final Widget content;
     final Widget icon;
-    if (!t.valid && t.field == 'base') {
-      icon = Icon(
-        Icons.warning_amber_rounded,
-        size: 16,
-        color: keepTone(VelvetColors.warning),
-      );
-      content = Text(
-        l.discoverDestFixBase,
-        key: const ValueKey('destination-preview-invalid'),
-        maxLines: lines,
-        overflow: cut,
-        style: quiet,
-      );
-    } else if (_customChosen && _custom.text.isEmpty) {
+    if (_customChosen && _custom.text.isEmpty) {
       icon = Icon(
         Icons.folder_outlined,
         size: 16,
@@ -648,12 +671,10 @@ class _DestinationSheetState extends State<DestinationSheet> {
         size: 16,
         color: VelvetColors.textSecondary,
       );
-      final crumbs = [...t.crumbs, t.file];
+      final crumbs = [...st.crumbs, t.file];
+      // One song lands in one folder: the note in a song's words.
+      final slots = keepSlotNote(l, st.slots, scope: kScopeSong);
       final soft = TextStyle(color: VelvetColors.textSecondary);
-      final slot = TextStyle(
-        color: VelvetColors.textSecondary,
-        fontStyle: FontStyle.italic,
-      );
       final note = TextStyle(
         color: VelvetColors.textSecondary,
         fontSize: 12,
@@ -689,17 +710,17 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 // only between the › separators.
                 for (var i = 0; i < crumbs.length; i++) ...[
                   if (i > 0) TextSpan(text: ' › ', style: soft),
-                  ..._crumb(crumbs[i], genre, slot),
+                  ...keepCrumbSpans(l, crumbs[i], hold: _hold),
                 ],
               ],
             ),
           ),
-          if (!compact && t.rendered.contains(genre))
+          if (!compact && slots != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                l.discoverDestGenreNote(genre),
-                key: const ValueKey('destination-preview-genre'),
+                slots,
+                key: const ValueKey('destination-preview-slots'),
                 style: note,
               ),
             ),
@@ -735,18 +756,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
         ),
       ),
     );
-  }
-
-  /// One segment of the path, unbreakable, the genre's [slot] in it set
-  /// apart in [style].
-  static List<InlineSpan> _crumb(String s, String slot, TextStyle style) {
-    final parts = s.split(slot);
-    return [
-      for (var i = 0; i < parts.length; i++) ...[
-        if (i > 0) TextSpan(text: _hold(slot), style: style),
-        if (parts[i].isNotEmpty) TextSpan(text: _hold(parts[i])),
-      ],
-    ];
   }
 
   Widget _label(String text) => Padding(
@@ -831,8 +840,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     ];
     final layout = _layout ?? view.destination!.layout;
     final presets = _presets(view, vpath);
-    final baseCheck = normalizeBase(_base.text);
-    final baseBad = !baseCheck.valid || _saveErrorField == _Field.base;
     return SingleChildScrollView(
       key: const ValueKey('destination-form'),
       child: Column(
@@ -864,9 +871,11 @@ class _DestinationSheetState extends State<DestinationSheet> {
                               _setCustom(layout);
                             } else if (_customChosen &&
                                 _custom.text == layout &&
+                                _heldBraces == null &&
                                 _isPreset(view, lib.vpath, layout)) {
                               // Back with it untouched: its preset again,
-                              // and Custom's field as it was.
+                              // and Custom's field as it was (never over a
+                              // base folder a layout reads as a variable).
                               _customChosen = false;
                               _setCustom(_customBefore ?? _custom.text);
                               _customBefore = null;
@@ -878,88 +887,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
               ],
             ),
           ),
-          _label(l.discoverDestBase),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 48),
-              padding: EdgeInsets.symmetric(horizontal: baseBad ? 11 : 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-                border: Border.all(
-                  color: baseBad
-                      ? keepTone(VelvetColors.error)
-                      : VelvetColors.border2,
-                  width: baseBad ? 2 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    '$vpath /',
-                    style: TextStyle(
-                      color: VelvetColors.textSecondary,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Semantics(
-                      label: l.discoverDestBase,
-                      child: TextField(
-                        key: const ValueKey('destination-base'),
-                        controller: _base,
-                        enabled: !saving,
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        textInputAction: TextInputAction.done,
-                        style: TextStyle(
-                          color: VelvetColors.textPrimary,
-                          fontSize: 15,
-                        ),
-                        cursorColor: VelvetColors.primary,
-                        scrollPadding: reveal,
-                        // The box around it is the field's frame: none of
-                        // the theme's own borders or fill inside it.
-                        decoration: InputDecoration(
-                          isCollapsed: true,
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          focusedErrorBorder: InputBorder.none,
-                          hintText: l.discoverDestBaseHint,
-                          hintStyle: TextStyle(
-                            color: VelvetColors.textTertiary,
-                            fontSize: 15,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_saveErrorField == _Field.base && _saveError != null)
-            _errorLine(_saveError!, const ValueKey('destination-base-error'))
-          else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-              child: Text(
-                l.discoverDestBaseHelp(vpath),
-                style: TextStyle(
-                  color: VelvetColors.textSecondary,
-                  fontSize: 12,
-                  height: 16 / 12,
-                ),
-              ),
-            ),
           _label(l.discoverDestLayout),
           for (final p in presets)
             _LayoutOption(
@@ -1008,9 +935,14 @@ class _DestinationSheetState extends State<DestinationSheet> {
   ) {
     final vars = _variables(view);
     final check = validateLayout(_custom.text);
-    final problem = _custom.text.isEmpty || check.valid
+    final held = _heldBraces;
+    final problem = _custom.text.isEmpty
         ? null
-        : _layoutProblem(l, check, vars);
+        : !check.valid
+        ? _layoutProblem(l, check, vars)
+        : held == null
+        ? null
+        : l.discoverDestErrBaseBraces(held);
     final refusal = _saveErrorField == _Field.layout ? _saveError : null;
     final refused = refusal != null;
     final bad = problem != null || refused;
@@ -1180,13 +1112,11 @@ class _DestinationSheetState extends State<DestinationSheet> {
               final v = _vpath;
               final layout = _chosenLayout;
               if (v == null || layout == null) return;
+              // No base folder: one set elsewhere went into the layout (a
+              // preset chosen over it leaves it behind).
               unawaited(
                 _save(
-                  CollectionDestination(
-                    vpath: v,
-                    base: _base.text.trim(),
-                    layout: layout,
-                  ),
+                  CollectionDestination(vpath: v, base: '', layout: layout),
                 ),
               );
             },
@@ -1682,11 +1612,6 @@ class _FormSkeleton extends StatelessWidget {
                   _Block(width: 88, height: 40, radius: 10),
                 ],
               ),
-            ),
-            _cap(l.discoverDestBase),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: _Block(height: 48, radius: 7),
             ),
             _cap(l.discoverDestLayout),
             for (final w in const [110.0, 180.0])

@@ -4478,6 +4478,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'サーバーの $path に保存されます。すでにある曲はスキップされます。';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4856,24 +4861,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase => '保存先を確認するには、ベースフォルダーを修正してください';
-
-  @override
   String get discoverDestFixLayout => '保存先を確認するには、レイアウトを修正してください';
 
   @override
   String get discoverDestLibrary => 'ライブラリ';
-
-  @override
-  String get discoverDestBase => 'ベースフォルダー';
-
-  @override
-  String get discoverDestBaseHint => 'ライブラリのルート';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return '$library の中。空欄にするとライブラリのルートになります。';
-  }
 
   @override
   String get discoverDestLayout => 'レイアウト';
@@ -4937,7 +4928,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get discoverDestErrAbsolute => 'レイアウトは / で始められません。ベースフォルダーの中から始まります。';
+  String discoverDestErrBaseBraces(String folder) {
+    return '「$folder」は別のデバイスで設定されたフォルダーですが、レイアウトの中では変数として扱われます。ここで名前を変えるか、レイアウトを選んでください。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => 'レイアウトは / で始められません。ライブラリの中から始まります。';
 
   @override
   String get discoverDestErrTraversal => 'パスに「..」フォルダーは使えません。';
@@ -4971,8 +4967,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverDestGenreSlot => 'ジャンル';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot は各ファイルのジャンルタグから入ります（タグがなければ省かれます）。';
+  String get discoverDestArtistSlot => 'アーティスト';
+
+  @override
+  String get discoverDestYearSlot => '年';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots は各曲のタグから決まるため、これらの曲は複数のフォルダーに入ることがあります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから決まるため、これらの曲は複数のフォルダーに入ることがあります（ジャンルのない曲ではそのフォルダーが省かれます）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots は曲のタグから決まります（ジャンルのない曲ではそのフォルダーが省かれます）。';
   }
 
   @override

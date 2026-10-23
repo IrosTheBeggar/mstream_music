@@ -1,16 +1,21 @@
 // The Keep a copy sheets' facts and small helpers: what "Only the albums
 // you don't have" counts (album NAMES, src/db/name-key.js's folding, never
 // counts), an album's length and year, an empty answer that names no
-// album, a connected server that does not answer — and the colour roles
-// the canvas added (text in the primary's place, the fill under an
-// on-primary label) in each palette, the clock and the format.
+// album, a connected server that does not answer, what each album song
+// files under (a path's slots read from it) — and the colour roles the
+// canvas added (text in the primary's place, the fill under an on-primary
+// label) in each palette, the clock and the format, a path's slot words
+// and their note.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/objects/discovery_plugins.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_facts.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
+import 'package:mstream_music/util/discover_jobs.dart';
 
 import 'discovery_keep_fixtures.dart';
 
@@ -129,6 +134,126 @@ void main() {
     expect(f.peerAlbums, isNull);
     expect(f.libraryAlbums, hasLength(3));
     expect(f.missing, isNull, reason: 'no peer list: nothing to compare');
+  });
+
+  test("each album song as a copy files it: the ARTIST tag as written, the "
+      "year, a genre only when the listing tells the file's", () async {
+    facts.albums['Borrowed Tapes'] = [
+      songOf(
+        'peerlib/a/1.mp3',
+        'One',
+        'Boukmanflow',
+        'Borrowed Tapes',
+        9,
+        genres: ['Hip-Hop'],
+      ),
+      songOf(
+        'peerlib/a/2.mp3',
+        'Two',
+        'Boukmanflow',
+        'Borrowed Tapes',
+        9,
+        artistDisplay: 'Boukmanflow feat. ALM',
+        genres: ['Hip-Hop', 'Rap'],
+      ),
+      songOf(
+        'peerlib/a/3.mp3',
+        'Three',
+        'Boukmanflow',
+        'Borrowed Tapes',
+        9,
+        year: null,
+      ),
+    ];
+    final f = await load();
+    final songs = f.layoutSongs!;
+    expect(
+      [for (final s in songs) s.artist],
+      ['Boukmanflow', 'Boukmanflow feat. ALM', 'Boukmanflow'],
+    );
+    expect([for (final s in songs) s.year], [2019, 2019, null]);
+    // "Hip-Hop/Rap" is two genres in the library, one folder on a copy.
+    expect([for (final s in songs) s.genre], ['Hip-Hop', null, null]);
+    expect(f.genreOf('peerlib/a/1.mp3'), 'Hip-Hop');
+    expect(f.genreOf('/peerlib/a/1.mp3'), 'Hip-Hop');
+    expect(f.genreOf('peerlib/a/2.mp3'), isNull);
+    expect(f.genreOf('peerlib/elsewhere.mp3'), isNull);
+    expect(f.genreOf(null), isNull);
+    // The ARTIST tag as written, for a copy of that one song.
+    expect(f.artistOf('peerlib/a/2.mp3'), 'Boukmanflow feat. ALM');
+    expect(f.artistOf('/peerlib/a/1.mp3'), 'Boukmanflow');
+    expect(f.artistOf('peerlib/elsewhere.mp3'), isNull);
+    // The artist's albums on the peer, with their years (by name).
+    expect(f.peerAlbumYears, {'borrowed tapes': 2019});
+    expect(const KeepFacts().layoutSongs, isNull, reason: 'not answered yet');
+  });
+
+  test("a path's slot words and the one note under it", () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(keepSlotWord(en, LayoutSlot.artist), '‹artist›');
+    expect(keepSlotNote(en, const [], scope: kScopeAlbum), isNull);
+    expect(
+      keepSlotNote(en, const [LayoutSlot.artist], scope: kScopeAlbum),
+      "‹artist› comes from each song's own tags, so these songs can land in "
+      'more than one folder.',
+    );
+    expect(
+      keepSlotNote(en, const [
+        LayoutSlot.artist,
+        LayoutSlot.year,
+      ], scope: kScopeAlbum),
+      "‹artist›, ‹year› come from each song's own tags, so these songs can "
+      'land in more than one folder.',
+    );
+    expect(
+      keepSlotNote(en, const [
+        LayoutSlot.artist,
+        LayoutSlot.genre,
+      ], scope: kScopeAlbum),
+      "‹artist›, ‹genre› come from each song's own tags, so these songs can "
+      'land in more than one folder (a song with none leaves that folder '
+      'out).',
+    );
+    expect(
+      keepSlotNote(en, const [LayoutSlot.genre], scope: kScopeArtist),
+      "‹genre› comes from each song's own tags, so these songs can land in "
+      'more than one folder (a song with none leaves that folder out).',
+    );
+    // One song lands in one folder: its own words.
+    expect(
+      keepSlotNote(en, const [LayoutSlot.genre], scope: kScopeSong),
+      "‹genre› comes from the song's own tags (a song with none leaves that "
+      'folder out).',
+    );
+    expect(
+      keepPathText(en, [
+        'copies',
+        'From friends',
+        '${slotMark(LayoutSlot.artist)} (live)',
+      ]),
+      'copies › From friends › ‹artist› (live)',
+    );
+    // Every language names each slot and lists them in its note.
+    for (final locale in AppLocalizations.supportedLocales) {
+      final l = lookupAppLocalizations(locale);
+      final words = [for (final s in LayoutSlot.values) keepSlotWord(l, s)];
+      expect(words.toSet(), hasLength(3), reason: '$locale');
+      final note = keepSlotNote(l, LayoutSlot.values, scope: kScopeAlbum)!;
+      for (final w in words) {
+        expect(note, contains(w), reason: '$locale');
+      }
+      expect(
+        keepSlotNote(l, const [LayoutSlot.year], scope: kScopeAlbum),
+        contains(words[1]),
+      );
+      final song = keepSlotNote(l, const [LayoutSlot.genre], scope: kScopeSong);
+      expect(song, contains(words[2]), reason: '$locale');
+      expect(
+        song,
+        isNot(keepSlotNote(l, const [LayoutSlot.genre], scope: kScopeAlbum)),
+        reason: '$locale: one song lands in one folder',
+      );
+    }
   });
 
   group('colour roles', () {

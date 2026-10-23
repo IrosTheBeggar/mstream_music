@@ -4707,6 +4707,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'Se guardan en tu servidor en $path. Se omiten las canciones que ya tienes.';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5098,26 +5103,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase =>
-      'Corrige la carpeta base para ver dónde se guardan los archivos';
-
-  @override
   String get discoverDestFixLayout =>
       'Corrige el diseño para ver dónde se guardan los archivos';
 
   @override
   String get discoverDestLibrary => 'Biblioteca';
-
-  @override
-  String get discoverDestBase => 'Carpeta base';
-
-  @override
-  String get discoverDestBaseHint => 'raíz de la biblioteca';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return 'Dentro de $library. Déjalo vacío para la raíz de la biblioteca.';
-  }
 
   @override
   String get discoverDestLayout => 'Diseño';
@@ -5182,8 +5172,13 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '«$folder» es una carpeta elegida en otro dispositivo, pero en un diseño se lee como una variable. Cámbiale el nombre aquí o elige un diseño.';
+  }
+
+  @override
   String get discoverDestErrAbsolute =>
-      'Un diseño no puede empezar con /: empieza dentro de la carpeta base.';
+      'Un diseño no puede empezar con /: empieza dentro de la biblioteca.';
 
   @override
   String get discoverDestErrTraversal =>
@@ -5221,8 +5216,40 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverDestGenreSlot => 'género';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot se toma de la etiqueta de género de cada archivo (se omite si no la tiene).';
+  String get discoverDestArtistSlot => 'artista';
+
+  @override
+  String get discoverDestYearSlot => 'año';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots salen de las etiquetas de cada canción, así que estas canciones pueden acabar en más de una carpeta.',
+      one:
+          '$slots sale de las etiquetas de cada canción, así que estas canciones pueden acabar en más de una carpeta.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots salen de las etiquetas de cada canción, así que estas canciones pueden acabar en más de una carpeta (si una canción no tiene género, esa carpeta se omite).',
+      one:
+          '$slots sale de las etiquetas de cada canción, así que estas canciones pueden acabar en más de una carpeta (si una canción no tiene género, esa carpeta se omite).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots sale de las etiquetas de la canción (si una canción no tiene género, esa carpeta se omite).';
   }
 
   @override

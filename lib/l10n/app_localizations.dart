@@ -7530,11 +7530,17 @@ abstract class AppLocalizations {
   /// **'Copy every album by {artist} from {peer}?'**
   String discoverKeepConfirmEveryTitle(String artist, String peer);
 
-  /// Body of the confirmation before an artist copy. {path} is where the files land on the user's server, like 'copies › Boukmanflow'.
+  /// Body of the confirmation before an artist copy whose layout gives each album its own folder (discoverKeepConfirmBodyFlat when it does not). {path} is where the files land on the user's server, like 'copies › Boukmanflow'.
   ///
   /// In en, this message translates to:
   /// **'They land on your server in {path}, one folder per album. Songs you already have are skipped.'**
   String discoverKeepConfirmBody(String path);
+
+  /// Body of the confirmation before an artist copy whose layout names no album folder (every album lands in the same folder). {path} is where the files land on the user's server, like 'copies › From friends › Boukmanflow'.
+  ///
+  /// In en, this message translates to:
+  /// **'They land on your server in {path}. Songs you already have are skipped.'**
+  String discoverKeepConfirmBodyFlat(String path);
 
   /// The confirmation's yes button.
   ///
@@ -8028,7 +8034,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open that link'**
   String get discoverToastLinkFailed;
 
-  /// Toast after the destination picker saved: {path} is the library and base folder, e.g. 'copies › from-peers'.
+  /// Toast after the destination picker saved: {path} is the library and the folders every copy lands in whatever its tags (the layout's leading folders that name no variable), e.g. 'copies › From peers'.
   ///
   /// In en, this message translates to:
   /// **'Saved · copies land in {path}'**
@@ -8064,12 +8070,6 @@ abstract class AppLocalizations {
   /// **'{title} lands at'**
   String discoverDestLandsAt(String title);
 
-  /// Destination picker preview while the typed base folder would be refused.
-  ///
-  /// In en, this message translates to:
-  /// **'Fix the base folder to see where files land'**
-  String get discoverDestFixBase;
-
   /// Destination picker preview while the chosen layout would be refused.
   ///
   /// In en, this message translates to:
@@ -8081,24 +8081,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Library'**
   String get discoverDestLibrary;
-
-  /// Destination picker section label (drawn in capitals) and the accessible name of its text field: a folder inside the library.
-  ///
-  /// In en, this message translates to:
-  /// **'Base folder'**
-  String get discoverDestBase;
-
-  /// Destination picker base folder field placeholder: empty means the root of the library.
-  ///
-  /// In en, this message translates to:
-  /// **'library root'**
-  String get discoverDestBaseHint;
-
-  /// Destination picker help under the base folder field; {library} is the chosen library's name.
-  ///
-  /// In en, this message translates to:
-  /// **'Inside {library}. Leave empty for the library root.'**
-  String discoverDestBaseHelp(String library);
 
   /// Destination picker section label (drawn in capitals): how folders are made from the tags.
   ///
@@ -8208,10 +8190,16 @@ abstract class AppLocalizations {
   /// **'A brace is out of place — variables are written like {example}.'**
   String discoverDestErrBraces(String example);
 
-  /// Destination picker, under the custom layout field: it starts with a slash; a layout is relative to the base folder.
+  /// Destination picker, under the custom layout field: a base folder saved on the web app or the terminal (the phone holds it at the start of the layout) has a brace in its name, like {{PEER}}, which a layout reads as a variable — saved as it is, copies would land elsewhere, so Save waits until it is renamed or a preset layout is chosen. {folder} is that folder's name.
   ///
   /// In en, this message translates to:
-  /// **'A layout can\'t start with / — it begins inside the base folder.'**
+  /// **'“{folder}” is a folder set on another device, but in a layout it reads as a variable. Rename it here, or choose a layout.'**
+  String discoverDestErrBaseBraces(String folder);
+
+  /// Destination picker, under the custom layout field: it starts with a slash; a layout is relative to the chosen library.
+  ///
+  /// In en, this message translates to:
+  /// **'A layout can\'t start with / — it begins inside the library.'**
   String get discoverDestErrAbsolute;
 
   /// Destination picker, under the custom layout field: it has a ".." segment (a folder that climbs out).
@@ -8262,17 +8250,41 @@ abstract class AppLocalizations {
   /// **'No value for this song, so left out of the path: {vars}'**
   String discoverDestMissing(String vars);
 
-  /// Destination picker preview: the word that stands in for a file's genre in the path (the phone cannot read the file's genre tag), shown between ‹ › marks.
+  /// Keep a copy paths not landed yet (Files go to, Retry adds to, the every-album question, the destination picker preview): the word that stands in for the genre folder, shown between ‹ › marks ('copies › ‹genre› › Boukmanflow'). Each song files under its own file's genre tag, which the phone cannot always tell.
   ///
   /// In en, this message translates to:
   /// **'genre'**
   String get discoverDestGenreSlot;
 
-  /// Destination picker preview, under the path, when the layout uses the genre: {slot} is the stand-in (like ‹genre›); the server fills it from each file's own genre tag and leaves it out for a file without one.
+  /// Keep a copy paths not landed yet: the word that stands in for the artist folder, shown between ‹ › marks ('copies › From friends › ‹artist›'), when the songs a copy takes are by different artists (a compilation) — each song files under its own artist tag.
   ///
   /// In en, this message translates to:
-  /// **'{slot} is filled from each file\'s genre tag (left out when a file has none).'**
-  String discoverDestGenreNote(String slot);
+  /// **'artist'**
+  String get discoverDestArtistSlot;
+
+  /// Keep a copy paths not landed yet: the word that stands in for the year folder, shown between ‹ › marks ('copies › Boukmanflow › ‹year›'), when the songs a copy takes carry different years — each song files under its own year tag.
+  ///
+  /// In en, this message translates to:
+  /// **'year'**
+  String get discoverDestYearSlot;
+
+  /// Keep a copy, one quiet line under a path not landed yet that shows stand-ins: {slots} lists them as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'); {count} is how many. The server files each song by its own tags, so the copy can land in several folders.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{slots} comes from each song\'s own tags, so these songs can land in more than one folder.} other{{slots} come from each song\'s own tags, so these songs can land in more than one folder.}}'**
+  String discoverKeepSlotNote(int count, String slots);
+
+  /// The same line as discoverKeepSlotNote when the stand-ins include the genre (like '‹genre›' or '‹artist›, ‹genre›'): a song whose file has no genre tag files without the genre folder.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{slots} comes from each song\'s own tags, so these songs can land in more than one folder (a song with none leaves that folder out).} other{{slots} come from each song\'s own tags, so these songs can land in more than one folder (a song with none leaves that folder out).}}'**
+  String discoverKeepSlotNoteGenre(int count, String slots);
+
+  /// The same line as discoverKeepSlotNote for a copy of ONE song (This song, and the destination picker's preview of one song): only the genre can stand in there, and one song lands in one folder. {slots} is the stand-in as shown (like '‹genre›'); a song whose file has no genre tag files without the genre folder.
+  ///
+  /// In en, this message translates to:
+  /// **'{slots} comes from the song\'s own tags (a song with none leaves that folder out).'**
+  String discoverKeepSlotNoteSong(String slots);
 
   /// Destination picker text button: drops the account's saved destination and goes back to the library default.
   ///

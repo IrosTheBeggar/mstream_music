@@ -4397,6 +4397,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return '它们会存放到你服务器上的 $path。你已有的歌曲会被跳过。';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4773,24 +4778,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase => '修正基础文件夹即可查看文件存放位置';
-
-  @override
   String get discoverDestFixLayout => '修正布局即可查看文件存放位置';
 
   @override
   String get discoverDestLibrary => '曲库';
-
-  @override
-  String get discoverDestBase => '基础文件夹';
-
-  @override
-  String get discoverDestBaseHint => '曲库根目录';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return '位于 $library 内。留空则使用曲库根目录。';
-  }
 
   @override
   String get discoverDestLayout => '布局';
@@ -4854,7 +4845,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get discoverDestErrAbsolute => '布局不能以 / 开头——它从基础文件夹内开始。';
+  String discoverDestErrBaseBraces(String folder) {
+    return '“$folder”是在其他设备上设置的文件夹，但在布局中会被当作变量。请在这里重命名，或选择一种布局。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => '布局不能以 / 开头——它从曲库内开始。';
 
   @override
   String get discoverDestErrTraversal => '路径不能包含“..”文件夹。';
@@ -4888,8 +4884,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverDestGenreSlot => '流派';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot 取自每个文件的流派标签（文件没有时省略）。';
+  String get discoverDestArtistSlot => '艺人';
+
+  @override
+  String get discoverDestYearSlot => '年份';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，因此这些歌可能会放进不止一个文件夹。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，因此这些歌可能会放进不止一个文件夹（没有流派的歌会省去该文件夹）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots 取自这首歌自己的标签（没有流派的歌会省去该文件夹）。';
   }
 
   @override

@@ -5,6 +5,9 @@
 /// row, where a collection copy will land for the layout being typed, and
 /// what the Copies list holds.
 ///
+/// A path not landed yet draws a per-song variable it cannot promise one
+/// value for as a slot ([scopeTarget]).
+///
 /// Nothing here speaks English: a row carries [JobPhrase]s with their
 /// numbers ([JobText]) and the UI translates them; the server's own words
 /// (a job's status line, its error) travel verbatim as [JobText.server].
@@ -66,6 +69,11 @@ String _jsString(Object? v) {
   return '$v';
 }
 
+/// JS `String.prototype.trim`. Dart's [String.trim] strips U+0085 (NEL) too,
+/// which the server keeps: a folder named "a\u0085" stays that folder.
+String _jsTrim(String s) => s.replaceAll(_jsEdgeSpace, '');
+final RegExp _jsEdgeSpace = RegExp(r'^\s+|\s+$');
+
 /// JS truthiness for a tag value (`a || b`).
 bool _truthy(Object? v) =>
     v != null && v != '' && v != 0 && v != false && !(v is double && v.isNaN);
@@ -76,8 +84,7 @@ String sanitizeSegment(Object? raw) {
   s = s.replaceAll(_badSegmentChars, '-');
   // A "~" or "$HOME" in a tag is a name, not a shell string: folded, as the
   // server's own sanitizeSegment folds it (the rendered path would otherwise
-  // be refused). Here the phone departs from the webapp's copy, which does
-  // not fold them yet; the server has the last word.
+  // be refused).
   s = s.replaceAll(_homeString, '-');
   s = s.replaceAll(_spaces, ' ');
   s = s.replaceAll(_edgeDots, '');
@@ -118,7 +125,7 @@ ResolvedLayout resolveLayout(Object? layout, Map<String, Object?>? meta) {
   });
   final segments = substituted
       .split(RegExp(r'[/\\]+'))
-      .map((s) => s.trim())
+      .map(_jsTrim)
       .where((s) => s.isNotEmpty);
   var path = segments.join('/');
   if (path.length > _maxResolvedLen) path = path.substring(0, _maxResolvedLen);
@@ -215,15 +222,45 @@ class BaseCheck {
 }
 
 BaseCheck normalizeBase(Object? base) {
-  final raw = (base == null ? '' : _jsString(base))
-      .replaceAll('\\', '/')
-      .split('/')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .join('/');
+  final raw = _baseFolders(base);
   if (raw.isEmpty) return const BaseCheck.ok('');
   final check = validateResolvedPath(raw);
   return check.valid ? BaseCheck.ok(raw) : BaseCheck.bad(check.error);
+}
+
+/// [base]'s folders as the server reads them, not yet checked: either
+/// separator, names trimmed, empty ones gone.
+String _baseFolders(Object? base) => (base == null ? '' : _jsString(base))
+    .replaceAll('\\', '/')
+    .split('/')
+    .map(_jsTrim)
+    .where((s) => s.isNotEmpty)
+    .join('/');
+
+/// [layout] with the base folder [base] in front of it: the phone keeps no
+/// base folder of its own (the webapp and the terminal do, on the one
+/// setting the account has), so it holds a destination's as the start of
+/// the layout. The server files a song at base folder / rendered layout,
+/// and so files it at the same place from base '' and this layout — except
+/// where a folder's name has a brace ([bracedFolder]): a stray brace or an
+/// unknown variable [validateLayout] refuses, a known one ({{ARTIST}})
+/// renders as the variable; and past 500 characters, where the layout is
+/// refused or its render cut where the server's base + render is not. A
+/// base [normalizeBase] refuses comes in front as read, for
+/// [validateLayout] to name. No base folder: [layout] as it is.
+String foldBase(Object? base, String layout) {
+  final folders = _baseFolders(base);
+  return folders.isEmpty ? layout : '$folders/$layout';
+}
+
+/// The first of [base]'s folders a layout cannot hold as that folder: one
+/// whose name has a brace, which a layout reads as a variable ("{{PEER}}"
+/// files under the server's name) or refuses. null when there is none.
+String? bracedFolder(Object? base) {
+  for (final folder in _baseFolders(base).split('/')) {
+    if (folder.contains('{') || folder.contains('}')) return folder;
+  }
+  return null;
 }
 
 /// Whether two destinations put files in the same place — the jobs route's
@@ -369,6 +406,237 @@ PreviewTarget previewTarget({
 /// "music/A/B/c.mp3" → ['music', 'A', 'B', 'c.mp3'], for a breadcrumb.
 List<String> pathCrumbs(String? filepath) =>
     (filepath ?? '').split('/').where((s) => s.isNotEmpty).toList();
+
+// ── where a copy of one scope lands ──────────────────────────────────────
+// The webapp's scopeTarget. "Files go to", the Retry / Add again lines, the
+// every-album question and the destination picker's preview render the
+// base folder and the layout with the tags of what the scope copies. The
+// server files EACH SONG by the copied file's own tags (destination.js
+// tagsForLayout: artist, album, year, genre, albumartist — artist and album
+// fall back to the song the copy was handed, genre and albumartist do not,
+// and nor does the year: neither a song's copy nor an album's listing
+// hands one in, federation-copy listAlbumSongs), so {{ARTIST}}, {{YEAR}}
+// and {{GENRE}} are per song, while {{ALBUM}}, {{ALBUMARTIST}} (the album's
+// credit) and {{PEER}} are one value for every song of an album. A per-song variable this client cannot promise one
+// value for stands as a SLOT inside its folder ("From friends › ‹artist›"),
+// the folder's own text kept — never one song's value for them all:
+//   song            the song's own values; {{GENRE}} its genre only when
+//                   this client has it, else the slot
+//   album           {{ARTIST}} / {{YEAR}} the value only when every song of
+//                   the album's listing agrees (a song with no artist tag
+//                   files under the album's credit; one with no year
+//                   without the year folder, a place of its own); until
+//                   the listing answers, the row's own unless it is a
+//                   compilation (its credit is not its artist), else the
+//                   slot. {{GENRE}} the slot unless every song's genre is
+//                   known and agrees
+//   artist          the artist as ARTIST and ALBUMARTIST, no album: the
+//                   first folder that names an album ({{ALBUM}}, or
+//                   {{YEAR}} — each album has its own) and every folder
+//                   after it are "one folder per album" ([perAlbum]); a
+//                   {{GENRE}} before it is the slot
+//   artist-missing  the same — or, when exactly one album is missing
+//                   ([oneAlbum]: its name and year), that album's folder
+// A path that has landed (a finished copy's files) is the server's own
+// filepath: no slots there.
+
+/// A per-song variable a path cannot promise one value for.
+enum LayoutSlot { artist, year, genre }
+
+/// [slot]'s mark inside a rendered path: private-use characters no tag
+/// brings and the layout engine leaves alone. The UI draws the slot's word
+/// in its place ([slotParts], [slotText]).
+String slotMark(LayoutSlot slot) => '\uE000${slot.name}\uE001';
+
+final RegExp _slotRe = RegExp('\uE000(artist|year|genre)\uE001');
+final RegExp _strayMark = RegExp('[\uE000\uE001]');
+
+/// [s] cut at its slots, in order: plain text ([slot] null) and slots.
+List<({String text, LayoutSlot? slot})> slotParts(String s) {
+  final out = <({String text, LayoutSlot? slot})>[];
+  void text(String t) {
+    // A mark a 500-character cut split in two is no slot: left out.
+    final plain = t.replaceAll(_strayMark, '');
+    if (plain.isNotEmpty) out.add((text: plain, slot: null));
+  }
+
+  var at = 0;
+  for (final m in _slotRe.allMatches(s)) {
+    text(s.substring(at, m.start));
+    out.add((text: '', slot: LayoutSlot.values.byName(m.group(1)!)));
+    at = m.end;
+  }
+  text(s.substring(at));
+  return out;
+}
+
+/// [s] as read, each slot as [word] names it.
+String slotText(String s, String Function(LayoutSlot slot) word) =>
+    [for (final p in slotParts(s)) p.slot == null ? p.text : word(p.slot!)]
+        .join();
+
+/// The slots [crumbs] show, in [LayoutSlot] order.
+List<LayoutSlot> slotsIn(Iterable<String> crumbs) => [
+      for (final slot in LayoutSlot.values)
+        if (crumbs.any((c) => c.contains(slotMark(slot)))) slot,
+    ];
+
+/// One song of an album copy as the album's listing tells it: its ARTIST
+/// tag as written, its year, and its genre when this client can tell the
+/// one its file carries (null when it cannot). A missing artist falls back
+/// to the album's credit, as the server's listing does; a missing year is
+/// none — the copy has nothing to fall back to.
+class LayoutSong {
+  final Object? artist;
+  final Object? year;
+  final String? genre;
+  const LayoutSong({this.artist, this.year, this.genre});
+}
+
+/// Where a copy of one scope lands: [target] holds previewTarget's checks
+/// (valid, error, field, the file, missingVars); [rendered] is what the
+/// layout rendered — for an artist copy, up to the first album's folder.
+class ScopeTarget {
+  final PreviewTarget target;
+  final String rendered;
+
+  /// An artist copy: one folder per album under [rendered].
+  final bool perAlbum;
+  const ScopeTarget(this.target, this.rendered, {this.perAlbum = false});
+
+  bool get valid => target.valid;
+
+  /// The line the Keep card draws: library › base folders › what the layout
+  /// rendered (slot marks inside), no file.
+  List<String> get crumbs => [
+        if (target.library.isNotEmpty) target.library,
+        ...pathCrumbs(target.base),
+        ...pathCrumbs(rendered),
+      ];
+
+  /// The slots the path shows, in [LayoutSlot] order.
+  List<LayoutSlot> get slots => slotsIn(crumbs);
+}
+
+/// A row whose album credit is not its own artist ("Various Artists" over
+/// one track artist): its album's songs are other artists' too (the album
+/// card's own test, discoveryCardIsCompilation).
+bool _compilation(Object? artist, Object? credit) {
+  final c = _truthy(credit) ? _jsString(credit).trim().toLowerCase() : '';
+  final a = _truthy(artist) ? _jsString(artist).trim().toLowerCase() : '';
+  return c.isNotEmpty && c != a;
+}
+
+/// The value every one of [values] files under (the first as given), or
+/// [slot]'s mark when two would make different folders.
+Object? _agreed(Iterable<Object?> values, LayoutSlot slot) {
+  Object? first;
+  String? key;
+  for (final v in values) {
+    final k = sanitizeSegment(v);
+    if (key == null) {
+      key = k;
+      first = v;
+    } else if (k != key) {
+      return slotMark(slot);
+    }
+  }
+  return first;
+}
+
+final RegExp _albumFolderRe =
+    RegExp(r'\{\{\s*(album|year)\s*\}\}', caseSensitive: false);
+
+/// Where a copy of [scope] lands (see above). [tags] are the row's (artist,
+/// album, year, albumartist) and, for a song, its genre when this client has
+/// it; [albumSongs] the album's listing (null until it answers); [oneAlbum]
+/// the one album an artist-missing copy takes, when only one is missing.
+ScopeTarget scopeTarget({
+  String? vpath,
+  Object? base,
+  Object? layout,
+  String scope = kScopeSong,
+  Map<String, Object?>? tags,
+  List<LayoutSong>? albumSongs,
+  ({String name, Object? year})? oneAlbum,
+  String? peerName,
+  String? fileName,
+}) {
+  final t = tags ?? const <String, Object?>{};
+  final artistScope = scope == kScopeArtist || scope == kScopeArtistMissing;
+  final one = scope == kScopeArtistMissing ? oneAlbum : null;
+  final wide = artistScope && one == null;
+  final genre = slotMark(LayoutSlot.genre);
+  final Map<String, Object?> v;
+  if (artistScope) {
+    v = {
+      'artist': t['artist'],
+      'album': one?.name,
+      'year': one?.year,
+      'genre': genre,
+      // The artist walk copies the artist's own albums, credited to the
+      // artist (federation-copy asks album-songs by albumArtist = the
+      // artist): ALBUMARTIST falls back to the artist, never this row's
+      // compilation credit ("Various Artists").
+      'albumartist': null,
+    };
+  } else if (scope == kScopeAlbum) {
+    final artist = t['artist'];
+    final year = t['year'];
+    final credit = t['albumartist'];
+    // The album's credit, one for every song: never the slot ARTIST may be.
+    final albumCredit = _truthy(credit) ? credit : artist;
+    final songs = albumSongs;
+    final listed = songs != null && songs.isNotEmpty;
+    final various = _compilation(artist, credit);
+    v = {
+      // A listed song with no artist tag files under the credit the listing
+      // was asked by (federation-copy listAlbumSongs' fallbackArtist).
+      'artist': listed
+          ? _agreed(
+              songs.map((s) => _truthy(s.artist) ? s.artist : albumCredit),
+              LayoutSlot.artist,
+            )
+          : (various ? slotMark(LayoutSlot.artist) : artist),
+      'album': t['album'],
+      // A listed song's year as the listing gives it: one with none files
+      // without the year folder (the copy has no year to fall back to).
+      'year': listed
+          ? _agreed(songs.map((s) => s.year), LayoutSlot.year)
+          : (various ? slotMark(LayoutSlot.year) : year),
+      'genre': listed && songs.every((s) => _truthy(s.genre))
+          ? _agreed(songs.map((s) => s.genre), LayoutSlot.genre)
+          : genre,
+      'albumartist': albumCredit,
+    };
+  } else {
+    v = {
+      'artist': t['artist'],
+      'album': t['album'],
+      'year': t['year'],
+      'genre': _truthy(t['genre']) ? t['genre'] : genre,
+      'albumartist': t['albumartist'],
+    };
+  }
+  final target = previewTarget(
+    vpath: vpath,
+    base: base,
+    layout: layout,
+    tags: v,
+    peerName: peerName,
+    fileName: fileName,
+  );
+  if (!target.valid || !wide) return ScopeTarget(target, target.rendered);
+  final folders = (layout as String).split(RegExp(r'[/\\]+'));
+  final at = folders.indexWhere(_albumFolderRe.hasMatch);
+  if (at == -1) return ScopeTarget(target, target.rendered);
+  final head = resolveLayout(folders.sublist(0, at).join('/'), {
+    'artist': v['artist'],
+    'genre': genre,
+    'peer': peerName,
+  });
+  return ScopeTarget(target, head.path, perAlbum: true);
+}
 
 // ── a job as a row ───────────────────────────────────────────────────────
 

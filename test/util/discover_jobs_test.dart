@@ -187,6 +187,70 @@ void main() {
       expect(pathCrumbs('music/A/B/c.mp3'), ['music', 'A', 'B', 'c.mp3']);
     });
 
+    test("a base folder folded into the layout (the phone keeps none) files each song where the base folder did — "
+        'but for a base that reads as layout syntax, or a path past 500 characters', () {
+      final bases = list('foldBases');
+      final good = list('layouts').cast<String>();
+      final refused = <Object?, Set<String>>{};
+      final elsewhere = <Object?>{};
+      for (final r in gold['fold'] as List) {
+        final base = bases[r['base'] as int];
+        final layout = good[r['layout'] as int];
+        final folded = foldBase(base, layout);
+        final check = validateLayout(folded);
+        expect(check.valid ? null : check.error, r['error'], reason: 'fold "$base" + $layout');
+        if (r['error'] != null) {
+          refused.putIfAbsent(base, () => {}).add(r['error'] as String);
+          continue;
+        }
+        final tagsAt = (r['tags'] as List).cast<int>();
+        for (var i = 0; i < tagsAt.length; i++) {
+          PreviewTarget at(Object? b, String l) => previewTarget(
+              vpath: 'music', base: b, layout: l, tags: tags[tagsAt[i]], peerName: "Sam's server", fileName: 'f.mp3');
+          final mine = at('', folded);
+          expect(mine.relDir, unpack((r['relDir'] as List)[i]), reason: 'fold "$base" + $layout #${tagsAt[i]}');
+          final same = mine.relDir == at(base, layout).relDir;
+          expect(same, (r['same'] as List)[i], reason: 'same place? "$base" + $layout #${tagsAt[i]}');
+          if (!same) elsewhere.add(base);
+        }
+      }
+      // A stray brace or an unknown variable in the base folder, or more
+      // than 500 characters in all: the field says so and Save waits.
+      expect(refused, {
+        'a{b': {'unbalanced_braces'},
+        '}}': {'unbalanced_braces'},
+        '{{FOO}}': {'unknown_variable'},
+        'x' * 480: {'template_too_long'},
+      });
+      // A known variable written in the base folder's name renders as the
+      // variable; a path past 500 characters is cut at another place. Every
+      // other base folder lands every song where it did.
+      expect(elsewhere, {'{{ARTIST}}', '{{ artist }}', '{{PEER}}', 'x' * 300});
+
+      // No base folder: the layout as it is; one the server refuses comes
+      // in front as read, for the validator to name.
+      expect(foldBase('', '{{ALBUMARTIST}}/{{ALBUM}}'), '{{ALBUMARTIST}}/{{ALBUM}}');
+      expect(foldBase(null, 'Inbox'), 'Inbox');
+      expect(foldBase(r' / \ ', 'Inbox'), 'Inbox');
+      expect(foldBase(r' From peers \ Sam/ ', '{{ALBUMARTIST}}/{{ALBUM}}'), 'From peers/Sam/{{ALBUMARTIST}}/{{ALBUM}}');
+      expect(validateLayout(foldBase('../up', '{{ARTIST}}')).error, 'traversal');
+
+      // A folder with a brace in its name, which no layout holds as that
+      // folder: the first, as the server reads the base, for the picker to
+      // name.
+      expect(bracedFolder(r' From peers \ {{PEER}} / a}b '), '{{PEER}}');
+      expect(bracedFolder('Mix {b'), 'Mix {b');
+      expect(bracedFolder(' From peers / Sam '), isNull);
+      expect(bracedFolder(''), isNull);
+      expect(bracedFolder(null), isNull);
+
+      // Trimmed as JS trims, as the server does: U+0085 (NEL) stays, so the
+      // folder and the place stay the same (Dart's own trim strips it).
+      expect(normalizeBase(' nel\u0085 ').base, 'nel\u0085');
+      expect(foldBase(' nel\u0085 / x ', '{{ARTIST}}'), 'nel\u0085/x/{{ARTIST}}');
+      expect(resolveLayout('{{ARTIST}}/ x\u0085 ', {'artist': 'b'}).path, 'b/x\u0085');
+    });
+
     test("the Keep card's destination line: library › folders, no file", () {
       final t = previewTarget(
           vpath: 'demo',
@@ -365,6 +429,155 @@ void main() {
           {'vpath': 'copies', 'base': 'Ran', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'});
       expect([copyJob().pinnedNowhere, copyJob().ranWith], [false, null]);
       expect(copyJob({'params': {'scope': 'album'}}).pinnedNowhere, isFalse, reason: 'no destination key is no pin');
+    });
+  });
+
+  group('a path not landed yet: a per-song variable it cannot promise is a slot', () {
+    // The server files each song by its own file's tags: {{ARTIST}},
+    // {{YEAR}} and {{GENRE}} per song; {{ALBUM}}, {{ALBUMARTIST}} and
+    // {{PEER}} one value for an album.
+    String read(ScopeTarget t) => t.crumbs.map((c) => slotText(c, (s) => '‹${s.name}›')).join(' › ');
+    const borrowed = {'artist': 'Boukmanflow', 'album': 'Borrowed Tapes', 'year': 2019};
+    // The stage's compilation, seen from its Boukmanflow row.
+    const sampler = {'artist': 'Boukmanflow', 'album': 'Night Market Sampler', 'year': 2020, 'albumartist': 'Various Artists'};
+    const samplerSongs = [
+      LayoutSong(artist: 'Color Out', year: 2020),
+      LayoutSong(artist: 'Boukmanflow', year: 2020),
+      LayoutSong(artist: 'ALM', year: 2020),
+    ];
+    ScopeTarget at(String layout, String scope,
+            {Map<String, Object?> tags = borrowed, List<LayoutSong>? songs, ({String name, Object? year})? oneAlbum}) =>
+        scopeTarget(
+            vpath: 'copies',
+            base: '',
+            layout: layout,
+            scope: scope,
+            tags: tags,
+            albumSongs: songs,
+            oneAlbum: oneAlbum,
+            peerName: 'Stage Peer B',
+            fileName: 'peerlib/x/01 - x.mp3');
+
+    test("a compilation's album: {{ARTIST}} is the slot before its listing answers and after; the album's own variables stay", () {
+      final before = at('From friends/{{ARTIST}}', kScopeAlbum, tags: sampler);
+      expect([read(before), before.slots, before.perAlbum], ['copies › From friends › ‹artist›', [LayoutSlot.artist], false]);
+      final after = at('From friends/{{ARTIST}}', kScopeAlbum, tags: sampler, songs: samplerSongs);
+      expect([read(after), after.slots], ['copies › From friends › ‹artist›', [LayoutSlot.artist]]);
+      // Not one song's artist for them all — the bug: "From friends › Boukmanflow".
+      expect(after.crumbs.join(), isNot(contains('Boukmanflow')));
+      // The album, its credit and the server are one value for every song.
+      expect(read(at('{{ALBUMARTIST}}/{{ALBUM}}', kScopeAlbum, tags: sampler, songs: samplerSongs)),
+          'copies › Various Artists › Night Market Sampler');
+      expect(read(at('{{PEER}}/{{ALBUM}}', kScopeAlbum, tags: sampler)), 'copies › Stage Peer B › Night Market Sampler');
+      // A compilation's year waits for the listing; every song agreeing, it is the year.
+      expect(read(at('{{YEAR}}', kScopeAlbum, tags: sampler)), 'copies › ‹year›');
+      expect(read(at('{{YEAR}}', kScopeAlbum, tags: sampler, songs: samplerSongs)), 'copies › 2020');
+      // A credit spelled like the artist is no compilation.
+      expect(read(at('{{ARTIST}}', kScopeAlbum, tags: {...borrowed, 'albumartist': ' boukmanflow '})), 'copies › Boukmanflow');
+    });
+
+    test("a single artist's album: the value — the row's until the listing answers, then the one every song agrees on", () {
+      expect(read(at('{{ARTIST}}/{{YEAR}}', kScopeAlbum)), 'copies › Boukmanflow › 2019');
+      const same = [LayoutSong(artist: 'Boukmanflow', year: 2019), LayoutSong(artist: 'Boukmanflow', year: 2019)];
+      final t = at('{{ARTIST}}/{{YEAR}}', kScopeAlbum, songs: same);
+      expect([read(t), t.slots], ['copies › Boukmanflow › 2019', <LayoutSlot>[]]);
+      // A song with no artist tag files under the album's credit (the row's
+      // artist when it has none), as the server's listing does.
+      expect(read(at('{{ARTIST}}', kScopeAlbum, songs: const [...same, LayoutSong()])), 'copies › Boukmanflow');
+      // A song with no year has nothing to fall back to: it files without
+      // the year's folder, so the songs make two places.
+      final yearless = at('{{ARTIST}}/{{YEAR}}', kScopeAlbum, songs: const [...same, LayoutSong(artist: 'Boukmanflow')]);
+      expect([read(yearless), yearless.slots], ['copies › Boukmanflow › ‹year›', [LayoutSlot.year]]);
+      // Two spellings that make one folder agree; a featured credit is a folder of its own.
+      expect(read(at('{{ARTIST}}', kScopeAlbum, tags: {...borrowed, 'artist': 'AC/DC'}, songs: const [LayoutSong(artist: 'AC/DC'), LayoutSong(artist: 'AC-DC')])),
+          'copies › AC-DC');
+      expect(read(at('{{ARTIST}}', kScopeAlbum, songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow feat. ALM')])),
+          'copies › ‹artist›');
+      // An empty answer names no album: the row's again.
+      expect(read(at('{{ARTIST}}', kScopeAlbum, songs: const [])), 'copies › Boukmanflow');
+      // {{ALBUMARTIST}} is the album's credit — the row's artist when it names
+      // none — however the songs' own artist tags read.
+      final featured = at('{{ALBUMARTIST}}/{{ALBUM}}', kScopeAlbum,
+          songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow feat. ALM')]);
+      expect([read(featured), featured.slots], ['copies › Boukmanflow › Borrowed Tapes', <LayoutSlot>[]]);
+    });
+
+    test("a compilation's listing: an empty one is no answer (the slot); songs with no artist tag file under its credit", () {
+      expect(read(at('From friends/{{ARTIST}}', kScopeAlbum, tags: sampler, songs: const [])), 'copies › From friends › ‹artist›');
+      expect(read(at('From friends/{{ARTIST}}', kScopeAlbum, tags: sampler, songs: const [LayoutSong(year: 2020), LayoutSong(year: 2020)])),
+          'copies › From friends › Various Artists');
+      expect(read(at('From friends/{{ARTIST}}', kScopeAlbum, tags: sampler, songs: const [LayoutSong(year: 2020), LayoutSong(artist: 'ALM')])),
+          'copies › From friends › ‹artist›');
+    });
+
+    test('mixed years: {{YEAR}} is the slot; no song with a year and none on the row: the folder drops, as the server drops it', () {
+      final mixed = at('{{ARTIST}}/{{YEAR}}', kScopeAlbum,
+          songs: const [LayoutSong(artist: 'Boukmanflow', year: 2019), LayoutSong(artist: 'Boukmanflow', year: 2020)]);
+      expect([read(mixed), mixed.slots], ['copies › Boukmanflow › ‹year›', [LayoutSlot.year]]);
+      final none = at('{{ARTIST}}/{{YEAR}}', kScopeAlbum,
+          tags: {...borrowed, 'year': null}, songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow')]);
+      expect([read(none), none.target.missingVars, none.slots], ['copies › Boukmanflow', ['YEAR'], <LayoutSlot>[]]);
+      // The row's year never stands in for the songs': none of them has one,
+      // so none lands in a year's folder.
+      final rowOnly = at('{{ARTIST}}/{{YEAR}}', kScopeAlbum, songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow')]);
+      expect([read(rowOnly), rowOnly.target.missingVars], ['copies › Boukmanflow', ['YEAR']]);
+    });
+
+    test("genre: a song's own only when this client has it; an album's only when every song's is known and agrees", () {
+      expect(read(at('{{GENRE}}/{{ARTIST}}', kScopeSong)), 'copies › ‹genre› › Boukmanflow');
+      expect(read(at('{{GENRE}}/{{ARTIST}}', kScopeSong, tags: {...borrowed, 'genre': 'Hip-Hop'})), 'copies › Hip-Hop › Boukmanflow');
+      expect(at('{{GENRE}}', kScopeSong).slots, [LayoutSlot.genre]);
+      const hipHop = LayoutSong(artist: 'Boukmanflow', genre: 'Hip-Hop');
+      expect(read(at('{{GENRE}}', kScopeAlbum)), 'copies › ‹genre›', reason: 'no listing yet');
+      expect(read(at('{{GENRE}}', kScopeAlbum, songs: const [hipHop, hipHop])), 'copies › Hip-Hop');
+      expect(read(at('{{GENRE}}', kScopeAlbum, songs: const [hipHop, LayoutSong(genre: 'Rap')])), 'copies › ‹genre›');
+      expect(read(at('{{GENRE}}', kScopeAlbum, songs: const [hipHop, LayoutSong()])), 'copies › ‹genre›', reason: 'one unknown');
+      final unknown = at('{{GENRE}}/{{ARTIST}}', kScopeAlbum, songs: const [LayoutSong(artist: 'Boukmanflow'), LayoutSong(artist: 'Boukmanflow')]);
+      expect([read(unknown), unknown.slots, unknown.target.missingVars], ['copies › ‹genre› › Boukmanflow', [LayoutSlot.genre], <String>[]],
+          reason: 'every genre unknown: the slot, never a folder dropped');
+      // A song's own artist and year are its own: never a slot.
+      expect(at('{{ARTIST}}/{{YEAR}}/{{ALBUM}}', kScopeSong, tags: sampler).slots, isEmpty);
+      expect(read(at('{{ALBUMARTIST}}/{{ARTIST}}', kScopeSong, tags: sampler)), 'copies › Various Artists › Boukmanflow');
+    });
+
+    test("a slot stands inside its folder, the folder's own text kept", () {
+      final t = at('{{ARTIST}} - {{GENRE}}', kScopeSong);
+      expect(read(t), 'copies › Boukmanflow - ‹genre›');
+      expect(slotParts(t.crumbs.last), [(text: 'Boukmanflow - ', slot: null), (text: '', slot: LayoutSlot.genre)]);
+      expect(read(at('From friends/{{ARTIST}} (live)', kScopeAlbum, tags: sampler)), 'copies › From friends › ‹artist› (live)');
+      final two = at('{{ARTIST}}/{{YEAR}} {{GENRE}}', kScopeAlbum, tags: sampler);
+      expect([read(two), two.slots], ['copies › ‹artist› › ‹year› ‹genre›', LayoutSlot.values]);
+      // A tag that reads like a slot is a name, not a slot; a cut mark is dropped.
+      final named = at('{{ARTIST}}', kScopeSong, tags: {...borrowed, 'artist': '‹artist›'});
+      expect([named.crumbs.last, named.slots], ['‹artist›', <LayoutSlot>[]]);
+      expect(slotParts('A\uE000gen'), [(text: 'Agen', slot: null)]);
+      expect(slotsIn(['copies', slotMark(LayoutSlot.year), 'x${slotMark(LayoutSlot.artist)}']), [LayoutSlot.artist, LayoutSlot.year]);
+    });
+
+    test('the artist scopes: ARTIST is the artist; the first album folder on is one folder per album; a genre before it is the slot', () {
+      final genre = at('{{GENRE}}/{{ARTIST}}/{{ALBUM}}', kScopeArtist);
+      expect([read(genre), genre.perAlbum, genre.slots], ['copies › ‹genre› › Boukmanflow', true, [LayoutSlot.genre]]);
+      final year = at('{{ARTIST}}/{{YEAR}}/{{ALBUM}}', kScopeArtist);
+      expect([read(year), year.perAlbum, year.slots], ['copies › Boukmanflow', true, <LayoutSlot>[]]);
+      expect([read(at('{{ALBUM}}/{{ARTIST}}', kScopeArtistMissing)), at('{{ALBUM}}/{{ARTIST}}', kScopeArtistMissing).perAlbum], ['copies', true]);
+      final after = at('{{ARTIST}}/{{ALBUM}}/{{GENRE}}', kScopeArtist);
+      expect([read(after), after.slots], ['copies › Boukmanflow', <LayoutSlot>[]], reason: 'a genre past the cut is inside "one folder per album"');
+      final flat = at('From friends', kScopeArtist);
+      expect([read(flat), flat.perAlbum], ['copies › From friends', false]);
+      // The walk copies the artist's own albums: never this row's compilation credit.
+      expect(read(at('{{ALBUMARTIST}}/{{ALBUM}}', kScopeArtist, tags: sampler)), 'copies › Boukmanflow');
+      // One album missing: its folder, its year.
+      final one = at('{{ARTIST}}/{{YEAR}}/{{ALBUM}}', kScopeArtistMissing, oneAlbum: (name: 'B-Sides', year: 2018));
+      expect([read(one), one.perAlbum], ['copies › Boukmanflow › 2018 › B-Sides', false]);
+      expect(read(at('{{ARTIST}}/{{ALBUM}}', kScopeArtist, oneAlbum: (name: 'B-Sides', year: 2018))), 'copies › Boukmanflow',
+          reason: 'only an only-missing copy takes one album');
+    });
+
+    test('a layout or base folder the server would refuse: no path, no slots, previewTarget\'s error', () {
+      final bad = scopeTarget(vpath: 'copies', base: '../up', layout: '{{ARTIST}}', scope: kScopeAlbum, tags: sampler);
+      expect([bad.valid, bad.target.field, bad.perAlbum], [false, 'base', false]);
+      final layout = scopeTarget(vpath: 'copies', layout: '{{TRACK}}/{{ALBUM}}', scope: kScopeArtist, tags: borrowed);
+      expect([layout.valid, layout.target.error, layout.perAlbum], [false, 'unknown_variable', false]);
     });
   });
 

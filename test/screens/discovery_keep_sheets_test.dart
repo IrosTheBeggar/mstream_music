@@ -1981,4 +1981,393 @@ void main() {
       },
     );
   });
+
+  group('a path that cannot promise one folder: each song files under its own '
+      'tags', () {
+    const artistNote =
+        "‹artist› comes from each song's own tags, so these songs can land "
+        'in more than one folder.';
+    const yearNote =
+        "‹year› comes from each song's own tags, so these songs can land in "
+        'more than one folder.';
+    const genreNote =
+        "‹genre› comes from each song's own tags, so these songs can land in "
+        'more than one folder (a song with none leaves that folder out).';
+    void useLayout(String layout, {String base = ''}) => h.fake.destination = {
+      ...h.fake.destination,
+      'destination': {
+        'vpath': 'copies',
+        'base': base,
+        'layout': layout,
+        'source': 'user',
+      },
+    };
+    Finder inCard(Finder f) => find.descendant(
+      of: find.byKey(const ValueKey('keep-copy')),
+      matching: f,
+    );
+
+    /// The span that draws [text] inside the widget keyed [key].
+    TextSpan? spanOf(WidgetTester tester, String key, String text) {
+      TextSpan? found;
+      for (final rich in tester.widgetList<RichText>(
+        find.descendant(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(RichText),
+        ),
+      )) {
+        rich.text.visitChildren((span) {
+          if (span is TextSpan && span.text == text) found = span;
+          return found == null;
+        });
+        if (found != null) break;
+      }
+      return found;
+    }
+
+    Future<void> openSampler(WidgetTester tester) async {
+      h.peersAnswer = () => keepPeersPayload(extraB: nightMarketRows());
+      await h.pumpDiscover(tester);
+      await tester.ensureVisible(find.text('Night Market Sampler').first);
+      await tester.pump();
+    }
+
+    testWidgets(
+      "Night Market Sampler with From friends/{{ARTIST}}: the album card's "
+      '"Files go to" says copies › From friends › ‹artist› and why — never '
+      "the one row's artist, before its songs answer and after",
+      (tester) async {
+        useLayout('From friends/{{ARTIST}}');
+        h.facts.gate = Completer<void>();
+        await openSampler(tester);
+        await tester.longPress(find.text('Night Market Sampler').first);
+        await frames(tester, 8);
+        // A compilation: the slot before the listing answers.
+        expect(
+          line('Files go to copies › From friends › ‹artist›'),
+          findsOneWidget,
+        );
+        expect(find.text(artistNote), findsOneWidget);
+        h.facts.gate!.complete();
+        await frames(tester);
+        expect(find.text('3 songs'), findsOneWidget);
+        expect(
+          line('Files go to copies › From friends › ‹artist›'),
+          findsOneWidget,
+          reason: 'Color Out, Boukmanflow and ALM: three folders',
+        );
+        expect(
+          inCard(find.textContaining('Boukmanflow', findRichText: true)),
+          findsNothing,
+          reason: "the bug: 'copies › From friends › Boukmanflow'",
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('keep-destination')),
+            matching: find.text(artistNote),
+          ),
+          findsOneWidget,
+        );
+        // Drawn quiet and italic, as the picker's slot is.
+        final slot = spanOf(tester, 'keep-destination', '‹artist›');
+        expect(slot?.style?.fontStyle, FontStyle.italic);
+        expect(slot?.style?.color, VelvetColors.textSecondary);
+        expect(
+          spanOf(tester, 'keep-destination', 'From friends')?.style?.color,
+          VelvetColors.textPrimary,
+          reason: "the layout's own folder reads as a folder",
+        );
+      },
+    );
+
+    testWidgets(
+      "the compilation's song sheet: This song lands under its own artist; "
+      'Album under the slot',
+      (tester) async {
+        useLayout('From friends/{{ARTIST}}');
+        await openSampler(tester);
+        await tester.longPress(find.text('Lantern Row'));
+        await frames(tester, 8);
+        expect(
+          line('Files go to copies › From friends › Boukmanflow'),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › From friends › ‹artist›'),
+          findsOneWidget,
+        );
+        expect(find.text(artistNote), findsOneWidget);
+        // {{ALBUMARTIST}} is the album's credit: one folder, no slot.
+        useLayout('{{ALBUMARTIST}}/{{ALBUM}}');
+        await h.jobs.loadDestination();
+        await frames(tester);
+        expect(
+          line('Files go to copies › Various Artists › Night Market Sampler'),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      "one artist's album: the year once every song agrees; mixed years "
+      'are the slot',
+      (tester) async {
+        useLayout('{{ARTIST}}/{{YEAR}}');
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(line('Files go to copies › Boukmanflow › 2019'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+        await frames(tester);
+        expect(line('Files go to copies › Boukmanflow › 2019'), findsOneWidget);
+        expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('keep-copy'))),
+        ).pop();
+        await frames(tester);
+
+        h.facts.albums['Borrowed Tapes'] = [
+          for (final (i, y) in [2019, 2020, 2019].indexed)
+            songOf(
+              'peerlib/Boukmanflow/Borrowed Tapes/0${i + 1}.mp3',
+              'Song $i',
+              'Boukmanflow',
+              'Borrowed Tapes',
+              9,
+              year: y,
+            ),
+        ];
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(
+          line('Files go to copies › Boukmanflow › 2019'),
+          findsOneWidget,
+          reason: "This song: the song's own year",
+        );
+        await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › Boukmanflow › ‹year›'),
+          findsOneWidget,
+        );
+        expect(find.text(yearNote), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "the genre: a song's own when the album's listing tells it, else the "
+      'slot; every album, and the question that names the path',
+      (tester) async {
+        useLayout('{{GENRE}}/{{ARTIST}}/{{ALBUM}}');
+        h.facts.genres['Late Train Verse'] = ['Hip-Hop'];
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(
+          line('Files go to copies › Hip-Hop › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+        // The album's other songs carry no genre the phone can tell.
+        await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › ‹genre› › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+        );
+        expect(find.text(genreNote), findsOneWidget);
+        // Every album: the genre before the album's folder is the slot.
+        await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+        await frames(tester);
+        await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+        await frames(tester);
+        expect(
+          line(
+            'Files go to copies › ‹genre› › Boukmanflow › one folder per album',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text(genreNote), findsOneWidget);
+        await tester.ensureVisible(find.text('Add every album'));
+        await tester.pump();
+        await tester.tap(find.text('Add every album'));
+        await frames(tester);
+        expect(
+          find.text(
+            'They land on your server in copies › ‹genre› › Boukmanflow, one '
+            'folder per album. Songs you already have are skipped.\n\n'
+            '$genreNote',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Cancel').last);
+        await frames(tester);
+      },
+    );
+
+    testWidgets(
+      'Retry on a copy that ran somewhere else names where it adds now, the '
+      'slot and its note with it',
+      (tester) async {
+        const layout = 'From friends/{{ARTIST}}';
+        useLayout(layout);
+        final failed = h.fake.addJob(
+          nightMarketRows().first,
+          scope: 'album',
+          state: 'failed',
+        );
+        failed['error'] = 'Stage Peer B went away';
+        failed['params'] = {
+          'scope': 'album',
+          'destination': {'vpath': 'copies', 'base': 'Old', 'layout': layout},
+        };
+        await openSampler(tester);
+        await tester.longPress(find.text('Night Market Sampler').first);
+        await frames(tester, 8);
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        expect(
+          inCard(
+            line(
+              'Retry adds to copies › From friends › ‹artist›, your saved '
+              'place now',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('keep-again-slot-note')),
+            matching: find.text(artistNote),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          spanOf(tester, 'keep-job', '‹artist›')?.style?.fontStyle,
+          FontStyle.italic,
+        );
+      },
+    );
+
+    testWidgets(
+      "a song whose ARTIST tag names a guest: This song lands under the tag "
+      'as written, Album under the slot',
+      (tester) async {
+        useLayout('From friends/{{ARTIST}}');
+        h.facts.albums['Borrowed Tapes'] = featuredTapes();
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        expect(
+          line('Files go to copies › From friends › Boukmanflow feat. ALM'),
+          findsOneWidget,
+          reason: "the file's tag, not the row's Boukmanflow",
+        );
+        expect(find.byKey(const ValueKey('keep-slot-note')), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('keep-chip-album')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › From friends › ‹artist›'),
+          findsOneWidget,
+        );
+        expect(find.text(artistNote), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'every album under a layout that names no album: one folder for them '
+      'all, said so in the question',
+      (tester) async {
+        useLayout('From friends/{{ARTIST}}');
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+        await frames(tester);
+        await tester.tap(find.byKey(const ValueKey('keep-only-missing')));
+        await frames(tester);
+        expect(
+          line('Files go to copies › From friends › Boukmanflow'),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(find.text('Add every album'));
+        await tester.pump();
+        await tester.tap(find.text('Add every album'));
+        await frames(tester);
+        expect(
+          find.text(
+            'They land on your server in copies › From friends › '
+            'Boukmanflow. Songs you already have are skipped.',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Cancel').last);
+        await frames(tester);
+      },
+    );
+
+    testWidgets(
+      "an every-album copy's Retry names where it adds now as Files go to "
+      'does: one folder per album under it',
+      (tester) async {
+        const layout = '{{ARTIST}}/{{ALBUM}}';
+        useLayout(layout);
+        // Borrowed Tapes is already here: no only-missing box, every album.
+        h.facts.libraryAlbums['boukmanflow'] = [
+          ...h.facts.libraryAlbums['boukmanflow']!,
+          'Borrowed Tapes',
+        ];
+        final failed = h.fake.addJob(
+          keepRow('Late Train Verse', track: '02 - ', similarity: 0.95),
+          scope: 'artist',
+          state: 'failed',
+        );
+        failed['error'] = 'Stage Peer B went away';
+        failed['params'] = {
+          'scope': 'artist',
+          'destination': {'vpath': 'copies', 'base': 'Old', 'layout': layout},
+        };
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+        await frames(tester);
+        expect(inCard(find.text('Copy failed')), findsOneWidget);
+        expect(
+          inCard(
+            line(
+              'Retry adds to copies › Boukmanflow › one folder per album, '
+              'your saved place now',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('keep-again-slot-note')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      "the one album an only-missing copy takes: its folder carries the "
+      "year the connected server's album list gives it",
+      (tester) async {
+        useLayout('{{ARTIST}}/{{YEAR}}/{{ALBUM}}');
+        h.facts.peerAlbums['boukmanflow'] = ['Borrowed Tapes', 'B-Sides'];
+        h.facts.albumYears['B-Sides'] = 2017;
+        h.facts.libraryAlbums['boukmanflow'] = [
+          ...h.facts.libraryAlbums['boukmanflow']!,
+          'Borrowed Tapes',
+        ];
+        await h.pumpDiscover(tester);
+        await openSongSheet(tester, 'Late Train Verse');
+        await tester.tap(find.byKey(const ValueKey('keep-chip-artist')));
+        await frames(tester);
+        expect(find.text("Only the 1 album you don't have"), findsOneWidget);
+        expect(
+          line('Files go to copies › Boukmanflow › 2017 › B-Sides'),
+          findsOneWidget,
+          reason: "not this row's 2019: B-Sides is another album",
+        );
+      },
+    );
+  });
 }

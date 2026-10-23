@@ -97,6 +97,12 @@ const String _kChipArtist = kScopeArtist;
 /// between the › separators.
 String _hold(String s) => s.replaceAll(' ', '\u00A0');
 
+/// A path not landed yet as the card draws it: its [crumbs] (library \u203A
+/// folders, slot marks inside), whether an artist copy's albums each take a
+/// folder under it ([perAlbum]: "\u203A one folder per album"), and the [scope]
+/// whose note it takes ([keepSlotNote]).
+typedef _Place = ({List<String> crumbs, bool perAlbum, String scope});
+
 class _KeepCopySectionState extends State<KeepCopySection> {
   late String? _chip = widget.initialChoice == kScopeArtistMissing
       ? _kChipArtist
@@ -227,41 +233,58 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     return m != null && m.length == 1 ? m.first : null;
   }
 
-  List<String> _crumbs(String scope) {
+  /// Where a copy of [scope] lands ([scopeTarget]): this row's tags, its
+  /// genre when the album's listing tells it, the listing itself (an album
+  /// copy's songs each file under their own artist, year and genre), and
+  /// the one album an only-missing copy takes when only one is missing.
+  /// Null while where files land is unknown.
+  ScopeTarget? _target(String scope) {
     final d = jobs.destination?.destination;
-    if (d == null) return const [];
-    final artistScope = scope == kScopeArtist || scope == kScopeArtistMissing;
-    final one = artistScope ? _oneMissing(scope) : null;
-    // This row's year speaks only for this row's album.
-    final ownAlbum =
-        !artistScope || (one != null && nameKey(one) == nameKey(lead.album));
-    final t = previewTarget(
+    if (d == null) return null;
+    final facts = widget.facts.facts;
+    final one = _oneMissing(scope);
+    return scopeTarget(
       vpath: d.vpath,
       base: d.base,
       layout: d.layout,
+      scope: scope,
       tags: {
-        'artist': lead.artist,
-        // An artist copy lands album by album, so no one album names the
-        // folder — unless only one is missing, which it then names.
-        'album': artistScope ? one : lead.album,
-        'year': ownAlbum ? lead.year : null,
-        // The artist walk copies the artist's own albums, credited to the
-        // artist (federation-copy asks album-songs by albumArtist = the
-        // artist): ALBUMARTIST falls back to the artist, never this row's
-        // compilation credit ("Various Artists").
-        'albumartist': artistScope ? null : lead.albumArtist,
+        // This song files under its file's ARTIST tag as written ("A feat.
+        // B"), which the album's listing tells — the row names A alone.
+        'artist': scope == kScopeSong
+            ? facts.artistOf(lead.filepath) ?? lead.artist
+            : lead.artist,
+        'album': lead.album,
+        'year': lead.year,
+        'genre': facts.genreOf(lead.filepath),
+        'albumartist': lead.albumArtist,
       },
+      albumSongs: facts.layoutSongs,
+      oneAlbum: one == null ? null : (name: one, year: _yearOf(one)),
       peerName: widget.peerName,
       fileName: lead.filepath,
     );
-    return t.valid ? t.crumbs : [if (d.vpath.isNotEmpty) d.vpath];
   }
 
-  bool _folderPerAlbum(String scope) {
-    final layout = jobs.destination?.destination?.layout ?? '';
-    return (scope == kScopeArtist || scope == kScopeArtistMissing) &&
-        _oneMissing(scope) == null &&
-        RegExp(r'\{\{\s*ALBUM\s*\}\}', caseSensitive: false).hasMatch(layout);
+  /// [album]'s year, one of the artist's on the connected server: what its
+  /// album list says, else this row's when it is this row's album.
+  int? _yearOf(String album) =>
+      widget.facts.facts.peerAlbumYears?[nameKey(album)] ??
+      (nameKey(album) == nameKey(lead.album) ? lead.year : null);
+
+  /// Where a copy of [scope] lands as the card draws it ([_Place]): library
+  /// › folders (slot marks inside), the library alone when the layout or
+  /// the base folder would be refused. Null while where files land is
+  /// unknown.
+  _Place? _place(String scope) {
+    final d = jobs.destination?.destination;
+    final t = _target(scope);
+    if (t == null || d == null) return null;
+    return (
+      crumbs: t.valid ? t.crumbs : [if (d.vpath.isNotEmpty) d.vpath],
+      perAlbum: t.perAlbum,
+      scope: scope,
+    );
   }
 
   /// The card grows downward when a chip is chosen (the only-missing box,
@@ -310,12 +333,20 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     }
     final peer = widget.peerName;
     final known = count != null && count > 0;
+    final place = _place(scope);
+    final crumbs = place?.crumbs ?? const <String>[];
+    final path = keepPathText(l, crumbs);
+    // A layout that names no album's folder puts every album in one.
+    final body = place != null && !place.perAlbum
+        ? l.discoverKeepConfirmBodyFlat(path)
+        : l.discoverKeepConfirmBody(path);
+    final note = keepSlotNote(l, slotsIn(crumbs), scope: scope);
     return fedConfirm(
       context,
       title: known
           ? l.discoverKeepConfirmTitle(count, peer)
           : l.discoverKeepConfirmEveryTitle(lead.artist, peer),
-      message: l.discoverKeepConfirmBody(_crumbs(scope).join(' › ')),
+      message: note == null ? body : '$body\n\n$note',
       confirmLabel: known
           ? l.discoverKeepConfirmAction(count)
           : l.discoverKeepConfirmEveryAction,
@@ -367,7 +398,8 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   /// The song the destination picker previews: this row's, or in album
   /// focus the album's first song once its songs are known.
   DestinationPreviewSong _previewSong() {
-    final songs = widget.albumFocus ? widget.facts.facts.albumSongs : null;
+    final facts = widget.facts.facts;
+    final songs = widget.albumFocus ? facts.albumSongs : null;
     if (songs != null && songs.isNotEmpty) {
       final s = songs.first;
       final m = s.metadata;
@@ -375,14 +407,22 @@ class _KeepCopySectionState extends State<KeepCopySection> {
           (v ?? '').trim().isNotEmpty ? v : or;
       return DestinationPreviewSong(
         title: pick(m?.title, s.name) ?? s.name,
-        artist: pick(m?.artist, lead.artist) ?? lead.artist,
+        // Its ARTIST tag as written ("A feat. B"): where its copy files.
+        artist:
+            pick(m?.artistDisplay, pick(m?.artist, lead.artist)) ?? lead.artist,
         album: pick(m?.album, lead.album),
         albumArtist: lead.albumArtist,
-        year: m?.year ?? lead.year,
+        // Its own year, or none: a copy has no year to fall back to.
+        year: m?.year,
+        genre: facts.genreOf(s.data),
         filepath: s.data,
       );
     }
-    return DestinationPreviewSong.ofLead(lead);
+    return DestinationPreviewSong.ofLead(
+      lead,
+      artist: facts.artistOf(lead.filepath),
+      genre: facts.genreOf(lead.filepath),
+    );
   }
 
   /// "Copies go to your server, not this phone": until the first copy
@@ -421,10 +461,10 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   /// never landed): the card names it before the verb is pressed, since
   /// the job's line hides "Files go to". Null when it is the same place, or
   /// where files land now is unknown.
-  String? _againPlace(DiscoveryJob job, String scope) {
+  _Place? _againPlace(DiscoveryJob job, String scope) {
     final now = jobs.destination?.destination;
     if (now == null || sameDestination(job.destination, now)) return null;
-    return _crumbs(scope).map(_hold).join(' › ');
+    return _place(scope);
   }
 
   DisplayItem _ownFile(String filepath) {
@@ -698,7 +738,8 @@ class _KeepCopySectionState extends State<KeepCopySection> {
   }
 
   Widget _destination(AppLocalizations l, String scope) {
-    final crumbs = _crumbs(scope);
+    final place = _place(scope);
+    final crumbs = place?.crumbs ?? const <String>[];
     final strong = TextStyle(
       color: VelvetColors.textPrimary,
       fontSize: 13,
@@ -715,9 +756,11 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     ];
     for (var i = 0; i < crumbs.length; i++) {
       if (i > 0) spans.add(TextSpan(text: ' › ', style: soft));
-      spans.add(TextSpan(text: _hold(crumbs[i]), style: strong));
+      spans.addAll(keepCrumbSpans(l, crumbs[i], style: strong, hold: _hold));
     }
-    if (_folderPerAlbum(scope)) {
+    // A slot in the path: one quiet line under it says why.
+    final note = keepSlotNote(l, slotsIn(crumbs), scope: scope);
+    if (place?.perAlbum == true) {
       spans.add(TextSpan(text: ' › ', style: soft));
       spans.add(
         TextSpan(text: _hold(l.discoverKeepFolderPerAlbum), style: soft),
@@ -739,7 +782,14 @@ class _KeepCopySectionState extends State<KeepCopySection> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 13),
-            child: Text.rich(TextSpan(children: spans)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(TextSpan(children: spans)),
+                if (note != null)
+                  _SlotNote(note, key: const ValueKey('keep-slot-note')),
+              ],
+            ),
           ),
         ),
         Semantics(
@@ -825,7 +875,7 @@ class _JobLine extends StatelessWidget {
   /// Where Retry or Add again lands now, when the copy ran somewhere else
   /// ("Retry adds to copies › …, your saved place now"); null when it is
   /// the same place.
-  final String? againPlace;
+  final _Place? againPlace;
 
   const _JobLine({
     super.key,
@@ -840,6 +890,50 @@ class _JobLine extends StatelessWidget {
     required this.onQueue,
     this.againPlace,
   });
+
+  /// "Retry adds to copies › …, your saved place now": the sentence [addsTo]
+  /// makes, the path's segments held together and its slots set apart as
+  /// "Files go to"'s are, an artist copy's "one folder per album" after it;
+  /// under it the slots' note when it shows any.
+  List<Widget> _againLines(
+    AppLocalizations l,
+    String Function(String place) addsTo,
+    _Place place,
+    Color text2,
+  ) {
+    const mark = '\uE002';
+    final words = addsTo(mark).split(mark);
+    final crumbs = place.crumbs;
+    final perAlbum = place.perAlbum
+        ? ' › ${_hold(l.discoverKeepFolderPerAlbum)}'
+        : '';
+    final path = <InlineSpan>[
+      for (var i = 0; i < crumbs.length; i++) ...[
+        if (i > 0) const TextSpan(text: ' › '),
+        ...keepCrumbSpans(l, crumbs[i], hold: _hold),
+      ],
+      if (perAlbum.isNotEmpty) TextSpan(text: perAlbum),
+    ];
+    final plain =
+        crumbs.map((c) => _hold(keepPathText(l, [c]))).join(' › ') + perAlbum;
+    final note = keepSlotNote(l, slotsIn(crumbs), scope: place.scope);
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text.rich(
+          TextSpan(
+            style: TextStyle(color: text2, fontSize: 13, height: 1.35),
+            children: words.length == 2
+                ? [TextSpan(text: words[0]), ...path, TextSpan(text: words[1])]
+                // A translation that does not name the place once: as text.
+                : [TextSpan(text: addsTo(plain))],
+          ),
+        ),
+      ),
+      if (note != null)
+        _SlotNote(note, key: const ValueKey('keep-again-slot-note')),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1089,7 +1183,6 @@ class _JobLine extends StatelessWidget {
     // somewhere else, the card says where before the verb is pressed.
     final place = againPlace;
     final addsTo = againAddsTo;
-    if (place != null && addsTo != null) subs.add(addsTo(place));
 
     return Padding(
       key: const ValueKey('keep-job'),
@@ -1150,6 +1243,8 @@ class _JobLine extends StatelessWidget {
                   style: TextStyle(color: text2, fontSize: 13, height: 1.35),
                 ),
               ),
+            if (place != null && addsTo != null)
+              ..._againLines(l, addsTo, place, text2),
             if (actions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -1160,6 +1255,25 @@ class _JobLine extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The quiet line under a path that shows slots ([keepSlotNote]).
+class _SlotNote extends StatelessWidget {
+  final String text;
+  const _SlotNote(this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: VelvetColors.textSecondary,
+        fontSize: 12,
+        height: 16 / 12,
+      ),
+    ),
+  );
 }
 
 /// The first-use note (FedNote's shape in the canvas's kit): raised, radius

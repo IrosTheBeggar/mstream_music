@@ -4788,6 +4788,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'Trafią na twój serwer do $path. Utwory, które już masz, zostaną pominięte.';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5200,26 +5205,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase =>
-      'Popraw folder bazowy, aby zobaczyć, gdzie trafią pliki';
-
-  @override
   String get discoverDestFixLayout =>
       'Popraw układ, aby zobaczyć, gdzie trafią pliki';
 
   @override
   String get discoverDestLibrary => 'Biblioteka';
-
-  @override
-  String get discoverDestBase => 'Folder bazowy';
-
-  @override
-  String get discoverDestBaseHint => 'katalog główny biblioteki';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return 'Wewnątrz „$library”. Zostaw puste, aby użyć katalogu głównego biblioteki.';
-  }
 
   @override
   String get discoverDestLayout => 'Układ';
@@ -5284,8 +5274,13 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '„$folder” to folder ustawiony na innym urządzeniu, ale w układzie jest czytany jako zmienna. Zmień tu jego nazwę albo wybierz układ.';
+  }
+
+  @override
   String get discoverDestErrAbsolute =>
-      'Układ nie może zaczynać się od / — zaczyna się w folderze bazowym.';
+      'Układ nie może zaczynać się od / — zaczyna się w bibliotece.';
 
   @override
   String get discoverDestErrTraversal =>
@@ -5323,8 +5318,48 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverDestGenreSlot => 'gatunek';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot pochodzi ze znacznika gatunku każdego pliku (pomijany, gdy plik go nie ma).';
+  String get discoverDestArtistSlot => 'wykonawca';
+
+  @override
+  String get discoverDestYearSlot => 'rok';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots pochodzi ze znaczników utworu (dla utworu bez gatunku ten folder jest pomijany).';
   }
 
   @override

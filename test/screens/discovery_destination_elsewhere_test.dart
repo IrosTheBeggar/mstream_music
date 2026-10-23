@@ -1,11 +1,13 @@
 // Where copies land, and Open elsewhere (the design canvas's
 // PhoneDestination and PhoneElsewhere boards): the destination picker from
 // the Keep card's Change — the library default, the live preview of where
-// this song lands, the writable libraries, the base folder, the layouts and
-// Custom (a layout typed by hand: its field, the variables, the validator's
-// words as typed), Save and "Use the library default", a refusal in the
-// server's words, saving, loading, no library, uploads off, a failed read,
-// the keyboard, German — and the links plug-in's sub-sheet over the song
+// this song lands, the writable libraries, the layouts and Custom (a layout
+// typed by hand: its field, the variables, the validator's words as typed),
+// no base folder (one set elsewhere opens in Custom, in front of the
+// layout, and is saved as none), Save and "Use the library default", a
+// refusal in the server's words, saving, loading, no library, uploads off,
+// a failed read, the keyboard, German — and the links plug-in's sub-sheet
+// over the song
 // sheet: loading, exact pages then searches, opening outside the app, a
 // link that will not open, empty, and the server's error.
 //
@@ -103,11 +105,28 @@ void main() {
   Map<String, dynamic> lastPut() =>
       jsonDecode(k.fake.calls('PUT', _dest).last.body) as Map<String, dynamic>;
 
+  /// The account's destination as the webapp or the terminal saved it: a
+  /// base folder [base] with [layout], in force.
+  void savedElsewhere(String base, String layout) {
+    final mine = {'vpath': 'copies', 'base': base, 'layout': layout};
+    k.fake.destination = {
+      ...k.fake.destination,
+      'destination': {...mine, 'source': 'user'},
+      'saved': mine,
+    };
+  }
+
+  /// A line as read, its no-break spaces read as spaces.
+  Finder line(String text) => find.byWidgetPredicate(
+    (w) =>
+        w is RichText && w.text.toPlainText().replaceAll('\u00A0', ' ') == text,
+  );
+
   group('the destination picker', () {
     testWidgets(
       'Change opens it over the sheet: the library default in force, where '
-      'this song lands, the writable libraries, the base folder, the '
-      'layouts; Save waits for a change',
+      'this song lands, the writable libraries, then the layouts — no base '
+      'folder; Save waits for a change',
       (tester) async {
         await openPicker(tester);
         expect(tester.takeException(), isNull);
@@ -129,12 +148,19 @@ void main() {
           find.byKey(const ValueKey('destination-library-copies')),
           findsOneWidget,
         );
-        expect(find.text('copies /'), findsOneWidget);
-        expect(find.text('library root'), findsOneWidget);
+        // LIBRARY, then LAYOUT: nothing of a base folder between them.
+        expect(find.text('LIBRARY'), findsOneWidget);
+        expect(find.text('LAYOUT'), findsOneWidget);
         expect(
-          find.text('Inside copies. Leave empty for the library root.'),
-          findsOneWidget,
+          tester.getTopLeft(find.text('LIBRARY')).dy,
+          lessThan(tester.getTopLeft(find.text('LAYOUT')).dy),
         );
+        expect(find.text('BASE FOLDER'), findsNothing);
+        expect(find.byKey(const ValueKey('destination-base')), findsNothing);
+        expect(find.text('copies /'), findsNothing);
+        expect(find.text('library root'), findsNothing);
+        expect(find.textContaining('Leave empty'), findsNothing);
+        expect(find.byType(TextField), findsNothing, reason: 'Custom is shut');
         expect(find.text('Artist / Album'), findsOneWidget);
         expect(find.text('{{ALBUMARTIST}}/{{ALBUM}}'), findsOneWidget);
         expect(find.text('Server / Artist / Album'), findsOneWidget);
@@ -151,13 +177,15 @@ void main() {
     );
 
     testWidgets(
-      'typing a base folder moves the preview; Save sends it, toasts where '
-      'copies land, the tag reads yours; Use the library default saves none',
+      'a folder typed in front of the layout in Custom moves the preview; '
+      'Save sends it in the layout with no base folder, toasts where copies '
+      'land, the tag reads yours; Use the library default saves none',
       (tester) async {
         await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
         await tester.enterText(
-          find.byKey(const ValueKey('destination-base')),
-          'from-peers',
+          find.byKey(const ValueKey('destination-custom')),
+          'from-peers/{{ALBUMARTIST}}/{{ALBUM}}',
         );
         await frames(tester, 2);
         expect(
@@ -168,10 +196,12 @@ void main() {
         expect(lastPut(), {
           'destination': {
             'vpath': 'copies',
-            'base': 'from-peers',
-            'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+            'base': '',
+            'layout': 'from-peers/{{ALBUMARTIST}}/{{ALBUM}}',
           },
         });
+        // Where every copy lands: the layout's leading folders that name no
+        // variable, as a base folder read.
         expect(toasts, ['Saved · copies land in copies › from-peers']);
         expect(successes, [true], reason: 'the check toast');
         expect(find.text('yours'), findsOneWidget);
@@ -277,10 +307,6 @@ void main() {
           preview(tester),
           'demo › Boukmanflow › 2019 - Borrowed Tapes › 02 - Late Train Verse.mp3',
         );
-        expect(
-          find.text('Inside demo. Leave empty for the library root.'),
-          findsOneWidget,
-        );
         await tapKey(tester, 'destination-save');
         expect(lastPut(), {
           'destination': {
@@ -293,42 +319,57 @@ void main() {
     );
 
     testWidgets(
-      "a base folder the server would refuse: the preview waits; Save's 400 "
-      "puts the server's words under the field; typing clears them",
+      'Use the library default, its Path Template starting with a plain '
+      'folder: the toast names that folder, as every copy lands in it',
+      (tester) async {
+        k.fake.destination = {
+          ...k.fake.destination,
+          'libraries': [
+            {'vpath': 'copies', 'template': 'Music/{{ALBUMARTIST}}/{{ALBUM}}'},
+          ],
+        };
+        savedElsewhere('', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        await tapText(tester, 'Use the library default');
+        expect(lastPut(), {'destination': null});
+        expect(toasts, ['Saved · copies land in copies › Music']);
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey(
+                'destination-layout-Music/{{ALBUMARTIST}}/{{ALBUM}}',
+              ),
+            ),
+          ),
+          isSemantics(label: 'Library layout', isChecked: true),
+        );
+        expect(
+          preview(tester),
+          'copies › Music › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+      },
+    );
+
+    testWidgets(
+      "a refusal that names neither the layout nor a field: the server's "
+      'words under the form; the next change clears them',
       (tester) async {
         await openPicker(tester);
-        await tester.enterText(
-          find.byKey(const ValueKey('destination-base')),
-          '../shared',
-        );
-        await frames(tester, 2);
-        expect(
-          find.text('Fix the base folder to see where files land'),
-          findsOneWidget,
-        );
-        expect(find.byKey(const ValueKey('destination-preview')), findsNothing);
-        k.fake.refuseOn['PUT $_dest'] = (
-          400,
-          'destination base folder: Resolved path cannot contain .. segments',
-        );
+        await tapText(tester, 'Server / Artist / Album');
+        const words = "destination: you cannot put files into library 'copies'";
+        k.fake.refuseOn['PUT $_dest'] = (400, words);
         await tapKey(tester, 'destination-save');
         expect(
           find.descendant(
-            of: find.byKey(const ValueKey('destination-base-error')),
-            matching: find.text(
-              'destination base folder: Resolved path cannot contain .. segments',
-            ),
+            of: find.byKey(const ValueKey('destination-save-error')),
+            matching: find.text(words),
           ),
           findsOneWidget,
         );
         expect(toasts, isEmpty);
-        await tester.enterText(
-          find.byKey(const ValueKey('destination-base')),
-          'shared',
-        );
-        await frames(tester, 2);
+        await tapKey(tester, 'destination-library-copies');
         expect(
-          find.byKey(const ValueKey('destination-base-error')),
+          find.byKey(const ValueKey('destination-save-error')),
           findsNothing,
         );
       },
@@ -338,23 +379,31 @@ void main() {
       tester,
     ) async {
       await openPicker(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('destination-base')),
-        'from-peers',
-      );
-      await frames(tester, 2);
+      await tapText(tester, 'Server / Artist / Album');
       k.fake.destinationGate = Completer<void>();
       await tapKey(tester, 'destination-save');
       expect(find.text('Saving…'), findsOneWidget);
-      final field = tester.widget<TextField>(
-        find.byKey(const ValueKey('destination-base')),
+      // Locked: another layout, or Custom, is not taken.
+      await tester.tap(find.text('Artist / Album'));
+      await tester.tap(find.byKey(const ValueKey('destination-custom-option')));
+      await tester.pump();
+      expect(
+        tester.getSemantics(
+          find.byKey(
+            const ValueKey(
+              'destination-layout-{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+            ),
+          ),
+        ),
+        isSemantics(label: 'Server / Artist / Album', isChecked: true),
       );
-      expect(field.enabled, isFalse);
+      expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
       k.fake.destinationGate!.complete();
       k.fake.destinationGate = null;
       await frames(tester);
       expect(find.text('Saving…'), findsNothing);
       expect(find.text('yours'), findsOneWidget);
+      expect(k.fake.count('PUT', _dest), 1);
     });
 
     testWidgets("from the album sheet it previews the album's first song", (
@@ -371,6 +420,507 @@ void main() {
         'copies › Boukmanflow › Borrowed Tapes › 01 - Rooftop Cypher.mp3',
       );
     });
+  });
+
+  group('the destination picker: a base folder saved elsewhere', () {
+    // The webapp and the terminal keep a base folder on the account's one
+    // setting; the phone has none. It opens as the start of the layout, in
+    // Custom, and is saved as none (base '').
+
+    TextField customField(WidgetTester tester) => tester.widget<TextField>(
+      find.byKey(const ValueKey('destination-custom')),
+    );
+
+    Matcher checked(String label, bool on) =>
+        isSemantics(label: label, isChecked: on);
+
+    Future<void> typeCustom(WidgetTester tester, String text) async {
+      await tester.enterText(
+        find.byKey(const ValueKey('destination-custom')),
+        text,
+      );
+      await frames(tester, 2);
+    }
+
+    testWidgets(
+      'it opens in Custom in front of the layout — no preset chosen, though '
+      'the layout is Artist / Album; the preview and the Keep card show the '
+      'same place; Save waits for an edit',
+      (tester) async {
+        savedElsewhere('From peers', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.text('yours'), findsOneWidget);
+        expect(find.byKey(const ValueKey('destination-base')), findsNothing);
+        expect(
+          customField(tester).controller!.text,
+          'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-custom-option')),
+          ),
+          checked('Custom', true),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          checked('Artist / Album', false),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey(
+                'destination-layout-{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+              ),
+            ),
+          ),
+          checked('Server / Artist / Album', false),
+        );
+        expect(customField(tester).focusNode!.hasFocus, isFalse);
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        expect(
+          preview(tester),
+          'copies › From peers › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'nothing edited');
+        // Edited, then back as it opened: the same place, nothing to save.
+        await typeCustom(tester, 'From peers/{{ALBUMARTIST}}');
+        await typeCustom(tester, 'From peers/{{ALBUMARTIST}}/{{ALBUM}}');
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'as it opened');
+        // The Keep card behind it reads the same place.
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('destination-sheet'))),
+        ).pop();
+        await frames(tester, 8);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      "an edit saves the whole layout with base '': the toast and the Keep "
+      'card read the same folder, Custom keeps it, Save waits again',
+      (tester) async {
+        savedElsewhere('From peers', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        await typeCustom(
+          tester,
+          'From peers/{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+        );
+        expect(
+          preview(tester),
+          'copies › From peers › Boukmanflow › 2019 - Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': 'From peers/{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+          },
+        });
+        expect(toasts, ['Saved · copies land in copies › From peers']);
+        expect(
+          customField(tester).controller!.text,
+          'From peers/{{ALBUMARTIST}}/{{YEAR}} - {{ALBUM}}',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 1, reason: 'saved: nothing new');
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('destination-sheet'))),
+        ).pop();
+        await frames(tester, 8);
+        expect(
+          line(
+            'Files go to copies › From peers › Boukmanflow › 2019 - Borrowed Tapes',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('another library takes the folder with it: Save sends the folded '
+        "layout there, base ''", (tester) async {
+      k.fake.destination = {
+        ...k.fake.destination,
+        'libraries': [
+          {'vpath': 'copies', 'template': null},
+          {'vpath': 'demo', 'template': null},
+        ],
+      };
+      savedElsewhere('From peers', '{{ALBUMARTIST}}/{{ALBUM}}');
+      await openPicker(tester);
+      await tapKey(tester, 'destination-library-demo');
+      expect(
+        customField(tester).controller!.text,
+        'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+      );
+      expect(
+        preview(tester),
+        'demo › From peers › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+      );
+      await tapKey(tester, 'destination-save');
+      expect(lastPut(), {
+        'destination': {
+          'vpath': 'demo',
+          'base': '',
+          'layout': 'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+        },
+      });
+    });
+
+    testWidgets(
+      'a preset chosen over it leaves the folder behind — the preview shows '
+      "so before Save, which sends the preset with base ''",
+      (tester) async {
+        savedElsewhere('From peers', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        await tapText(tester, 'Server / Artist / Album');
+        expect(
+          preview(tester),
+          'copies › Stage Peer B › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        // The layout it held, with no folder in front: an edit too.
+        await tapText(tester, 'Artist / Album');
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+        expect(
+          preview(tester),
+          'copies › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+          },
+        });
+        expect(toasts, ['Saved · copies land in copies']);
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          checked('Artist / Album', true),
+        );
+        // Custom still holds the layout with the folder, to go back to.
+        await tapKey(tester, 'destination-custom-option');
+        expect(
+          customField(tester).controller!.text,
+          'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+        );
+      },
+    );
+
+    testWidgets(
+      "Use the library default: none saved, the default's preset in force, "
+      'Custom keeps the folded layout; Save waits',
+      (tester) async {
+        savedElsewhere('From peers', 'Inbox/{{ARTIST}}');
+        await openPicker(tester);
+        expect(
+          customField(tester).controller!.text,
+          'From peers/Inbox/{{ARTIST}}',
+        );
+        await tapText(tester, 'Use the library default');
+        expect(lastPut(), {'destination': null});
+        expect(find.text('library default'), findsOneWidget);
+        expect(find.text('Use the library default'), findsNothing);
+        expect(toasts, ['Saved · copies land in copies']);
+        expect(find.byKey(const ValueKey('destination-custom')), findsNothing);
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey('destination-layout-{{ALBUMARTIST}}/{{ALBUM}}'),
+            ),
+          ),
+          checked('Artist / Album', true),
+        );
+        expect(
+          preview(tester),
+          'copies › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 1, reason: 'nothing changed');
+        await tapKey(tester, 'destination-custom-option');
+        expect(
+          customField(tester).controller!.text,
+          'From peers/Inbox/{{ARTIST}}',
+        );
+      },
+    );
+
+    testWidgets(
+      "the fold is the library's own Path Template: it still opens in Custom, "
+      'no preset chosen; Save waits',
+      (tester) async {
+        k.fake.destination = {
+          ...k.fake.destination,
+          'libraries': [
+            {
+              'vpath': 'copies',
+              'template': 'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+            },
+          ],
+        };
+        savedElsewhere('From peers', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        expect(
+          customField(tester).controller!.text,
+          'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-custom-option')),
+          ),
+          checked('Custom', true),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey(
+                'destination-layout-From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+              ),
+            ),
+          ),
+          checked('Library layout', false),
+        );
+        expect(
+          preview(tester),
+          'copies › From peers › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'nothing edited');
+      },
+    );
+
+    testWidgets(
+      "a base folder named like a variable ('{{PEER}}'): Custom, no preset — "
+      'though the fold reads as the server preset; the preview and the Keep '
+      'card show the folder; a warning names it and Save stays off, another '
+      "library too; the server preset is a change, saved with base ''",
+      (tester) async {
+        k.fake.destination = {
+          ...k.fake.destination,
+          'libraries': [
+            {'vpath': 'copies', 'template': null},
+            {'vpath': 'demo', 'template': null},
+          ],
+        };
+        savedElsewhere('{{PEER}}', '{{ALBUMARTIST}}/{{ALBUM}}');
+        await openPicker(tester);
+        expect(tester.takeException(), isNull);
+        expect(
+          customField(tester).controller!.text,
+          '{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('destination-custom-option')),
+          ),
+          checked('Custom', true),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(
+              const ValueKey(
+                'destination-layout-{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+              ),
+            ),
+          ),
+          checked('Server / Artist / Album', false),
+        );
+        // Where files land now: the folder, as the Keep card behind reads it.
+        expect(
+          preview(tester),
+          'copies › {{PEER}} › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          line('Files go to copies › {{PEER}} › Boukmanflow › Borrowed Tapes'),
+          findsOneWidget,
+        );
+        const warning =
+            '“{{PEER}}” is a folder set on another device, but in a layout '
+            'it reads as a variable. Rename it here, or choose a layout.';
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('destination-custom-invalid')),
+            matching: find.text(warning),
+          ),
+          findsOneWidget,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'nothing edited');
+        // Another library: the same text, so still not that folder.
+        await tapKey(tester, 'destination-library-demo');
+        expect(
+          preview(tester),
+          'demo › {{PEER}} › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        expect(find.text(warning), findsOneWidget);
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0, reason: 'the folder unrenamed');
+        await tapKey(tester, 'destination-library-copies');
+        // The server preset: the same text, the server's name — elsewhere.
+        await tapText(tester, 'Server / Artist / Album');
+        expect(find.text(warning), findsNothing);
+        expect(
+          preview(tester),
+          'copies › Stage Peer B › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': '{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+          },
+        });
+      },
+    );
+
+    testWidgets(
+      "a base folder named like a variable, renamed: the warning goes, the "
+      'preview follows, Save sends the layout typed; typed back, Save waits '
+      'again',
+      (tester) async {
+        savedElsewhere('{{ artist }}', '{{ALBUM}}');
+        await openPicker(tester);
+        expect(customField(tester).controller!.text, '{{ artist }}/{{ALBUM}}');
+        expect(
+          preview(tester),
+          'copies › {{ artist }} › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsOneWidget,
+        );
+        await typeCustom(tester, 'artist/{{ALBUM}}');
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsNothing,
+        );
+        expect(
+          preview(tester),
+          'copies › artist › Borrowed Tapes › 02 - Late Train Verse.mp3',
+        );
+        // As it opened: the folder read as a variable again.
+        await typeCustom(tester, '{{ artist }}/{{ALBUM}}');
+        expect(
+          find.byKey(const ValueKey('destination-custom-invalid')),
+          findsOneWidget,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0);
+        await typeCustom(tester, 'artist/{{ALBUM}}');
+        await tapKey(tester, 'destination-save');
+        expect(lastPut(), {
+          'destination': {
+            'vpath': 'copies',
+            'base': '',
+            'layout': 'artist/{{ALBUM}}',
+          },
+        });
+      },
+    );
+
+    testWidgets(
+      "the song's genre stands as a slot in the folded layout's preview, as "
+      'it does in the Keep card',
+      (tester) async {
+        savedElsewhere('From peers', '{{GENRE}}/{{ARTIST}}');
+        await openPicker(tester);
+        expect(
+          preview(tester),
+          'copies › From peers › ‹genre› › Boukmanflow › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets("a base folder no layout can hold ('Mix {b', a stray "
+        "brace): Custom names the validator's words, the preview where files "
+        'land now; Save stays off; fixed, it saves', (tester) async {
+      savedElsewhere('Mix {b', '{{ALBUMARTIST}}/{{ALBUM}}');
+      await openPicker(tester);
+      expect(
+        customField(tester).controller!.text,
+        'Mix {b/{{ALBUMARTIST}}/{{ALBUM}}',
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('destination-custom-invalid')),
+          matching: find.text(
+            'A brace is out of place — variables are written like {{ARTIST}}.',
+          ),
+        ),
+        findsOneWidget,
+      );
+      // As the Keep card behind reads it: the folder as it is.
+      expect(
+        preview(tester),
+        'copies › Mix {b › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+      );
+      expect(
+        line('Files go to copies › Mix {b › Boukmanflow › Borrowed Tapes'),
+        findsOneWidget,
+      );
+      await tapKey(tester, 'destination-save');
+      expect(k.fake.count('PUT', _dest), 0);
+      await typeCustom(tester, 'Mix b/{{ALBUMARTIST}}/{{ALBUM}}');
+      expect(
+        preview(tester),
+        'copies › Mix b › Boukmanflow › Borrowed Tapes › 02 - Late Train Verse.mp3',
+      );
+      await tapKey(tester, 'destination-save');
+      expect(lastPut(), {
+        'destination': {
+          'vpath': 'copies',
+          'base': '',
+          'layout': 'Mix b/{{ALBUMARTIST}}/{{ALBUM}}',
+        },
+      });
+    });
+
+    testWidgets(
+      'a base folder the server would refuse, should one reach the sheet: '
+      'Custom holds it as read and the validator names it; Save stays off',
+      (tester) async {
+        savedElsewhere('../x', '{{ARTIST}}');
+        await openPicker(tester);
+        expect(customField(tester).controller!.text, '../x/{{ARTIST}}');
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('destination-custom-invalid')),
+            matching: find.text("A path can't contain .. folders."),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Fix the layout to see where files land'),
+          findsOneWidget,
+        );
+        await tapKey(tester, 'destination-save');
+        expect(k.fake.count('PUT', _dest), 0);
+      },
+    );
   });
 
   group('the destination picker: Custom, a layout typed by hand', () {
@@ -542,7 +1092,8 @@ void main() {
             'layout': 'From friends',
           },
         });
-        expect(toasts, ['Saved · copies land in copies']);
+        // Every copy lands in the folder: the toast names it.
+        expect(toasts, ['Saved · copies land in copies › From friends']);
         expect(find.text('yours'), findsOneWidget);
         expect(customField(tester).controller!.text, 'From friends');
         await tapKey(tester, 'destination-save');
@@ -690,7 +1241,7 @@ void main() {
         );
         await refused(
           '/Inbox',
-          "A layout can't start with / — it begins inside the base folder.",
+          "A layout can't start with / — it begins inside the library.",
         );
         await refused('~/Inbox', r"A path can't contain ~ or $HOME.");
         await refused(r'$HOME/Inbox', r"A path can't contain ~ or $HOME.");
@@ -875,10 +1426,11 @@ void main() {
           preview(tester),
           'copies › ‹genre› › Boukmanflow › 02 - Late Train Verse.mp3',
         );
+        // One song lands in one folder: the note in a song's words.
         expect(
           find.text(
-            "‹genre› is filled from each file's genre tag (left out when a "
-            'file has none).',
+            "‹genre› comes from the song's own tags (a song with none leaves "
+            'that folder out).',
           ),
           findsOneWidget,
         );
@@ -901,7 +1453,7 @@ void main() {
         // No genre: no slot, no note.
         await typeCustom(tester, '{{ARTIST}}');
         expect(
-          find.byKey(const ValueKey('destination-preview-genre')),
+          find.byKey(const ValueKey('destination-preview-slots')),
           findsNothing,
         );
         await tapKey(tester, 'destination-save');
@@ -910,28 +1462,120 @@ void main() {
     );
 
     testWidgets(
-      'an empty Custom under a base folder the server would refuse: the '
-      'preview asks to fix the base folder first',
+      "a song whose ARTIST tag names a guest: the preview files it under the "
+      'tag as written, as its copy does',
       (tester) async {
+        k.facts.albums['Borrowed Tapes'] = featuredTapes();
         await openPicker(tester);
         await tapKey(tester, 'destination-custom-option');
-        await tester.enterText(
-          find.byKey(const ValueKey('destination-base')),
-          '../x',
-        );
-        await frames(tester, 2);
+        await typeCustom(tester, '{{ARTIST}}');
         expect(
-          find.text('Fix the base folder to see where files land'),
+          preview(tester),
+          'copies › Boukmanflow feat. ALM › 02 - Late Train Verse.mp3',
+        );
+      },
+    );
+
+    testWidgets(
+      "from the album sheet: the first song's genre and ARTIST tag, as the "
+      "album's listing tells them",
+      (tester) async {
+        k.facts.albums['Borrowed Tapes'] = featuredTapes(
+          guestOn: 'Rooftop Cypher',
+          genres: {
+            'Rooftop Cypher': ['Hip-Hop'],
+          },
+        );
+        await k.pumpDiscover(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        await tapKey(tester, 'keep-change');
+        await frames(tester, 4);
+        expect(find.text('Rooftop Cypher lands at'), findsOneWidget);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, '{{GENRE}}/{{ARTIST}}');
+        expect(
+          preview(tester),
+          'copies › Hip-Hop › Boukmanflow feat. ALM › 01 - Rooftop Cypher.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      "from the album sheet, a first song with no year of its own: no year "
+      "folder — never the row's year, which its copy does not carry",
+      (tester) async {
+        k.facts.albums['Borrowed Tapes'] = [
+          songOf(
+            'peerlib/Boukmanflow/Borrowed Tapes/01 - Rooftop Cypher.mp3',
+            'Rooftop Cypher',
+            'Boukmanflow',
+            'Borrowed Tapes',
+            12,
+            year: null,
+          ),
+        ];
+        await k.pumpDiscover(tester);
+        await tester.longPress(find.text('Borrowed Tapes').first);
+        await frames(tester, 8);
+        await tapKey(tester, 'keep-change');
+        await frames(tester, 4);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, '{{ARTIST}}/{{YEAR}}');
+        expect(
+          preview(tester),
+          'copies › Boukmanflow › 01 - Rooftop Cypher.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-missing')),
           findsOneWidget,
         );
-        expect(find.text('Type a path to see where files land'), findsNothing);
-        await tester.enterText(
-          find.byKey(const ValueKey('destination-base')),
-          'x',
-        );
-        await frames(tester, 2);
+      },
+    );
+
+    testWidgets(
+      "a song whose genre the album's listing tells: the preview names it; "
+      'a tag the library split in two stays the slot',
+      (tester) async {
+        k.facts.genres['Late Train Verse'] = ['Hip-Hop'];
+        await openPicker(tester);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, '{{GENRE}}/{{ARTIST}}');
         expect(
-          find.text('Type a path to see where files land'),
+          preview(tester),
+          'copies › Hip-Hop › Boukmanflow › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
+          findsNothing,
+        );
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('destination-sheet'))),
+        ).pop();
+        await frames(tester);
+        Navigator.of(
+          tester.element(find.byKey(const ValueKey('keep-copy'))),
+        ).pop();
+        await frames(tester);
+
+        // "Hip-Hop/Rap": two genres in the library, one folder on a copy.
+        k.facts.genres['Late Train Verse'] = ['Hip-Hop', 'Rap'];
+        await tester.longPress(find.text('Late Train Verse'));
+        await frames(tester, 8);
+        await tapKey(tester, 'keep-change');
+        await frames(tester, 4);
+        await tapKey(tester, 'destination-custom-option');
+        await typeCustom(tester, '{{GENRE}}/{{ARTIST}}');
+        expect(
+          preview(tester),
+          'copies › ‹genre› › Boukmanflow › 02 - Late Train Verse.mp3',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
           findsOneWidget,
         );
       },
@@ -1205,22 +1849,38 @@ void main() {
     });
 
     testWidgets(
-      'the keyboard up: the sheet lifts above it and Save stays in reach',
+      'the keyboard up on a base folder saved elsewhere, in Custom: the '
+      'sheet lifts above it and Save stays in reach',
       (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': 'From peers',
+          'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+        };
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
         await pumpPicker(tester);
+        final custom = find.byKey(const ValueKey('destination-custom'));
+        await tester.ensureVisible(custom);
+        await tester.pump();
         tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3);
         addTearDown(tester.view.resetViewInsets);
-        await tester.tap(find.byKey(const ValueKey('destination-base')));
+        await tester.tap(custom);
         await KeepHarness.pumpFor(tester);
         expect(tester.takeException(), isNull);
         final save = tester.getRect(
           find.byKey(const ValueKey('destination-save')),
         );
         expect(save.bottom, lessThanOrEqualTo(844 - 300));
-        final field = tester.getRect(
-          find.byKey(const ValueKey('destination-base')),
-        );
+        final field = tester.getRect(custom);
         expect(field.bottom, lessThanOrEqualTo(844 - 300));
+        expect(
+          tester.widget<TextField>(custom).controller!.text,
+          'From peers/{{ALBUMARTIST}}/{{ALBUM}}',
+        );
       },
     );
 
@@ -1357,8 +2017,9 @@ void main() {
         Locale('de'),
       ),
     ]) {
-      testWidgets('the keyboard up on $name: Custom and the base folder in '
-          'view', (tester) async {
+      testWidgets('the keyboard up on $name: Custom in view, Save in reach', (
+        tester,
+      ) async {
         await pumpPicker(
           tester,
           width: width,
@@ -1406,13 +2067,6 @@ void main() {
         await KeepHarness.pumpFor(tester);
         expect(tester.takeException(), isNull);
         await inView('destination-custom');
-
-        await tester.showKeyboard(
-          find.byKey(const ValueKey('destination-base')),
-        );
-        await KeepHarness.pumpFor(tester);
-        expect(tester.takeException(), isNull);
-        await inView('destination-base');
         expect(
           tester.getRect(find.byKey(const ValueKey('destination-save'))).bottom,
           lessThanOrEqualTo(height - keyboard),

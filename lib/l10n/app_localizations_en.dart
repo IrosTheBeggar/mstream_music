@@ -4660,6 +4660,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'They land on your server in $path. Songs you already have are skipped.';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5046,25 +5051,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase =>
-      'Fix the base folder to see where files land';
-
-  @override
   String get discoverDestFixLayout => 'Fix the layout to see where files land';
 
   @override
   String get discoverDestLibrary => 'Library';
-
-  @override
-  String get discoverDestBase => 'Base folder';
-
-  @override
-  String get discoverDestBaseHint => 'library root';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return 'Inside $library. Leave empty for the library root.';
-  }
 
   @override
   String get discoverDestLayout => 'Layout';
@@ -5128,8 +5118,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '“$folder” is a folder set on another device, but in a layout it reads as a variable. Rename it here, or choose a layout.';
+  }
+
+  @override
   String get discoverDestErrAbsolute =>
-      'A layout can\'t start with / — it begins inside the base folder.';
+      'A layout can\'t start with / — it begins inside the library.';
 
   @override
   String get discoverDestErrTraversal => 'A path can\'t contain .. folders.';
@@ -5166,8 +5161,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverDestGenreSlot => 'genre';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot is filled from each file\'s genre tag (left out when a file has none).';
+  String get discoverDestArtistSlot => 'artist';
+
+  @override
+  String get discoverDestYearSlot => 'year';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots come from each song\'s own tags, so these songs can land in more than one folder.',
+      one:
+          '$slots comes from each song\'s own tags, so these songs can land in more than one folder.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots come from each song\'s own tags, so these songs can land in more than one folder (a song with none leaves that folder out).',
+      one:
+          '$slots comes from each song\'s own tags, so these songs can land in more than one folder (a song with none leaves that folder out).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots comes from the song\'s own tags (a song with none leaves that folder out).';
   }
 
   @override

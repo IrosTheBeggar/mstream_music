@@ -132,24 +132,85 @@ List<Map<String, dynamic>> compilationRows() => [
   ),
 ];
 
-/// One song of an album-songs answer.
+/// One song of an album-songs answer ([genres] the library's split of its
+/// genre tag; [artistDisplay] its ARTIST tag as written).
 Map<String, dynamic> songOf(
   String path,
   String title,
   String artist,
   String album,
   int seconds, {
-  int year = 2019,
+  int? year = 2019,
+  List<String> genres = const [],
+  String? artistDisplay,
 }) => {
   'filepath': path,
   'metadata': {
     'title': title,
     'artist': artist,
+    'artist-display': ?artistDisplay,
     'album': album,
     'year': year,
     'duration': seconds,
+    'genres': genres,
   },
 };
+
+/// The stage's compilation on Stage Peer B (found live 2026-10-22): "Night
+/// Market Sampler", credited to Various Artists, its songs by Color Out,
+/// Boukmanflow and ALM — an album copy files each song under its own
+/// artist. Discover shows Boukmanflow's song of it.
+List<Map<String, dynamic>> nightMarketRows() => [
+  keepRow(
+    'Lantern Row',
+    album: 'Night Market Sampler',
+    albumArtist: 'Various Artists',
+    year: 2020,
+    track: '02 - ',
+    similarity: 0.85,
+  ),
+];
+
+/// Its album-songs answer.
+List<Map<String, dynamic>> nightMarketSongs() => [
+  for (final (i, (title, artist)) in const [
+    ('Neon Stalls', 'Color Out'),
+    ('Lantern Row', 'Boukmanflow'),
+    ('Last Ferry', 'ALM'),
+  ].indexed)
+    songOf(
+      'peerlib/$artist/Night Market Sampler/0${i + 1} - $title.mp3',
+      title,
+      artist,
+      'Night Market Sampler',
+      60,
+      year: 2020,
+    ),
+];
+
+/// Borrowed Tapes as the peer lists it, the ARTIST tag of [guestOn] naming
+/// a guest ("Boukmanflow feat. ALM": a copy of it files there, not under the
+/// row's Boukmanflow); [genres] the library's split of each one's genre tag,
+/// by title.
+List<Map<String, dynamic>> featuredTapes({
+  String guestOn = 'Late Train Verse',
+  Map<String, List<String>> genres = const {},
+}) => [
+  for (final (i, title) in const [
+    'Rooftop Cypher',
+    'Late Train Verse',
+    'Corner Store Loop',
+  ].indexed)
+    songOf(
+      'peerlib/Boukmanflow/Borrowed Tapes/0${i + 1} - $title.mp3',
+      title,
+      'Boukmanflow',
+      'Borrowed Tapes',
+      9,
+      artistDisplay: title == guestOn ? 'Boukmanflow feat. ALM' : null,
+      genres: genres[title] ?? const [],
+    ),
+];
 
 /// The facts the sheets ask: album-songs and artists-albums, through a
 /// peer (its virtual Server) or on the user's own server; every request
@@ -158,6 +219,15 @@ class FakeFacts {
   final List<(String server, String location, Map body)> asked = [];
   bool peerDown = false;
   Completer<void>? gate;
+
+  /// Albums answered as given, by name (before the stage's own).
+  Map<String, List<Map<String, dynamic>>> albums = {};
+
+  /// Borrowed Tapes' songs' genres, by title (none by default).
+  Map<String, List<String>> genres = {};
+
+  /// The year artists-albums gives an album, by name (2019 by default).
+  Map<String, int> albumYears = {};
 
   /// Albums by artist, per side.
   Map<String, List<String>> peerAlbums = {
@@ -184,6 +254,9 @@ class FakeFacts {
     if (server.isFederated && peerDown) throw Exception('502');
     final artist = '${body['artist'] ?? ''}'.toLowerCase();
     if (location.endsWith('/db/album-songs')) {
+      final given = albums[body['album']];
+      if (given != null) return given;
+      if (body['album'] == 'Night Market Sampler') return nightMarketSongs();
       if (body['album'] == 'Borrowed Tapes') {
         return [
           songOf(
@@ -192,6 +265,7 @@ class FakeFacts {
             'Boukmanflow',
             'Borrowed Tapes',
             12,
+            genres: genres['Rooftop Cypher'] ?? const [],
           ),
           songOf(
             'peerlib/Boukmanflow/Borrowed Tapes/02 - Late Train Verse.mp3',
@@ -199,6 +273,7 @@ class FakeFacts {
             'Boukmanflow',
             'Borrowed Tapes',
             8,
+            genres: genres['Late Train Verse'] ?? const [],
           ),
           songOf(
             'peerlib/Boukmanflow/Borrowed Tapes/03 - Corner Store Loop.mp3',
@@ -206,6 +281,7 @@ class FakeFacts {
             'Boukmanflow',
             'Borrowed Tapes',
             9,
+            genres: genres['Corner Store Loop'] ?? const [],
           ),
         ];
       }
@@ -230,7 +306,7 @@ class FakeFacts {
           : (libraryAlbums[artist] ?? const []);
       return {
         'albums': [
-          for (final n in names) {'name': n, 'year': 2019},
+          for (final n in names) {'name': n, 'year': albumYears[n] ?? 2019},
           {'name': null, 'year': null},
         ],
       };

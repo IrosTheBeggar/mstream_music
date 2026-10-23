@@ -382,6 +382,67 @@ String keepJobText(
   };
 }
 
+/// A slot's word in the user's language, between ‹ › ("‹artist›"): a
+/// per-song variable a path not landed yet cannot promise one value for
+/// ([scopeTarget]).
+String keepSlotWord(AppLocalizations l, LayoutSlot slot) {
+  final word = switch (slot) {
+    LayoutSlot.artist => l.discoverDestArtistSlot,
+    LayoutSlot.year => l.discoverDestYearSlot,
+    LayoutSlot.genre => l.discoverDestGenreSlot,
+  };
+  return '‹$word›';
+}
+
+/// A path's [crumbs] as one plain line ("copies › From friends ›
+/// ‹artist›"), each slot as its word.
+String keepPathText(AppLocalizations l, List<String> crumbs) =>
+    crumbs.map((c) => slotText(c, (s) => keepSlotWord(l, s))).join(' › ');
+
+/// The one quiet line under a path that shows [slots] (null when it shows
+/// none): they come from each song's own tags, so the songs can land in
+/// more than one folder — and a song with no genre leaves its folder out.
+/// A copy of one song ([scope] [kScopeSong]: only its genre can be a slot)
+/// lands in one folder, and says so in its own words.
+String? keepSlotNote(
+  AppLocalizations l,
+  List<LayoutSlot> slots, {
+  required String scope,
+}) {
+  if (slots.isEmpty) return null;
+  final words = slots.map((s) => keepSlotWord(l, s)).join(', ');
+  if (scope == kScopeSong) return l.discoverKeepSlotNoteSong(words);
+  return slots.contains(LayoutSlot.genre)
+      ? l.discoverKeepSlotNoteGenre(slots.length, words)
+      : l.discoverKeepSlotNote(slots.length, words);
+}
+
+/// How a slot reads inside a path: quiet and italic, set apart from the
+/// folders the layout names (on top of the path's own style).
+TextStyle keepSlotStyle() => TextStyle(
+  color: VelvetColors.textSecondary,
+  fontStyle: FontStyle.italic,
+  fontWeight: FontWeight.w400,
+);
+
+/// One segment of a path as spans: its text in [style], each slot's word in
+/// [keepSlotStyle] — every part through [hold], so the line breaks only
+/// between the › separators.
+List<InlineSpan> keepCrumbSpans(
+  AppLocalizations l,
+  String crumb, {
+  TextStyle? style,
+  required String Function(String) hold,
+}) => [
+  for (final p in slotParts(crumb))
+    p.slot == null
+        ? TextSpan(text: hold(p.text), style: style)
+        : TextSpan(
+            text: hold(keepSlotWord(l, p.slot!)),
+            style: (style ?? const TextStyle()).merge(keepSlotStyle()),
+          ),
+];
+
 /// A page marker's word: "waiting", "copying…", "in your collection"… On an
 /// album card a copy that says how far it is reads "copying 2 of 3" ([card]).
 String keepMarkerWord(AppLocalizations l, CopyMarker m, {bool card = false}) =>

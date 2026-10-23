@@ -185,10 +185,19 @@ class FakePluginServer {
       if (destinationGate != null) await destinationGate!.future;
       if (req.method == 'PUT') {
         final d = (jsonDecode(req.body) as Map)['destination'];
+        // The library default, as destination.js destinationFor: the first
+        // library, with its own Path Template or the server's default layout.
+        final first = (destination['libraries'] as List).first as Map;
+        final template = first['template'] as String?;
         destination = {
           ...destination,
           'destination': d == null
-              ? {'vpath': 'copies', 'base': '', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}', 'source': 'default'}
+              ? {
+                  'vpath': first['vpath'],
+                  'base': '',
+                  'layout': template != null && template.isNotEmpty ? template : '{{ALBUMARTIST}}/{{ALBUM}}',
+                  'source': 'default',
+                }
               : {...d as Map, 'source': 'user'},
           'saved': d,
         };

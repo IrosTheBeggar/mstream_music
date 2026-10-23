@@ -4699,6 +4699,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'Finiscono sul tuo server in $path. I brani che hai già vengono saltati.';
+  }
+
+  @override
   String discoverKeepConfirmAction(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5090,26 +5095,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get discoverDestFixBase =>
-      'Correggi la cartella di base per vedere dove finiscono i file';
-
-  @override
   String get discoverDestFixLayout =>
       'Correggi la struttura per vedere dove finiscono i file';
 
   @override
   String get discoverDestLibrary => 'Libreria';
-
-  @override
-  String get discoverDestBase => 'Cartella di base';
-
-  @override
-  String get discoverDestBaseHint => 'radice della libreria';
-
-  @override
-  String discoverDestBaseHelp(String library) {
-    return 'Dentro $library. Lascia vuoto per la radice della libreria.';
-  }
 
   @override
   String get discoverDestLayout => 'Struttura';
@@ -5174,8 +5164,13 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '«$folder» è una cartella impostata su un altro dispositivo, ma in una struttura si legge come una variabile. Rinominala qui o scegli una struttura.';
+  }
+
+  @override
   String get discoverDestErrAbsolute =>
-      'Una struttura non può iniziare con /: parte dalla cartella di base.';
+      'Una struttura non può iniziare con /: parte dalla libreria.';
 
   @override
   String get discoverDestErrTraversal =>
@@ -5213,8 +5208,40 @@ class AppLocalizationsIt extends AppLocalizations {
   String get discoverDestGenreSlot => 'genere';
 
   @override
-  String discoverDestGenreNote(String slot) {
-    return '$slot viene dal tag genere di ogni file (omesso se il file non lo ha).';
+  String get discoverDestArtistSlot => 'artista';
+
+  @override
+  String get discoverDestYearSlot => 'anno';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots vengono dai tag di ogni brano, quindi questi brani possono finire in più di una cartella.',
+      one:
+          '$slots viene dai tag di ogni brano, quindi questi brani possono finire in più di una cartella.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots vengono dai tag di ogni brano, quindi questi brani possono finire in più di una cartella (per un brano senza genere quella cartella viene omessa).',
+      one:
+          '$slots viene dai tag di ogni brano, quindi questi brani possono finire in più di una cartella (per un brano senza genere quella cartella viene omessa).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots viene dai tag del brano (per un brano senza genere quella cartella viene omessa).';
   }
 
   @override

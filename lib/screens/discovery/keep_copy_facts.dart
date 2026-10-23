@@ -12,6 +12,7 @@ import '../../singletons/api.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/album_songs_body.dart';
 import '../../util/discover_badges.dart' show nameKey;
+import '../../util/discover_jobs.dart' show LayoutSong;
 
 /// The sizes a connected server's song and album sheets show beside the
 /// Keep a copy choices, and the Listen verbs' songs: the album on that
@@ -39,6 +40,11 @@ class KeepFacts {
   /// left out). Null until it answers, or when it did not.
   final List<String>? peerAlbums;
 
+  /// The year that list gives each of those albums, by name ([nameKey]):
+  /// the folder "Files go to" names for the one album an only-missing copy
+  /// takes. Null until it answers.
+  final Map<String, int>? peerAlbumYears;
+
   /// The user's own library's albums by the artist (names). Null until it
   /// answers, or when it did not.
   final List<String>? libraryAlbums;
@@ -50,6 +56,7 @@ class KeepFacts {
   const KeepFacts({
     this.albumSongs,
     this.peerAlbums,
+    this.peerAlbumYears,
     this.libraryAlbums,
     this.peerFailed = false,
   });
@@ -88,6 +95,50 @@ class KeepFacts {
     return counts.entries.reduce((a, b) => b.value > a.value ? b : a).key;
   }
 
+  /// The album's songs as a copy files them ([LayoutSong], what "Files go
+  /// to" reads an album copy's {{ARTIST}}, {{YEAR}} and {{GENRE}} from):
+  /// each one's ARTIST tag as written ("A feat. B" files under that, not
+  /// under A), its year, and its genre when the listing tells the file's —
+  /// a single one: the library splits a tag like "Hip-Hop/Rap" in two,
+  /// while a copy files under the tag as written. Null until the album
+  /// answered.
+  List<LayoutSong>? get layoutSongs =>
+      albumSongs == null ? null : [for (final s in albumSongs!) _layout(s)];
+
+  /// The genre [filepath]'s file carries (the peer's path), when the
+  /// album's listing holds that song and tells it ([layoutSongs]).
+  String? genreOf(String? filepath) => _songAt(filepath)?.genre;
+
+  /// The ARTIST tag [filepath]'s file carries as written ("A feat. B" — a
+  /// copy of it files there, where the row names A alone), when the album's
+  /// listing holds that song and tells it ([layoutSongs]).
+  String? artistOf(String? filepath) {
+    final a = _songAt(filepath)?.artist;
+    return a is String && a.trim().isNotEmpty ? a : null;
+  }
+
+  LayoutSong? _songAt(String? filepath) {
+    final want = _bare(filepath);
+    if (want.isEmpty) return null;
+    for (final s in albumSongs ?? const <DisplayItem>[]) {
+      if (_bare(s.data) == want) return _layout(s);
+    }
+    return null;
+  }
+
+  static String _bare(String? path) =>
+      (path ?? '').replaceFirst(RegExp(r'^/+'), '');
+
+  static LayoutSong _layout(DisplayItem s) {
+    final m = s.metadata;
+    final genres = m?.genres ?? const <String>[];
+    return LayoutSong(
+      artist: m?.artistDisplay ?? m?.artist,
+      year: m?.year,
+      genre: genres.length == 1 ? genres.first : null,
+    );
+  }
+
   /// The connected server's albums by the artist that no album of the
   /// library carries the name of — what "Only the albums you don't have"
   /// copies. Null until both lists answered.
@@ -115,11 +166,13 @@ class KeepFacts {
   KeepFacts _with({
     List<DisplayItem>? albumSongs,
     List<String>? peerAlbums,
+    Map<String, int>? peerAlbumYears,
     List<String>? libraryAlbums,
     bool? peerFailed,
   }) => KeepFacts(
     albumSongs: albumSongs ?? this.albumSongs,
     peerAlbums: peerAlbums ?? this.peerAlbums,
+    peerAlbumYears: peerAlbumYears ?? this.peerAlbumYears,
     libraryAlbums: libraryAlbums ?? this.libraryAlbums,
     peerFailed: peerFailed ?? this.peerFailed,
   );
@@ -295,6 +348,21 @@ class KeepFactsLoader extends ChangeNotifier {
     return List.unmodifiable(out);
   }
 
+  /// Each named album's year in an artists-albums answer, by [nameKey].
+  static Map<String, int> _years(dynamic res) {
+    final albums = res is Map ? res['albums'] : null;
+    if (albums is! List) return const {};
+    final out = <String, int>{};
+    for (final a in albums) {
+      final n = a is Map ? a['name'] : null;
+      final y = a is Map ? a['year'] : null;
+      if (n is String && n.trim().isNotEmpty && y is num && y > 0) {
+        out.putIfAbsent(nameKey(n), () => y.toInt());
+      }
+    }
+    return Map.unmodifiable(out);
+  }
+
   Future<void> _loadArtist() async {
     final body = {'artist': artist};
     final p = peer;
@@ -303,11 +371,12 @@ class KeepFactsLoader extends ChangeNotifier {
       if (p != null)
         () async {
           try {
-            final names = _names(
-              await _fetch(p, '/api/v1/db/artists-albums', body),
-            );
+            final res = await _fetch(p, '/api/v1/db/artists-albums', body);
             if (_disposed) return;
-            facts = facts._with(peerAlbums: names);
+            facts = facts._with(
+              peerAlbums: _names(res),
+              peerAlbumYears: _years(res),
+            );
           } catch (_) {
             if (_disposed) return;
             facts = facts._with(peerFailed: true);
