@@ -604,17 +604,29 @@ Widget fedLoading() => const Center(
     child: Padding(
         padding: EdgeInsets.all(40), child: CircularProgressIndicator()));
 
-/// A yes/no dialog; true when the user confirmed.
+/// A yes/no dialog; true when the user confirmed. [title] puts a heading
+/// over [message] (which is then the body, in the secondary colour).
 Future<bool> fedConfirm(BuildContext context,
     {required String message,
     required String confirmLabel,
+    String? title,
     bool danger = false}) async {
   final l = AppLocalizations.of(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: VelvetColors.surface,
-      content: Text(message, style: TextStyle(color: VelvetColors.textPrimary)),
+      title: title == null
+          ? null
+          : Text(title,
+              style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
+      content: Text(message,
+          style: title == null
+              ? TextStyle(color: VelvetColors.textPrimary)
+              : TextStyle(color: VelvetColors.textSecondary, height: 1.4)),
       actions: [
         TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

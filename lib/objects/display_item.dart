@@ -32,6 +32,11 @@ class DisplayItem {
   // rows disagree (see albumSongsBody). Both null on older servers.
   String? albumArtist;
   int? year;
+  // Album items only: a TRACK artist album-songs narrows the album to (its
+  // `artist` filter) — set where the card came from tracks rather than an
+  // album list, so no album credit is known (Discover's connected-server
+  // albums, grouped by album + track artist). Null everywhere else.
+  String? trackArtist;
 
   int downloadProgress = 0;
 
@@ -39,7 +44,13 @@ class DisplayItem {
     String? aaFile = altAlbumArt ?? metadata?.albumArt;
 
     if (server != null && aaFile != null) {
-      return Image.network(buildAlbumArtUrl(server!, aaFile));
+      // A cover the server cannot serve (a cache that was cleared, a stale
+      // file name) falls back to the row's own icon, as a row with no art
+      // draws — never the framework's error box.
+      return Image.network(
+        buildAlbumArtUrl(server!, aaFile),
+        errorBuilder: (_, _, _) => icon ?? const SizedBox.shrink(),
+      );
     }
 
     return icon;

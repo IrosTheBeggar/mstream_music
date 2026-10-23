@@ -873,40 +873,40 @@
   "browserRated": "Rated",
   "browserSectionLibrary": "Library",
   "@browserSectionLibrary": {
-      "description": "Home screen group header: the browse destinations."
+    "description": "Home screen group header: the browse destinations."
   },
   "browserSectionListen": "Listen",
   "@browserSectionListen": {
-      "description": "Home screen group header: Auto DJ and Sonic path."
+    "description": "Home screen group header: Auto DJ and Sonic path."
   },
   "browserSectionNetwork": "Network",
   "@browserSectionNetwork": {
-      "description": "Home screen group header: libraries shared by other servers."
+    "description": "Home screen group header: libraries shared by other servers."
   },
   "browserSectionServer": "Server",
   "@browserSectionServer": {
-      "description": "Home screen group header: what the server does for you (torrents)."
+    "description": "Home screen group header: what the server does for you (torrents)."
   },
   "browserFederation": "Federation",
   "@browserFederation": {
-      "description": "Home card: the libraries other servers share with this one."
+    "description": "Home card: the libraries other servers share with this one."
   },
   "browserAutoDjOn": "On",
   "@browserAutoDjOn": {
-      "description": "Auto DJ card subtext while the DJ is armed."
+    "description": "Auto DJ card subtext while the DJ is armed."
   },
   "browserAutoDjOff": "Off",
   "@browserAutoDjOff": {
-      "description": "Auto DJ card subtext while the DJ is off."
+    "description": "Auto DJ card subtext while the DJ is off."
   },
   "browserSharedLibraries": "{count, plural, =1{1 shared library} other{{count} shared libraries}}",
   "@browserSharedLibraries": {
-      "description": "Federation card subtext: how many peers share a library with this server.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Federation card subtext: how many peers share a library with this server.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "browserSearch": "Search",
   "browserWelcomeTitle": "Welcome to mStream",
@@ -1424,9 +1424,217 @@
   "@irohShareUnavailable": {
     "description": "Shown when trying to share tracks from an iroh (peer-to-peer) server."
   },
-  "discoverTitle": "Discover",
+  "discoverTitle": "More like this",
   "@discoverTitle": {
-    "description": "Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet."
+    "description": "Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle)."
+  },
+  "discoverPageTitle": "Discover",
+  "@discoverPageTitle": {
+    "description": "Title of the Discover page (recommendations seeded by the user's play history on one server: library songs and albums, network leads, peers' songs) and its card under Listen on the server home."
+  },
+  "discoverPageWindowDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@discoverPageWindowDays": {
+    "description": "A seed window length in days (segmented control label and app-bar subtitle part).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageWindowAll": "All time",
+  "@discoverPageWindowAll": {
+    "description": "The all-time seed window (segmented control label and app-bar subtitle part)."
+  },
+  "discoverPageWidened": "Nothing in the last {window}, so these come from further back.",
+  "@discoverPageWidened": {
+    "description": "Seeds sheet note when the chosen window had no plays and the server looked further back. {window} is like \"30 days\".",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageBasedOn": "Based on",
+  "@discoverPageBasedOn": {
+    "description": "Title of the Discover page's seeds sheet (opened from More options): the songs the page is seeded from."
+  },
+  "discoverPageBasedOnLast": "Based on the last",
+  "@discoverPageBasedOnLast": {
+    "description": "Label in the Discover page's configuration bar, directly before the window chooser, which shows \"7 days\" / \"30 days\" / \"90 days\" / \"All time\" (discoverPageWindowDays / discoverPageWindowAll). Reads as one phrase: \"Based on the last [30 days ▾]\"."
+  },
+  "discoverPageBasedOnAllTime": "Based on",
+  "@discoverPageBasedOnAllTime": {
+    "description": "Label in the Discover page's configuration bar before the window chooser when the window is all time (discoverPageWindowAll), where \"Based on the last\" would read wrong: \"Based on [All time ▾]\". Any wording that reads as one phrase with the all-time label works, e.g. \"Period\"."
+  },
+  "discoverPageMoreOptions": "More options",
+  "@discoverPageMoreOptions": {
+    "description": "Link at the right of the Discover page's configuration bar; opens the seeds sheet (which songs the page is based on: drop one, bring one back, pin a song)."
+  },
+  "discoverPageNewSeeds": "New seeds",
+  "@discoverPageNewSeeds": {
+    "description": "Tooltip of the refresh button on the Discover page's top bar (where other lists have search): asks again, and the server answers from a new random batch of the songs you finished."
+  },
+  "discoverPageAlbumsLibrary": "Albums from your library",
+  "@discoverPageAlbumsLibrary": {
+    "description": "Discover section header (shown in small caps): albums from the user's own library."
+  },
+  "discoverPageAlbumsPeer": "Albums from {name}",
+  "@discoverPageAlbumsPeer": {
+    "description": "Discover section header (shown in small caps): albums from the one connected (federated) server that answered. {name} is that server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageAlbumsPeers": "Albums from connected servers",
+  "@discoverPageAlbumsPeers": {
+    "description": "Discover section header (shown in small caps): albums from several connected (federated) servers."
+  },
+  "discoverPageSongsLibrary": "Songs from your library",
+  "@discoverPageSongsLibrary": {
+    "description": "Discover section header (shown in small caps): songs from the user's own library."
+  },
+  "discoverPageSongsPeer": "Songs from {name}",
+  "@discoverPageSongsPeer": {
+    "description": "Discover section header (shown in small caps): songs from the one connected (federated) server that answered. {name} is that server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageSongsPeers": "Songs from connected servers",
+  "@discoverPageSongsPeers": {
+    "description": "Discover section header (shown in small caps): songs from several connected (federated) servers."
+  },
+  "discoverPageLibraryNothing": "Nothing new in your library sounds like these songs.",
+  "@discoverPageLibraryNothing": {
+    "description": "One line under \"Songs from your library\" when the library has no suggestions."
+  },
+  "discoverPagePeersQuiet": "Nothing from your connected servers right now.",
+  "@discoverPagePeersQuiet": {
+    "description": "One line under the connected servers' songs header when they had nothing playable."
+  },
+  "discoverPagePeersFailed": "Couldn't reach your connected servers.",
+  "@discoverPagePeersFailed": {
+    "description": "One line under the connected servers' songs header when asking them failed; a Try again button follows it."
+  },
+  "discoverPageSaveAsPlaylist": "Save as playlist",
+  "@discoverPageSaveAsPlaylist": {
+    "description": "Button under Discover's library songs: save them as a server playlist."
+  },
+  "discoverPageBrowseLibrary": "Browse your library",
+  "@discoverPageBrowseLibrary": {
+    "description": "Button on Discover's nothing-finished card: open the server's File Explorer."
+  },
+  "discoverPageAgoToday": "today",
+  "@discoverPageAgoToday": {
+    "description": "Relative time: today."
+  },
+  "discoverPageAgoYesterday": "yesterday",
+  "@discoverPageAgoYesterday": {
+    "description": "Relative time: yesterday."
+  },
+  "discoverPageAgoMonths": "{count, plural, =1{1 month ago} other{{count} months ago}}",
+  "@discoverPageAgoMonths": {
+    "description": "Relative time in months.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageAgoYears": "{count, plural, =1{1 year ago} other{{count} years ago}}",
+  "@discoverPageAgoYears": {
+    "description": "Relative time in years.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageRandomTitle": "Finish a few songs and this page learns your taste",
+  "@discoverPageRandomTitle": {
+    "description": "Card title when nothing has been finished yet."
+  },
+  "discoverPageRandomBody": "Discover seeds itself from songs you play to the end. Skipped songs never count. Until there are some, here are suggestions around a random pick from your library.",
+  "@discoverPageRandomBody": {
+    "description": "Card body under that title."
+  },
+  "discoverPageAnotherPick": "Another pick",
+  "@discoverPageAnotherPick": {
+    "description": "Button on the nothing-finished card: seed from another random song."
+  },
+  "discoverPageChooseSong": "Choose a song…",
+  "@discoverPageChooseSong": {
+    "description": "Button on the nothing-finished card: pick the seed song yourself."
+  },
+  "discoverPageError": "Discover couldn't load. Check the connection and try again.",
+  "@discoverPageError": {
+    "description": "Shown when the Discover page could not load and has nothing to show."
+  },
+  "discoverPageRetry": "Try again",
+  "@discoverPageRetry": {
+    "description": "Button: try loading again."
+  },
+  "discoverPagePickedHeader": "Picked for this visit",
+  "@discoverPagePickedHeader": {
+    "description": "Seeds sheet group: songs pinned for this visit (now playing at open, songs picked)."
+  },
+  "discoverPageRandomHeader": "Random pick",
+  "@discoverPageRandomHeader": {
+    "description": "Group header in the Discover page's seeds sheet over the random seed the server picked because nothing was finished yet (in place of \"Finished recently\")."
+  },
+  "discoverPageDroppedHeader": "Left out",
+  "@discoverPageDroppedHeader": {
+    "description": "Seeds sheet group: seeds the user switched off (left out for the rest of this visit)."
+  },
+  "discoverPageDroppedNote": "switch one on to bring it back",
+  "@discoverPageDroppedNote": {
+    "description": "Small note next to that header."
+  },
+  "discoverPagePlayedTimes": "played {count}×",
+  "@discoverPagePlayedTimes": {
+    "description": "Seed row detail: how many times the seed was played.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageListenedTo": "listened to",
+  "@discoverPageListenedTo": {
+    "description": "Seed row detail: the seed was listened to past half but not to the end."
+  },
+  "discoverPageNotAnalyzed": "not analyzed yet",
+  "@discoverPageNotAnalyzed": {
+    "description": "Seed row detail: the seed has not been analyzed yet, so it steers nothing."
+  },
+  "discoverPageAddOwn": "Add your own",
+  "@discoverPageAddOwn": {
+    "description": "Seeds sheet group: add a seed yourself."
+  },
+  "discoverPageAddOwnSub": "a song you want more of",
+  "@discoverPageAddOwnSub": {
+    "description": "Small note next to that header."
+  },
+  "discoverPagePickSong": "Pick a song…",
+  "@discoverPagePickSong": {
+    "description": "Seeds sheet row: opens the song picker."
+  },
+  "discoverPagePickSongSub": "search your library, or take a random one",
+  "@discoverPagePickSongSub": {
+    "description": "Subtitle of that row."
+  },
+  "discoverPageUseThese": "{count, plural, =1{Use this 1} other{Use these {count}}}",
+  "@discoverPageUseThese": {
+    "description": "Seeds sheet primary button: apply the seeds that are switched on.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "discoverMatchedBySound": "Matched by sound",
   "@discoverMatchedBySound": {
@@ -2165,1935 +2373,1935 @@
   },
   "federationTitle": "Federation",
   "@federationTitle": {
-      "description": "Title of the Federation screen (libraries shared between servers)."
+    "description": "Title of the Federation screen (libraries shared between servers)."
   },
   "federationStatusOn": "On · connected to relay",
   "@federationStatusOn": {
-      "description": "Federation status line when the endpoint is up and reachable."
+    "description": "Federation status line when the endpoint is up and reachable."
   },
   "federationStatusConnecting": "On · connecting…",
   "@federationStatusConnecting": {
-      "description": "Federation status line while the endpoint is still reaching its relay."
+    "description": "Federation status line while the endpoint is still reaching its relay."
   },
   "federationStatusOff": "Off",
   "@federationStatusOff": {
-      "description": "Federation status line when the feature is switched off."
+    "description": "Federation status line when the feature is switched off."
   },
   "federationStatusUnavailable": "Not available on this platform",
   "@federationStatusUnavailable": {
-      "description": "Federation status line when the server cannot run the iroh component."
+    "description": "Federation status line when the server cannot run the iroh component."
   },
   "federationSharedWithYou": "Shared with you",
   "@federationSharedWithYou": {
-      "description": "Section header: the peers whose libraries this server can read."
+    "description": "Section header: the peers whose libraries this server can read."
   },
   "federationRequestsSection": "Requests",
   "@federationRequestsSection": {
-      "description": "Section header: pairing requests."
+    "description": "Section header: pairing requests."
   },
   "federationYourSharedLibraries": "Your shared libraries",
   "@federationYourSharedLibraries": {
-      "description": "Section header: the tickets this admin minted."
+    "description": "Section header: the tickets this admin minted."
   },
   "federationAddPeer": "Add a peer",
   "@federationAddPeer": {
-      "description": "Row and screen title: add a friend's server by ticket."
+    "description": "Row and screen title: add a friend's server by ticket."
   },
   "federationShareLibrary": "Share a library",
   "@federationShareLibrary": {
-      "description": "Primary action and screen title: mint a ticket for one of this server's libraries."
+    "description": "Primary action and screen title: mint a ticket for one of this server's libraries."
   },
   "federationNoPeersYet": "Nothing is shared with this server yet.",
   "@federationNoPeersYet": {
-      "description": "Empty state for the Shared with you section."
+    "description": "Empty state for the Shared with you section."
   },
   "federationNoKeysYet": "No tickets yet — share a library to mint one.",
   "@federationNoKeysYet": {
-      "description": "Empty state for the tickets section (admin)."
+    "description": "Empty state for the tickets section (admin)."
   },
   "federationNoRequests": "No requests yet — servers on the discovery network can find you here.",
   "@federationNoRequests": {
-      "description": "Empty state for the requests section when the inbox is open."
+    "description": "Empty state for the requests section when the inbox is open."
   },
   "federationClipboardTicket": "Ticket on your clipboard",
   "@federationClipboardTicket": {
-      "description": "Banner title when a federation ticket is found on the clipboard."
+    "description": "Banner title when a federation ticket is found on the clipboard."
   },
   "federationTicketPreview": "{name} · shares {libraries}",
   "@federationTicketPreview": {
-      "description": "One-line preview of a ticket: the server name and the libraries it grants.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          },
-          "libraries": {
-              "type": "String"
-          }
+    "description": "One-line preview of a ticket: the server name and the libraries it grants.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "libraries": {
+        "type": "String"
       }
+    }
   },
   "federationTicketPreviewNoLibraries": "{name}",
   "@federationTicketPreviewNoLibraries": {
-      "description": "One-line preview of a ticket that lists no libraries.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "One-line preview of a ticket that lists no libraries.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationUnnamedServer": "Unnamed server",
   "@federationUnnamedServer": {
-      "description": "Stand-in for a ticket or request without a server name."
+    "description": "Stand-in for a ticket or request without a server name."
   },
   "federationAddPeerAction": "Add peer",
   "@federationAddPeerAction": {
-      "description": "Button: add the peer."
+    "description": "Button: add the peer."
   },
   "federationPeerLive": "live",
   "@federationPeerLive": {
-      "description": "Peer state: its tunnel is up."
+    "description": "Peer state: its tunnel is up."
   },
   "federationPeerConnecting": "connecting…",
   "@federationPeerConnecting": {
-      "description": "Peer state: its tunnel is still dialing."
+    "description": "Peer state: its tunnel is still dialing."
   },
   "federationPeerDirectTunnel": "direct tunnel",
   "@federationPeerDirectTunnel": {
-      "description": "Peer transport: this phone dials the peer itself."
+    "description": "Peer transport: this phone dials the peer itself."
   },
   "federationPeerViaParent": "via {parent}",
   "@federationPeerViaParent": {
-      "description": "Peer transport: reached through the parent server's proxy.",
-      "placeholders": {
-          "parent": {
-              "type": "String"
-          }
+    "description": "Peer transport: reached through the parent server's proxy.",
+    "placeholders": {
+      "parent": {
+        "type": "String"
       }
+    }
   },
   "federationPeerViaTunnel": "via {parent}'s tunnel",
   "@federationPeerViaTunnel": {
-      "description": "Peer transport: reached through the parent's Quick Connect tunnel.",
-      "placeholders": {
-          "parent": {
-              "type": "String"
-          }
+    "description": "Peer transport: reached through the parent's Quick Connect tunnel.",
+    "placeholders": {
+      "parent": {
+        "type": "String"
       }
+    }
   },
   "federationPeerMissing": "no longer shared",
   "@federationPeerMissing": {
-      "description": "Peer state: the parent stopped listing it."
+    "description": "Peer state: the parent stopped listing it."
   },
   "federationPeerHidden": "hidden from the picker",
   "@federationPeerHidden": {
-      "description": "Peer state: the user hid it from the server picker."
+    "description": "Peer state: the user hid it from the server picker."
   },
   "federationMemberNote": "Sharing is an admin job. Minting tickets, adding peers and answering pairing requests need an admin sign-in on {server} — the same one that opens the admin panel.",
   "@federationMemberNote": {
-      "description": "Note for a non-admin user on the Federation screen.",
-      "placeholders": {
-          "server": {
-              "type": "String"
-          }
+    "description": "Note for a non-admin user on the Federation screen.",
+    "placeholders": {
+      "server": {
+        "type": "String"
       }
+    }
   },
   "federationRestrictedNote": "This server only takes admin calls from its own network. Connect from home to manage sharing here.",
   "@federationRestrictedNote": {
-      "description": "Note when the admin API is restricted to the local network."
+    "description": "Note when the admin API is restricted to the local network."
   },
   "federationDisabledNote": "The admin API is switched off on this server.",
   "@federationDisabledNote": {
-      "description": "Note when the admin API is disabled server-side."
+    "description": "Note when the admin API is disabled server-side."
   },
   "federationUnsupportedNote": "This server is too old to manage federation from the app. Update mStream.",
   "@federationUnsupportedNote": {
-      "description": "Note when the server lacks the federation admin routes."
+    "description": "Note when the server lacks the federation admin routes."
   },
   "federationLoadFailed": "Couldn't reach the server.",
   "@federationLoadFailed": {
-      "description": "Error line when the federation screen cannot load."
+    "description": "Error line when the federation screen cannot load."
   },
   "federationRetry": "Retry",
   "@federationRetry": {
-      "description": "Button: retry loading."
+    "description": "Button: retry loading."
   },
   "federationOffTitle": "Share libraries with friends' servers",
   "@federationOffTitle": {
-      "description": "Headline of the Federation screen while the feature is off."
+    "description": "Headline of the Federation screen while the feature is off."
   },
   "federationOffBody": "Pair two mStream servers to read each other's music. Tickets are what you swap — text one, scan one, paste one.",
   "@federationOffBody": {
-      "description": "Explainer under the headline while federation is off."
+    "description": "Explainer under the headline while federation is off."
   },
   "federationOffPoint1Title": "Read-only, end-to-end encrypted",
   "@federationOffPoint1Title": {
-      "description": "Selling point 1 title (federation off)."
+    "description": "Selling point 1 title (federation off)."
   },
   "federationOffPoint1Body": "Playlists and ratings never leave your server",
   "@federationOffPoint1Body": {
-      "description": "Selling point 1 body."
+    "description": "Selling point 1 body."
   },
   "federationOffPoint2Title": "No port forwarding or DNS",
   "@federationOffPoint2Title": {
-      "description": "Selling point 2 title."
+    "description": "Selling point 2 title."
   },
   "federationOffPoint2Body": "iroh finds a path — direct when it can, relay when it must",
   "@federationOffPoint2Body": {
-      "description": "Selling point 2 body."
+    "description": "Selling point 2 body."
   },
   "federationOffPoint3Title": "Tickets you can revoke",
   "@federationOffPoint3Title": {
-      "description": "Selling point 3 title."
+    "description": "Selling point 3 title."
   },
   "federationOffPoint3Body": "Each one is claimed once and cut off any time",
   "@federationOffPoint3Body": {
-      "description": "Selling point 3 body."
+    "description": "Selling point 3 body."
   },
   "federationOffAdminOnly": "Only the server admin can turn this on.",
   "@federationOffAdminOnly": {
-      "description": "Note under the selling points for admins."
+    "description": "Note under the selling points for admins."
   },
   "federationOffMemberNote": "Federation is off on {server}. Its admin can turn it on.",
   "@federationOffMemberNote": {
-      "description": "Note for a non-admin when federation is off.",
-      "placeholders": {
-          "server": {
-              "type": "String"
-          }
+    "description": "Note for a non-admin when federation is off.",
+    "placeholders": {
+      "server": {
+        "type": "String"
       }
+    }
   },
   "federationTurnOn": "Turn on federation",
   "@federationTurnOn": {
-      "description": "Button: enable federation."
+    "description": "Button: enable federation."
   },
   "federationUnavailableNote": "The iroh component has no build for this server's OS/CPU, so the federation endpoint can't run here.",
   "@federationUnavailableNote": {
-      "description": "Note when the server platform cannot run federation."
+    "description": "Note when the server platform cannot run federation."
   },
   "federationTurnedOn": "Federation is on",
   "@federationTurnedOn": {
-      "description": "Toast after enabling federation."
+    "description": "Toast after enabling federation."
   },
   "federationTurnedOff": "Federation is off",
   "@federationTurnedOff": {
-      "description": "Toast after disabling federation."
+    "description": "Toast after disabling federation."
   },
   "federationToggleFailed": "Couldn't update the federation setting.",
   "@federationToggleFailed": {
-      "description": "Toast when the on/off switch fails."
+    "description": "Toast when the on/off switch fails."
   },
   "federationSettingsTitle": "Federation settings",
   "@federationSettingsTitle": {
-      "description": "Title of the federation settings screen."
+    "description": "Title of the federation settings screen."
   },
   "federationSwitchSubtitle": "Peer-to-peer, end-to-end encrypted. No port forwarding, no DNS.",
   "@federationSwitchSubtitle": {
-      "description": "Subtitle of the federation on/off switch."
+    "description": "Subtitle of the federation on/off switch."
   },
   "federationStatusSection": "Status",
   "@federationStatusSection": {
-      "description": "Section header: endpoint status."
+    "description": "Section header: endpoint status."
   },
   "federationConnectedRelay": "Connected to relay",
   "@federationConnectedRelay": {
-      "description": "Status row: the endpoint reached its relay."
+    "description": "Status row: the endpoint reached its relay."
   },
   "federationNotRunning": "Endpoint not running",
   "@federationNotRunning": {
-      "description": "Status row: federation is on but the endpoint is down."
+    "description": "Status row: federation is on but the endpoint is down."
   },
   "federationEndpointId": "Endpoint id",
   "@federationEndpointId": {
-      "description": "Label of the server's iroh endpoint id."
+    "description": "Label of the server's iroh endpoint id."
   },
   "federationEndpointCopied": "Endpoint id copied",
   "@federationEndpointCopied": {
-      "description": "Toast after copying the endpoint id."
+    "description": "Toast after copying the endpoint id."
   },
   "federationPairingRequestsSection": "Pairing requests",
   "@federationPairingRequestsSection": {
-      "description": "Section header in settings: the requests inbox switch."
+    "description": "Section header in settings: the requests inbox switch."
   },
   "federationRequestsInboxTitle": "Accept requests from the discovery network",
   "@federationRequestsInboxTitle": {
-      "description": "Switch: let discovery peers send pairing requests."
+    "description": "Switch: let discovery peers send pairing requests."
   },
   "federationRequestsInboxSubtitle": "Off by default. When off, new requests are refused at the transport; answers to your own requests still arrive.",
   "@federationRequestsInboxSubtitle": {
-      "description": "Subtitle of the requests inbox switch."
+    "description": "Subtitle of the requests inbox switch."
   },
   "federationInboxFailed": "Couldn't update the requests inbox.",
   "@federationInboxFailed": {
-      "description": "Toast when the inbox switch fails."
+    "description": "Toast when the inbox switch fails."
   },
   "federationDefaultsSection": "Defaults for new tickets",
   "@federationDefaultsSection": {
-      "description": "Section header: the limit defaults from the server config."
+    "description": "Section header: the limit defaults from the server config."
   },
   "federationDefaultsNote": "From the server config — every ticket can change them",
   "@federationDefaultsNote": {
-      "description": "Subtitle under the limit defaults row."
+    "description": "Subtitle under the limit defaults row."
   },
   "federationOffWarning": "Turning federation off drops every peer bridge and hides your tickets until it is back on. Peers keep their tickets.",
   "@federationOffWarning": {
-      "description": "Warning note in settings."
+    "description": "Warning note in settings."
   },
   "federationRequestWantsToPair": "{name} wants to pair",
   "@federationRequestWantsToPair": {
-      "description": "Request row title (inbound).",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Request row title (inbound).",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationRequestToName": "Request to {name}",
   "@federationRequestToName": {
-      "description": "Request row title (outbound).",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Request row title (outbound).",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationRequestOffers": "Offers {libraries}",
   "@federationRequestOffers": {
-      "description": "Request row: what the other server offers.",
-      "placeholders": {
-          "libraries": {
-              "type": "String"
-          }
+    "description": "Request row: what the other server offers.",
+    "placeholders": {
+      "libraries": {
+        "type": "String"
       }
+    }
   },
   "federationRequestOffersNothing": "Offers nothing",
   "@federationRequestOffersNothing": {
-      "description": "Request row: the other server offers no library."
+    "description": "Request row: the other server offers no library."
   },
   "federationRequestYouOffered": "You offered {libraries}",
   "@federationRequestYouOffered": {
-      "description": "Outbound request row: what this server offered.",
-      "placeholders": {
-          "libraries": {
-              "type": "String"
-          }
+    "description": "Outbound request row: what this server offered.",
+    "placeholders": {
+      "libraries": {
+        "type": "String"
       }
+    }
   },
   "federationRequestYouOfferedNothing": "You offered nothing",
   "@federationRequestYouOfferedNothing": {
-      "description": "Outbound request row: nothing offered."
+    "description": "Outbound request row: nothing offered."
   },
   "federationReqSending": "sending…",
   "@federationReqSending": {
-      "description": "Request state chip: the request is being delivered."
+    "description": "Request state chip: the request is being delivered."
   },
   "federationReqWaiting": "waiting on them",
   "@federationReqWaiting": {
-      "description": "Request state chip: delivered, no answer yet."
+    "description": "Request state chip: delivered, no answer yet."
   },
   "federationReqSharingBack": "sharing back…",
   "@federationReqSharingBack": {
-      "description": "Request state chip: granting our share after they accepted."
+    "description": "Request state chip: granting our share after they accepted."
   },
   "federationReqNeedsAnswer": "needs your answer",
   "@federationReqNeedsAnswer": {
-      "description": "Request state chip: an inbound request awaiting the admin."
+    "description": "Request state chip: an inbound request awaiting the admin."
   },
   "federationReqSendingTicket": "sending your ticket…",
   "@federationReqSendingTicket": {
-      "description": "Request state chip: accepted, the ticket is being sent."
+    "description": "Request state chip: accepted, the ticket is being sent."
   },
   "federationReqWaitingShare": "waiting on their share",
   "@federationReqWaitingShare": {
-      "description": "Request state chip: waiting for the other side's grant."
+    "description": "Request state chip: waiting for the other side's grant."
   },
   "federationReqDeclined": "declined",
   "@federationReqDeclined": {
-      "description": "Request state chip: they declined."
+    "description": "Request state chip: they declined."
   },
   "federationReqYouDeclined": "you declined",
   "@federationReqYouDeclined": {
-      "description": "Request state chip: this admin declined."
+    "description": "Request state chip: this admin declined."
   },
   "federationReqInboxClosed": "their inbox is closed",
   "@federationReqInboxClosed": {
-      "description": "Request state chip: refused at the transport."
+    "description": "Request state chip: refused at the transport."
   },
   "federationReqFederated": "federated",
   "@federationReqFederated": {
-      "description": "Request state chip: completed."
+    "description": "Request state chip: completed."
   },
   "federationReqWithdrawn": "withdrawn",
   "@federationReqWithdrawn": {
-      "description": "Request state chip: cancelled."
+    "description": "Request state chip: cancelled."
   },
   "federationReqExpired": "expired",
   "@federationReqExpired": {
-      "description": "Request state chip: expired."
+    "description": "Request state chip: expired."
   },
   "federationAccept": "Accept…",
   "@federationAccept": {
-      "description": "Button: open the accept screen for a request."
+    "description": "Button: open the accept screen for a request."
   },
   "federationAcceptAndShare": "Accept & share",
   "@federationAcceptAndShare": {
-      "description": "Button: accept the request and share back."
+    "description": "Button: accept the request and share back."
   },
   "federationDecline": "Decline",
   "@federationDecline": {
-      "description": "Button: reject a request."
+    "description": "Button: reject a request."
   },
   "federationCancelRequest": "Cancel request",
   "@federationCancelRequest": {
-      "description": "Button: withdraw an outbound request."
+    "description": "Button: withdraw an outbound request."
   },
   "federationDismiss": "Dismiss",
   "@federationDismiss": {
-      "description": "Button: remove a finished request from the list."
+    "description": "Button: remove a finished request from the list."
   },
   "federationRequestTitle": "Pairing request",
   "@federationRequestTitle": {
-      "description": "Title of the pairing request screen."
+    "description": "Title of the pairing request screen."
   },
   "federationRequestReceived": "Received {ago} over the discovery network",
   "@federationRequestReceived": {
-      "description": "Line under a request: when it arrived.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Line under a request: when it arrived.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationRequestSent": "Sent {ago} over the discovery network",
   "@federationRequestSent": {
-      "description": "Line under an outbound request: when it was sent.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Line under an outbound request: when it was sent.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationShareBack": "Share back",
   "@federationShareBack": {
-      "description": "Section header: libraries to share in return."
+    "description": "Section header: libraries to share in return."
   },
   "federationShareBackNote": "Nothing changes hands until you accept. They get read-only access to the libraries you tick — at least one.",
   "@federationShareBackNote": {
-      "description": "Note under the share-back list."
+    "description": "Note under the share-back list."
   },
   "federationTheirLimits": "Their limits",
   "@federationTheirLimits": {
-      "description": "Section header: the limits the accepted peer will get."
+    "description": "Section header: the limits the accepted peer will get."
   },
   "federationChange": "Change",
   "@federationChange": {
-      "description": "Link: edit the limits."
+    "description": "Link: edit the limits."
   },
   "federationRequestIgnored": "Requests from this server are ignored for 7 days",
   "@federationRequestIgnored": {
-      "description": "Note under a declined inbound request."
+    "description": "Note under a declined inbound request."
   },
   "federationRequestAccepted": "Request accepted",
   "@federationRequestAccepted": {
-      "description": "Toast after accepting a request."
+    "description": "Toast after accepting a request."
   },
   "federationRequestDeclined": "Request declined",
   "@federationRequestDeclined": {
-      "description": "Toast after declining a request."
+    "description": "Toast after declining a request."
   },
   "federationRequestCancelled": "Request withdrawn",
   "@federationRequestCancelled": {
-      "description": "Toast after cancelling an outbound request."
+    "description": "Toast after cancelling an outbound request."
   },
   "federationRequestActionFailed": "Couldn't update the request.",
   "@federationRequestActionFailed": {
-      "description": "Toast when a request action fails."
+    "description": "Toast when a request action fails."
   },
   "federationTicketNameLabel": "Who is this for?",
   "@federationTicketNameLabel": {
-      "description": "Field label: the name of the person the ticket is for."
+    "description": "Field label: the name of the person the ticket is for."
   },
   "federationTicketNameHint": "Only you see this name — it labels the ticket in your list.",
   "@federationTicketNameHint": {
-      "description": "Hint under the ticket name field."
+    "description": "Hint under the ticket name field."
   },
   "federationLibrariesTheyCanRead": "Libraries they can read",
   "@federationLibrariesTheyCanRead": {
-      "description": "Section header: libraries to grant."
+    "description": "Section header: libraries to grant."
   },
   "federationLimitsSection": "Limits",
   "@federationLimitsSection": {
-      "description": "Section header: bandwidth limits."
+    "description": "Section header: bandwidth limits."
   },
   "federationExactNumbers": "Exact numbers",
   "@federationExactNumbers": {
-      "description": "Link: switch the limits editor to numeric fields."
+    "description": "Link: switch the limits editor to numeric fields."
   },
   "federationPresets": "Presets",
   "@federationPresets": {
-      "description": "Link: switch the limits editor back to preset chips."
+    "description": "Link: switch the limits editor back to preset chips."
   },
   "federationLimitStreamRate": "Stream rate",
   "@federationLimitStreamRate": {
-      "description": "Limit label: bitrate cap."
+    "description": "Limit label: bitrate cap."
   },
   "federationLimitPerDay": "Per day",
   "@federationLimitPerDay": {
-      "description": "Limit label: daily quota."
+    "description": "Limit label: daily quota."
   },
   "federationLimitStreams": "Streams at once",
   "@federationLimitStreams": {
-      "description": "Limit label: concurrent streams."
+    "description": "Limit label: concurrent streams."
   },
   "federationLimitExpires": "Expires",
   "@federationLimitExpires": {
-      "description": "Limit label: ticket expiry."
+    "description": "Limit label: ticket expiry."
   },
   "federationUnlimited": "Unlimited",
   "@federationUnlimited": {
-      "description": "Chip: no limit."
+    "description": "Chip: no limit."
   },
   "federationNever": "Never",
   "@federationNever": {
-      "description": "Chip: the ticket never expires."
+    "description": "Chip: the ticket never expires."
   },
   "federationDays": "{count, plural, =1{1 day} other{{count} days}}",
   "@federationDays": {
-      "description": "Chip: expiry in N days.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Chip: expiry in N days.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "federationOneYear": "1 year",
   "@federationOneYear": {
-      "description": "Chip: expiry in one year."
+    "description": "Chip: expiry in one year."
   },
   "federationKbps": "{n} kbps",
   "@federationKbps": {
-      "description": "Bitrate in kilobits per second.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Bitrate in kilobits per second.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "federationMbps": "{n} Mbps",
   "@federationMbps": {
-      "description": "Bitrate in megabits per second.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Bitrate in megabits per second.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "federationMbPerDay": "{n} MB a day",
   "@federationMbPerDay": {
-      "description": "Daily quota in megabytes.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Daily quota in megabytes.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "federationGbPerDay": "{n} GB a day",
   "@federationGbPerDay": {
-      "description": "Daily quota in gigabytes.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Daily quota in gigabytes.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "federationStreamsCount": "{count, plural, =1{1 stream} other{{count} streams}}",
   "@federationStreamsCount": {
-      "description": "Concurrent stream cap.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Concurrent stream cap.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "federationNeverExpires": "never expires",
   "@federationNeverExpires": {
-      "description": "Ticket has no expiry."
+    "description": "Ticket has no expiry."
   },
   "federationExpiresIn": "expires {when}",
   "@federationExpiresIn": {
-      "description": "Ticket expiry, relative or dated.",
-      "placeholders": {
-          "when": {
-              "type": "String"
-          }
+    "description": "Ticket expiry, relative or dated.",
+    "placeholders": {
+      "when": {
+        "type": "String"
       }
+    }
   },
   "federationExpired": "expired",
   "@federationExpired": {
-      "description": "Ticket past its expiry."
+    "description": "Ticket past its expiry."
   },
   "federationInDays": "{count, plural, =1{in 1 day} other{in {count} days}}",
   "@federationInDays": {
-      "description": "Relative future time in days.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Relative future time in days.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "federationInHours": "{count, plural, =1{in 1 hour} other{in {count} hours}}",
   "@federationInHours": {
-      "description": "Relative future time in hours.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Relative future time in hours.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "federationStreamRateField": "Stream rate (kbps, 0 = unlimited)",
   "@federationStreamRateField": {
-      "description": "Numeric field label."
+    "description": "Numeric field label."
   },
   "federationPerDayField": "Daily quota (MB, 0 = unlimited)",
   "@federationPerDayField": {
-      "description": "Numeric field label."
+    "description": "Numeric field label."
   },
   "federationStreamsField": "Max streams (0 = unlimited)",
   "@federationStreamsField": {
-      "description": "Numeric field label."
+    "description": "Numeric field label."
   },
   "federationExpiresField": "Expires in days (0 = never)",
   "@federationExpiresField": {
-      "description": "Numeric field label."
+    "description": "Numeric field label."
   },
   "federationCreateTicket": "Create ticket",
   "@federationCreateTicket": {
-      "description": "Button: mint the ticket."
+    "description": "Button: mint the ticket."
   },
   "federationMintFailed": "Couldn't create the ticket.",
   "@federationMintFailed": {
-      "description": "Toast when minting fails."
+    "description": "Toast when minting fails."
   },
   "federationNoLibraries": "This server has no libraries to share.",
   "@federationNoLibraries": {
-      "description": "Empty state of the library list in the mint form."
+    "description": "Empty state of the library list in the mint form."
   },
   "federationTicketTitle": "Your ticket",
   "@federationTicketTitle": {
-      "description": "Title of the ticket screen."
+    "description": "Title of the ticket screen."
   },
   "federationTicketFor": "Ticket for {name}",
   "@federationTicketFor": {
-      "description": "Ticket card title.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Ticket card title.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationTicketReads": "Reads {libraries}",
   "@federationTicketReads": {
-      "description": "Ticket card: the libraries it grants.",
-      "placeholders": {
-          "libraries": {
-              "type": "String"
-          }
+    "description": "Ticket card: the libraries it grants.",
+    "placeholders": {
+      "libraries": {
+        "type": "String"
       }
+    }
   },
   "federationTicketQrHint": "Same room? Let them scan this.",
   "@federationTicketQrHint": {
-      "description": "Caption under the QR code."
+    "description": "Caption under the QR code."
   },
   "federationTicketWarning": "Anyone holding this ticket can read those libraries until it is claimed or revoked. Send it over a private channel — the first server to use it claims it.",
   "@federationTicketWarning": {
-      "description": "Credential warning on the ticket screen."
+    "description": "Credential warning on the ticket screen."
   },
   "federationCopyTicket": "Copy ticket",
   "@federationCopyTicket": {
-      "description": "Button: copy the ticket text."
+    "description": "Button: copy the ticket text."
   },
   "federationTicketCopied": "Ticket copied",
   "@federationTicketCopied": {
-      "description": "Toast after copying the ticket."
+    "description": "Toast after copying the ticket."
   },
   "federationSendByText": "Send by text…",
   "@federationSendByText": {
-      "description": "Primary button: open the share sheet with the ticket."
+    "description": "Primary button: open the share sheet with the ticket."
   },
   "federationTicketRevokeNote": "Revoke it any time from Federation. If they reinstall, Reset claim lets the ticket be claimed again.",
   "@federationTicketRevokeNote": {
-      "description": "Note at the bottom of the ticket screen."
+    "description": "Note at the bottom of the ticket screen."
   },
   "federationTicketNotRunning": "The federation endpoint isn't running, so there is no ticket to send yet. Turn federation on and come back.",
   "@federationTicketNotRunning": {
-      "description": "Note when a key has no ticket because the endpoint is down."
+    "description": "Note when a key has no ticket because the endpoint is down."
   },
   "federationShareMessage": "I'm sharing my mStream music library with you — {libraries}, read-only. In the mStream app open Federation → Add a peer and paste this ticket:\n\n{ticket}\n\nIt works once — I can revoke it any time.",
   "@federationShareMessage": {
-      "description": "The text message composed around a ticket for the share sheet.",
-      "placeholders": {
-          "libraries": {
-              "type": "String"
-          },
-          "ticket": {
-              "type": "String"
-          }
+    "description": "The text message composed around a ticket for the share sheet.",
+    "placeholders": {
+      "libraries": {
+        "type": "String"
+      },
+      "ticket": {
+        "type": "String"
       }
+    }
   },
   "federationShareSubject": "mStream federation ticket",
   "@federationShareSubject": {
-      "description": "Subject line for the share sheet."
+    "description": "Subject line for the share sheet."
   },
   "federationKeyClaimed": "claimed",
   "@federationKeyClaimed": {
-      "description": "Key state: the ticket was redeemed."
+    "description": "Key state: the ticket was redeemed."
   },
   "federationKeyNotClaimed": "not claimed yet",
   "@federationKeyNotClaimed": {
-      "description": "Key state: the ticket has not been redeemed."
+    "description": "Key state: the ticket has not been redeemed."
   },
   "federationKeyTodayUsage": "{amount} today",
   "@federationKeyTodayUsage": {
-      "description": "Bytes served to a key today.",
-      "placeholders": {
-          "amount": {
-              "type": "String"
-          }
+    "description": "Bytes served to a key today.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
       }
+    }
   },
   "federationKeyLastUsed": "Last used {ago}",
   "@federationKeyLastUsed": {
-      "description": "Key row: last use.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Key row: last use.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationKeyNeverUsed": "Never used",
   "@federationKeyNeverUsed": {
-      "description": "Key row: never used."
+    "description": "Key row: never used."
   },
   "federationKeyClaimedAgo": "Claimed {ago}",
   "@federationKeyClaimedAgo": {
-      "description": "Key row: when the ticket was redeemed.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Key row: when the ticket was redeemed.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationResetBinding": "Reset claim",
   "@federationResetBinding": {
-      "description": "Button: let the ticket be claimed again."
+    "description": "Button: let the ticket be claimed again."
   },
   "federationResetBindingNote": "Friend reinstalled? Let the ticket be claimed again.",
   "@federationResetBindingNote": {
-      "description": "Subtitle of the reset-claim row."
+    "description": "Subtitle of the reset-claim row."
   },
   "federationBindingReset": "The ticket can be claimed again",
   "@federationBindingReset": {
-      "description": "Toast after resetting a key's binding."
+    "description": "Toast after resetting a key's binding."
   },
   "federationRevoke": "Revoke",
   "@federationRevoke": {
-      "description": "Button: revoke a ticket."
+    "description": "Button: revoke a ticket."
   },
   "federationRevokeConfirm": "Revoke this ticket? {name} loses access right away.",
   "@federationRevokeConfirm": {
-      "description": "Confirm dialog before revoking.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Confirm dialog before revoking.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationRevoked": "Ticket revoked",
   "@federationRevoked": {
-      "description": "Toast after revoking."
+    "description": "Toast after revoking."
   },
   "federationSaveLimits": "Save limits",
   "@federationSaveLimits": {
-      "description": "Button: save edited limits."
+    "description": "Button: save edited limits."
   },
   "federationLimitsSaved": "Limits saved",
   "@federationLimitsSaved": {
-      "description": "Toast after saving limits."
+    "description": "Toast after saving limits."
   },
   "federationLimitsFailed": "Couldn't save the limits.",
   "@federationLimitsFailed": {
-      "description": "Toast when saving limits fails."
+    "description": "Toast when saving limits fails."
   },
   "federationSend": "Send",
   "@federationSend": {
-      "description": "Short button: send the ticket."
+    "description": "Short button: send the ticket."
   },
   "federationKeyTitle": "Shared library",
   "@federationKeyTitle": {
-      "description": "Title of the key detail screen."
+    "description": "Title of the key detail screen."
   },
   "federationActionFailed": "That didn't work: {error}",
   "@federationActionFailed": {
-      "description": "Generic failure toast with the server's message.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Generic failure toast with the server's message.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "federationTheirTicket": "Their ticket",
   "@federationTheirTicket": {
-      "description": "Field label: the pasted ticket."
+    "description": "Field label: the pasted ticket."
   },
   "federationScanQr": "Scan a QR code",
   "@federationScanQr": {
-      "description": "Button: open the scanner."
+    "description": "Button: open the scanner."
   },
   "federationScannerTitle": "Scan a federation ticket",
   "@federationScannerTitle": {
-      "description": "Title of the QR scanner for tickets."
+    "description": "Title of the QR scanner for tickets."
   },
   "federationPaste": "Paste",
   "@federationPaste": {
-      "description": "Button: paste from the clipboard."
+    "description": "Button: paste from the clipboard."
   },
   "federationTicketPasted": "Pasted from your clipboard.",
   "@federationTicketPasted": {
-      "description": "Hint after pasting a ticket."
+    "description": "Hint after pasting a ticket."
   },
   "federationNotATicket": "That doesn't look like a federation ticket.",
   "@federationNotATicket": {
-      "description": "Error under the ticket field."
+    "description": "Error under the ticket field."
   },
   "federationTicketTooNew": "This ticket comes from a newer mStream than this app understands.",
   "@federationTicketTooNew": {
-      "description": "Error for a ticket with a newer version."
+    "description": "Error for a ticket with a newer version."
   },
   "federationTicketExpiredNote": "This ticket has expired.",
   "@federationTicketExpiredNote": {
-      "description": "Error for an expired ticket."
+    "description": "Error for an expired ticket."
   },
   "federationDisplayName": "Display name",
   "@federationDisplayName": {
-      "description": "Field label: optional peer name."
+    "description": "Field label: optional peer name."
   },
   "federationDisplayNameHint": "Optional — how it shows in your server picker.",
   "@federationDisplayNameHint": {
-      "description": "Hint under the display name field."
+    "description": "Hint under the display name field."
   },
   "federationSharesLibraries": "Shares {libraries}",
   "@federationSharesLibraries": {
-      "description": "Preview: libraries the ticket grants.",
-      "placeholders": {
-          "libraries": {
-              "type": "String"
-          }
+    "description": "Preview: libraries the ticket grants.",
+    "placeholders": {
+      "libraries": {
+        "type": "String"
       }
+    }
   },
   "federationSharesUnknown": "Libraries not listed on the ticket",
   "@federationSharesUnknown": {
-      "description": "Preview: the ticket names no libraries."
+    "description": "Preview: the ticket names no libraries."
   },
   "federationValidUntil": "valid until {date}",
   "@federationValidUntil": {
-      "description": "Preview: ticket expiry.",
-      "placeholders": {
-          "date": {
-              "type": "String"
-          }
+    "description": "Preview: ticket expiry.",
+    "placeholders": {
+      "date": {
+        "type": "String"
       }
+    }
   },
   "federationAddPeerShowsUnder": "Shows up under {server}",
   "@federationAddPeerShowsUnder": {
-      "description": "Explainer row title on the add-peer screen.",
-      "placeholders": {
-          "server": {
-              "type": "String"
-          }
+    "description": "Explainer row title on the add-peer screen.",
+    "placeholders": {
+      "server": {
+        "type": "String"
       }
+    }
   },
   "federationAddPeerReadOnly": "Read-only · {branch} {name} in the picker",
   "@federationAddPeerReadOnly": {
-      "description": "Explainer row body: how the peer will appear.",
-      "placeholders": {
-          "branch": {
-              "type": "String"
-          },
-          "name": {
-              "type": "String"
-          }
+    "description": "Explainer row body: how the peer will appear.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationAddPeerDials": "Your server dials it over iroh",
   "@federationAddPeerDials": {
-      "description": "Explainer row title."
+    "description": "Explainer row title."
   },
   "federationAddPeerEncrypted": "End-to-end encrypted · no port forwarding",
   "@federationAddPeerEncrypted": {
-      "description": "Explainer row body."
+    "description": "Explainer row body."
   },
   "federationAddPeerNoTicket": "No ticket yet? Ask them to text you one.",
   "@federationAddPeerNoTicket": {
-      "description": "Note at the bottom of the add-peer screen."
+    "description": "Note at the bottom of the add-peer screen."
   },
   "federationPeerAdded": "{name} added",
   "@federationPeerAdded": {
-      "description": "Toast after adding a peer.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Toast after adding a peer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationAddPeerFailed": "Couldn't add the peer.",
   "@federationAddPeerFailed": {
-      "description": "Toast when adding fails."
+    "description": "Toast when adding fails."
   },
   "federationPeerAlreadyAdded": "This ticket is already added as a peer.",
   "@federationPeerAlreadyAdded": {
-      "description": "Error when the ticket was already used here."
+    "description": "Error when the ticket was already used here."
   },
   "federationLibrariesYouCanRead": "Libraries you can read",
   "@federationLibrariesYouCanRead": {
-      "description": "Section header on the peer screen."
+    "description": "Section header on the peer screen."
   },
   "federationDiscoverySection": "Discovery",
   "@federationDiscoverySection": {
-      "description": "Section header on the peer screen."
+    "description": "Section header on the peer screen."
   },
   "federationAskPeerSimilar": "Ask this peer for similar music",
   "@federationAskPeerSimilar": {
-      "description": "Switch: send discovery queries to this peer."
+    "description": "Switch: send discovery queries to this peer."
   },
   "federationAskPeerSimilarNote": "Sends what you're listening to — to this peer only.",
   "@federationAskPeerSimilarNote": {
-      "description": "Subtitle of the discovery switch."
+    "description": "Subtitle of the discovery switch."
   },
   "federationAutoDjSection": "Auto DJ",
   "@federationAutoDjSection": {
-      "description": "Section header on the peer screen."
+    "description": "Section header on the peer screen."
   },
   "federationAutoDjParticipates": "Takes part in multi-server Auto DJ",
   "@federationAutoDjParticipates": {
-      "description": "Row: the peer is a fan-out candidate."
+    "description": "Row: the peer is a fan-out candidate."
   },
   "federationAutoDjParticipatesNote": "Answers with its own library when the DJ is on",
   "@federationAutoDjParticipatesNote": {
-      "description": "Row subtitle."
+    "description": "Row subtitle."
   },
   "federationAutoDjNotCandidate": "Not an Auto DJ candidate",
   "@federationAutoDjNotCandidate": {
-      "description": "Row: the peer cannot join the DJ fan-out."
+    "description": "Row: the peer cannot join the DJ fan-out."
   },
   "federationAutoDjNotCandidateNote": "Needs a server that can answer sonic picks",
   "@federationAutoDjNotCandidateNote": {
-      "description": "Row subtitle."
+    "description": "Row subtitle."
   },
   "federationTest": "Test",
   "@federationTest": {
-      "description": "Button: test the connection to a peer."
+    "description": "Button: test the connection to a peer."
   },
   "federationTesting": "Testing…",
   "@federationTesting": {
-      "description": "Button while a test runs."
+    "description": "Button while a test runs."
   },
   "federationTestOk": "Reachable",
   "@federationTestOk": {
-      "description": "Result: the peer answered."
+    "description": "Result: the peer answered."
   },
   "federationTestFailed": "Couldn't reach it: {error}",
   "@federationTestFailed": {
-      "description": "Result: the peer did not answer.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Result: the peer did not answer.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "federationCheckedAgo": "Checked {ago}",
   "@federationCheckedAgo": {
-      "description": "Peer status: when the server last tested it.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Peer status: when the server last tested it.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationNeverTested": "Never tested",
   "@federationNeverTested": {
-      "description": "Peer status: no test yet."
+    "description": "Peer status: no test yet."
   },
   "federationLastSeen": "Last seen {ago}",
   "@federationLastSeen": {
-      "description": "Peer status: last successful contact.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Peer status: last successful contact.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "federationBrowseLibrary": "Browse this library",
   "@federationBrowseLibrary": {
-      "description": "Primary button on the peer screen."
+    "description": "Primary button on the peer screen."
   },
   "federationRemovePeer": "Remove peer",
   "@federationRemovePeer": {
-      "description": "Button: remove a peer from the server."
+    "description": "Button: remove a peer from the server."
   },
   "federationRemovePeerConfirm": "Remove {name}? Tracks queued from it stop playing.",
   "@federationRemovePeerConfirm": {
-      "description": "Confirm dialog before removing a peer.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Confirm dialog before removing a peer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationPeerRemoved": "{name} removed",
   "@federationPeerRemoved": {
-      "description": "Toast after removing a peer.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Toast after removing a peer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "federationShowInPicker": "Show in server picker",
   "@federationShowInPicker": {
-      "description": "Switch: unhide the peer."
+    "description": "Switch: unhide the peer."
   },
   "federationShowInPickerNote": "Hidden peers keep playing what you queued from them.",
   "@federationShowInPickerNote": {
-      "description": "Subtitle of the show-in-picker switch."
+    "description": "Subtitle of the show-in-picker switch."
   },
   "federationPeerReadOnlyNote": "Read-only — playlists and ratings stay on your own server.",
   "@federationPeerReadOnlyNote": {
-      "description": "Note under the libraries list on the peer screen."
+    "description": "Note under the libraries list on the peer screen."
   },
   "federationPeerLibrariesUnknown": "Not listed yet — open it once to load its libraries.",
   "@federationPeerLibrariesUnknown": {
-      "description": "Empty state of the peer's library list."
+    "description": "Empty state of the peer's library list."
   },
   "federationTransportDirect": "Direct tunnel from this phone",
   "@federationTransportDirect": {
-      "description": "Peer transport line."
+    "description": "Peer transport line."
   },
   "federationTransportRelay": "Relay standing by",
   "@federationTransportRelay": {
-      "description": "Peer transport secondary line."
+    "description": "Peer transport secondary line."
   },
   "federationTransportViaParent": "Through {parent}",
   "@federationTransportViaParent": {
-      "description": "Peer transport line: proxied by the parent.",
-      "placeholders": {
-          "parent": {
-              "type": "String"
-          }
+    "description": "Peer transport line: proxied by the parent.",
+    "placeholders": {
+      "parent": {
+        "type": "String"
       }
+    }
   },
   "federationTransportViaParentTunnel": "Through {parent} over its tunnel",
   "@federationTransportViaParentTunnel": {
-      "description": "Peer transport line: proxied over the parent's tunnel.",
-      "placeholders": {
-          "parent": {
-              "type": "String"
-          }
+    "description": "Peer transport line: proxied over the parent's tunnel.",
+    "placeholders": {
+      "parent": {
+        "type": "String"
       }
+    }
   },
   "federationDiscoveryFailed": "Couldn't update the discovery setting.",
   "@federationDiscoveryFailed": {
-      "description": "Toast when the discovery switch fails."
+    "description": "Toast when the discovery switch fails."
   },
   "agoJustNow": "just now",
   "@agoJustNow": {
-      "description": "Relative time: under two minutes."
+    "description": "Relative time: under two minutes."
   },
   "agoMinutes": "{count, plural, =1{1 min ago} other{{count} min ago}}",
   "@agoMinutes": {
-      "description": "Relative time in minutes.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Relative time in minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "agoHours": "{count, plural, =1{1 h ago} other{{count} h ago}}",
   "@agoHours": {
-      "description": "Relative time in hours.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Relative time in hours.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "agoDays": "{count, plural, =1{1 day ago} other{{count} days ago}}",
   "@agoDays": {
-      "description": "Relative time in days.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Relative time in days.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "browserP2pNetwork": "P2P Network",
   "@browserP2pNetwork": {
-      "description": "Home card: the discovery network screen."
+    "description": "Home card: the discovery network screen."
   },
   "browserP2pOn": "On",
   "@browserP2pOn": {
-      "description": "P2P card subtext: the server is on the discovery network."
+    "description": "P2P card subtext: the server is on the discovery network."
   },
   "browserP2pOff": "Off",
   "@browserP2pOff": {
-      "description": "P2P card subtext: the discovery network is off on this server."
+    "description": "P2P card subtext: the discovery network is off on this server."
   },
   "p2pTitle": "P2P Network",
   "@p2pTitle": {
-      "description": "Title of the P2P Network screen."
+    "description": "Title of the P2P Network screen."
   },
   "p2pStatusConnected": "Connected",
   "@p2pStatusConnected": {
-      "description": "Mesh state: at least one neighbor."
+    "description": "Mesh state: at least one neighbor."
   },
   "p2pNeighborsCount": "{count, plural, =1{1 neighbor} other{{count} neighbors}}",
   "@p2pNeighborsCount": {
-      "description": "Mesh neighbor count.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Mesh neighbor count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pAnnouncingAs": "announcing as {name}",
   "@p2pAnnouncingAs": {
-      "description": "Status line: the name this server announces.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Status line: the name this server announces.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "p2pStatusSearching": "Joined · waiting for neighbors",
   "@p2pStatusSearching": {
-      "description": "Mesh state: joined, no neighbor yet."
+    "description": "Mesh state: joined, no neighbor yet."
   },
   "p2pStatusReconnecting": "Reconnecting · attempt {n}",
   "@p2pStatusReconnecting": {
-      "description": "Mesh state: crash recovery is replaying the sidecar.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Mesh state: crash recovery is replaying the sidecar.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "p2pStatusNotJoined": "Not joined yet",
   "@p2pStatusNotJoined": {
-      "description": "Mesh state: enabled but the sidecar has not joined."
+    "description": "Mesh state: enabled but the sidecar has not joined."
   },
   "p2pStatusOff": "Off",
   "@p2pStatusOff": {
-      "description": "Network state: disabled."
+    "description": "Network state: disabled."
   },
   "p2pStatusUnavailable": "Not available on this platform",
   "@p2pStatusUnavailable": {
-      "description": "Network state: no sidecar binary."
+    "description": "Network state: no sidecar binary."
   },
   "p2pStatNeighbors": "mesh neighbors",
   "@p2pStatNeighbors": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pStatNeighborsSub": "live gossip links",
   "@p2pStatNeighborsSub": {
-      "description": "Stat tile detail."
+    "description": "Stat tile detail."
   },
   "p2pStatKnown": "servers known",
   "@p2pStatKnown": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pStatKnownSub": "{hidden} hidden · {blocked} blocked",
   "@p2pStatKnownSub": {
-      "description": "Stat tile detail.",
-      "placeholders": {
-          "hidden": {
-              "type": "int"
-          },
-          "blocked": {
-              "type": "int"
-          }
+    "description": "Stat tile detail.",
+    "placeholders": {
+      "hidden": {
+        "type": "int"
+      },
+      "blocked": {
+        "type": "int"
       }
+    }
   },
   "p2pStatHeld": "snapshots held",
   "@p2pStatHeld": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pStatHeldOf": "{held} of {max}",
   "@p2pStatHeldOf": {
-      "description": "Stat tile value: held snapshots out of the auto-fetch count.",
-      "placeholders": {
-          "held": {
-              "type": "int"
-          },
-          "max": {
-              "type": "int"
-          }
+    "description": "Stat tile value: held snapshots out of the auto-fetch count.",
+    "placeholders": {
+      "held": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
       }
+    }
   },
   "p2pStatStorage": "{used} of {cap}",
   "@p2pStatStorage": {
-      "description": "Stat tile detail: snapshot storage used of the cap.",
-      "placeholders": {
-          "used": {
-              "type": "String"
-          },
-          "cap": {
-              "type": "String"
-          }
+    "description": "Stat tile detail: snapshot storage used of the cap.",
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "cap": {
+        "type": "String"
       }
+    }
   },
   "p2pStatTracks": "peer tracks",
   "@p2pStatTracks": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pStatTracksSub": "{count, plural, =1{searchable, 1 library} other{searchable, {count} libraries}}",
   "@p2pStatTracksSub": {
-      "description": "Stat tile detail.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Stat tile detail.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pActivity": "Activity",
   "@p2pActivity": {
-      "description": "Activity screen title and the link to it."
+    "description": "Activity screen title and the link to it."
   },
   "p2pActivitySubtitle": "newest first · held in memory",
   "@p2pActivitySubtitle": {
-      "description": "Activity screen subtitle."
+    "description": "Activity screen subtitle."
   },
   "p2pActivityEmpty": "Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.",
   "@p2pActivityEmpty": {
-      "description": "Activity empty state."
+    "description": "Activity empty state."
   },
   "p2pActivityNote": "The full history lives in the server logs.",
   "@p2pActivityNote": {
-      "description": "Note under the activity list."
+    "description": "Note under the activity list."
   },
   "p2pFromNetwork": "From the network",
   "@p2pFromNetwork": {
-      "description": "Section header: the listener payoff."
+    "description": "Section header: the listener payoff."
   },
   "p2pFindSimilar": "Find similar music on the network",
   "@p2pFindSimilar": {
-      "description": "Row: opens Discover's network section."
+    "description": "Row: opens Discover's network section."
   },
-  "p2pFindSimilarSub": "{count, plural, =1{Opens Discover for the track playing now · leads from 1 downloaded library} other{Opens Discover for the track playing now · leads from {count} downloaded libraries}}",
+  "p2pFindSimilarSub": "{count, plural, =1{Opens More like this for the track playing now · leads from 1 downloaded library} other{Opens More like this for the track playing now · leads from {count} downloaded libraries}}",
   "@p2pFindSimilarSub": {
-      "description": "Row subtitle.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Row subtitle. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle).",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
-  "p2pFindSimilarNothingPlaying": "Play something first — Discover follows the current track",
+  "p2pFindSimilarNothingPlaying": "Play something first — More like this follows the current track",
   "@p2pFindSimilarNothingPlaying": {
-      "description": "Row subtitle when nothing is playing."
+    "description": "Row subtitle when nothing is playing. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle)."
   },
   "p2pNewArtistsOnlySub": "Hide leads for artists already in this library",
   "@p2pNewArtistsOnlySub": {
-      "description": "Subtitle of the new-artists-only switch."
+    "description": "Subtitle of the new-artists-only switch."
   },
   "p2pServersYouFollow": "Servers you follow",
   "@p2pServersYouFollow": {
-      "description": "Section header (admin)."
+    "description": "Section header (admin)."
   },
   "p2pServersOnNetwork": "Servers on the network",
   "@p2pServersOnNetwork": {
-      "description": "Section header (member)."
+    "description": "Section header (member)."
   },
   "p2pNoServersYet": "No servers heard yet — befriend one with a friend's ticket, or give gossip a minute.",
   "@p2pNoServersYet": {
-      "description": "Catalog empty state."
+    "description": "Catalog empty state."
   },
   "p2pHiddenIncompatible": "{count, plural, =1{1 server hidden — incompatible model} other{{count} servers hidden — incompatible model}}",
   "@p2pHiddenIncompatible": {
-      "description": "Footer: hidden incompatible servers.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Footer: hidden incompatible servers.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pShow": "Show",
   "@p2pShow": {
-      "description": "Link: show hidden servers."
+    "description": "Link: show hidden servers."
   },
   "p2pHide": "Hide",
   "@p2pHide": {
-      "description": "Link: hide incompatible servers again."
+    "description": "Link: hide incompatible servers again."
   },
   "p2pBefriend": "Befriend a server",
   "@p2pBefriend": {
-      "description": "Row and screen title: join a friend's server by ticket."
+    "description": "Row and screen title: join a friend's server by ticket."
   },
   "p2pOnline": "online",
   "@p2pOnline": {
-      "description": "Peer state."
+    "description": "Peer state."
   },
   "p2pOfflineFor": "offline {ago}",
   "@p2pOfflineFor": {
-      "description": "Peer state with the last-heard time.",
-      "placeholders": {
-          "ago": {
-              "type": "String"
-          }
+    "description": "Peer state with the last-heard time.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
       }
+    }
   },
   "p2pTracksCount": "{count, plural, =1{1 track} other{{count} tracks}}",
   "@p2pTracksCount": {
-      "description": "Track count.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Track count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pSeedersCount": "{count, plural, =1{1 seeder} other{{count} seeders}}",
   "@p2pSeedersCount": {
-      "description": "Seeder count.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Seeder count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pChipDownloaded": "downloaded",
   "@p2pChipDownloaded": {
-      "description": "Snapshot chip."
+    "description": "Snapshot chip."
   },
   "p2pChipUpdate": "update available",
   "@p2pChipUpdate": {
-      "description": "Snapshot chip."
+    "description": "Snapshot chip."
   },
   "p2pChipNotDownloaded": "not downloaded",
   "@p2pChipNotDownloaded": {
-      "description": "Snapshot chip."
+    "description": "Snapshot chip."
   },
   "p2pChipPinned": "pinned",
   "@p2pChipPinned": {
-      "description": "Snapshot chip."
+    "description": "Snapshot chip."
   },
   "p2pChipIncompatible": "incompatible model",
   "@p2pChipIncompatible": {
-      "description": "Peer chip."
+    "description": "Peer chip."
   },
   "p2pChipFederated": "federated",
   "@p2pChipFederated": {
-      "description": "Relationship chip."
+    "description": "Relationship chip."
   },
   "p2pChipTheyAsked": "they asked you",
   "@p2pChipTheyAsked": {
-      "description": "Relationship chip."
+    "description": "Relationship chip."
   },
   "p2pChipRequestSent": "request sent",
   "@p2pChipRequestSent": {
-      "description": "Relationship chip."
+    "description": "Relationship chip."
   },
   "p2pSearchingTitle": "Searching for peers",
   "@p2pSearchingTitle": {
-      "description": "Card title while alone on the mesh."
+    "description": "Card title while alone on the mesh."
   },
   "p2pSearchingBody": "The mesh weaves in over a minute or so. This screen updates itself.",
   "@p2pSearchingBody": {
-      "description": "Card body while alone on the mesh."
+    "description": "Card body while alone on the mesh."
   },
   "p2pReconnectingTitle": "Reconnecting",
   "@p2pReconnectingTitle": {
-      "description": "Card title during crash recovery."
+    "description": "Card title during crash recovery."
   },
   "p2pReconnectingBody": "The sidecar died and is being replayed (attempt {n}) — no action needed.",
   "@p2pReconnectingBody": {
-      "description": "Card body during crash recovery.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Card body during crash recovery.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "p2pJoinTitle": "Recommendations from other people's libraries",
   "@p2pJoinTitle": {
-      "description": "Join screen headline."
+    "description": "Join screen headline."
   },
   "p2pWhatShared": "What gets shared",
   "@p2pWhatShared": {
-      "description": "Section header on the join screen."
+    "description": "Section header on the join screen."
   },
   "p2pShared1": "A metadata-only snapshot",
   "@p2pShared1": {
-      "description": "Shared item 1."
+    "description": "Shared item 1."
   },
   "p2pShared1Sub": "Artist, title, duration, sound fingerprints — never audio files",
   "@p2pShared1Sub": {
-      "description": "Shared item 1 detail."
+    "description": "Shared item 1 detail."
   },
   "p2pShared2": "Your server's name and description",
   "@p2pShared2": {
-      "description": "Shared item 2."
+    "description": "Shared item 2."
   },
   "p2pShared2Sub": "Visible to everyone on the network, by default the public community network",
   "@p2pShared2Sub": {
-      "description": "Shared item 2 detail."
+    "description": "Shared item 2 detail."
   },
   "p2pHowYouAppear": "How you appear",
   "@p2pHowYouAppear": {
-      "description": "Section header: identity."
+    "description": "Section header: identity."
   },
   "p2pServerName": "Server name",
   "@p2pServerName": {
-      "description": "Field label."
+    "description": "Field label."
   },
   "p2pServerNameHint": "“mStream” next to 18,000 other mStreams is the first thing to change.",
   "@p2pServerNameHint": {
-      "description": "Field hint."
+    "description": "Field hint."
   },
   "p2pDescription": "Description",
   "@p2pDescription": {
-      "description": "Field label."
+    "description": "Field label."
   },
   "p2pDescriptionHint": "180 characters, optional.",
   "@p2pDescriptionHint": {
-      "description": "Field hint."
+    "description": "Field hint."
   },
   "p2pAlsoAcceptRequests": "Also accept federation requests",
   "@p2pAlsoAcceptRequests": {
-      "description": "Switch on the join screen."
+    "description": "Switch on the join screen."
   },
   "p2pAlsoAcceptRequestsSub": "Invitations to share libraries — nothing is shared unless you approve each one. Turns federation on.",
   "@p2pAlsoAcceptRequestsSub": {
-      "description": "Switch subtitle."
+    "description": "Switch subtitle."
   },
   "p2pJoin": "Join the network",
   "@p2pJoin": {
-      "description": "Button: enable the discovery network."
+    "description": "Button: enable the discovery network."
   },
   "p2pJoining": "Joining…",
   "@p2pJoining": {
-      "description": "Button while enabling."
+    "description": "Button while enabling."
   },
   "p2pJoined": "Joined the discovery network — give the mesh a minute to weave in.",
   "@p2pJoined": {
-      "description": "Toast after joining."
+    "description": "Toast after joining."
   },
   "p2pJoinFailed": "Couldn't join the network: {error}",
   "@p2pJoinFailed": {
-      "description": "Toast when joining fails.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast when joining fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pInboxFailed": "Discovery is on, but the request inbox didn't start: {error}",
   "@p2pInboxFailed": {
-      "description": "Toast when the federation half of joining fails.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast when the federation half of joining fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pUnavailableNote": "The p2p-sidecar binary was not found for this platform and no downloadable build is published — the network is unavailable.",
   "@p2pUnavailableNote": {
-      "description": "Note when the sidecar is missing."
+    "description": "Note when the sidecar is missing."
   },
   "p2pWillDownloadNote": "The sidecar is not installed yet; joining downloads it first.",
   "@p2pWillDownloadNote": {
-      "description": "Note when the sidecar can be fetched."
+    "description": "Note when the sidecar can be fetched."
   },
   "p2pAdminOnlyNote": "Only the server admin can join.",
   "@p2pAdminOnlyNote": {
-      "description": "Note for admins on the join screen."
+    "description": "Note for admins on the join screen."
   },
   "p2pMemberOffNote": "The discovery network is off on {server}. Its admin can join it.",
   "@p2pMemberOffNote": {
-      "description": "Member note when the network is off.",
-      "placeholders": {
-          "server": {
-              "type": "String"
-          }
+    "description": "Member note when the network is off.",
+    "placeholders": {
+      "server": {
+        "type": "String"
       }
+    }
   },
   "p2pMemberNote": "Joining, inviting and snapshots are admin jobs. Sign in to {server} as an admin to manage the network here.",
   "@p2pMemberNote": {
-      "description": "Member note.",
-      "placeholders": {
-          "server": {
-              "type": "String"
-          }
+    "description": "Member note.",
+    "placeholders": {
+      "server": {
+        "type": "String"
       }
+    }
   },
   "p2pSnapshotSection": "Snapshot",
   "@p2pSnapshotSection": {
-      "description": "Section header on the peer screen."
+    "description": "Section header on the peer screen."
   },
   "p2pDownloadedSize": "Downloaded · {size}",
   "@p2pDownloadedSize": {
-      "description": "Snapshot row title.",
-      "placeholders": {
-          "size": {
-              "type": "String"
-          }
+    "description": "Snapshot row title.",
+    "placeholders": {
+      "size": {
+        "type": "String"
       }
+    }
   },
   "p2pSnapshotSeq": "Snapshot {seq}",
   "@p2pSnapshotSeq": {
-      "description": "Snapshot row detail.",
-      "placeholders": {
-          "seq": {
-              "type": "int"
-          }
+    "description": "Snapshot row detail.",
+    "placeholders": {
+      "seq": {
+        "type": "int"
       }
+    }
   },
   "p2pNewerAnnounced": "a newer one ({seq}) is announced",
   "@p2pNewerAnnounced": {
-      "description": "Snapshot row detail when stale.",
-      "placeholders": {
-          "seq": {
-              "type": "int"
-          }
+    "description": "Snapshot row detail when stale.",
+    "placeholders": {
+      "seq": {
+        "type": "int"
       }
+    }
   },
   "p2pNotDownloaded": "Not downloaded",
   "@p2pNotDownloaded": {
-      "description": "Snapshot row title."
+    "description": "Snapshot row title."
   },
   "p2pNotDownloadedSub": "Download it to search it from Discover",
   "@p2pNotDownloadedSub": {
-      "description": "Snapshot row detail."
+    "description": "Snapshot row detail."
   },
   "p2pDownload": "Download",
   "@p2pDownload": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pUpdate": "Update",
   "@p2pUpdate": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pDownloading": "Downloading…",
   "@p2pDownloading": {
-      "description": "Button while fetching."
+    "description": "Button while fetching."
   },
   "p2pDownloaded": "Snapshot downloaded",
   "@p2pDownloaded": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pDownloadFailed": "Couldn't download the snapshot: {error}",
   "@p2pDownloadFailed": {
-      "description": "Toast.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pPin": "Pin this snapshot",
   "@p2pPin": {
-      "description": "Switch."
+    "description": "Switch."
   },
   "p2pPinSub": "{count, plural, =1{Rotation frees the least-used snapshots after 1 day; a pinned one stays.} other{Rotation frees the least-used snapshots after {count} days; a pinned one stays.}}",
   "@p2pPinSub": {
-      "description": "Switch subtitle.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Switch subtitle.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pPinSubNoRotation": "Rotation is off; a pinned snapshot also survives a storage squeeze.",
   "@p2pPinSubNoRotation": {
-      "description": "Switch subtitle when rotation is off."
+    "description": "Switch subtitle when rotation is off."
   },
   "p2pRemoveSnapshot": "Remove snapshot",
   "@p2pRemoveSnapshot": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pSnapshotRemoved": "Snapshot removed",
   "@p2pSnapshotRemoved": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pHeldSince": "held since",
   "@p2pHeldSince": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pTracksLabel": "tracks",
   "@p2pTracksLabel": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pSeedersLabel": "seeders",
   "@p2pSeedersLabel": {
-      "description": "Stat tile label."
+    "description": "Stat tile label."
   },
   "p2pSeedersSub": "serving the snapshot",
   "@p2pSeedersSub": {
-      "description": "Stat tile detail."
+    "description": "Stat tile detail."
   },
   "p2pFederatedWithYou": "Federated with you",
   "@p2pFederatedWithYou": {
-      "description": "Relationship row title."
+    "description": "Relationship row title."
   },
   "p2pFederatedWithYouSub": "Open Federation to see what you read from each other",
   "@p2pFederatedWithYouSub": {
-      "description": "Relationship row detail."
+    "description": "Relationship row detail."
   },
   "p2pTheyAskedYou": "They asked to federate",
   "@p2pTheyAskedYou": {
-      "description": "Relationship row title."
+    "description": "Relationship row title."
   },
   "p2pTheyAskedYouSub": "Review the request under Federation",
   "@p2pTheyAskedYouSub": {
-      "description": "Relationship row detail."
+    "description": "Relationship row detail."
   },
   "p2pRequestSentTitle": "Request sent",
   "@p2pRequestSentTitle": {
-      "description": "Relationship row title."
+    "description": "Relationship row title."
   },
   "p2pRequestSentSub": "Waiting on them · track it under Federation",
   "@p2pRequestSentSub": {
-      "description": "Relationship row detail."
+    "description": "Relationship row detail."
   },
   "p2pAskToFederate": "Ask to share libraries",
   "@p2pAskToFederate": {
-      "description": "Relationship row title."
+    "description": "Relationship row title."
   },
   "p2pAskToFederateSub": "Sends a request over the network — nothing changes hands now",
   "@p2pAskToFederateSub": {
-      "description": "Relationship row detail."
+    "description": "Relationship row detail."
   },
   "p2pOpen": "Open",
   "@p2pOpen": {
-      "description": "Link."
+    "description": "Link."
   },
   "p2pReview": "Review",
   "@p2pReview": {
-      "description": "Link."
+    "description": "Link."
   },
   "p2pForget": "Forget this server",
   "@p2pForget": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pForgetSub": "Offline with nothing downloaded; it comes back if heard again",
   "@p2pForgetSub": {
-      "description": "Button detail."
+    "description": "Button detail."
   },
   "p2pForgotten": "{name} forgotten",
   "@p2pForgotten": {
-      "description": "Toast.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "p2pBlockServer": "Block server",
   "@p2pBlockServer": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pBlockConfirm": "Block {name}? Its announcements are ignored and its snapshot removed.",
   "@p2pBlockConfirm": {
-      "description": "Confirm dialog.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Confirm dialog.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "p2pBlocked": "{name} blocked",
   "@p2pBlocked": {
-      "description": "Toast.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "p2pUnblock": "Unblock",
   "@p2pUnblock": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pUnblocked": "Server unblocked",
   "@p2pUnblocked": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pIncompatibleNote": "Incompatible embedding model — its library can't power this server's similar-search.",
   "@p2pIncompatibleNote": {
-      "description": "Note on an incompatible peer."
+    "description": "Note on an incompatible peer."
   },
   "p2pCompatible": "compatible model",
   "@p2pCompatible": {
-      "description": "Peer subtitle piece."
+    "description": "Peer subtitle piece."
   },
   "p2pModelUnknown": "model unknown",
   "@p2pModelUnknown": {
-      "description": "Peer subtitle piece."
+    "description": "Peer subtitle piece."
   },
   "p2pNoDescription": "No description.",
   "@p2pNoDescription": {
-      "description": "Peer description empty state."
+    "description": "Peer description empty state."
   },
   "p2pUnnamedServer": "Unnamed server",
   "@p2pUnnamedServer": {
-      "description": "Stand-in for a server without a name."
+    "description": "Stand-in for a server without a name."
   },
   "p2pFederateTitle": "Ask to federate",
   "@p2pFederateTitle": {
-      "description": "Screen title."
+    "description": "Screen title."
   },
   "p2pFederateNote": "Sends a request over the discovery network. No access is exchanged now — they see your name, message and offer; libraries are only shared if they accept.",
   "@p2pFederateNote": {
-      "description": "Explainer note."
+    "description": "Explainer note."
   },
   "p2pMessage": "Message",
   "@p2pMessage": {
-      "description": "Field label."
+    "description": "Field label."
   },
   "p2pMessageHint": "Optional · {n} / 500",
   "@p2pMessageHint": {
-      "description": "Field hint with the character count.",
-      "placeholders": {
-          "n": {
-              "type": "int"
-          }
+    "description": "Field hint with the character count.",
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
+    }
   },
   "p2pShareBackLibraries": "Libraries you'll share back if they accept",
   "@p2pShareBackLibraries": {
-      "description": "Section header."
+    "description": "Section header."
   },
   "p2pShareBackNote": "Uncheck everything for a one-way ask — you would only read theirs.",
   "@p2pShareBackNote": {
-      "description": "Note under the list."
+    "description": "Note under the list."
   },
   "p2pSendRequest": "Send request",
   "@p2pSendRequest": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pRequestSent": "Request sent — track it under Federation",
   "@p2pRequestSent": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pRequestFailed": "Couldn't send the request: {error}",
   "@p2pRequestFailed": {
-      "description": "Toast.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pTheirTicket": "Their ticket",
   "@p2pTheirTicket": {
-      "description": "Field label."
+    "description": "Field label."
   },
   "p2pTheirTicketHint": "A friend finds theirs under Invite a friend on their P2P Network screen.",
   "@p2pTheirTicketHint": {
-      "description": "Field hint."
+    "description": "Field hint."
   },
   "p2pTicketPasted": "Pasted from your clipboard.",
   "@p2pTicketPasted": {
-      "description": "Field hint after pasting."
+    "description": "Field hint after pasting."
   },
   "p2pRememberFriend": "Remember this friend",
   "@p2pRememberFriend": {
-      "description": "Switch."
+    "description": "Switch."
   },
   "p2pRememberFriendSub": "Saved to the server config so the friendship survives restarts.",
   "@p2pRememberFriendSub": {
-      "description": "Switch subtitle."
+    "description": "Switch subtitle."
   },
   "p2pJoinFriend": "Join",
   "@p2pJoinFriend": {
-      "description": "Button: join the friend's server."
+    "description": "Button: join the friend's server."
   },
   "p2pJoinedFriend": "Joined — the mesh weaves in over a minute",
   "@p2pJoinedFriend": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pJoinFriendFailed": "Couldn't join: {error}",
   "@p2pJoinFriendFailed": {
-      "description": "Toast.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pNotATicket": "That doesn't look like an endpoint ticket.",
   "@p2pNotATicket": {
-      "description": "Field error."
+    "description": "Field error."
   },
   "p2pScanQr": "Scan a QR code",
   "@p2pScanQr": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pScannerTitle": "Scan a network ticket",
   "@p2pScannerTitle": {
-      "description": "Scanner title."
+    "description": "Scanner title."
   },
   "p2pInviteFriend": "Invite a friend",
   "@p2pInviteFriend": {
-      "description": "Section header and share subject."
+    "description": "Section header and share subject."
   },
   "p2pYourTicketNote": "Your ticket — a friend pastes it here on their phone to befriend {name}. It is an address, not a credential.",
   "@p2pYourTicketNote": {
-      "description": "Note above your own ticket.",
-      "placeholders": {
-          "name": {
-              "type": "String"
-          }
+    "description": "Note above your own ticket.",
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
+    }
   },
   "p2pTicketCopied": "Ticket copied",
   "@p2pTicketCopied": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pShareMessage": "Befriend my mStream server on the discovery network — in the mStream app open P2P Network → Befriend a server and paste this ticket:\n\n{ticket}",
   "@p2pShareMessage": {
-      "description": "Share-sheet message.",
-      "placeholders": {
-          "ticket": {
-              "type": "String"
-          }
+    "description": "Share-sheet message.",
+    "placeholders": {
+      "ticket": {
+        "type": "String"
       }
+    }
   },
   "p2pShareSubject": "mStream discovery-network ticket",
   "@p2pShareSubject": {
-      "description": "Share-sheet subject."
+    "description": "Share-sheet subject."
   },
   "p2pTicketNotReady": "The sidecar isn't running yet, so there is no ticket to share.",
   "@p2pTicketNotReady": {
-      "description": "Note when the endpoint ticket is missing."
+    "description": "Note when the endpoint ticket is missing."
   },
   "p2pSettingsTitle": "Network settings",
   "@p2pSettingsTitle": {
-      "description": "Screen title."
+    "description": "Screen title."
   },
   "p2pSwitchTitle": "Discovery network",
   "@p2pSwitchTitle": {
-      "description": "Switch title."
+    "description": "Switch title."
   },
   "p2pSwitchSub": "Announcing a metadata-only snapshot to the network. Switch off to leave — collected data stays local.",
   "@p2pSwitchSub": {
-      "description": "Switch subtitle."
+    "description": "Switch subtitle."
   },
   "p2pLeaveConfirm": "Leave the discovery network? Your server stops announcing and downloading snapshots. Local discovery keeps working.",
   "@p2pLeaveConfirm": {
-      "description": "Confirm dialog."
+    "description": "Confirm dialog."
   },
   "p2pLeave": "Leave",
   "@p2pLeave": {
-      "description": "Confirm button."
+    "description": "Confirm button."
   },
   "p2pLeft": "Left the discovery network",
   "@p2pLeft": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pLeaveFailed": "Couldn't leave the network: {error}",
   "@p2pLeaveFailed": {
-      "description": "Toast.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pEditIdentity": "Name and description",
   "@p2pEditIdentity": {
-      "description": "Screen title for editing the identity."
+    "description": "Screen title for editing the identity."
   },
   "p2pIdentitySaved": "Saved — announced to the network",
   "@p2pIdentitySaved": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pSaveFailed": "Couldn't save: {error}",
   "@p2pSaveFailed": {
-      "description": "Toast.",
-      "placeholders": {
-          "error": {
-              "type": "String"
-          }
+    "description": "Toast.",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
+    }
   },
   "p2pSnapshotsSection": "Snapshots",
   "@p2pSnapshotsSection": {
-      "description": "Section header."
+    "description": "Section header."
   },
   "p2pAutoDownload": "Auto-download up to",
   "@p2pAutoDownload": {
-      "description": "Chip row label."
+    "description": "Chip row label."
   },
   "p2pServersCount": "{count, plural, =1{1 server} other{{count} servers}}",
   "@p2pServersCount": {
-      "description": "Chip label.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Chip label.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pStorageCap": "Storage cap",
   "@p2pStorageCap": {
-      "description": "Chip row label."
+    "description": "Chip row label."
   },
   "p2pRotate": "Rotate downloads",
   "@p2pRotate": {
-      "description": "Chip row label."
+    "description": "Chip row label."
   },
   "p2pForgetOffline": "Forget offline servers",
   "@p2pForgetOffline": {
-      "description": "Chip row label."
+    "description": "Chip row label."
   },
   "p2pMeshSection": "Mesh",
   "@p2pMeshSection": {
-      "description": "Section header."
+    "description": "Section header."
   },
   "p2pCommunitySeeds": "Community seeds",
   "@p2pCommunitySeeds": {
-      "description": "Row title."
+    "description": "Row title."
   },
   "p2pCommunitySeedsOn": "Bootstrapping through the public seed servers",
   "@p2pCommunitySeedsOn": {
-      "description": "Row detail when on."
+    "description": "Row detail when on."
   },
   "p2pCommunitySeedsOff": "Off — only befriended servers; set in the server config",
   "@p2pCommunitySeedsOff": {
-      "description": "Row detail when off."
+    "description": "Row detail when off."
   },
   "p2pBlockedServers": "{count, plural, =0{No blocked servers} =1{1 blocked server} other{{count} blocked servers}}",
   "@p2pBlockedServers": {
-      "description": "Row title.",
-      "placeholders": {
-          "count": {
-              "type": "int"
-          }
+    "description": "Row title.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
+    }
   },
   "p2pBlockedSub": "Announcements ignored, snapshots never fetched",
   "@p2pBlockedSub": {
-      "description": "Row detail."
+    "description": "Row detail."
   },
   "p2pBlockedTitle": "Blocked servers",
   "@p2pBlockedTitle": {
-      "description": "Screen title."
+    "description": "Screen title."
   },
   "p2pSaved": "Saved",
   "@p2pSaved": {
-      "description": "Toast."
+    "description": "Toast."
   },
   "p2pOff": "Off",
   "@p2pOff": {
-      "description": "Chip: none."
+    "description": "Chip: none."
   },
   "p2pSave": "Save",
   "@p2pSave": {
-      "description": "Button."
+    "description": "Button."
   },
   "p2pSearchServers": "Search servers — name or description",
   "@p2pSearchServers": {
@@ -4489,5 +4697,1125 @@
   "homeWidgetPinUnsupported": "This launcher can't add widgets from here. Use its own widget picker.",
   "@homeWidgetPinUnsupported": {
     "description": "Snackbar / sheet text when the Android launcher refuses pin requests."
+  },
+  "discoverSheetPeerOnline": "{name} online",
+  "@discoverSheetPeerOnline": {
+    "description": "Connected-server song/album sheet: the status line under the header while that server answers (a green dot before it). {name} is the connected server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetPeerNotAnswering": "{name} not answering",
+  "@discoverSheetPeerNotAnswering": {
+    "description": "Connected-server sheet: the status line when that server did not answer (a grey dot before it). {name} is the server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetSongCount": "{count, plural, =1{1 song} other{{count} songs}}",
+  "@discoverSheetSongCount": {
+    "description": "Connected-server sheets: how many songs an album has on that server (the album line, the Album choice's size).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetAlbumCount": "{count, plural, =1{1 album} other{{count} albums}}",
+  "@discoverSheetAlbumCount": {
+    "description": "Connected-server sheets: a number of albums (the artist line, the Artist choice's size, a finished copy's line).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetNotInLibrary": "not in your library",
+  "@discoverSheetNotInLibrary": {
+    "description": "Connected-server song sheet, album line: the user's own library has no album of this name by the artist."
+  },
+  "discoverSheetInLibrary": "in your library",
+  "@discoverSheetInLibrary": {
+    "description": "Connected-server song sheet, album line: the user's own library already has an album of this name by the artist."
+  },
+  "discoverSheetYouHaveAlbums": "{count, plural, =1{you have 1 album} other{you have {count} albums}}",
+  "@discoverSheetYouHaveAlbums": {
+    "description": "Connected-server song sheet, artist line when that server did not answer: how many albums by the artist the user's own library has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverSheetOpenAlbum": "Open album",
+  "@discoverSheetOpenAlbum": {
+    "description": "Connected-server sheets: button/row that opens the album (through that server)."
+  },
+  "discoverSheetQueueAlbum": "Queue album",
+  "@discoverSheetQueueAlbum": {
+    "description": "Connected-server sheets: button/row that adds the album's songs to the end of the queue."
+  },
+  "discoverSheetPlayAlbum": "Play album",
+  "@discoverSheetPlayAlbum": {
+    "description": "Connected-server album sheet: row that plays the album now."
+  },
+  "discoverSheetOpenArtist": "Open artist",
+  "@discoverSheetOpenArtist": {
+    "description": "Connected-server song sheet, artist line: button that opens the artist's albums on that server."
+  },
+  "discoverSheetListen": "Listen",
+  "@discoverSheetListen": {
+    "description": "Connected-server album sheet: small-caps label over the play/queue/open rows."
+  },
+  "discoverSheetKeepCopy": "Keep a copy",
+  "@discoverSheetKeepCopy": {
+    "description": "Connected-server sheets: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone)."
+  },
+  "discoverSheetOpenElsewhere": "Open elsewhere",
+  "@discoverSheetOpenElsewhere": {
+    "description": "Connected-server song sheet: row that lists links to this song on other services (MusicBrainz, Deezer, …)."
+  },
+  "discoverSheetBrowsePeer": "Browse {name}",
+  "@discoverSheetBrowsePeer": {
+    "description": "Connected-server song sheet: row that switches the app to browsing that server's library. {name} is the server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetDownloadToPhone": "Download to this phone",
+  "@discoverSheetDownloadToPhone": {
+    "description": "Connected-server song sheet, last row: saves the song file onto THIS phone for offline play (the old Download, renamed so it is never confused with Keep a copy, which copies to the server)."
+  },
+  "discoverSheetDownloadToPhoneSub": "For offline play on this device",
+  "@discoverSheetDownloadToPhoneSub": {
+    "description": "Second line under 'Download to this phone'."
+  },
+  "discoverSheetAlbumFailed": "Couldn't load this album from {name}",
+  "@discoverSheetAlbumFailed": {
+    "description": "Toast when Play album / Queue album could not get the album's songs from the connected server. {name} is that server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverAlbumCardMore": "More for {album}",
+  "@discoverAlbumCardMore": {
+    "description": "Accessible name of the ⋯ button on a connected server's album card on Discover (opens the album sheet). {album} is the album name.",
+    "placeholders": {
+      "album": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepThisSong": "This song",
+  "@discoverKeepThisSong": {
+    "description": "Keep a copy card: choice that copies only this song."
+  },
+  "discoverKeepAlbum": "Album",
+  "@discoverKeepAlbum": {
+    "description": "Keep a copy card: choice that copies the song's whole album."
+  },
+  "discoverKeepArtist": "Artist",
+  "@discoverKeepArtist": {
+    "description": "Keep a copy card: choice that copies the artist's albums."
+  },
+  "discoverKeepWhat": "What to keep",
+  "@discoverKeepWhat": {
+    "description": "Accessible name of the Keep a copy choices (This song / Album / Artist)."
+  },
+  "discoverKeepYouHave": "you have {count}",
+  "@discoverKeepYouHave": {
+    "description": "Keep a copy card, under the Artist choice after the album count ('1 album · you have 3'): albums by the artist the user's own library already has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepOnlyMissing": "{count, plural, =1{Only the 1 album you don't have} other{Only the {count} albums you don't have}}",
+  "@discoverKeepOnlyMissing": {
+    "description": "Keep a copy card, checkbox under the Artist choice: copy only the artist's albums the user's library lacks (matched by album name).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepFilesGoTo": "Files go to",
+  "@discoverKeepFilesGoTo": {
+    "description": "Keep a copy card: start of the line naming where the copied files land ('Files go to copies › Artist › Album')."
+  },
+  "discoverKeepPathTooLong": "This copy's path would pass {max} characters, more than the server takes",
+  "@discoverKeepPathTooLong": {
+    "description": "Keep a copy card, in place of 'Files go to …' (and of 'Retry adds to …'): the layout would render a path longer than the server takes for this copy (long tags, deep folders on the connected server), so the server would refuse it; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepFolderPerAlbum": "one folder per album",
+  "@discoverKeepFolderPerAlbum": {
+    "description": "Keep a copy card: end of the destination line for an artist copy (each album lands in its own folder)."
+  },
+  "discoverKeepChange": "Change",
+  "@discoverKeepChange": {
+    "description": "Keep a copy card: link after the destination line that opens the destination picker."
+  },
+  "discoverKeepChangeHint": "Change where copies go",
+  "@discoverKeepChangeHint": {
+    "description": "Accessible name of the Keep a copy card's Change link."
+  },
+  "discoverKeepAddSong": "Add song",
+  "@discoverKeepAddSong": {
+    "description": "Keep a copy card's main button with This song chosen: copies the song to the user's server."
+  },
+  "discoverKeepAddAlbum": "Add album",
+  "@discoverKeepAddAlbum": {
+    "description": "Keep a copy card's main button with Album chosen."
+  },
+  "discoverKeepAddEveryAlbum": "Add every album",
+  "@discoverKeepAddEveryAlbum": {
+    "description": "Keep a copy card's main button with Artist chosen (every album by the artist on that server)."
+  },
+  "discoverKeepAddAlbums": "{count, plural, =1{Add 1 album} other{Add {count} albums}}",
+  "@discoverKeepAddAlbums": {
+    "description": "Keep a copy card's main button with Artist chosen and 'only the albums you don't have' ticked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepAddMissing": "Add the albums you don't have",
+  "@discoverKeepAddMissing": {
+    "description": "Keep a copy card's main button when only the missing albums can be copied and their number is not known yet."
+  },
+  "discoverKeepUploadsOff": "Your account can't add files to this server",
+  "@discoverKeepUploadsOff": {
+    "description": "Keep a copy card's only line when the user's account may not upload to their server."
+  },
+  "discoverKeepNoLibrary": "No library on your server takes new files",
+  "@discoverKeepNoLibrary": {
+    "description": "Keep a copy card's only line when uploads are allowed but no library on the user's server accepts new files."
+  },
+  "discoverKeepStartFailed": "Couldn't reach your server. Try again.",
+  "@discoverKeepStartFailed": {
+    "description": "Keep a copy card: the copy could not be started and the server gave no words of its own (a network failure)."
+  },
+  "discoverKeepDestChanged": "Where files land changed since this opened. Check the path above and add again.",
+  "@discoverKeepDestChanged": {
+    "description": "Keep a copy card: a copy was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). The 'Files go to' line above already shows the new place; the user checks it and presses Add again."
+  },
+  "discoverKeepDestChangedTryAgain": "Where files land changed since this opened. Check the path above and try again.",
+  "@discoverKeepDestChangedTryAgain": {
+    "description": "Keep a copy card, under a finished copy's line: its Retry or Add again was not started because where the account's copies land changed since the card opened (on another device, or in the webapp). A 'Files go to' line with the new place is drawn just above; the user checks it and presses the verb again."
+  },
+  "discoverKeepRetryAddsTo": "Retry adds to {path}, your saved place now",
+  "@discoverKeepRetryAddsTo": {
+    "description": "Keep a copy card, under a finished copy that ran somewhere else than where copies land now: where its Retry would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepAddAgainAddsTo": "Add again adds to {path}, your saved place now",
+  "@discoverKeepAddAgainAddsTo": {
+    "description": "Keep a copy card, under a cancelled copy that ran somewhere else than where copies land now: where its Add again would put the files. {path} is the library and folders, e.g. 'copies › Boukmanflow › Borrowed Tapes'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmTitle": "{count, plural, =1{Copy 1 album from {peer}?} other{Copy {count} albums from {peer}?}}",
+  "@discoverKeepConfirmTitle": {
+    "description": "Confirmation title before copying several albums by an artist from a connected server. {peer} is that server's name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmEveryTitle": "Copy every album by {artist} from {peer}?",
+  "@discoverKeepConfirmEveryTitle": {
+    "description": "Confirmation title before copying every album by an artist when their number is not known yet. {artist} is the artist, {peer} the connected server.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmBody": "They land on your server in {path}, one folder per album. Songs you already have are skipped.",
+  "@discoverKeepConfirmBody": {
+    "description": "Body of the confirmation before an artist copy whose layout gives each album its own folder (discoverKeepConfirmBodyFlat when it does not). {path} is where the files land on the user's server, like 'copies › Boukmanflow'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmBodyFlat": "They land on your server in {path}. Songs you already have are skipped.",
+  "@discoverKeepConfirmBodyFlat": {
+    "description": "Body of the confirmation before an artist copy whose layout names no album folder (every album lands in the same folder). {path} is where the files land on the user's server, like 'copies › From friends › Boukmanflow'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepConfirmAction": "{count, plural, =1{Copy 1 album} other{Copy {count} albums}}",
+  "@discoverKeepConfirmAction": {
+    "description": "The confirmation's yes button.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepConfirmEveryAction": "Copy every album",
+  "@discoverKeepConfirmEveryAction": {
+    "description": "The every-album confirmation's yes button (count not known)."
+  },
+  "discoverJobQueued": "Waiting for a free slot",
+  "@discoverJobQueued": {
+    "description": "Keep a copy card: the copy is queued behind another one on the server."
+  },
+  "discoverJobQueuedSub": "Starts on its own",
+  "@discoverJobQueuedSub": {
+    "description": "Under 'Waiting for a free slot': nothing to do, it starts by itself."
+  },
+  "discoverJobCopying": "Copying",
+  "@discoverJobCopying": {
+    "description": "Keep a copy card: the copy is running (a progress bar and the server's status line follow)."
+  },
+  "discoverJobStarting": "Starting…",
+  "@discoverJobStarting": {
+    "description": "Keep a copy card: running but the server has not said anything yet."
+  },
+  "discoverJobStopping": "Stopping…",
+  "@discoverJobStopping": {
+    "description": "Keep a copy card: the user cancelled a running copy; it stops at its next check."
+  },
+  "discoverJobInCollection": "In your collection",
+  "@discoverJobInCollection": {
+    "description": "Keep a copy card: the copy landed in a library on the user's server."
+  },
+  "discoverJobOwned": "Already yours",
+  "@discoverJobOwned": {
+    "description": "Keep a copy card: nothing was copied because the user's library already had it."
+  },
+  "discoverJobOwnedSub": "Your library has this song",
+  "@discoverJobOwnedSub": {
+    "description": "Under 'Already yours' for one song (the library file's path may follow)."
+  },
+  "discoverJobSkipped": "Skipped · a file is already there",
+  "@discoverJobSkipped": {
+    "description": "Keep a copy card: the song was not copied because a file already exists where it would land."
+  },
+  "discoverJobExistsSub": "A file is already at {path} · nothing was overwritten",
+  "@discoverJobExistsSub": {
+    "description": "Under the skipped line. {path} is where the song would have landed.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobFailed": "Copy failed",
+  "@discoverJobFailed": {
+    "description": "Keep a copy card: the copy failed (the server's own words follow)."
+  },
+  "discoverJobFailedSub": "The copy did not finish",
+  "@discoverJobFailedSub": {
+    "description": "Under 'Copy failed' when the server said nothing more."
+  },
+  "discoverJobNothingCopiedLead": "Nothing copied",
+  "@discoverJobNothingCopiedLead": {
+    "description": "Start of a failed album copy's line ('Nothing copied · 3 failed')."
+  },
+  "discoverJobNothingCopied": "nothing copied",
+  "@discoverJobNothingCopied": {
+    "description": "End of a stopped copy's line after its reason ('… · nothing copied')."
+  },
+  "discoverJobStopped": "Stopped",
+  "@discoverJobStopped": {
+    "description": "Keep a copy card: the copy ended early (its reason follows)."
+  },
+  "discoverJobStoppedQuota": "{peer}'s transfer limit stopped it",
+  "@discoverJobStoppedQuota": {
+    "description": "Why a copy stopped: the connected server's daily transfer limit. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedBusy": "{peer} is serving too many streams right now",
+  "@discoverJobStoppedBusy": {
+    "description": "Why a copy stopped: the connected server is busy. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedPeer": "{peer} went away",
+  "@discoverJobStoppedPeer": {
+    "description": "Why a copy stopped: the connected server stopped answering. {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobStoppedRefused": "{peer} does not allow copies with your server's key",
+  "@discoverJobStoppedRefused": {
+    "description": "Why a copy stopped: the connected server refuses copies to the user's server (no Retry). {peer} is its name.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobCancelledNothing": "Stopped · nothing was copied",
+  "@discoverJobCancelledNothing": {
+    "description": "Keep a copy card: the user cancelled the copy before anything landed."
+  },
+  "discoverJobCancelledSome": "{count, plural, =1{Stopped · 1 copied} other{Stopped · {count} copied}}",
+  "@discoverJobCancelledSome": {
+    "description": "Keep a copy card: the user cancelled an album copy after some songs landed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobCancelledSub": "You cancelled it",
+  "@discoverJobCancelledSub": {
+    "description": "Under a cancelled copy."
+  },
+  "discoverJobCancelledStay": "{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}",
+  "@discoverJobCancelledStay": {
+    "description": "Under a cancelled album copy: the songs that already landed stay.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobNothingAll": "You have it all",
+  "@discoverJobNothingAll": {
+    "description": "Keep a copy card: an album/artist copy found nothing to copy — the user already has everything."
+  },
+  "discoverJobNothingFrom": "Nothing to copy from {peer}",
+  "@discoverJobNothingFrom": {
+    "description": "Under 'You have it all'. {peer} is the connected server.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobOnlyGuest": "Nothing of theirs to copy",
+  "@discoverJobOnlyGuest": {
+    "description": "Keep a copy card: an artist copy found the artist only as a guest on that server's albums."
+  },
+  "discoverJobOnlyGuestSub": "{artist} only appears as a guest on {peer}'s albums",
+  "@discoverJobOnlyGuestSub": {
+    "description": "Under 'Nothing of theirs to copy'. {artist} is the artist, {peer} the connected server.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobFromOther": "Copying from {peer}",
+  "@discoverJobFromOther": {
+    "description": "Keep a copy card: the same album/artist is being copied from ANOTHER connected server. {peer} is that other server.",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobComesBack": "{action} comes back when that copy ends",
+  "@discoverJobComesBack": {
+    "description": "Under 'Copying from …'. {action} is the card's button label ('Add album').",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobDone": "Finished",
+  "@discoverJobDone": {
+    "description": "Keep a copy card: a copy finished in a way this app cannot read in detail."
+  },
+  "discoverJobCopiedCount": "{count, plural, other{{count} copied}}",
+  "@discoverJobCopiedCount": {
+    "description": "Part of a finished album copy's line: songs copied.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobOwnedCount": "{count, plural, other{{count} already yours}}",
+  "@discoverJobOwnedCount": {
+    "description": "Part of a finished album copy's line: songs skipped because the library already had them.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobFailedCount": "{count, plural, other{{count} failed}}",
+  "@discoverJobFailedCount": {
+    "description": "Part of a finished album copy's line: songs that failed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobAlbumsFailed": "{count, plural, =1{1 album failed} other{{count} albums failed}}",
+  "@discoverJobAlbumsFailed": {
+    "description": "Part of a finished artist copy's line: albums whose listing failed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobAlbumsLeftOut": "{count, plural, =1{1 album left out} other{{count} albums left out}}",
+  "@discoverJobAlbumsLeftOut": {
+    "description": "Part of a finished artist copy's line: albums not copied (already owned, or the artist only guests on them).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverJobRetry": "Retry",
+  "@discoverJobRetry": {
+    "description": "Keep a copy card: start the same copy again (it takes only what is still missing)."
+  },
+  "discoverJobAddAgain": "Add again",
+  "@discoverJobAddAgain": {
+    "description": "Keep a copy card: start a cancelled copy again."
+  },
+  "discoverJobAddToQueue": "Add to queue",
+  "@discoverJobAddToQueue": {
+    "description": "Keep a copy card: queue the copied song (the new library file)."
+  },
+  "discoverMarkWaiting": "waiting",
+  "@discoverMarkWaiting": {
+    "description": "Discover, on a connected server's song row or album card: the user's copy of it is queued. Lowercase, a word only."
+  },
+  "discoverMarkCopying": "copying…",
+  "@discoverMarkCopying": {
+    "description": "Discover row/card marker: the copy is running."
+  },
+  "discoverMarkCopyingCount": "copying {done} of {total}",
+  "@discoverMarkCopyingCount": {
+    "description": "Discover album card marker while its album copies: songs done of the album's total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverMarkStopping": "stopping…",
+  "@discoverMarkStopping": {
+    "description": "Discover row/card marker: the copy was cancelled and is stopping."
+  },
+  "discoverMarkInCollection": "in your collection",
+  "@discoverMarkInCollection": {
+    "description": "Discover row/card marker: the copy landed on the user's server."
+  },
+  "discoverMarkAlreadyYours": "already yours",
+  "@discoverMarkAlreadyYours": {
+    "description": "Discover row/card marker: nothing was copied, the library already had it."
+  },
+  "discoverMarkStopped": "stopped",
+  "@discoverMarkStopped": {
+    "description": "Discover row/card marker: the copy ended early (limit, busy, server gone)."
+  },
+  "discoverMarkRefused": "refused",
+  "@discoverMarkRefused": {
+    "description": "Discover row/card marker: the connected server refuses copies to the user's server."
+  },
+  "discoverMarkFailed": "failed",
+  "@discoverMarkFailed": {
+    "description": "Discover row/card marker: the copy failed."
+  },
+  "discoverMarkSkipped": "skipped",
+  "@discoverMarkSkipped": {
+    "description": "Discover row/card marker: not copied because a file already exists where it would land."
+  },
+  "discoverCopiesCopying": "{count, plural, other{Copying {count}}}",
+  "@discoverCopiesCopying": {
+    "description": "Discover's Copies strip under the configuration bar: copies running or waiting on the user's server.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverCopiesFailed": "{count, plural, other{{count} failed}}",
+  "@discoverCopiesFailed": {
+    "description": "Discover's Copies strip: copies that failed or stopped and still want the user (Retry / Clear finished).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverCopiesLabel": "Copies: {summary}",
+  "@discoverCopiesLabel": {
+    "description": "Accessible name of Discover's Copies strip (opens the Copies list). {summary} is the strip's text, e.g. 'Copying 2, 1 failed'.",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesTitle": "Copies",
+  "@discoverCopiesTitle": {
+    "description": "Title of the Copies sheet, and the name of the home SERVER card listing what the user's own server is copying for them from connected servers (Discover's Keep a copy)."
+  },
+  "discoverCopiesSectionCopying": "Copying",
+  "@discoverCopiesSectionCopying": {
+    "description": "Copies sheet section header (drawn in capitals): copies running or waiting for a free slot."
+  },
+  "discoverCopiesSectionAttention": "Stopped or failed",
+  "@discoverCopiesSectionAttention": {
+    "description": "Copies sheet section header (drawn in capitals): copies that failed or stopped early and still want Retry or Clear finished."
+  },
+  "discoverCopiesSectionFinished": "Just finished",
+  "@discoverCopiesSectionFinished": {
+    "description": "Copies sheet section header (drawn in capitals): copies the phone saw end since it opened (landed, already yours, cancelled)."
+  },
+  "discoverCopiesClearFinished": "Clear finished",
+  "@discoverCopiesClearFinished": {
+    "description": "Copies sheet button pinned at the bottom: removes the finished copies from the list (on the user's server)."
+  },
+  "discoverCopiesEmpty": "Nothing copying",
+  "@discoverCopiesEmpty": {
+    "description": "Copies sheet empty state: the server is copying nothing and nothing failed."
+  },
+  "discoverCopiesEmptySub": "Long-press a connected server's song or album on Discover to keep a copy.",
+  "@discoverCopiesEmptySub": {
+    "description": "Copies sheet empty state: how a copy starts."
+  },
+  "discoverCopiesOpenDiscover": "Open Discover",
+  "@discoverCopiesOpenDiscover": {
+    "description": "Copies sheet empty state (opened from the home): a pill that opens the Discover page."
+  },
+  "discoverCopiesLoadFailed": "Couldn't load your copies",
+  "@discoverCopiesLoadFailed": {
+    "description": "Copies sheet error state: the list of copies could not be read from the user's server."
+  },
+  "discoverCopiesLoadFailedSub": "Your server didn't answer. Copies keep running there.",
+  "@discoverCopiesLoadFailedSub": {
+    "description": "Copies sheet error state's second line when the server sent no words of its own (copies run on the server, not the phone)."
+  },
+  "discoverCopiesLoading": "Loading your copies",
+  "@discoverCopiesLoading": {
+    "description": "Accessible label of the Copies sheet's loading placeholders."
+  },
+  "discoverCopiesKindSong": "Song",
+  "@discoverCopiesKindSong": {
+    "description": "Copies sheet row: what a copy takes (first part of 'Song · Artist · from Server')."
+  },
+  "discoverCopiesKindAlbum": "Album",
+  "@discoverCopiesKindAlbum": {
+    "description": "Copies sheet row: what a copy takes (first part of 'Album · Artist · from Server')."
+  },
+  "discoverCopiesKindEvery": "Every album",
+  "@discoverCopiesKindEvery": {
+    "description": "Copies sheet row: a copy of every album by an artist (first part of 'Every album · from Server')."
+  },
+  "discoverCopiesKindMissing": "What you're missing",
+  "@discoverCopiesKindMissing": {
+    "description": "Copies sheet row: a copy of only the artist's albums the library lacks (first part of 'What you're missing · from Server')."
+  },
+  "discoverCopiesFrom": "from {peer}",
+  "@discoverCopiesFrom": {
+    "description": "Copies sheet row: the connected server a copy comes from (last part of 'Song · Artist · from Server').",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesEveryAlbumBy": "Every album by {artist}",
+  "@discoverCopiesEveryAlbumBy": {
+    "description": "Copies sheet row title for a copy of every album by an artist.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesMissingOf": "{artist} · albums you don't have",
+  "@discoverCopiesMissingOf": {
+    "description": "Copies sheet row title for a copy of only the artist's albums the library lacks.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesAlreadyFinished": "Already finished · nothing to cancel",
+  "@discoverCopiesAlreadyFinished": {
+    "description": "Toast when Cancel reached the server after the copy had already ended (the row turns into its outcome)."
+  },
+  "discoverCopiesCancelFailed": "Couldn't cancel. Try again.",
+  "@discoverCopiesCancelFailed": {
+    "description": "Toast when a copy's Cancel could not reach the user's server."
+  },
+  "discoverCopiesDestChanged": "Couldn't start: where files land changed — retry it from Keep a copy",
+  "@discoverCopiesDestChanged": {
+    "description": "Toast when a Retry or Add again from the Copies list was not started because where the account's copies land changed since that copy ran. Keep a copy (on the song or album sheet) shows the new place."
+  },
+  "discoverToastCopying": "Copying {title} from {peer}",
+  "@discoverToastCopying": {
+    "description": "Toast once the sheet that started a copy closes: the song or album title, and the connected server it is copied from.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastCopyingEvery": "Copying every album by {artist} from {peer}",
+  "@discoverToastCopyingEvery": {
+    "description": "Toast once the sheet that started an every-album copy closes.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastCopyingMissing": "Copying the albums by {artist} you don't have from {peer}",
+  "@discoverToastCopyingMissing": {
+    "description": "Toast once the sheet that started an only-the-albums-you-don't-have copy closes.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastAdded": "Added to your collection",
+  "@discoverToastAdded": {
+    "description": "Toast when a copy the phone saw running ends with something copied into the user's library."
+  },
+  "discoverToastAlreadyYours": "Already in your library",
+  "@discoverToastAlreadyYours": {
+    "description": "Toast when a copy ends having copied nothing because the library already had it all."
+  },
+  "discoverToastFailed": "Copy failed: {reason}",
+  "@discoverToastFailed": {
+    "description": "Toast when a copy fails; {reason} is the server's own words (or what the counts say).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastStopped": "Stopped early: {reason}",
+  "@discoverToastStopped": {
+    "description": "Toast when a copy ends early (the connected server's transfer limit, busy, gone, or refusing copies); {reason} says which.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastLinkFailed": "Couldn't open that link",
+  "@discoverToastLinkFailed": {
+    "description": "Toast when an Open elsewhere link could not be opened outside the app."
+  },
+  "discoverToastSaved": "Saved · copies land in {path}",
+  "@discoverToastSaved": {
+    "description": "Toast after the destination picker saved: {path} is the library and the folders every copy lands in whatever its tags (the layout's leading folders that name no variable), e.g. 'copies › From peers'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestTitle": "Where copies land",
+  "@discoverDestTitle": {
+    "description": "Title of the destination picker sheet (where on the user's server copies from connected servers are put)."
+  },
+  "discoverDestSub": "One setting for your account · every copy uses it",
+  "@discoverDestSub": {
+    "description": "Destination picker subtitle: the destination is one setting per account, shared by every copy."
+  },
+  "discoverDestTagDefault": "library default",
+  "@discoverDestTagDefault": {
+    "description": "Destination picker tag beside the title: the library's own default destination is in force."
+  },
+  "discoverDestTagYours": "yours",
+  "@discoverDestTagYours": {
+    "description": "Destination picker tag beside the title: the account's own saved destination is in force."
+  },
+  "discoverDestLandsAt": "{title} lands at",
+  "@discoverDestLandsAt": {
+    "description": "Destination picker preview label above the path where this song would be copied; {title} is the song's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestFixLayout": "Fix the layout to see where files land",
+  "@discoverDestFixLayout": {
+    "description": "Destination picker preview while the chosen layout would be refused."
+  },
+  "discoverDestPathTooLong": "This song's path would pass {max} characters, more than the server takes",
+  "@discoverDestPathTooLong": {
+    "description": "Destination picker preview: the layout is fine, but for this song (long tags, deep folders on the connected server) it would render a path longer than the server takes, so the server would refuse the copy; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverDestLibrary": "Library",
+  "@discoverDestLibrary": {
+    "description": "Destination picker section label (drawn in capitals): the libraries this account can add files to."
+  },
+  "discoverDestLayout": "Layout",
+  "@discoverDestLayout": {
+    "description": "Destination picker section label (drawn in capitals): how folders are made from the tags."
+  },
+  "discoverDestPresetArtistAlbum": "Artist / Album",
+  "@discoverDestPresetArtistAlbum": {
+    "description": "Destination picker layout preset: a folder per artist, then per album."
+  },
+  "discoverDestPresetServer": "Server / Artist / Album",
+  "@discoverDestPresetServer": {
+    "description": "Destination picker layout preset: a folder named after the connected server, then artist, then album."
+  },
+  "discoverDestPresetServerFolders": "Same folders as the server",
+  "@discoverDestPresetServerFolders": {
+    "description": "Destination picker layout preset: each copied song goes into the same folders it sits in on the connected server (that server's library itself left out), like 'Boukmanflow › Borrowed Tapes'."
+  },
+  "discoverDestPresetLibrary": "Library layout",
+  "@discoverDestPresetLibrary": {
+    "description": "Destination picker layout preset: the chosen library's own path template (shown only when it has one)."
+  },
+  "discoverDestPresetCustom": "Custom",
+  "@discoverDestPresetCustom": {
+    "description": "Destination picker layout choice: a layout the user types by hand (its text field opens under it). Also chosen when the layout in force is none of the presets."
+  },
+  "discoverDestCustomSub": "Type your own path",
+  "@discoverDestCustomSub": {
+    "description": "Destination picker: the line under the Custom layout choice."
+  },
+  "discoverDestCustomField": "Custom layout",
+  "@discoverDestCustomField": {
+    "description": "Accessible name of the destination picker's custom layout text field."
+  },
+  "discoverDestCustomHint": "e.g. From friends or {example}",
+  "@discoverDestCustomHint": {
+    "description": "Destination picker custom layout field placeholder: a plain folder name (translate it) or {example}, a layout with variables kept as is (like {{ARTIST}}/{{ALBUM}}).",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestCustomHelp": "Use / between folders. Variables sort copies by artist, album…; a plain name puts every copy in the same folder.",
+  "@discoverDestCustomHelp": {
+    "description": "Destination picker help under the custom layout field: \"/\" makes folders; variables (the buttons above it) sort copies by their tags; plain text is the same folder for every copy."
+  },
+  "discoverDestCustomEmpty": "Type a path to see where files land",
+  "@discoverDestCustomEmpty": {
+    "description": "Destination picker preview while the custom layout field is empty."
+  },
+  "discoverDestInsertArtist": "Insert artist",
+  "@discoverDestInsertArtist": {
+    "description": "Accessible name of the destination picker button that inserts the artist variable into the custom layout."
+  },
+  "discoverDestInsertAlbum": "Insert album",
+  "@discoverDestInsertAlbum": {
+    "description": "Accessible name of the destination picker button that inserts the album variable into the custom layout."
+  },
+  "discoverDestInsertYear": "Insert year",
+  "@discoverDestInsertYear": {
+    "description": "Accessible name of the destination picker button that inserts the year variable into the custom layout."
+  },
+  "discoverDestInsertGenre": "Insert genre",
+  "@discoverDestInsertGenre": {
+    "description": "Accessible name of the destination picker button that inserts the genre variable into the custom layout."
+  },
+  "discoverDestInsertAlbumArtist": "Insert album artist",
+  "@discoverDestInsertAlbumArtist": {
+    "description": "Accessible name of the destination picker button that inserts the album artist variable (the album's credit) into the custom layout."
+  },
+  "discoverDestInsertPeer": "Insert server name",
+  "@discoverDestInsertPeer": {
+    "description": "Accessible name of the destination picker button that inserts the variable for the name of the connected server the copy comes from."
+  },
+  "discoverDestInsertServerFolder": "Insert server folder",
+  "@discoverDestInsertServerFolder": {
+    "description": "Accessible name of the destination picker button that inserts the variable for the folders the song sits in on the connected server the copy comes from (it can be several folders)."
+  },
+  "discoverDestErrUnknownVar": "Unknown variable {name}. Use {vars}.",
+  "@discoverDestErrUnknownVar": {
+    "description": "Destination picker, under the custom layout field: it names a variable that does not exist; {name} is it in its braces (like {{ARTST}}), {vars} the variables there are (like ARTIST, ALBUM).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestErrBraces": "A brace is out of place — variables are written like {example}.",
+  "@discoverDestErrBraces": {
+    "description": "Destination picker, under the custom layout field: a single or unmatched brace; {example} is a variable in its double braces (like {{ARTIST}}).",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestErrBaseBraces": "“{folder}” is a folder set on another device, but in a layout it reads as a variable. Rename it here, or choose a layout.",
+  "@discoverDestErrBaseBraces": {
+    "description": "Destination picker, under the custom layout field: a base folder saved on the web app or the terminal (the phone holds it at the start of the layout) has a brace in its name, like {{PEER}}, which a layout reads as a variable — saved as it is, copies would land elsewhere, so Save waits until it is renamed or a preset layout is chosen. {folder} is that folder's name.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestErrAbsolute": "A layout can't start with / — it begins inside the library.",
+  "@discoverDestErrAbsolute": {
+    "description": "Destination picker, under the custom layout field: it starts with a slash; a layout is relative to the chosen library."
+  },
+  "discoverDestErrTraversal": "A path can't contain .. folders.",
+  "@discoverDestErrTraversal": {
+    "description": "Destination picker, under the custom layout field: it has a \"..\" segment (a folder that climbs out)."
+  },
+  "discoverDestErrEmpty": "That makes no folder — add a name or a variable.",
+  "@discoverDestErrEmpty": {
+    "description": "Destination picker, under the custom layout field: it renders to no folder at all (only spaces or slashes)."
+  },
+  "discoverDestErrHome": "A path can't contain ~ or $HOME.",
+  "@discoverDestErrHome": {
+    "description": "Destination picker, under the custom layout field: it contains a tilde or $HOME (a home folder reference), which the server refuses. Keep ~ and $HOME as they are."
+  },
+  "discoverDestErrGeneric": "That path can't be used.",
+  "@discoverDestErrGeneric": {
+    "description": "Destination picker, under the custom layout field: the server would refuse it for another reason."
+  },
+  "discoverDestErrDrive": "A path can't use a drive letter like C:.",
+  "@discoverDestErrDrive": {
+    "description": "Destination picker, under the custom layout field: it starts a folder with a Windows drive letter (like C:), which the server refuses."
+  },
+  "discoverDestErrTooLong": "A layout can be at most {max} characters.",
+  "@discoverDestErrTooLong": {
+    "description": "Destination picker, under the custom layout field: it is longer than the server takes; {max} is the limit (500).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverDestErrControl": "A path can't contain tabs or other control characters.",
+  "@discoverDestErrControl": {
+    "description": "Destination picker, under the custom layout field: it contains a tab, a line break or another control character (usually pasted)."
+  },
+  "discoverDestMissing": "No value for this song, so left out of the path: {vars}",
+  "@discoverDestMissing": {
+    "description": "Destination picker preview, under the path: the layout's variables that this song has no tag for, so their part of the path is left out; {vars} lists them as typed (like {{YEAR}}, {{ALBUM}}).",
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestGenreSlot": "genre",
+  "@discoverDestGenreSlot": {
+    "description": "Keep a copy paths not landed yet (Files go to, Retry adds to, the every-album question, the destination picker preview): the word that stands in for the genre folder, shown between ‹ › marks ('copies › ‹genre› › Boukmanflow'). Each song files under its own file's genre tag, which the phone cannot always tell."
+  },
+  "discoverDestArtistSlot": "artist",
+  "@discoverDestArtistSlot": {
+    "description": "Keep a copy paths not landed yet: the word that stands in for the artist folder, shown between ‹ › marks ('copies › From friends › ‹artist›'), when the songs a copy takes are by different artists (a compilation) — each song files under its own artist tag."
+  },
+  "discoverDestYearSlot": "year",
+  "@discoverDestYearSlot": {
+    "description": "Keep a copy paths not landed yet: the word that stands in for the year folder, shown between ‹ › marks ('copies › Boukmanflow › ‹year›'), when the songs a copy takes carry different years — each song files under its own year tag."
+  },
+  "discoverDestServerFolderSlot": "server folder",
+  "@discoverDestServerFolderSlot": {
+    "description": "Keep a copy paths not landed yet: the words that stand in for the folders a song sits in on the connected server, shown between ‹ › marks ('copies › ‹server folder›'), when the songs a copy takes sit in different folders there — each song lands in its own server folder."
+  },
+  "discoverKeepSlotNote": "{count, plural, =1{{slots} comes from each song's own tags, so these songs can land in more than one folder.} other{{slots} come from each song's own tags, so these songs can land in more than one folder.}}",
+  "@discoverKeepSlotNote": {
+    "description": "Keep a copy, one quiet line under a path not landed yet that shows stand-ins: {slots} lists them as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'); {count} is how many. The server files each song by its own tags, so the copy can land in several folders.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteGenre": "{count, plural, =1{{slots} comes from each song's own tags, so these songs can land in more than one folder (a song with none leaves that folder out).} other{{slots} come from each song's own tags, so these songs can land in more than one folder (a song with none leaves that folder out).}}",
+  "@discoverKeepSlotNoteGenre": {
+    "description": "The same line as discoverKeepSlotNote when the stand-ins include the genre (like '‹genre›' or '‹artist›, ‹genre›'): a song whose file has no genre tag files without the genre folder.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteSong": "{slots} comes from the song's own tags (a song with none leaves that folder out).",
+  "@discoverKeepSlotNoteSong": {
+    "description": "The same line as discoverKeepSlotNote for a copy of ONE song (This song, and the destination picker's preview of one song): only the genre can stand in there, and one song lands in one folder. {slots} is the stand-in as shown (like '‹genre›'); a song whose file has no genre tag files without the genre folder.",
+    "placeholders": {
+      "slots": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServer": "{server} comes from where each song sits on the server, so these songs can land in more than one folder.",
+  "@discoverKeepSlotNoteServer": {
+    "description": "The same line as discoverKeepSlotNote when the only stand-in is the server folder: {server} is it as shown (like '‹server folder›'). Each song lands in the folders it sits in on the connected server, so the copy can land in several folders.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServerTags": "{count, plural, =1{{slots} comes from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder.} other{{slots} come from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder.}}",
+  "@discoverKeepSlotNoteServerTags": {
+    "description": "The same line as discoverKeepSlotNote when the stand-ins are some of the tags AND the server folder: {slots} lists the tag ones as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'), {count} is how many of those; {server} is the server folder's stand-in as shown (like '‹server folder›').",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepSlotNoteServerTagsGenre": "{count, plural, =1{{slots} comes from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).} other{{slots} come from each song's own tags and {server} from where it sits on the server, so these songs can land in more than one folder (a song with none leaves that folder out).}}",
+  "@discoverKeepSlotNoteServerTagsGenre": {
+    "description": "The same line as discoverKeepSlotNoteServerTags when the tag stand-ins include the genre: a song whose file has no genre tag files without the genre folder.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverDestUseDefault": "Use the library default",
+  "@discoverDestUseDefault": {
+    "description": "Destination picker text button: drops the account's saved destination and goes back to the library default."
+  },
+  "discoverDestSaving": "Saving…",
+  "@discoverDestSaving": {
+    "description": "Destination picker Save button while the save is in flight."
+  },
+  "discoverDestLoadFailed": "Couldn't load where copies land",
+  "@discoverDestLoadFailed": {
+    "description": "Destination picker error state: the destination could not be read."
+  },
+  "discoverDestLoading": "Loading where copies land",
+  "@discoverDestLoading": {
+    "description": "Accessible label of the destination picker's loading placeholders."
+  },
+  "discoverKeepFirstUse": "Copies go to your server, not this phone. Check where they land before the first one.",
+  "@discoverKeepFirstUse": {
+    "description": "Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved."
+  },
+  "discoverElsewhereExact": "Exact pages",
+  "@discoverElsewhereExact": {
+    "description": "Open elsewhere section label (drawn in capitals): pages for this exact recording on MusicBrainz."
+  },
+  "discoverElsewhereSearch": "Search",
+  "@discoverElsewhereSearch": {
+    "description": "Open elsewhere section label (drawn in capitals): searches on other catalogues (the rows are the catalogues' own names)."
+  },
+  "discoverElsewhereMbRecording": "MusicBrainz recording",
+  "@discoverElsewhereMbRecording": {
+    "description": "Open elsewhere row: the MusicBrainz page of this recording."
+  },
+  "discoverElsewhereMbReleaseGroup": "MusicBrainz release group",
+  "@discoverElsewhereMbReleaseGroup": {
+    "description": "Open elsewhere row: the MusicBrainz page of the release group (the album)."
+  },
+  "discoverElsewhereMbIsrc": "MusicBrainz ISRC",
+  "@discoverElsewhereMbIsrc": {
+    "description": "Open elsewhere row: the MusicBrainz page of the recording's ISRC code."
+  },
+  "discoverElsewhereEmpty": "No links for this song",
+  "@discoverElsewhereEmpty": {
+    "description": "Open elsewhere empty state."
+  },
+  "discoverElsewhereEmptySub": "It has no MusicBrainz ids, and no title or artist to search for.",
+  "@discoverElsewhereEmptySub": {
+    "description": "Open elsewhere empty state: why there are no links."
+  },
+  "discoverElsewhereFailed": "Couldn't look up links right now",
+  "@discoverElsewhereFailed": {
+    "description": "Open elsewhere error state; the server's own words, when it sent some, show under it."
+  },
+  "discoverElsewhereLoading": "Looking up links",
+  "@discoverElsewhereLoading": {
+    "description": "Accessible label of Open elsewhere's loading placeholders."
+  },
+  "discoverElsewhereOpensOutside": "Opens outside the app",
+  "@discoverElsewhereOpensOutside": {
+    "description": "Accessibility hint on an Open elsewhere row."
   }
 }

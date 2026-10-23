@@ -1761,7 +1761,170 @@ class AppLocalizationsJa extends AppLocalizations {
       'ピアツーピア（iroh）サーバーでは共有を利用できません — リンクできる公開 URL がありません。';
 
   @override
-  String get discoverTitle => 'ディスカバー';
+  String get discoverTitle => '似た曲';
+
+  @override
+  String get discoverPageTitle => 'ディスカバー';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => '全期間';
+
+  @override
+  String discoverPageWidened(String window) {
+    return '直近 $window には何もないため、さらに前の曲を使っています。';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'もとにした曲';
+
+  @override
+  String get discoverPageBasedOnLast => '対象期間';
+
+  @override
+  String get discoverPageBasedOnAllTime => '対象期間';
+
+  @override
+  String get discoverPageMoreOptions => 'その他のオプション';
+
+  @override
+  String get discoverPageNewSeeds => 'もとにする曲を変える';
+
+  @override
+  String get discoverPageAlbumsLibrary => 'ライブラリのアルバム';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return '$nameのアルバム';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => '接続中のサーバーのアルバム';
+
+  @override
+  String get discoverPageSongsLibrary => 'ライブラリの曲';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return '$nameの曲';
+  }
+
+  @override
+  String get discoverPageSongsPeers => '接続中のサーバーの曲';
+
+  @override
+  String get discoverPageLibraryNothing => 'ライブラリに、これらの曲に似た新しい曲はありません。';
+
+  @override
+  String get discoverPagePeersQuiet => '接続中のサーバーからは今のところ何もありません。';
+
+  @override
+  String get discoverPagePeersFailed => '接続中のサーバーに接続できませんでした。';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'プレイリストとして保存';
+
+  @override
+  String get discoverPageBrowseLibrary => 'ライブラリを見る';
+
+  @override
+  String get discoverPageAgoToday => '今日';
+
+  @override
+  String get discoverPageAgoYesterday => '昨日';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count か月前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 年前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle => '何曲か最後まで聴くと、このページがあなたの好みを学びます';
+
+  @override
+  String get discoverPageRandomBody =>
+      'ディスカバーは最後まで聴いた曲をもとにします。スキップした曲は数えません。それまでは、ライブラリからランダムに選んだ1曲をもとにおすすめします。';
+
+  @override
+  String get discoverPageAnotherPick => '別の曲';
+
+  @override
+  String get discoverPageChooseSong => '曲を選ぶ…';
+
+  @override
+  String get discoverPageError => 'ディスカバーを読み込めませんでした。接続を確認して、もう一度お試しください。';
+
+  @override
+  String get discoverPageRetry => '再試行';
+
+  @override
+  String get discoverPagePickedHeader => '今回選んだ曲';
+
+  @override
+  String get discoverPageRandomHeader => 'ランダムに選んだ曲';
+
+  @override
+  String get discoverPageDroppedHeader => '除外した曲';
+
+  @override
+  String get discoverPageDroppedNote => 'オンにすると戻ります';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return '$count 回再生';
+  }
+
+  @override
+  String get discoverPageListenedTo => '途中まで聴いた';
+
+  @override
+  String get discoverPageNotAnalyzed => '未解析';
+
+  @override
+  String get discoverPageAddOwn => '自分で追加';
+
+  @override
+  String get discoverPageAddOwnSub => 'もっと聴きたい曲';
+
+  @override
+  String get discoverPagePickSong => '曲を選ぶ…';
+
+  @override
+  String get discoverPagePickSongSub => 'ライブラリを検索するか、ランダムに選ぶ';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この $count 曲を使う',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'サウンドでマッチ';
@@ -3194,14 +3357,14 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '再生中の曲で「ディスカバー」を開きます · 取得済み $count ライブラリからの候補',
+      other: '再生中の曲で「似た曲」を開きます · 取得済み $count ライブラリからの候補',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'まず何かを再生してください — 「ディスカバー」は再生中の曲に追従します';
+      'まず何かを再生してください — 「似た曲」は再生中の曲に追従します';
 
   @override
   String get p2pNewArtistsOnlySub => 'このライブラリに既にいるアーティストの候補を隠す';
@@ -4117,4 +4280,822 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get homeWidgetPinUnsupported =>
       'このランチャーはここからウィジェットを追加できません。ランチャーのウィジェット一覧から追加してください。';
+
+  @override
+  String discoverSheetPeerOnline(String name) {
+    return '$name はオンライン';
+  }
+
+  @override
+  String discoverSheetPeerNotAnswering(String name) {
+    return '$name が応答しません';
+  }
+
+  @override
+  String discoverSheetSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverSheetAlbumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 枚のアルバム',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetNotInLibrary => 'ライブラリにありません';
+
+  @override
+  String get discoverSheetInLibrary => 'ライブラリにあります';
+
+  @override
+  String discoverSheetYouHaveAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '手元に $count 枚',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetOpenAlbum => 'アルバムを開く';
+
+  @override
+  String get discoverSheetQueueAlbum => 'アルバムをキューに追加';
+
+  @override
+  String get discoverSheetPlayAlbum => 'アルバムを再生';
+
+  @override
+  String get discoverSheetOpenArtist => 'アーティストを開く';
+
+  @override
+  String get discoverSheetListen => '聴く';
+
+  @override
+  String get discoverSheetKeepCopy => 'コピーを保存';
+
+  @override
+  String get discoverSheetOpenElsewhere => 'ほかのサービスで開く';
+
+  @override
+  String discoverSheetBrowsePeer(String name) {
+    return '$name を見る';
+  }
+
+  @override
+  String get discoverSheetDownloadToPhone => 'このスマートフォンにダウンロード';
+
+  @override
+  String get discoverSheetDownloadToPhoneSub => 'この端末でオフライン再生するため';
+
+  @override
+  String discoverSheetAlbumFailed(String name) {
+    return '$name からこのアルバムを読み込めませんでした';
+  }
+
+  @override
+  String discoverAlbumCardMore(String album) {
+    return '$album のその他の操作';
+  }
+
+  @override
+  String get discoverKeepThisSong => 'この曲';
+
+  @override
+  String get discoverKeepAlbum => 'アルバム';
+
+  @override
+  String get discoverKeepArtist => 'アーティスト';
+
+  @override
+  String get discoverKeepWhat => '保存する範囲';
+
+  @override
+  String discoverKeepYouHave(int count) {
+    return '手元に $count';
+  }
+
+  @override
+  String discoverKeepOnlyMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '持っていない $count 枚だけ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepFilesGoTo => '保存先';
+
+  @override
+  String discoverKeepPathTooLong(int max) {
+    return 'このコピーのパスは $max 文字を超えるため、サーバーが受け付けません';
+  }
+
+  @override
+  String get discoverKeepFolderPerAlbum => 'アルバムごとにフォルダー';
+
+  @override
+  String get discoverKeepChange => '変更';
+
+  @override
+  String get discoverKeepChangeHint => 'コピーの保存先を変更';
+
+  @override
+  String get discoverKeepAddSong => '曲を追加';
+
+  @override
+  String get discoverKeepAddAlbum => 'アルバムを追加';
+
+  @override
+  String get discoverKeepAddEveryAlbum => 'すべてのアルバムを追加';
+
+  @override
+  String discoverKeepAddAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 枚のアルバムを追加',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepAddMissing => '持っていないアルバムを追加';
+
+  @override
+  String get discoverKeepUploadsOff => 'このアカウントはこのサーバーにファイルを追加できません';
+
+  @override
+  String get discoverKeepNoLibrary => 'あなたのサーバーには新しいファイルを追加できるライブラリがありません';
+
+  @override
+  String get discoverKeepStartFailed => 'サーバーに接続できませんでした。もう一度お試しください。';
+
+  @override
+  String get discoverKeepDestChanged =>
+      '開いてからファイルの保存先が変わりました。上のパスを確認して、もう一度追加してください。';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      '開いてからファイルの保存先が変わりました。上のパスを確認して、もう一度お試しください。';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return '再試行の保存先は $path（現在保存されている場所）です';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'もう一度追加の保存先は $path（現在保存されている場所）です';
+  }
+
+  @override
+  String discoverKeepConfirmTitle(int count, String peer) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$peer から $count 枚のアルバムをコピーしますか？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepConfirmEveryTitle(String artist, String peer) {
+    return '$peer から $artist のすべてのアルバムをコピーしますか？';
+  }
+
+  @override
+  String discoverKeepConfirmBody(String path) {
+    return 'サーバーの $path に、アルバムごとのフォルダーで保存されます。すでにある曲はスキップされます。';
+  }
+
+  @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'サーバーの $path に保存されます。すでにある曲はスキップされます。';
+  }
+
+  @override
+  String discoverKeepConfirmAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 枚をコピー',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepConfirmEveryAction => 'すべてコピー';
+
+  @override
+  String get discoverJobQueued => '空きを待っています';
+
+  @override
+  String get discoverJobQueuedSub => '自動的に始まります';
+
+  @override
+  String get discoverJobCopying => 'コピー中';
+
+  @override
+  String get discoverJobStarting => '開始しています…';
+
+  @override
+  String get discoverJobStopping => '停止しています…';
+
+  @override
+  String get discoverJobInCollection => 'コレクションに追加済み';
+
+  @override
+  String get discoverJobOwned => 'すでに持っています';
+
+  @override
+  String get discoverJobOwnedSub => 'ライブラリにこの曲があります';
+
+  @override
+  String get discoverJobSkipped => 'スキップ · すでにファイルがあります';
+
+  @override
+  String discoverJobExistsSub(String path) {
+    return '$path にすでにファイルがあります · 上書きしていません';
+  }
+
+  @override
+  String get discoverJobFailed => 'コピーに失敗しました';
+
+  @override
+  String get discoverJobFailedSub => 'コピーは完了しませんでした';
+
+  @override
+  String get discoverJobNothingCopiedLead => '何もコピーされませんでした';
+
+  @override
+  String get discoverJobNothingCopied => 'コピーなし';
+
+  @override
+  String get discoverJobStopped => '停止しました';
+
+  @override
+  String discoverJobStoppedQuota(String peer) {
+    return '$peer の転送上限で停止しました';
+  }
+
+  @override
+  String discoverJobStoppedBusy(String peer) {
+    return '$peer は現在ストリームが多すぎます';
+  }
+
+  @override
+  String discoverJobStoppedPeer(String peer) {
+    return '$peer との接続が切れました';
+  }
+
+  @override
+  String discoverJobStoppedRefused(String peer) {
+    return '$peer はあなたのサーバーのキーでのコピーを許可していません';
+  }
+
+  @override
+  String get discoverJobCancelledNothing => '停止 · 何もコピーされていません';
+
+  @override
+  String discoverJobCancelledSome(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '停止 · $count 曲コピー済み',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobCancelledSub => 'キャンセルしました';
+
+  @override
+  String discoverJobCancelledStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'キャンセルしました · $count 曲はコレクションに残ります',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobNothingAll => 'すべて持っています';
+
+  @override
+  String discoverJobNothingFrom(String peer) {
+    return '$peer からコピーするものはありません';
+  }
+
+  @override
+  String get discoverJobOnlyGuest => 'その人自身の作品はありません';
+
+  @override
+  String discoverJobOnlyGuestSub(String artist, String peer) {
+    return '$artist は $peer のアルバムにゲスト参加しているだけです';
+  }
+
+  @override
+  String discoverJobFromOther(String peer) {
+    return '$peer からコピー中';
+  }
+
+  @override
+  String discoverJobComesBack(String action) {
+    return 'そのコピーが終わると「$action」が戻ります';
+  }
+
+  @override
+  String get discoverJobDone => '完了';
+
+  @override
+  String discoverJobCopiedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲コピー',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobOwnedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲は所有済み',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobFailedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲失敗',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 枚のアルバムが失敗',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsLeftOut(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 枚のアルバムを除外',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobRetry => '再試行';
+
+  @override
+  String get discoverJobAddAgain => 'もう一度追加';
+
+  @override
+  String get discoverJobAddToQueue => 'キューに追加';
+
+  @override
+  String get discoverMarkWaiting => '待機中';
+
+  @override
+  String get discoverMarkCopying => 'コピー中…';
+
+  @override
+  String discoverMarkCopyingCount(int done, int total) {
+    return 'コピー中 $done/$total';
+  }
+
+  @override
+  String get discoverMarkStopping => '停止中…';
+
+  @override
+  String get discoverMarkInCollection => 'コレクションに追加済み';
+
+  @override
+  String get discoverMarkAlreadyYours => '所有済み';
+
+  @override
+  String get discoverMarkStopped => '停止';
+
+  @override
+  String get discoverMarkRefused => '拒否';
+
+  @override
+  String get discoverMarkFailed => '失敗';
+
+  @override
+  String get discoverMarkSkipped => 'スキップ';
+
+  @override
+  String discoverCopiesCopying(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'コピー中 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '失敗 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesLabel(String summary) {
+    return 'コピー: $summary';
+  }
+
+  @override
+  String get discoverCopiesTitle => 'コピー';
+
+  @override
+  String get discoverCopiesSectionCopying => 'コピー中';
+
+  @override
+  String get discoverCopiesSectionAttention => '停止または失敗';
+
+  @override
+  String get discoverCopiesSectionFinished => '完了したばかり';
+
+  @override
+  String get discoverCopiesClearFinished => '完了済みを消去';
+
+  @override
+  String get discoverCopiesEmpty => 'コピー中のものはありません';
+
+  @override
+  String get discoverCopiesEmptySub =>
+      'ディスカバーで接続中のサーバーの曲やアルバムを長押しすると、コピーを保存できます。';
+
+  @override
+  String get discoverCopiesOpenDiscover => 'ディスカバーを開く';
+
+  @override
+  String get discoverCopiesLoadFailed => 'コピーを読み込めませんでした';
+
+  @override
+  String get discoverCopiesLoadFailedSub => 'サーバーが応答しませんでした。コピーはサーバー上で続いています。';
+
+  @override
+  String get discoverCopiesLoading => 'コピーを読み込み中';
+
+  @override
+  String get discoverCopiesKindSong => '曲';
+
+  @override
+  String get discoverCopiesKindAlbum => 'アルバム';
+
+  @override
+  String get discoverCopiesKindEvery => 'すべてのアルバム';
+
+  @override
+  String get discoverCopiesKindMissing => '持っていないもの';
+
+  @override
+  String discoverCopiesFrom(String peer) {
+    return '$peer から';
+  }
+
+  @override
+  String discoverCopiesEveryAlbumBy(String artist) {
+    return '$artist のすべてのアルバム';
+  }
+
+  @override
+  String discoverCopiesMissingOf(String artist) {
+    return '$artist · 持っていないアルバム';
+  }
+
+  @override
+  String get discoverCopiesAlreadyFinished => 'すでに完了しています · キャンセルするものはありません';
+
+  @override
+  String get discoverCopiesCancelFailed => 'キャンセルできませんでした。もう一度お試しください。';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      '開始できませんでした：保存先が変わりました — 「コピーを保存」から再試行してください';
+
+  @override
+  String discoverToastCopying(String title, String peer) {
+    return '$peer から $title をコピー中';
+  }
+
+  @override
+  String discoverToastCopyingEvery(String artist, String peer) {
+    return '$peer から $artist のすべてのアルバムをコピー中';
+  }
+
+  @override
+  String discoverToastCopyingMissing(String artist, String peer) {
+    return '$peer から、持っていない $artist のアルバムをコピー中';
+  }
+
+  @override
+  String get discoverToastAdded => 'コレクションに追加しました';
+
+  @override
+  String get discoverToastAlreadyYours => 'すでにライブラリにあります';
+
+  @override
+  String discoverToastFailed(String reason) {
+    return 'コピーに失敗しました: $reason';
+  }
+
+  @override
+  String discoverToastStopped(String reason) {
+    return '途中で停止しました: $reason';
+  }
+
+  @override
+  String get discoverToastLinkFailed => 'そのリンクを開けませんでした';
+
+  @override
+  String discoverToastSaved(String path) {
+    return '保存しました · コピーは $path に保存されます';
+  }
+
+  @override
+  String get discoverDestTitle => 'コピーの保存先';
+
+  @override
+  String get discoverDestSub => 'アカウント共通の設定 · すべてのコピーに使われます';
+
+  @override
+  String get discoverDestTagDefault => 'ライブラリの既定';
+
+  @override
+  String get discoverDestTagYours => 'あなたの設定';
+
+  @override
+  String discoverDestLandsAt(String title) {
+    return '$title の保存先';
+  }
+
+  @override
+  String get discoverDestFixLayout => '保存先を確認するには、レイアウトを修正してください';
+
+  @override
+  String discoverDestPathTooLong(int max) {
+    return 'この曲のパスは $max 文字を超えるため、サーバーが受け付けません';
+  }
+
+  @override
+  String get discoverDestLibrary => 'ライブラリ';
+
+  @override
+  String get discoverDestLayout => 'レイアウト';
+
+  @override
+  String get discoverDestPresetArtistAlbum => 'アーティスト / アルバム';
+
+  @override
+  String get discoverDestPresetServer => 'サーバー / アーティスト / アルバム';
+
+  @override
+  String get discoverDestPresetServerFolders => 'サーバーと同じフォルダー';
+
+  @override
+  String get discoverDestPresetLibrary => 'ライブラリのレイアウト';
+
+  @override
+  String get discoverDestPresetCustom => 'カスタム';
+
+  @override
+  String get discoverDestCustomSub => 'パスを自分で入力';
+
+  @override
+  String get discoverDestCustomField => 'カスタムレイアウト';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return '例: 友だちから、または $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'フォルダーは / で区切ります。変数を使うとアーティストやアルバムごとに分けられ、固定の名前だとすべてのコピーが同じフォルダーに入ります。';
+
+  @override
+  String get discoverDestCustomEmpty => 'パスを入力すると保存先が表示されます';
+
+  @override
+  String get discoverDestInsertArtist => 'アーティストを挿入';
+
+  @override
+  String get discoverDestInsertAlbum => 'アルバムを挿入';
+
+  @override
+  String get discoverDestInsertYear => '年を挿入';
+
+  @override
+  String get discoverDestInsertGenre => 'ジャンルを挿入';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'アルバムアーティストを挿入';
+
+  @override
+  String get discoverDestInsertPeer => 'サーバー名を挿入';
+
+  @override
+  String get discoverDestInsertServerFolder => 'サーバーのフォルダーを挿入';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return '不明な変数 $name です。$vars を使ってください。';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return '波かっこの位置が正しくありません。変数は $example のように書きます。';
+  }
+
+  @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '「$folder」は別のデバイスで設定されたフォルダーですが、レイアウトの中では変数として扱われます。ここで名前を変えるか、レイアウトを選んでください。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => 'レイアウトは / で始められません。ライブラリの中から始まります。';
+
+  @override
+  String get discoverDestErrTraversal => 'パスに「..」フォルダーは使えません。';
+
+  @override
+  String get discoverDestErrEmpty => 'フォルダーが作られません。名前か変数を追加してください。';
+
+  @override
+  String get discoverDestErrHome => 'パスに ~ や \$HOME は使えません。';
+
+  @override
+  String get discoverDestErrGeneric => 'このパスは使えません。';
+
+  @override
+  String get discoverDestErrDrive => 'パスに C: のようなドライブ文字は使えません。';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'レイアウトは $max 文字までです。';
+  }
+
+  @override
+  String get discoverDestErrControl => 'パスにタブなどの制御文字は使えません。';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'この曲には値がないため、パスから省かれます: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'ジャンル';
+
+  @override
+  String get discoverDestArtistSlot => 'アーティスト';
+
+  @override
+  String get discoverDestYearSlot => '年';
+
+  @override
+  String get discoverDestServerFolderSlot => 'サーバーのフォルダー';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots は各曲のタグから決まるため、これらの曲は複数のフォルダーに入ることがあります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから決まるため、これらの曲は複数のフォルダーに入ることがあります（ジャンルのない曲ではそのフォルダーが省かれます）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots は曲のタグから決まります（ジャンルのない曲ではそのフォルダーが省かれます）。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから、$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots は各曲のタグから、$server は各曲がサーバー上のどこにあるかで決まるため、これらの曲は複数のフォルダーに入ることがあります（ジャンルのない曲ではそのフォルダーが省かれます）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverDestUseDefault => 'ライブラリの既定を使う';
+
+  @override
+  String get discoverDestSaving => '保存中…';
+
+  @override
+  String get discoverDestLoadFailed => 'コピーの保存先を読み込めませんでした';
+
+  @override
+  String get discoverDestLoading => 'コピーの保存先を読み込み中';
+
+  @override
+  String get discoverKeepFirstUse =>
+      'コピーはこのスマートフォンではなく、サーバーに保存されます。最初のコピーの前に保存先を確認してください。';
+
+  @override
+  String get discoverElsewhereExact => '該当ページ';
+
+  @override
+  String get discoverElsewhereSearch => '検索';
+
+  @override
+  String get discoverElsewhereMbRecording => 'MusicBrainz の録音';
+
+  @override
+  String get discoverElsewhereMbReleaseGroup => 'MusicBrainz のリリースグループ';
+
+  @override
+  String get discoverElsewhereMbIsrc => 'MusicBrainz の ISRC';
+
+  @override
+  String get discoverElsewhereEmpty => 'この曲のリンクはありません';
+
+  @override
+  String get discoverElsewhereEmptySub =>
+      'MusicBrainz の ID がなく、検索できるタイトルやアーティストもありません。';
+
+  @override
+  String get discoverElsewhereFailed => '今はリンクを取得できませんでした';
+
+  @override
+  String get discoverElsewhereLoading => 'リンクを検索中';
+
+  @override
+  String get discoverElsewhereOpensOutside => 'アプリの外で開きます';
 }

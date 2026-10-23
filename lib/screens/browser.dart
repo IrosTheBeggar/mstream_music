@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
@@ -19,6 +21,7 @@ import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
+import '../util/image_cache.dart';
 import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
@@ -27,6 +30,14 @@ import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
+import 'discovery/copies_hub.dart';
+import 'discovery/copies_sheet.dart';
+import 'discovery/discovery_copy_marks.dart';
+import 'discovery/discovery_listing.dart';
+import 'discovery/discovery_page_controller.dart';
+import 'discovery/discovery_widgets.dart';
+import 'discovery/keep_copy_ui.dart';
+import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
@@ -138,6 +149,16 @@ class _BrowserState extends State<Browser> {
       return;
     }
 
+    // Discover is a browser listing like Albums: a frame on this stack that
+    // fills itself in as the server answers (discovery_listing.dart), so it
+    // draws with the browser's own rows and Back returns to the home.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'discover') {
+      final s = browserList[index].server;
+      if (s != null) DiscoveryListing().open(s);
+      return;
+    }
+
     // The feature cards: screens of their own rather than browser frames, so
     // the browser stays where it is behind them.
     if (browserList[index].type == 'execAction' &&
@@ -158,6 +179,17 @@ class _BrowserState extends State<Browser> {
         browserList[index].data == 'torrents') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
+      return;
+    }
+    // Copies: what the server is copying for you (Discover's Keep a copy),
+    // a sheet over the home.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'copies') {
+      final s = browserList[index].server;
+      if (s != null) {
+        unawaited(showCopiesSheet(context, CopiesHub().jobsFor(s),
+            fromHome: true));
+      }
       return;
     }
     if ((browserList[index].type == 'execAction' ||
@@ -712,13 +744,25 @@ class _BrowserState extends State<Browser> {
   // misaligns the text.
   Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
+    // A connected server's album on Discover (the album grid off): the
+    // long-press opens its album sheet, and a copy's marker leads its line.
+    final page = DiscoveryListing().controller;
+    final leads = discoveryCardLeads(b[i]);
+    final peerCard = page != null && leads.isNotEmpty;
+    final marker =
+        peerCard ? page.jobs.cardMarker(leads, album: b[i].name) : null;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: ListTile(
             leading: b[i].getAlbumThumb(),
             title: b[i].getText(l: l),
-            subtitle: b[i].getSubText(l: l),
+            subtitle: marker != null
+                ? DiscoveryRowMarkerLine(
+                    marker: marker, rest: b[i].subtext, counts: true)
+                : b[i].getSubText(l: l),
+            onLongPress:
+                peerCard ? () => showPeerAlbumSheet(c, b[i], page) : null,
             onTap: () {
               handleTap(b, i, c);
             }));
@@ -975,6 +1019,9 @@ class _BrowserState extends State<Browser> {
                                       : VelvetColors.textSecondary));
                         },
                       )
+                    else if (item.data == 'copies' && item.server != null)
+                      // Live counts only: "Copying 2" / "1 failed".
+                      CopiesHomeLines(jobs: CopiesHub().jobsFor(item.server!))
                     else if (item.subtext != null)
                       Text(
                         homeCardSubtext(l, item.subtext!),
@@ -1050,14 +1097,34 @@ class _BrowserState extends State<Browser> {
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
   // convention everywhere (Apple Music / Spotify / Symfonium).
-  void _showTrackActions(DisplayItem item, BuildContext c) =>
-      showTrackActionsSheet(c, item);
+  //
+  // A connected server's song on Discover gets its own sheet instead: the
+  // same listen verbs, its album and artist, Keep a copy, Open elsewhere,
+  // Browse that server, and Download to this phone last.
+  void _showTrackActions(DisplayItem item, BuildContext c) {
+    final lead = discoveryLeadOf(item);
+    final page = DiscoveryListing().controller;
+    if (lead != null && page != null) {
+      showPeerSongSheet(c, item, lead, page);
+      return;
+    }
+    showTrackActionsSheet(c, item);
+  }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
     final allowWrap = !LetterStrip.showsFor(b);
+    // A connected server's row on Discover: what the user's copy of it is
+    // doing ("copying…", "in your collection"…) leads its second line, and
+    // its strip fills with the copy (primary — a phone download keeps the
+    // green).
+    final lead = discoveryLeadOf(b[i]);
+    final marker = lead == null
+        ? null
+        : DiscoveryListing().controller?.jobs.markerFor(lead);
+    final copyStrip = discoveryRowCopyStrip(marker);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -1083,7 +1150,7 @@ class _BrowserState extends State<Browser> {
                         children: <Widget>[
                       SizedBox(
                         width: 4,
-                        child: RotatedBox(
+                        child: copyStrip ?? RotatedBox(
                           quarterTurns: 3,
                           child: LinearProgressIndicator(
                             // value: displayList[index].downloadProgress/100,
@@ -1102,7 +1169,10 @@ class _BrowserState extends State<Browser> {
                           child: ListTile(
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
-                              subtitle: b[i].getSubText(),
+                              subtitle: marker != null
+                                  ? DiscoveryRowMarkerLine(
+                                      marker: marker, rest: b[i].subtext)
+                                  : b[i].getSubText(),
                               // No trailing control: it sat exactly where
                               // the letter strip lands, and long-press opens
                               // the same sheet.
@@ -1110,6 +1180,158 @@ class _BrowserState extends State<Browser> {
                                 handleTap(b, i, c);
                               }))
                     ])))));
+  }
+
+  // ── Discover: the listing DiscoveryListing keeps on the stack ──
+  //
+  // The browser's own album items and song rows (makeListItem, so taps and
+  // long-presses do what they do everywhere), between the pieces only
+  // Discover has: the configuration bar first, state cards, section
+  // headers, the footers. Albums run as a horizontal strip of the album
+  // grid's cards when the album-grid setting is on (the browser's album
+  // look), as album rows when it is off. Pull to refresh and the toolbar's
+  // New seeds — where other lists have local search, which this frame does
+  // not offer — both ask again, and the server answers from a new random
+  // batch of seeds.
+  // A search still open from another list narrows the songs and albums;
+  // the chrome stays.
+  Widget _discoveryView(
+      BuildContext context, List<DisplayItem> all, String query) {
+    final c = DiscoveryListing().controller;
+    final items = query.isEmpty
+        ? all
+        : all
+            .where((it) =>
+                it.type == kDiscoverBar ||
+                ((it.type == 'file' || it.type == 'album') &&
+                    it.matchesQuery(query)))
+            .toList();
+    return StreamBuilder<bool>(
+      stream: SettingsManager().albumGridStream,
+      initialData: SettingsManager().albumGrid,
+      builder: (context, gridSnap) {
+        final grid = gridSnap.data ?? true;
+        final children = <Widget>[];
+        var firstHeader = true;
+        for (var i = 0; i < items.length; i++) {
+          final it = items[i];
+          switch (it.type) {
+            case kDiscoverBar:
+              if (c != null) {
+                children.add(DiscoveryConfigBar(controller: c));
+                // What the server is copying for you, under the bar.
+                children.add(DiscoveryCopiesStrip(controller: c));
+              }
+            case kDiscoverState:
+              children.add(discoveryStateWidget(context, it, c, grid: grid));
+            case kDiscoverFoot:
+              if (c != null) {
+                children.add(DiscoveryFooter(controller: c, which: it.data!));
+              }
+            case 'section':
+              children.add(
+                  _discoverySectionHeader(context, it, first: firstHeader));
+              firstHeader = false;
+            case 'album' when grid:
+              // The run of album items from here is one strip.
+              var end = i;
+              while (end + 1 < items.length && items[end + 1].type == 'album') {
+                end++;
+              }
+              children.add(_discoveryAlbumStrip(context, items, i, end));
+              i = end;
+            default:
+              children.add(makeListItem(items, i, context));
+          }
+        }
+        // Same row density as the browser's list (see the main ListView).
+        return ListTileTheme.merge(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+          horizontalTitleGap: 10,
+          minLeadingWidth: 32,
+          child: RefreshIndicator(
+            color: VelvetColors.primary,
+            onRefresh: c?.refresh ?? () async {},
+            child: ListView(
+              controller: BrowserManager().sc,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 24),
+              children: children,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// A Discover header, in the home's section style (small accent caps).
+  Widget _discoverySectionHeader(BuildContext context, DisplayItem section,
+      {required bool first}) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, first ? 14 : 22, 14, 6),
+      child: Text(
+        discoverySectionLabel(l, section).toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          // The canvas's --ptext on the page: the primary only where it
+          // reads at 4.5:1 there (Velvet's violet does not; Light's amber
+          // is darkened).
+          color: keepInkOnPage(),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  // DiscoveryStripSkeleton holds a strip's place at the same size.
+  static const double _stripCardWidth = kDiscoverStripCardWidth;
+
+  /// Album items [from]..[to] of [items] as one horizontal strip of the
+  /// album grid's cards; a tap goes through handleTap, as a grid card's
+  /// does.
+  Widget _discoveryAlbumStrip(
+      BuildContext context, List<DisplayItem> items, int from, int to) {
+    final cacheW = artCacheSize(_stripCardWidth);
+    return SizedBox(
+      height: kDiscoverStripHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: to - from + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: AlbumGrid.spacing),
+        itemBuilder: (context, k) {
+          final item = items[from + k];
+          // A connected server's card: its copy's badge in the cover, and
+          // a long-press or its ⋯ for the album sheet. The tap still opens
+          // the album.
+          final page = DiscoveryListing().controller;
+          final leads = discoveryCardLeads(item);
+          final peerCard = page != null && leads.isNotEmpty;
+          final marker =
+              peerCard ? page.jobs.cardMarker(leads, album: item.name) : null;
+          void sheet() => showPeerAlbumSheet(context, item, page!);
+          return SizedBox(
+            width: _stripCardWidth,
+            child: AlbumGridCard(
+              item: item,
+              cacheWidth: cacheW,
+              onTap: () => handleTap(items, from + k, context),
+              onLongPress: peerCard ? sheet : null,
+              onMore: peerCard ? sheet : null,
+              moreLabel: peerCard
+                  ? AppLocalizations.of(context).discoverAlbumCardMore(item.name)
+                  : null,
+              coverBadge:
+                  marker == null ? null : DiscoveryCardBadge(marker: marker),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // In-flow context strip under the toolbar: the query on a search-results list,
@@ -1243,6 +1465,14 @@ class _BrowserState extends State<Browser> {
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
                     final List<DisplayItem> rawList = snapshot.data ?? [];
+
+                    // Discover draws its own listing (the bar, sections and
+                    // footers around the browser's rows).
+                    if (DiscoveryListing.isListing(rawList)) {
+                      final search = BrowserManager().search;
+                      return _discoveryView(context, rawList,
+                          search.open ? search.query.trim() : '');
+                    }
 
                     // Local search filters only the *displayed* list; the
                     // manager's browserList (hence navigation / back-stack

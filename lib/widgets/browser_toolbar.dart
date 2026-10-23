@@ -10,6 +10,8 @@
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
 //                          back · label · search · (no songs to act on)
+//   • Discover           → back · label · New seeds (no search, no verbs:
+//                          its footers carry them)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -23,6 +25,7 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
+import '../screens/discovery/discovery_listing.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
@@ -267,6 +270,30 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
+  // Discover's "New seeds": the open frame's controller asks again
+  // (DiscoveryPageController.refresh) — a plain re-ask, which the server
+  // answers from a new random batch of seeds. Off while it could do nothing
+  // — no answer yet, a call out (the bar's thin line shows it; the rows stay
+  // up), the route refused — so the button follows the controller, not only
+  // the browser streams.
+  Widget _newSeedsButton(AppLocalizations l) {
+    final c = DiscoveryListing().controller;
+    Widget button(bool on) => IconButton(
+          key: const ValueKey('discovery-new-seeds'),
+          icon: const Icon(Icons.refresh, size: 22),
+          color: VelvetColors.appBarTextSecondary,
+          disabledColor:
+              VelvetColors.appBarTextSecondary.withValues(alpha: 0.4),
+          tooltip: l.discoverPageNewSeeds,
+          onPressed: on ? () => unawaited(c!.refresh()) : null,
+        );
+    if (c == null) return button(false);
+    return ListenableBuilder(
+      listenable: c,
+      builder: (_, _) => button(c.canRefresh),
+    );
+  }
+
   Widget _title(String text) => Expanded(
         child: Text(
           text,
@@ -472,8 +499,17 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // Play/Shuffle appear only when the current list actually holds playable
     // rows, so Albums / Artists / Playlists (which list containers, not songs)
     // keep a clean bar and you never get a play button with nothing to play.
+    //
+    // Discover is the exception: its song lists carry their own verbs (the
+    // footers' Queue all · Shuffle · Save as playlist, per list), and its
+    // frame mixes the library's rows with connected servers' — so no
+    // page-wide Play / Add all / Download, which would act on both at once
+    // (and offer to download a peer's tracks unasked). Back · label ·
+    // New seeds: where other lists have search, Discover's bar asks again,
+    // from a new random batch of songs you finished ([_newSeedsButton]).
     final canBack = BrowserManager().browserCache.length > 1;
-    final targets = _actionTargets;
+    final discover = DiscoveryListing.isListing(s.list);
+    final targets = discover ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
       if (canBack)
@@ -484,7 +520,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       else
         const SizedBox(width: 12),
       _title(browserChromeLabel(l, s.label)),
-      if (canPlay) ...[
+      if (discover) ...[
+        _newSeedsButton(l),
+        const SizedBox(width: 12),
+      ] else if (canPlay) ...[
         // Play/Add all claim the bar, so search moves into the overflow.
         // Add all rather than Shuffle: in a folder the usual intent is "put
         // this on the end of what I'm listening to", and shuffling a single

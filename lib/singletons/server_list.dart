@@ -366,6 +366,9 @@ class ServerManager {
       final bool? prevP2pAvailable = server.p2pAvailable;
       final int? prevFedInbox = server.federationInbox;
       final int? prevStats = server.statsVersion;
+      final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
+      final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
+      final bool? prevNoUpload = server.noUpload;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -423,14 +426,26 @@ class ServerManager {
           server.p2pAvailable != prevP2pAvailable ||
           server.federationInbox != prevFedInbox ||
           server.discoveryPathAvailable != prevDiscoveryPath ||
+          server.discoveryTasteAvailable != prevDiscoveryTaste ||
+          server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
+          server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
       }
+      // The home's cards that follow a flag. Discover wants discovery AND
+      // the taste route, so either half changing redraws it — a server
+      // upgraded (or its discovery switched on) while its home is showing
+      // gains the card without a server switch.
       if (server.federationAvailable != prevFedAvailable ||
           server.p2pAvailable != prevP2pAvailable ||
           server.federationInbox != prevFedInbox ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.discoveryPathAvailable != prevDiscoveryPath ||
+          server.discoveryAvailable != prevDiscovery ||
+          server.discoveryTasteAvailable != prevDiscoveryTaste ||
+          // The SERVER section's Copies row follows these two.
+          server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
+          server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         _refreshHomeIfShowing(server);
       }
@@ -533,6 +548,16 @@ class ServerManager {
     // Stats API v2 (mStream 6.27+): an integer generation, absent before.
     server.statsVersion =
         features is Map && features['stats'] is int ? features['stats'] as int : null;
+    // The Discover page (an integer generation too — see Server) and the
+    // plug-in flag; both server-wide, so under `features` here.
+    server.discoveryTasteAvailable =
+        features is Map && hasTasteGeneration(features['discoveryTaste']);
+    server.discoveryPluginsAvailable =
+        features is Map && features['discoveryPlugins'] == true;
+    // Caller-scoped (the account's upload right), so under `user` here.
+    server.noUpload = user is Map && user['noUpload'] is bool
+        ? user['noUpload'] as bool
+        : null;
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -558,7 +583,13 @@ class ServerManager {
     }
     final res = jsonDecode(response.body);
     if (res is! Map) throw Exception('Failed to connect to server');
+    _applyPingPayload(server, res);
+    return res;
+  }
 
+  /// Fold a decoded ping body into [server] — the half of [_applyPing] that
+  /// needs no network, split out so the flag rules are testable.
+  void _applyPingPayload(Server server, Map res) {
     _applyVpaths(server, res['vpaths']);
     _applyPlaylists(server, res['playlists']);
     _applyTranscode(server, res['transcode']);
@@ -575,8 +606,32 @@ class ServerManager {
     server.p2pAvailable = res.containsKey('discoveryP2p');
     server.statsVersion = res['stats'] is int ? res['stats'] as int : null;
     server.discoveryPathAvailable = res['discoveryPath'] == true;
-    return res;
+    // Ping lists its capability keys by hand (mStream src/api/playlist.js),
+    // and carries `discoveryTaste` beside `discoveryPlugins` from the build
+    // that has the Discover page (mStream docs/discovery-page-plan.md §2.10).
+    server.discoveryTasteAvailable = hasTasteGeneration(res['discoveryTaste']);
+    server.discoveryPluginsAvailable = res['discoveryPlugins'] == true;
+    server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
   }
+
+  /// Whether a `discoveryTaste` wire value advertises the Discover page: an
+  /// integer generation (1 = POST /discovery/taste + prefs; a later body key
+  /// ships as 2), so anything ≥ 1 has the routes. A bool, a string or a
+  /// fraction is not a generation — the flag stays off rather than guessed
+  /// on (flags, never probes).
+  @visibleForTesting
+  static bool hasTasteGeneration(dynamic v) => v is int && v >= 1;
+
+  /// Test seam over [_applyServerInfo]: fold a layered `GET /api/` body into
+  /// [server] exactly as a refresh would, minus the network.
+  @visibleForTesting
+  void applyServerInfoForTest(Server server, Map info) =>
+      _applyServerInfo(server, info);
+
+  /// Test seam over [_applyPingPayload]: fold a ping body into [server].
+  @visibleForTesting
+  void applyPingForTest(Server server, Map res) =>
+      _applyPingPayload(server, res);
 
   /// Reconcile [server]'s Auto DJ path map against the library list it just
   /// reported: add new vpaths (enabled), drop ones that are gone, and re-enable
@@ -2526,6 +2581,13 @@ class ServerManager {
     server.federationInbox = null; // its requests are its operator's business
     server.p2pAvailable = false; // the network is the parent's, not a peer's
     server.discoveryPathAvailable = false;
+    // The taste route takes a logged-in account (requireAccount 403s a
+    // federation key or a guest token), and its seeds are the account's own
+    // plays — which for a peer's tracks live on the PARENT. Discover is the
+    // parent's page; the plug-in routes are off the allowlist besides.
+    server.discoveryTasteAvailable = false;
+    server.discoveryPluginsAvailable = false;
+    server.noUpload = null; // a copy lands on the parent, whose flag governs
     server.statsVersion = null; // its plays post to the parent, whose flag governs
     server.playlists.clear();
   }

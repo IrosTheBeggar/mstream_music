@@ -1861,7 +1861,186 @@ class AppLocalizationsPl extends AppLocalizations {
       'Udostępnianie nie jest dostępne dla serwerów peer-to-peer (iroh) — nie mają publicznego adresu URL, do którego można linkować.';
 
   @override
-  String get discoverTitle => 'Odkrywaj';
+  String get discoverTitle => 'Więcej podobnych';
+
+  @override
+  String get discoverPageTitle => 'Odkrywaj';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dnia',
+      many: '$count dni',
+      few: '$count dni',
+      one: '1 dzień',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => 'Cały czas';
+
+  @override
+  String discoverPageWidened(String window) {
+    return 'W ostatnich $window nic nie było, więc te pochodzą z wcześniej.';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'Na podstawie';
+
+  @override
+  String get discoverPageBasedOnLast => 'Na podstawie ostatnich';
+
+  @override
+  String get discoverPageBasedOnAllTime => 'Okres';
+
+  @override
+  String get discoverPageMoreOptions => 'Więcej opcji';
+
+  @override
+  String get discoverPageNewSeeds => 'Nowe utwory bazowe';
+
+  @override
+  String get discoverPageAlbumsLibrary => 'Albumy z twojej biblioteki';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return 'Albumy z serwera „$name”';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Albumy z połączonych serwerów';
+
+  @override
+  String get discoverPageSongsLibrary => 'Utwory z twojej biblioteki';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Utwory z serwera „$name”';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Utwory z połączonych serwerów';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'Nic nowego w twojej bibliotece nie brzmi jak te utwory.';
+
+  @override
+  String get discoverPagePeersQuiet => 'Na razie nic z połączonych serwerów.';
+
+  @override
+  String get discoverPagePeersFailed =>
+      'Nie udało się połączyć z połączonymi serwerami.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Zapisz jako playlistę';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Przeglądaj bibliotekę';
+
+  @override
+  String get discoverPageAgoToday => 'dzisiaj';
+
+  @override
+  String get discoverPageAgoYesterday => 'wczoraj';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count miesiąca temu',
+      many: '$count miesięcy temu',
+      few: '$count miesiące temu',
+      one: '1 miesiąc temu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count roku temu',
+      many: '$count lat temu',
+      few: '$count lata temu',
+      one: '1 rok temu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle =>
+      'Przesłuchaj do końca kilka utworów, a ta strona pozna twój gust';
+
+  @override
+  String get discoverPageRandomBody =>
+      'Odkrywaj opiera się na utworach słuchanych do końca. Pominięte nigdy się nie liczą. Zanim jakieś się pojawią, oto propozycje wokół losowego utworu z twojej biblioteki.';
+
+  @override
+  String get discoverPageAnotherPick => 'Inny utwór';
+
+  @override
+  String get discoverPageChooseSong => 'Wybierz utwór…';
+
+  @override
+  String get discoverPageError =>
+      'Nie udało się wczytać Odkrywaj. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get discoverPageRetry => 'Spróbuj ponownie';
+
+  @override
+  String get discoverPagePickedHeader => 'Wybrane na tę wizytę';
+
+  @override
+  String get discoverPageRandomHeader => 'Losowy wybór';
+
+  @override
+  String get discoverPageDroppedHeader => 'Pominięte';
+
+  @override
+  String get discoverPageDroppedNote => 'włącz, aby przywrócić';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return 'odtworzono $count×';
+  }
+
+  @override
+  String get discoverPageListenedTo => 'przesłuchany';
+
+  @override
+  String get discoverPageNotAnalyzed => 'jeszcze nie przeanalizowany';
+
+  @override
+  String get discoverPageAddOwn => 'Dodaj własny';
+
+  @override
+  String get discoverPageAddOwnSub => 'utwór, którego chcesz więcej';
+
+  @override
+  String get discoverPagePickSong => 'Wybierz utwór…';
+
+  @override
+  String get discoverPagePickSongSub => 'przeszukaj bibliotekę lub wylosuj';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Użyj tych $count',
+      many: 'Użyj tych $count',
+      few: 'Użyj tych $count',
+      one: 'Użyj 1',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'Dopasowane brzmieniem';
@@ -3386,20 +3565,20 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       many:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       few:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       one:
-          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
+          'Otwiera ekran Więcej podobnych dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Najpierw coś odtwórz — ekran Odkrywaj podąża za bieżącym utworem';
+      'Najpierw coś odtwórz — ekran Więcej podobnych podąża za bieżącym utworem';
 
   @override
   String get p2pNewArtistsOnlySub =>
@@ -4389,4 +4568,913 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get homeWidgetPinUnsupported =>
       'Ten launcher nie może dodawać widżetów stąd. Użyj jego własnego wyboru widżetów.';
+
+  @override
+  String discoverSheetPeerOnline(String name) {
+    return '„$name” online';
+  }
+
+  @override
+  String discoverSheetPeerNotAnswering(String name) {
+    return '„$name” nie odpowiada';
+  }
+
+  @override
+  String discoverSheetSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworu',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverSheetAlbumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count albumu',
+      many: '$count albumów',
+      few: '$count albumy',
+      one: '1 album',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetNotInLibrary => 'nie ma w twojej bibliotece';
+
+  @override
+  String get discoverSheetInLibrary => 'jest w twojej bibliotece';
+
+  @override
+  String discoverSheetYouHaveAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'masz $count albumu',
+      many: 'masz $count albumów',
+      few: 'masz $count albumy',
+      one: 'masz 1 album',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetOpenAlbum => 'Otwórz album';
+
+  @override
+  String get discoverSheetQueueAlbum => 'Dodaj album do kolejki';
+
+  @override
+  String get discoverSheetPlayAlbum => 'Odtwórz album';
+
+  @override
+  String get discoverSheetOpenArtist => 'Otwórz wykonawcę';
+
+  @override
+  String get discoverSheetListen => 'Słuchaj';
+
+  @override
+  String get discoverSheetKeepCopy => 'Zachowaj kopię';
+
+  @override
+  String get discoverSheetOpenElsewhere => 'Otwórz gdzie indziej';
+
+  @override
+  String discoverSheetBrowsePeer(String name) {
+    return 'Przeglądaj „$name”';
+  }
+
+  @override
+  String get discoverSheetDownloadToPhone => 'Pobierz na ten telefon';
+
+  @override
+  String get discoverSheetDownloadToPhoneSub =>
+      'Do słuchania offline na tym urządzeniu';
+
+  @override
+  String discoverSheetAlbumFailed(String name) {
+    return 'Nie udało się wczytać tego albumu z „$name”';
+  }
+
+  @override
+  String discoverAlbumCardMore(String album) {
+    return 'Więcej dla „$album”';
+  }
+
+  @override
+  String get discoverKeepThisSong => 'Ten utwór';
+
+  @override
+  String get discoverKeepAlbum => 'Album';
+
+  @override
+  String get discoverKeepArtist => 'Wykonawca';
+
+  @override
+  String get discoverKeepWhat => 'Co zachować';
+
+  @override
+  String discoverKeepYouHave(int count) {
+    return 'masz $count';
+  }
+
+  @override
+  String discoverKeepOnlyMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tylko $count albumu, których nie masz',
+      many: 'Tylko $count albumów, których nie masz',
+      few: 'Tylko $count albumy, których nie masz',
+      one: 'Tylko 1 album, którego nie masz',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepFilesGoTo => 'Pliki trafią do';
+
+  @override
+  String discoverKeepPathTooLong(int max) {
+    return 'Ścieżka tej kopii przekroczyłaby $max znaków – więcej, niż przyjmuje serwer';
+  }
+
+  @override
+  String get discoverKeepFolderPerAlbum => 'osobny folder na każdy album';
+
+  @override
+  String get discoverKeepChange => 'Zmień';
+
+  @override
+  String get discoverKeepChangeHint => 'Zmień miejsce zapisu kopii';
+
+  @override
+  String get discoverKeepAddSong => 'Dodaj utwór';
+
+  @override
+  String get discoverKeepAddAlbum => 'Dodaj album';
+
+  @override
+  String get discoverKeepAddEveryAlbum => 'Dodaj wszystkie albumy';
+
+  @override
+  String discoverKeepAddAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Dodaj $count albumu',
+      many: 'Dodaj $count albumów',
+      few: 'Dodaj $count albumy',
+      one: 'Dodaj 1 album',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepAddMissing => 'Dodaj albumy, których nie masz';
+
+  @override
+  String get discoverKeepUploadsOff =>
+      'Twoje konto nie może dodawać plików na ten serwer';
+
+  @override
+  String get discoverKeepNoLibrary =>
+      'Żadna biblioteka na twoim serwerze nie przyjmuje nowych plików';
+
+  @override
+  String get discoverKeepStartFailed =>
+      'Nie udało się połączyć z twoim serwerem. Spróbuj ponownie.';
+
+  @override
+  String get discoverKeepDestChanged =>
+      'Miejsce zapisu plików zmieniło się od otwarcia. Sprawdź ścieżkę powyżej i dodaj ponownie.';
+
+  @override
+  String get discoverKeepDestChangedTryAgain =>
+      'Miejsce zapisu plików zmieniło się od otwarcia. Sprawdź ścieżkę powyżej i spróbuj ponownie.';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return 'Ponowienie trafi do $path, twojego obecnie zapisanego miejsca';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return 'Ponowne dodanie trafi do $path, twojego obecnie zapisanego miejsca';
+  }
+
+  @override
+  String discoverKeepConfirmTitle(int count, String peer) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Skopiować $count albumu z „$peer”?',
+      many: 'Skopiować $count albumów z „$peer”?',
+      few: 'Skopiować $count albumy z „$peer”?',
+      one: 'Skopiować 1 album z „$peer”?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepConfirmEveryTitle(String artist, String peer) {
+    return 'Skopiować wszystkie albumy wykonawcy $artist z „$peer”?';
+  }
+
+  @override
+  String discoverKeepConfirmBody(String path) {
+    return 'Trafią na twój serwer do $path, osobny folder na każdy album. Utwory, które już masz, zostaną pominięte.';
+  }
+
+  @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return 'Trafią na twój serwer do $path. Utwory, które już masz, zostaną pominięte.';
+  }
+
+  @override
+  String discoverKeepConfirmAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Skopiuj $count albumu',
+      many: 'Skopiuj $count albumów',
+      few: 'Skopiuj $count albumy',
+      one: 'Skopiuj 1 album',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepConfirmEveryAction => 'Skopiuj wszystkie albumy';
+
+  @override
+  String get discoverJobQueued => 'Czeka na wolne miejsce';
+
+  @override
+  String get discoverJobQueuedSub => 'Ruszy samo';
+
+  @override
+  String get discoverJobCopying => 'Kopiowanie';
+
+  @override
+  String get discoverJobStarting => 'Uruchamianie…';
+
+  @override
+  String get discoverJobStopping => 'Zatrzymywanie…';
+
+  @override
+  String get discoverJobInCollection => 'W twojej kolekcji';
+
+  @override
+  String get discoverJobOwned => 'Już to masz';
+
+  @override
+  String get discoverJobOwnedSub => 'Twoja biblioteka ma już ten utwór';
+
+  @override
+  String get discoverJobSkipped => 'Pominięto · plik już tam jest';
+
+  @override
+  String discoverJobExistsSub(String path) {
+    return 'Pod $path jest już plik · nic nie nadpisano';
+  }
+
+  @override
+  String get discoverJobFailed => 'Kopiowanie nie powiodło się';
+
+  @override
+  String get discoverJobFailedSub => 'Kopiowanie nie zostało ukończone';
+
+  @override
+  String get discoverJobNothingCopiedLead => 'Nic nie skopiowano';
+
+  @override
+  String get discoverJobNothingCopied => 'nic nie skopiowano';
+
+  @override
+  String get discoverJobStopped => 'Zatrzymano';
+
+  @override
+  String discoverJobStoppedQuota(String peer) {
+    return 'Zatrzymał je limit transferu „$peer”';
+  }
+
+  @override
+  String discoverJobStoppedBusy(String peer) {
+    return '„$peer” obsługuje teraz zbyt wiele strumieni';
+  }
+
+  @override
+  String discoverJobStoppedPeer(String peer) {
+    return '„$peer” przestał odpowiadać';
+  }
+
+  @override
+  String discoverJobStoppedRefused(String peer) {
+    return '„$peer” nie pozwala na kopie z kluczem twojego serwera';
+  }
+
+  @override
+  String get discoverJobCancelledNothing => 'Zatrzymano · nic nie skopiowano';
+
+  @override
+  String discoverJobCancelledSome(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zatrzymano · skopiowano $count',
+      many: 'Zatrzymano · skopiowano $count',
+      few: 'Zatrzymano · skopiowano $count',
+      one: 'Zatrzymano · skopiowano 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobCancelledSub => 'Anulowano';
+
+  @override
+  String discoverJobCancelledStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Anulowano · $count utworu zostaje w twojej kolekcji',
+      many: 'Anulowano · $count utworów zostaje w twojej kolekcji',
+      few: 'Anulowano · $count utwory zostają w twojej kolekcji',
+      one: 'Anulowano · utwór zostaje w twojej kolekcji',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobNothingAll => 'Masz już wszystko';
+
+  @override
+  String discoverJobNothingFrom(String peer) {
+    return 'Nie ma nic do skopiowania z „$peer”';
+  }
+
+  @override
+  String get discoverJobOnlyGuest => 'Brak ich własnych albumów do skopiowania';
+
+  @override
+  String discoverJobOnlyGuestSub(String artist, String peer) {
+    return '$artist występuje na albumach z „$peer” tylko gościnnie';
+  }
+
+  @override
+  String discoverJobFromOther(String peer) {
+    return 'Kopiowanie z „$peer”';
+  }
+
+  @override
+  String discoverJobComesBack(String action) {
+    return '„$action” wróci, gdy ta kopia się skończy';
+  }
+
+  @override
+  String get discoverJobDone => 'Zakończono';
+
+  @override
+  String discoverJobCopiedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'skopiowano $count',
+      many: 'skopiowano $count',
+      few: 'skopiowano $count',
+      one: 'skopiowano 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobOwnedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count już masz',
+      many: '$count już masz',
+      few: '$count już masz',
+      one: '1 już masz',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobFailedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nieudanego',
+      many: '$count nieudanych',
+      few: '$count nieudane',
+      one: '1 nieudany',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count albumu nieudanego',
+      many: '$count albumów nieudanych',
+      few: '$count albumy nieudane',
+      one: '1 album nieudany',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsLeftOut(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count albumu pominiętego',
+      many: '$count albumów pominiętych',
+      few: '$count albumy pominięte',
+      one: '1 album pominięty',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobRetry => 'Ponów';
+
+  @override
+  String get discoverJobAddAgain => 'Dodaj ponownie';
+
+  @override
+  String get discoverJobAddToQueue => 'Dodaj do kolejki';
+
+  @override
+  String get discoverMarkWaiting => 'czeka';
+
+  @override
+  String get discoverMarkCopying => 'kopiowanie…';
+
+  @override
+  String discoverMarkCopyingCount(int done, int total) {
+    return 'kopiowanie $done z $total';
+  }
+
+  @override
+  String get discoverMarkStopping => 'zatrzymywanie…';
+
+  @override
+  String get discoverMarkInCollection => 'w twojej kolekcji';
+
+  @override
+  String get discoverMarkAlreadyYours => 'już masz';
+
+  @override
+  String get discoverMarkStopped => 'zatrzymano';
+
+  @override
+  String get discoverMarkRefused => 'odmowa';
+
+  @override
+  String get discoverMarkFailed => 'nieudane';
+
+  @override
+  String get discoverMarkSkipped => 'pominięto';
+
+  @override
+  String discoverCopiesCopying(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kopiowanie: $count',
+      many: 'Kopiowanie: $count',
+      few: 'Kopiowanie: $count',
+      one: 'Kopiowanie: 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nieudanej',
+      many: '$count nieudanych',
+      few: '$count nieudane',
+      one: '1 nieudana',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesLabel(String summary) {
+    return 'Kopie: $summary';
+  }
+
+  @override
+  String get discoverCopiesTitle => 'Kopie';
+
+  @override
+  String get discoverCopiesSectionCopying => 'Kopiowanie';
+
+  @override
+  String get discoverCopiesSectionAttention => 'Zatrzymane lub nieudane';
+
+  @override
+  String get discoverCopiesSectionFinished => 'Właśnie zakończone';
+
+  @override
+  String get discoverCopiesClearFinished => 'Wyczyść zakończone';
+
+  @override
+  String get discoverCopiesEmpty => 'Nic się nie kopiuje';
+
+  @override
+  String get discoverCopiesEmptySub =>
+      'Przytrzymaj utwór lub album z połączonego serwera w Odkrywaj, aby zachować kopię.';
+
+  @override
+  String get discoverCopiesOpenDiscover => 'Otwórz Odkrywaj';
+
+  @override
+  String get discoverCopiesLoadFailed => 'Nie udało się wczytać twoich kopii';
+
+  @override
+  String get discoverCopiesLoadFailedSub =>
+      'Twój serwer nie odpowiedział. Kopie trwają tam dalej.';
+
+  @override
+  String get discoverCopiesLoading => 'Wczytywanie twoich kopii';
+
+  @override
+  String get discoverCopiesKindSong => 'Utwór';
+
+  @override
+  String get discoverCopiesKindAlbum => 'Album';
+
+  @override
+  String get discoverCopiesKindEvery => 'Wszystkie albumy';
+
+  @override
+  String get discoverCopiesKindMissing => 'To, czego nie masz';
+
+  @override
+  String discoverCopiesFrom(String peer) {
+    return 'z „$peer”';
+  }
+
+  @override
+  String discoverCopiesEveryAlbumBy(String artist) {
+    return 'Wszystkie albumy wykonawcy $artist';
+  }
+
+  @override
+  String discoverCopiesMissingOf(String artist) {
+    return '$artist · albumy, których nie masz';
+  }
+
+  @override
+  String get discoverCopiesAlreadyFinished =>
+      'Już zakończone · nie ma czego anulować';
+
+  @override
+  String get discoverCopiesCancelFailed =>
+      'Nie udało się anulować. Spróbuj ponownie.';
+
+  @override
+  String get discoverCopiesDestChanged =>
+      'Nie udało się rozpocząć: miejsce zapisu plików się zmieniło — ponów z Zachowaj kopię';
+
+  @override
+  String discoverToastCopying(String title, String peer) {
+    return 'Kopiowanie „$title” z „$peer”';
+  }
+
+  @override
+  String discoverToastCopyingEvery(String artist, String peer) {
+    return 'Kopiowanie wszystkich albumów wykonawcy $artist z „$peer”';
+  }
+
+  @override
+  String discoverToastCopyingMissing(String artist, String peer) {
+    return 'Kopiowanie z „$peer” albumów wykonawcy $artist, których nie masz';
+  }
+
+  @override
+  String get discoverToastAdded => 'Dodano do twojej kolekcji';
+
+  @override
+  String get discoverToastAlreadyYours => 'Już jest w twojej bibliotece';
+
+  @override
+  String discoverToastFailed(String reason) {
+    return 'Kopiowanie nie powiodło się: $reason';
+  }
+
+  @override
+  String discoverToastStopped(String reason) {
+    return 'Zatrzymano przedwcześnie: $reason';
+  }
+
+  @override
+  String get discoverToastLinkFailed => 'Nie udało się otworzyć tego linku';
+
+  @override
+  String discoverToastSaved(String path) {
+    return 'Zapisano · kopie trafią do $path';
+  }
+
+  @override
+  String get discoverDestTitle => 'Gdzie trafiają kopie';
+
+  @override
+  String get discoverDestSub =>
+      'Jedno ustawienie dla twojego konta · używa go każda kopia';
+
+  @override
+  String get discoverDestTagDefault => 'domyślne biblioteki';
+
+  @override
+  String get discoverDestTagYours => 'twoje';
+
+  @override
+  String discoverDestLandsAt(String title) {
+    return '„$title” trafi do';
+  }
+
+  @override
+  String get discoverDestFixLayout =>
+      'Popraw układ, aby zobaczyć, gdzie trafią pliki';
+
+  @override
+  String discoverDestPathTooLong(int max) {
+    return 'Ścieżka tego utworu przekroczyłaby $max znaków – więcej, niż przyjmuje serwer';
+  }
+
+  @override
+  String get discoverDestLibrary => 'Biblioteka';
+
+  @override
+  String get discoverDestLayout => 'Układ';
+
+  @override
+  String get discoverDestPresetArtistAlbum => 'Wykonawca / Album';
+
+  @override
+  String get discoverDestPresetServer => 'Serwer / Wykonawca / Album';
+
+  @override
+  String get discoverDestPresetServerFolders =>
+      'Te same foldery co na serwerze';
+
+  @override
+  String get discoverDestPresetLibrary => 'Układ biblioteki';
+
+  @override
+  String get discoverDestPresetCustom => 'Własny';
+
+  @override
+  String get discoverDestCustomSub => 'Wpisz własną ścieżkę';
+
+  @override
+  String get discoverDestCustomField => 'Własny układ';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return 'np. Od znajomych lub $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      'Foldery oddzielaj znakiem /. Zmienne sortują kopie według wykonawcy, albumu…; stała nazwa umieszcza każdą kopię w tym samym folderze.';
+
+  @override
+  String get discoverDestCustomEmpty =>
+      'Wpisz ścieżkę, aby zobaczyć, gdzie trafią pliki';
+
+  @override
+  String get discoverDestInsertArtist => 'Wstaw wykonawcę';
+
+  @override
+  String get discoverDestInsertAlbum => 'Wstaw album';
+
+  @override
+  String get discoverDestInsertYear => 'Wstaw rok';
+
+  @override
+  String get discoverDestInsertGenre => 'Wstaw gatunek';
+
+  @override
+  String get discoverDestInsertAlbumArtist => 'Wstaw wykonawcę albumu';
+
+  @override
+  String get discoverDestInsertPeer => 'Wstaw nazwę serwera';
+
+  @override
+  String get discoverDestInsertServerFolder => 'Wstaw folder z serwera';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return 'Nieznana zmienna $name. Użyj $vars.';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return 'Nawias klamrowy jest w złym miejscu — zmienne zapisuje się jak $example.';
+  }
+
+  @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '„$folder” to folder ustawiony na innym urządzeniu, ale w układzie jest czytany jako zmienna. Zmień tu jego nazwę albo wybierz układ.';
+  }
+
+  @override
+  String get discoverDestErrAbsolute =>
+      'Układ nie może zaczynać się od / — zaczyna się w bibliotece.';
+
+  @override
+  String get discoverDestErrTraversal =>
+      'Ścieżka nie może zawierać folderów „..”.';
+
+  @override
+  String get discoverDestErrEmpty =>
+      'Nie powstaje żaden folder — dodaj nazwę lub zmienną.';
+
+  @override
+  String get discoverDestErrHome => 'Ścieżka nie może zawierać ~ ani \$HOME.';
+
+  @override
+  String get discoverDestErrGeneric => 'Tej ścieżki nie można użyć.';
+
+  @override
+  String get discoverDestErrDrive =>
+      'Ścieżka nie może zawierać litery dysku, np. C:.';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return 'Układ może mieć najwyżej $max znaków.';
+  }
+
+  @override
+  String get discoverDestErrControl =>
+      'Ścieżka nie może zawierać tabulatorów ani innych znaków sterujących.';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return 'Brak wartości dla tego utworu, więc pominięte w ścieżce: $vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => 'gatunek';
+
+  @override
+  String get discoverDestArtistSlot => 'wykonawca';
+
+  @override
+  String get discoverDestYearSlot => 'rok';
+
+  @override
+  String get discoverDestServerFolderSlot => 'folder z serwera';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots pochodzi ze znaczników utworu (dla utworu bez gatunku ten folder jest pomijany).';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server zależy od tego, gdzie każdy utwór leży na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      many:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      few:
+          '$slots pochodzą ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+      one:
+          '$slots pochodzi ze znaczników każdego utworu, a $server z miejsca, w którym leży on na serwerze, więc te utwory mogą trafić do więcej niż jednego folderu (dla utworu bez gatunku ten folder jest pomijany).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverDestUseDefault => 'Użyj domyślnych ustawień biblioteki';
+
+  @override
+  String get discoverDestSaving => 'Zapisywanie…';
+
+  @override
+  String get discoverDestLoadFailed =>
+      'Nie udało się wczytać, gdzie trafiają kopie';
+
+  @override
+  String get discoverDestLoading =>
+      'Wczytywanie miejsca, do którego trafiają kopie';
+
+  @override
+  String get discoverKeepFirstUse =>
+      'Kopie trafiają na twój serwer, nie na ten telefon. Przed pierwszą sprawdź, gdzie trafią.';
+
+  @override
+  String get discoverElsewhereExact => 'Dokładne strony';
+
+  @override
+  String get discoverElsewhereSearch => 'Szukaj';
+
+  @override
+  String get discoverElsewhereMbRecording => 'Nagranie w MusicBrainz';
+
+  @override
+  String get discoverElsewhereMbReleaseGroup => 'Grupa wydań w MusicBrainz';
+
+  @override
+  String get discoverElsewhereMbIsrc => 'ISRC w MusicBrainz';
+
+  @override
+  String get discoverElsewhereEmpty => 'Brak linków do tego utworu';
+
+  @override
+  String get discoverElsewhereEmptySub =>
+      'Nie ma identyfikatorów MusicBrainz ani tytułu czy wykonawcy do wyszukania.';
+
+  @override
+  String get discoverElsewhereFailed => 'Nie udało się teraz wyszukać linków';
+
+  @override
+  String get discoverElsewhereLoading => 'Wyszukiwanie linków';
+
+  @override
+  String get discoverElsewhereOpensOutside => 'Otwiera się poza aplikacją';
 }

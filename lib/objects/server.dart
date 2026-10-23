@@ -85,6 +85,37 @@ class Server {
   //                                  answered (an older build never does).
   //                                  Feeds the home banner and the alerts.
   int? federationInbox;
+  //   discoveryTasteAvailable      — the history-seeded Discover page
+  //                                  (POST /api/v1/discovery/taste + its
+  //                                  prefs routes). The wire value is an
+  //                                  integer generation like `stats`
+  //                                  (`features.discoveryTaste`, ping
+  //                                  `discoveryTaste`); any generation ≥ 1
+  //                                  has the page, so the app keeps the
+  //                                  answer, not the number. The home card
+  //                                  wants it AND [discoveryAvailable] (the
+  //                                  route 403s with discovery off).
+  bool? discoveryTasteAvailable;
+  //   discoveryPluginsAvailable    — at least one discovery plug-in is on,
+  //                                  so a recommendation row has actions
+  //                                  (`features.discoveryPlugins`, ping
+  //                                  `discoveryPlugins`). Discover's Keep a
+  //                                  copy and the Copies list gate on it
+  //                                  first (DiscoveryJobsController): off,
+  //                                  no plug-in route is asked at all.
+  bool? discoveryPluginsAvailable;
+  //   noUpload                     — this ACCOUNT may not add files to the
+  //                                  server (caller-scoped: `user.noUpload`
+  //                                  on /api, `noUpload` on ping — the
+  //                                  server switch or the user's
+  //                                  allow_upload). Keep a copy reads it to
+  //                                  word a null collection destination:
+  //                                  "your account can't add files" against
+  //                                  "no library takes new files". Null
+  //                                  from a server too old to say, and on a
+  //                                  federated peer (a copy lands on the
+  //                                  PARENT, whose flag governs).
+  bool? noUpload;
   //   statsVersion                 — the Stats API generation the server
   //                                  advertises (`features.stats`; 2 = Stats
   //                                  API v2: plays post, history reads). Null
@@ -402,6 +433,13 @@ class Server {
             : null,
         federationInbox =
             json['federationInbox'] is int ? json['federationInbox'] : null,
+        discoveryTasteAvailable = json['discoveryTasteAvailable'] is bool
+            ? json['discoveryTasteAvailable']
+            : null,
+        discoveryPluginsAvailable = json['discoveryPluginsAvailable'] is bool
+            ? json['discoveryPluginsAvailable']
+            : null,
+        noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
         discoveryEnabled =
@@ -448,6 +486,9 @@ class Server {
         'federationAvailable': federationAvailable,
         'p2pAvailable': p2pAvailable,
         'federationInbox': federationInbox,
+        'discoveryTasteAvailable': discoveryTasteAvailable,
+        'discoveryPluginsAvailable': discoveryPluginsAvailable,
+        'noUpload': noUpload,
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,

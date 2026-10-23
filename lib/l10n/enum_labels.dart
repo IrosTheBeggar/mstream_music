@@ -162,12 +162,16 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.autoDjTitle;
     case 'Sonic path':
       return l.pathScreenTitle;
+    case 'Discover':
+      return l.discoverPageTitle;
     case 'Federation':
       return l.browserFederation;
     case 'P2P Network':
       return l.browserP2pNetwork;
     case 'Add torrent':
       return l.torrentScreenTitle; // the screen's own title, as the drawer used
+    case 'Copies':
+      return l.discoverCopiesTitle;
     case 'Search':
       return l.browserSearch;
     case 'Read-only server':

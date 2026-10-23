@@ -1722,7 +1722,170 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohShareUnavailable => '点对点（iroh）服务器不支持分享 — 它们没有可链接的公开地址。';
 
   @override
-  String get discoverTitle => '发现';
+  String get discoverTitle => '更多类似';
+
+  @override
+  String get discoverPageTitle => '发现';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => '全部时间';
+
+  @override
+  String discoverPageWidened(String window) {
+    return '最近 $window 内没有记录，所以这些来自更早之前。';
+  }
+
+  @override
+  String get discoverPageBasedOn => '依据';
+
+  @override
+  String get discoverPageBasedOnLast => '统计范围';
+
+  @override
+  String get discoverPageBasedOnAllTime => '统计范围';
+
+  @override
+  String get discoverPageMoreOptions => '更多选项';
+
+  @override
+  String get discoverPageNewSeeds => '换一批依据歌曲';
+
+  @override
+  String get discoverPageAlbumsLibrary => '来自你曲库的专辑';
+
+  @override
+  String discoverPageAlbumsPeer(String name) {
+    return '来自 $name 的专辑';
+  }
+
+  @override
+  String get discoverPageAlbumsPeers => '来自已连接服务器的专辑';
+
+  @override
+  String get discoverPageSongsLibrary => '来自你曲库的歌曲';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return '来自 $name 的歌曲';
+  }
+
+  @override
+  String get discoverPageSongsPeers => '来自已连接服务器的歌曲';
+
+  @override
+  String get discoverPageLibraryNothing => '曲库中没有听起来像这些歌的新歌。';
+
+  @override
+  String get discoverPagePeersQuiet => '已连接的服务器暂时没有内容。';
+
+  @override
+  String get discoverPagePeersFailed => '无法访问已连接的服务器。';
+
+  @override
+  String get discoverPageSaveAsPlaylist => '保存为播放列表';
+
+  @override
+  String get discoverPageBrowseLibrary => '浏览曲库';
+
+  @override
+  String get discoverPageAgoToday => '今天';
+
+  @override
+  String get discoverPageAgoYesterday => '昨天';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个月前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 年前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageRandomTitle => '听完几首歌，这个页面就会了解你的口味';
+
+  @override
+  String get discoverPageRandomBody =>
+      '“发现”根据你听完的歌来推荐，跳过的歌不算。在有这样的歌之前，这里是围绕曲库中一首随机歌曲的推荐。';
+
+  @override
+  String get discoverPageAnotherPick => '换一首';
+
+  @override
+  String get discoverPageChooseSong => '选择一首歌…';
+
+  @override
+  String get discoverPageError => '无法加载“发现”。请检查连接后重试。';
+
+  @override
+  String get discoverPageRetry => '重试';
+
+  @override
+  String get discoverPagePickedHeader => '本次选择';
+
+  @override
+  String get discoverPageRandomHeader => '随机挑选';
+
+  @override
+  String get discoverPageDroppedHeader => '已排除';
+
+  @override
+  String get discoverPageDroppedNote => '打开即可恢复';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return '播放 $count 次';
+  }
+
+  @override
+  String get discoverPageListenedTo => '听过';
+
+  @override
+  String get discoverPageNotAnalyzed => '尚未分析';
+
+  @override
+  String get discoverPageAddOwn => '自己添加';
+
+  @override
+  String get discoverPageAddOwnSub => '想多听类似的歌';
+
+  @override
+  String get discoverPagePickSong => '选一首歌…';
+
+  @override
+  String get discoverPagePickSongSub => '搜索曲库，或随机选一首';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '使用这 $count 首',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => '按声音匹配';
@@ -3131,13 +3294,13 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '为正在播放的曲目打开“发现” · 来自 $count 个已下载曲库的线索',
+      other: '为正在播放的曲目打开“更多类似” · 来自 $count 个已下载曲库的线索',
     );
     return '$_temp0';
   }
 
   @override
-  String get p2pFindSimilarNothingPlaying => '请先播放一首歌 — “发现”会跟随当前曲目';
+  String get p2pFindSimilarNothingPlaying => '请先播放一首歌 — “更多类似”会跟随当前曲目';
 
   @override
   String get p2pNewArtistsOnlySub => '隐藏此曲库中已有艺术家的线索';
@@ -4038,4 +4201,814 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeWidgetPinUnsupported => '此启动器无法从这里添加小组件，请使用它自带的小组件选择器。';
+
+  @override
+  String discoverSheetPeerOnline(String name) {
+    return '$name 在线';
+  }
+
+  @override
+  String discoverSheetPeerNotAnswering(String name) {
+    return '$name 无响应';
+  }
+
+  @override
+  String discoverSheetSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverSheetAlbumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张专辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetNotInLibrary => '不在你的曲库中';
+
+  @override
+  String get discoverSheetInLibrary => '已在你的曲库中';
+
+  @override
+  String discoverSheetYouHaveAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你有 $count 张',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverSheetOpenAlbum => '打开专辑';
+
+  @override
+  String get discoverSheetQueueAlbum => '将专辑加入队列';
+
+  @override
+  String get discoverSheetPlayAlbum => '播放专辑';
+
+  @override
+  String get discoverSheetOpenArtist => '打开艺人';
+
+  @override
+  String get discoverSheetListen => '收听';
+
+  @override
+  String get discoverSheetKeepCopy => '保留副本';
+
+  @override
+  String get discoverSheetOpenElsewhere => '在别处打开';
+
+  @override
+  String discoverSheetBrowsePeer(String name) {
+    return '浏览 $name';
+  }
+
+  @override
+  String get discoverSheetDownloadToPhone => '下载到这部手机';
+
+  @override
+  String get discoverSheetDownloadToPhoneSub => '用于在此设备上离线播放';
+
+  @override
+  String discoverSheetAlbumFailed(String name) {
+    return '无法从 $name 加载此专辑';
+  }
+
+  @override
+  String discoverAlbumCardMore(String album) {
+    return '$album 的更多操作';
+  }
+
+  @override
+  String get discoverKeepThisSong => '这首歌';
+
+  @override
+  String get discoverKeepAlbum => '专辑';
+
+  @override
+  String get discoverKeepArtist => '艺人';
+
+  @override
+  String get discoverKeepWhat => '保留内容';
+
+  @override
+  String discoverKeepYouHave(int count) {
+    return '你有 $count';
+  }
+
+  @override
+  String discoverKeepOnlyMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '只要你没有的 $count 张',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepFilesGoTo => '文件保存到';
+
+  @override
+  String discoverKeepPathTooLong(int max) {
+    return '这份副本的路径将超过 $max 个字符，超出服务器的上限';
+  }
+
+  @override
+  String get discoverKeepFolderPerAlbum => '每张专辑一个文件夹';
+
+  @override
+  String get discoverKeepChange => '更改';
+
+  @override
+  String get discoverKeepChangeHint => '更改副本的保存位置';
+
+  @override
+  String get discoverKeepAddSong => '添加歌曲';
+
+  @override
+  String get discoverKeepAddAlbum => '添加专辑';
+
+  @override
+  String get discoverKeepAddEveryAlbum => '添加全部专辑';
+
+  @override
+  String discoverKeepAddAlbums(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '添加 $count 张专辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepAddMissing => '添加你没有的专辑';
+
+  @override
+  String get discoverKeepUploadsOff => '你的账户无法向此服务器添加文件';
+
+  @override
+  String get discoverKeepNoLibrary => '你的服务器上没有可接收新文件的曲库';
+
+  @override
+  String get discoverKeepStartFailed => '无法连接到你的服务器，请重试。';
+
+  @override
+  String get discoverKeepDestChanged => '打开后文件存放位置已变。请检查上方路径后重新添加。';
+
+  @override
+  String get discoverKeepDestChangedTryAgain => '打开后文件存放位置已变。请检查上方路径后重试。';
+
+  @override
+  String discoverKeepRetryAddsTo(String path) {
+    return '重试将存放到 $path，即你现在保存的位置';
+  }
+
+  @override
+  String discoverKeepAddAgainAddsTo(String path) {
+    return '重新添加将存放到 $path，即你现在保存的位置';
+  }
+
+  @override
+  String discoverKeepConfirmTitle(int count, String peer) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '要从 $peer 复制 $count 张专辑吗？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepConfirmEveryTitle(String artist, String peer) {
+    return '要从 $peer 复制 $artist 的全部专辑吗？';
+  }
+
+  @override
+  String discoverKeepConfirmBody(String path) {
+    return '它们会存放到你服务器上的 $path，每张专辑一个文件夹。你已有的歌曲会被跳过。';
+  }
+
+  @override
+  String discoverKeepConfirmBodyFlat(String path) {
+    return '它们会存放到你服务器上的 $path。你已有的歌曲会被跳过。';
+  }
+
+  @override
+  String discoverKeepConfirmAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '复制 $count 张专辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepConfirmEveryAction => '复制全部专辑';
+
+  @override
+  String get discoverJobQueued => '正在等待空闲位置';
+
+  @override
+  String get discoverJobQueuedSub => '会自动开始';
+
+  @override
+  String get discoverJobCopying => '正在复制';
+
+  @override
+  String get discoverJobStarting => '正在开始…';
+
+  @override
+  String get discoverJobStopping => '正在停止…';
+
+  @override
+  String get discoverJobInCollection => '已在你的收藏中';
+
+  @override
+  String get discoverJobOwned => '你已拥有';
+
+  @override
+  String get discoverJobOwnedSub => '你的曲库已有这首歌';
+
+  @override
+  String get discoverJobSkipped => '已跳过 · 该位置已有文件';
+
+  @override
+  String discoverJobExistsSub(String path) {
+    return '$path 已有文件 · 未覆盖任何内容';
+  }
+
+  @override
+  String get discoverJobFailed => '复制失败';
+
+  @override
+  String get discoverJobFailedSub => '复制未完成';
+
+  @override
+  String get discoverJobNothingCopiedLead => '未复制任何内容';
+
+  @override
+  String get discoverJobNothingCopied => '未复制任何内容';
+
+  @override
+  String get discoverJobStopped => '已停止';
+
+  @override
+  String discoverJobStoppedQuota(String peer) {
+    return '$peer 的传输限额使其停止';
+  }
+
+  @override
+  String discoverJobStoppedBusy(String peer) {
+    return '$peer 当前的串流太多';
+  }
+
+  @override
+  String discoverJobStoppedPeer(String peer) {
+    return '$peer 已断开';
+  }
+
+  @override
+  String discoverJobStoppedRefused(String peer) {
+    return '$peer 不允许使用你服务器的密钥进行复制';
+  }
+
+  @override
+  String get discoverJobCancelledNothing => '已停止 · 未复制任何内容';
+
+  @override
+  String discoverJobCancelledSome(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已停止 · 已复制 $count 首',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobCancelledSub => '你已取消';
+
+  @override
+  String discoverJobCancelledStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你已取消 · $count 首歌曲保留在你的收藏中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobNothingAll => '你已全部拥有';
+
+  @override
+  String discoverJobNothingFrom(String peer) {
+    return '没有可从 $peer 复制的内容';
+  }
+
+  @override
+  String get discoverJobOnlyGuest => '没有其本人的作品可复制';
+
+  @override
+  String discoverJobOnlyGuestSub(String artist, String peer) {
+    return '$artist 只是以嘉宾身份出现在 $peer 的专辑中';
+  }
+
+  @override
+  String discoverJobFromOther(String peer) {
+    return '正在从 $peer 复制';
+  }
+
+  @override
+  String discoverJobComesBack(String action) {
+    return '该复制结束后，“$action”会重新出现';
+  }
+
+  @override
+  String get discoverJobDone => '已完成';
+
+  @override
+  String discoverJobCopiedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已复制 $count 首',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobOwnedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首你已拥有',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobFailedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首失败',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张专辑失败',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverJobAlbumsLeftOut(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略过 $count 张专辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverJobRetry => '重试';
+
+  @override
+  String get discoverJobAddAgain => '重新添加';
+
+  @override
+  String get discoverJobAddToQueue => '添加到队列';
+
+  @override
+  String get discoverMarkWaiting => '等待中';
+
+  @override
+  String get discoverMarkCopying => '复制中…';
+
+  @override
+  String discoverMarkCopyingCount(int done, int total) {
+    return '复制中 $done/$total';
+  }
+
+  @override
+  String get discoverMarkStopping => '停止中…';
+
+  @override
+  String get discoverMarkInCollection => '已在收藏中';
+
+  @override
+  String get discoverMarkAlreadyYours => '已拥有';
+
+  @override
+  String get discoverMarkStopped => '已停止';
+
+  @override
+  String get discoverMarkRefused => '被拒绝';
+
+  @override
+  String get discoverMarkFailed => '失败';
+
+  @override
+  String get discoverMarkSkipped => '已跳过';
+
+  @override
+  String discoverCopiesCopying(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在复制 $count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项失败',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverCopiesLabel(String summary) {
+    return '副本：$summary';
+  }
+
+  @override
+  String get discoverCopiesTitle => '副本';
+
+  @override
+  String get discoverCopiesSectionCopying => '正在复制';
+
+  @override
+  String get discoverCopiesSectionAttention => '已停止或失败';
+
+  @override
+  String get discoverCopiesSectionFinished => '刚刚完成';
+
+  @override
+  String get discoverCopiesClearFinished => '清除已完成';
+
+  @override
+  String get discoverCopiesEmpty => '没有正在复制的内容';
+
+  @override
+  String get discoverCopiesEmptySub => '在“发现”中长按已连接服务器的歌曲或专辑，即可保留副本。';
+
+  @override
+  String get discoverCopiesOpenDiscover => '打开“发现”';
+
+  @override
+  String get discoverCopiesLoadFailed => '无法加载你的副本';
+
+  @override
+  String get discoverCopiesLoadFailedSub => '你的服务器没有响应。复制仍在服务器上进行。';
+
+  @override
+  String get discoverCopiesLoading => '正在加载你的副本';
+
+  @override
+  String get discoverCopiesKindSong => '歌曲';
+
+  @override
+  String get discoverCopiesKindAlbum => '专辑';
+
+  @override
+  String get discoverCopiesKindEvery => '全部专辑';
+
+  @override
+  String get discoverCopiesKindMissing => '你缺少的';
+
+  @override
+  String discoverCopiesFrom(String peer) {
+    return '来自 $peer';
+  }
+
+  @override
+  String discoverCopiesEveryAlbumBy(String artist) {
+    return '$artist 的全部专辑';
+  }
+
+  @override
+  String discoverCopiesMissingOf(String artist) {
+    return '$artist · 你没有的专辑';
+  }
+
+  @override
+  String get discoverCopiesAlreadyFinished => '已经完成 · 无需取消';
+
+  @override
+  String get discoverCopiesCancelFailed => '无法取消，请重试。';
+
+  @override
+  String get discoverCopiesDestChanged => '无法开始：文件存放位置已变 — 请从“保留副本”重试';
+
+  @override
+  String discoverToastCopying(String title, String peer) {
+    return '正在从 $peer 复制 $title';
+  }
+
+  @override
+  String discoverToastCopyingEvery(String artist, String peer) {
+    return '正在从 $peer 复制 $artist 的全部专辑';
+  }
+
+  @override
+  String discoverToastCopyingMissing(String artist, String peer) {
+    return '正在从 $peer 复制你没有的 $artist 专辑';
+  }
+
+  @override
+  String get discoverToastAdded => '已添加到你的收藏';
+
+  @override
+  String get discoverToastAlreadyYours => '已在你的曲库中';
+
+  @override
+  String discoverToastFailed(String reason) {
+    return '复制失败：$reason';
+  }
+
+  @override
+  String discoverToastStopped(String reason) {
+    return '提前停止：$reason';
+  }
+
+  @override
+  String get discoverToastLinkFailed => '无法打开该链接';
+
+  @override
+  String discoverToastSaved(String path) {
+    return '已保存 · 副本将存放到 $path';
+  }
+
+  @override
+  String get discoverDestTitle => '副本存放位置';
+
+  @override
+  String get discoverDestSub => '账户的统一设置 · 所有副本都使用它';
+
+  @override
+  String get discoverDestTagDefault => '曲库默认';
+
+  @override
+  String get discoverDestTagYours => '你的';
+
+  @override
+  String discoverDestLandsAt(String title) {
+    return '$title 将存放到';
+  }
+
+  @override
+  String get discoverDestFixLayout => '修正布局即可查看文件存放位置';
+
+  @override
+  String discoverDestPathTooLong(int max) {
+    return '这首歌的路径将超过 $max 个字符，超出服务器的上限';
+  }
+
+  @override
+  String get discoverDestLibrary => '曲库';
+
+  @override
+  String get discoverDestLayout => '布局';
+
+  @override
+  String get discoverDestPresetArtistAlbum => '艺人 / 专辑';
+
+  @override
+  String get discoverDestPresetServer => '服务器 / 艺人 / 专辑';
+
+  @override
+  String get discoverDestPresetServerFolders => '与服务器相同的文件夹';
+
+  @override
+  String get discoverDestPresetLibrary => '曲库布局';
+
+  @override
+  String get discoverDestPresetCustom => '自定义';
+
+  @override
+  String get discoverDestCustomSub => '自己输入路径';
+
+  @override
+  String get discoverDestCustomField => '自定义布局';
+
+  @override
+  String discoverDestCustomHint(String example) {
+    return '例如 朋友分享 或 $example';
+  }
+
+  @override
+  String get discoverDestCustomHelp =>
+      '用 / 分隔文件夹。变量按艺人、专辑等整理副本；固定名称会把所有副本放进同一个文件夹。';
+
+  @override
+  String get discoverDestCustomEmpty => '输入路径即可查看文件存放位置';
+
+  @override
+  String get discoverDestInsertArtist => '插入艺人';
+
+  @override
+  String get discoverDestInsertAlbum => '插入专辑';
+
+  @override
+  String get discoverDestInsertYear => '插入年份';
+
+  @override
+  String get discoverDestInsertGenre => '插入流派';
+
+  @override
+  String get discoverDestInsertAlbumArtist => '插入专辑艺人';
+
+  @override
+  String get discoverDestInsertPeer => '插入服务器名称';
+
+  @override
+  String get discoverDestInsertServerFolder => '插入服务器文件夹';
+
+  @override
+  String discoverDestErrUnknownVar(String name, String vars) {
+    return '未知变量 $name。请使用 $vars。';
+  }
+
+  @override
+  String discoverDestErrBraces(String example) {
+    return '花括号位置不对——变量应写成 $example。';
+  }
+
+  @override
+  String discoverDestErrBaseBraces(String folder) {
+    return '“$folder”是在其他设备上设置的文件夹，但在布局中会被当作变量。请在这里重命名，或选择一种布局。';
+  }
+
+  @override
+  String get discoverDestErrAbsolute => '布局不能以 / 开头——它从曲库内开始。';
+
+  @override
+  String get discoverDestErrTraversal => '路径不能包含“..”文件夹。';
+
+  @override
+  String get discoverDestErrEmpty => '这样不会生成任何文件夹——请添加名称或变量。';
+
+  @override
+  String get discoverDestErrHome => '路径不能包含 ~ 或 \$HOME。';
+
+  @override
+  String get discoverDestErrGeneric => '无法使用此路径。';
+
+  @override
+  String get discoverDestErrDrive => '路径不能使用 C: 这样的盘符。';
+
+  @override
+  String discoverDestErrTooLong(int max) {
+    return '布局最多 $max 个字符。';
+  }
+
+  @override
+  String get discoverDestErrControl => '路径不能包含制表符或其他控制字符。';
+
+  @override
+  String discoverDestMissing(String vars) {
+    return '这首歌没有该值，因此不计入路径：$vars';
+  }
+
+  @override
+  String get discoverDestGenreSlot => '流派';
+
+  @override
+  String get discoverDestArtistSlot => '艺人';
+
+  @override
+  String get discoverDestYearSlot => '年份';
+
+  @override
+  String get discoverDestServerFolderSlot => '服务器文件夹';
+
+  @override
+  String discoverKeepSlotNote(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，因此这些歌可能会放进不止一个文件夹。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteGenre(int count, String slots) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，因此这些歌可能会放进不止一个文件夹（没有流派的歌会省去该文件夹）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteSong(String slots) {
+    return '$slots 取自这首歌自己的标签（没有流派的歌会省去该文件夹）。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServer(String server) {
+    return '$server 取决于每首歌在服务器上的位置，因此这些歌可能会放进不止一个文件夹。';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTags(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$slots 取自每首歌自己的标签，$server 取决于它在服务器上的位置，因此这些歌可能会放进不止一个文件夹。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepSlotNoteServerTagsGenre(
+    int count,
+    String slots,
+    String server,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$slots 取自每首歌自己的标签，$server 取决于它在服务器上的位置，因此这些歌可能会放进不止一个文件夹（没有流派的歌会省去该文件夹）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverDestUseDefault => '使用曲库默认设置';
+
+  @override
+  String get discoverDestSaving => '正在保存…';
+
+  @override
+  String get discoverDestLoadFailed => '无法加载副本存放位置';
+
+  @override
+  String get discoverDestLoading => '正在加载副本存放位置';
+
+  @override
+  String get discoverKeepFirstUse => '副本会存放到你的服务器，而不是这部手机。第一次复制前请先确认存放位置。';
+
+  @override
+  String get discoverElsewhereExact => '精确页面';
+
+  @override
+  String get discoverElsewhereSearch => '搜索';
+
+  @override
+  String get discoverElsewhereMbRecording => 'MusicBrainz 录音';
+
+  @override
+  String get discoverElsewhereMbReleaseGroup => 'MusicBrainz 发行组';
+
+  @override
+  String get discoverElsewhereMbIsrc => 'MusicBrainz ISRC';
+
+  @override
+  String get discoverElsewhereEmpty => '这首歌没有链接';
+
+  @override
+  String get discoverElsewhereEmptySub => '它没有 MusicBrainz ID，也没有可搜索的标题或艺人。';
+
+  @override
+  String get discoverElsewhereFailed => '暂时无法查找链接';
+
+  @override
+  String get discoverElsewhereLoading => '正在查找链接';
+
+  @override
+  String get discoverElsewhereOpensOutside => '在应用外打开';
 }

@@ -53,6 +53,11 @@ class ApiManager {
     _direct = http.Client();
   }
 
+  /// The pooled client itself, for the direct-call clients that live beside
+  /// ApiManager (DiscoveryPluginsApi). Read it per call: [resetDirectClient]
+  /// replaces it.
+  http.Client get directClient => _direct;
+
   /// POST /api/v1/db/genres — returns the server's distinct genre
   /// list with track counts. Used by the AutoDJ screen to populate
   /// the genre-picker autocomplete.
@@ -162,7 +167,14 @@ class ApiManager {
     final int loadToken = BrowserManager()
         .beginLoading(onCancel: cancelable ? client.close : null);
     try {
-      Server server = ServerManager().currentServer ??
+      // The server the caller names — an item's own server — else the one
+      // being browsed. Discover lists a connected server's albums and songs
+      // while the user's own server is current: opening one of them must ask
+      // that connected server (through the parent's proxy, server.apiUri),
+      // not the current one. (Until 2026-10-20 the argument was ignored, so
+      // such an album opened the current server's same-named album.)
+      Server server = currentServer ??
+          ServerManager().currentServer ??
           (throw Exception('No Server Selected'));
 
       Uri currentUri = server.apiUri(location);
@@ -617,11 +629,15 @@ class ApiManager {
   /// the browser stack — used by the album detail screen, which renders its own
   /// tracklist. Throws on a server error so the caller can show its own state.
   Future<List<DisplayItem>> fetchAlbumSongs(String? album,
-      {Server? useThisServer, int? year, String? albumArtist}) async {
+      {Server? useThisServer,
+      int? year,
+      String? albumArtist,
+      String? artist}) async {
     final res = await makeServerCall(
         useThisServer,
         '/api/v1/db/album-songs',
-        albumSongsBody(album, year: year, albumArtist: albumArtist),
+        albumSongsBody(album,
+            year: year, albumArtist: albumArtist, artist: artist),
         'POST');
 
     final List<DisplayItem> newList = [];
@@ -849,7 +865,8 @@ class ApiManager {
       Server server,
       String location,
       Map<String, dynamic> body,
-      T Function(Map) parse) async {
+      T Function(Map) parse,
+      {Duration timeout = const Duration(seconds: 15)}) async {
     try {
       final response = await _direct
           .post(
@@ -860,7 +877,7 @@ class ApiManager {
               'x-access-token': server.authToken ?? '',
             },
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(timeout);
       if (response.statusCode == 403) {
         return DiscoveryFetchResult<T>.disabled();
       }
@@ -872,6 +889,28 @@ class ApiManager {
       verboseLog('[api] discovery $location failed: $err');
       return DiscoveryFetchResult<T>.error();
     }
+  }
+
+  /// POST /api/v1/discovery/taste — the Discover page (plan §3.1): seeds from
+  /// this account's play history, then library rows + album cards, P2P leads
+  /// and federated peers' rows, as [req] asks. A 403 is the route's
+  /// "discovery is off / no index" (and the account gate: a federation key,
+  /// a guest or jukebox mode) → [DiscoveryFetchResult.disabled]; the caller
+  /// latches and re-pings once. Gating on the Server flags is the caller's
+  /// job (discoveryAvailable && discoveryTasteAvailable) — this only sends.
+  ///
+  /// A longer deadline than the per-seed routes: one call can pay an index
+  /// rebuild, a library pass per seed and the P2P pass, and a `peers` call
+  /// waits out a 4 s per-peer federation deadline on top.
+  Future<DiscoveryFetchResult<TasteResponse>> fetchDiscoveryTaste(
+      Server server, TasteRequest req) {
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/taste',
+      req.toJson(),
+      (m) => TasteResponse.fromServerMap(m),
+      timeout: const Duration(seconds: 30),
+    );
   }
 
   /// POST /api/v1/discovery/local/similar/tracks — library tracks sonically

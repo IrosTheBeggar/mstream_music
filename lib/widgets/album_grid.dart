@@ -87,7 +87,7 @@ class AlbumGrid extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (context, i) {
           final item = items[i];
-          return _AlbumCard(
+          return AlbumGridCard(
             item: item,
             onTap: () => onTap(i),
             cacheWidth: cacheW,
@@ -98,23 +98,47 @@ class AlbumGrid extends StatelessWidget {
   }
 }
 
-class _AlbumCard extends StatelessWidget {
+/// One album card: cover art, name, subtext. Public so Discover's album
+/// strips draw the browser's own album look (browser.dart).
+class AlbumGridCard extends StatelessWidget {
   final DisplayItem item;
   final VoidCallback onTap;
   final int cacheWidth;
 
-  const _AlbumCard(
-      {required this.item, required this.onTap, required this.cacheWidth});
+  /// A long-press on the card (Discover's connected-server cards: the album
+  /// sheet). Null: tap only, as every other card.
+  final VoidCallback? onLongPress;
+
+  /// A ⋯ in the bottom-right of the card's text block, never over the
+  /// cover's tap target (Discover's connected-server cards). Null: none.
+  final VoidCallback? onMore;
+
+  /// The ⋯'s accessible name ("More for Borrowed Tapes").
+  final String? moreLabel;
+
+  /// Drawn inside the cover, bottom-left (a copy's state on Discover).
+  final Widget? coverBadge;
+
+  const AlbumGridCard(
+      {super.key,
+      required this.item,
+      required this.onTap,
+      required this.cacheWidth,
+      this.onLongPress,
+      this.onMore,
+      this.moreLabel,
+      this.coverBadge});
 
   @override
   Widget build(BuildContext context) {
     final image = _buildArt();
-    return Material(
+    final card = Material(
       color: VelvetColors.card,
       borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         splashColor: VelvetColors.primaryDim,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,12 +150,29 @@ class _AlbumCard extends StatelessWidget {
                   topLeft: Radius.circular(VelvetColors.radiusLarge),
                   topRight: Radius.circular(VelvetColors.radiusLarge),
                 ),
-                child: image,
+                child: coverBadge == null
+                    ? image
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          image,
+                          Positioned(
+                            left: 6,
+                            bottom: 6,
+                            right: 6,
+                            child: Align(
+                              alignment: Alignment.bottomLeft,
+                              child: coverBadge!,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(8, 6, 8, 8),
+                // Room on the title's right for the ⋯ when there is one.
+                padding: EdgeInsets.fromLTRB(8, 6, onMore == null ? 8 : 26, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -171,12 +212,57 @@ class _AlbumCard extends StatelessWidget {
         ),
       ),
     );
+    if (onMore == null) return card;
+    // The ⋯'s 44 px hit area covers the text block's right end only — the
+    // cover above it keeps the tap that opens the album.
+    return LayoutBuilder(builder: (context, box) {
+      final textHeight = box.maxHeight.isFinite
+          ? (box.maxHeight - box.maxWidth).clamp(0.0, double.infinity)
+          : 48.0;
+      return Stack(
+        children: [
+          Positioned.fill(child: card),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            width: 44,
+            height: textHeight < 44 ? 44 : textHeight,
+            child: Semantics(
+              button: true,
+              label: moreLabel,
+              excludeSemantics: true,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  key: ValueKey('album-card-more-${item.name}'),
+                  onTap: onMore,
+                  borderRadius: BorderRadius.only(
+                    bottomRight: Radius.circular(VelvetColors.radiusLarge),
+                  ),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 5, right: 6),
+                      child: Icon(Icons.more_horiz,
+                          size: 18, color: VelvetColors.textSecondary),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
-      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'm');
+      // 'l': the server's 256 px rendition, the webapp's album-card size.
+      // mStream caches only 's' (92 px) and 'l'; any other value serves the
+      // full-size original, which is what 'm' quietly did here.
+      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'l');
       return Image.network(
         url,
         fit: BoxFit.cover,
