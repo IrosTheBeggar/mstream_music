@@ -89,6 +89,8 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   ui.Image? _audioImage;
   bool _decoding = false;
   double _time = 0;
+  // Whether a tick has run yet, so the first one isn't measured from zero.
+  bool _ticked = false;
   String? _error;
 
   StreamSubscription<MediaItem?>? _trackSub;
@@ -172,10 +174,16 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   void _prev() => _setPreset((_index - 1 + _presets.length) % _presets.length);
 
   void _onTick(Duration elapsed) {
-    _time = elapsed.inMicroseconds / 1e6;
+    final time = elapsed.inMicroseconds / 1e6;
+    // Seconds since the last tick, for the spectrum's smoothing — a rate per
+    // second, so a 120 Hz screen settles no faster than a 60 Hz one. Held to
+    // 0..0.25 s: a first tick or a stall is not a reason to jump.
+    final dt = (_ticked ? time - _time : 1 / 60).clamp(0.0, 0.25).toDouble();
+    _ticked = true;
+    _time = time;
     _spectrum.playing =
         MediaManager().audioHandler.playbackState.value.playing;
-    _spectrum.advance();
+    _spectrum.advance(dt);
     _refreshAudioImage();
     _repaint.value++;
   }
