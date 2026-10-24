@@ -252,6 +252,10 @@ class SettingsManager {
   // phone…") was seen through: the first copy started or a destination was
   // saved on this phone. Until then the Keep card shows it.
   bool discoverKeepNoteSeen = false;
+  // The one-time hint while browsing a connected server ("Long-press a song
+  // to keep a copy of it on your server.") has shown on this install: set
+  // the moment it shows, so it never shows twice.
+  bool keepBrowseHintShown = false;
   // A phone notification when a federation request lands in an admin's
   // inbox (FederationInboxAlerts). On by default; the OS permission is only
   // asked for when there is something to show.
@@ -408,6 +412,7 @@ class SettingsManager {
           ? window
           : kTasteDefaultWindow;
       discoverKeepNoteSeen = m['discoverKeepNoteSeen'] == true;
+      keepBrowseHintShown = m['keepBrowseHintShown'] == true;
       notifyFederationRequests = m['notifyFederationRequests'] ?? true;
       historyEnabled = m['historyEnabled'] ?? true;
       historySendToServer = m['historySendToServer'] ?? true;
@@ -635,6 +640,7 @@ class SettingsManager {
       'discoverNewArtistsOnly': discoverNewArtistsOnly,
       'discoverWindow': discoverWindow,
       'discoverKeepNoteSeen': discoverKeepNoteSeen,
+      'keepBrowseHintShown': keepBrowseHintShown,
       'notifyFederationRequests': notifyFederationRequests,
       'historyEnabled': historyEnabled,
       'historySendToServer': historySendToServer,
@@ -755,6 +761,16 @@ class SettingsManager {
   Future<void> markDiscoverKeepNoteSeen() async {
     if (discoverKeepNoteSeen) return;
     discoverKeepNoteSeen = true;
+    try {
+      await _save();
+    } catch (_) {}
+  }
+
+  /// The browse hint just showed: it is not shown again on this install. A
+  /// failed write only means it may show once more next launch.
+  Future<void> markKeepBrowseHintShown() async {
+    if (keepBrowseHintShown) return;
+    keepBrowseHintShown = true;
     try {
       await _save();
     } catch (_) {}

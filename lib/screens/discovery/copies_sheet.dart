@@ -25,7 +25,9 @@ import 'keep_toast.dart';
 /// phone saw end since), each row with its title, "Kind · Artist · from
 /// Server", a bar while it copies and its state line with one verb —
 /// Cancel, Retry, Play (and Add to queue), Add again. "Clear finished" is
-/// pinned at the bottom.
+/// pinned at the bottom. A connected server's folder copy (kept while
+/// browsing it) is a row too — the folder's name, "Folder · from Server", a
+/// folder tile — whose Retry and Add again send its own landing again.
 ///
 /// States: loading (still rows at the real row height), the list failing
 /// (Try again), nothing copying (from home: Open Discover), and a cancel
@@ -254,7 +256,7 @@ class _CopiesSheetState extends State<CopiesSheet> {
         icon: Icons.library_add_outlined,
         iconColor: VelvetColors.textTertiary,
         title: l.discoverCopiesEmpty,
-        sub: l.discoverCopiesEmptySub,
+        sub: l.discoverCopiesEmptySubAny,
         pill: widget.fromHome && _discoverReachable
             ? KeepPill(
                 l.discoverCopiesOpenDiscover,
@@ -421,6 +423,8 @@ class _CopyRow extends StatelessWidget {
         return l.discoverCopiesEveryAlbumBy(_s('artist'));
       case kScopeArtistMissing:
         return l.discoverCopiesMissingOf(_s('artist'));
+      case kScopeFolder:
+        return folderTitle(_rec);
       default:
         final t = _s('title');
         return t.isNotEmpty ? t : safeFileName(_rec['filepath']);
@@ -441,6 +445,7 @@ class _CopyRow extends StatelessWidget {
       ],
       kScopeArtist => [l.discoverCopiesKindEvery, ?from],
       kScopeArtistMissing => [l.discoverCopiesKindMissing, ?from],
+      kScopeFolder => [l.discoverCopiesKindFolder, ?from],
       _ => [l.discoverCopiesKindSong, ?nonEmpty(_s('artist')), ?from],
     }.join(' · ');
   }
@@ -609,20 +614,27 @@ class _CopyRow extends StatelessWidget {
   }
 
   /// The row's cover: the Discover row's art when the page holds it, else a
-  /// tile (a person for the artist scopes).
+  /// tile (a person for the artist scopes, a folder for a folder copy).
   Widget _cover() {
-    Widget tile(IconData i) => Container(
+    Widget tile(IconData i, {double size = 22, Color? color}) => Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
         color: VelvetColors.raised,
         borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
       ),
-      child: Icon(i, size: 22, color: VelvetColors.textSecondary),
+      child: Icon(i, size: size, color: color ?? VelvetColors.textSecondary),
     );
     final scope = job.scope;
     if (scope == kScopeArtist || scope == kScopeArtistMissing) {
       return tile(Icons.person_outline);
+    }
+    if (scope == kScopeFolder) {
+      return tile(
+        Icons.folder,
+        size: 24,
+        color: keepTone(VelvetColors.warning),
+      );
     }
     DiscoveryLead? lead;
     for (final l in jobs.leads) {

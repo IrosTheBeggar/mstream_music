@@ -39,6 +39,11 @@ const List<String> kDiscoverJobScopes = [
   kScopeArtistMissing,
 ];
 
+/// The scopes the phone keeps a copy of: Discover's, and a connected
+/// server's folder — offered only from that server's file explorer
+/// (util/discover_copy_gate.dart KeepEntry.explorer).
+const List<String> kKeepJobScopes = [...kDiscoverJobScopes, kScopeFolder];
+
 /// The server's default collection layout (src/discovery-plugins/
 /// destination.js DEFAULT_LAYOUT): by the album's credit, so a compilation
 /// copied whole lands in one folder (`Various Artists/<album>`); ALBUMARTIST
@@ -94,20 +99,38 @@ class DiscoveryPlugin {
   bool hasScope(String s) => scopes.contains(s);
 }
 
-/// `GET /api/v1/discovery/plugins`: the enabled plug-ins, and whether THIS
-/// caller may start jobs (`jobs.allowed`, the acquisition gate).
+/// `GET /api/v1/discovery/plugins`: the enabled plug-ins, whether THIS
+/// caller may start jobs (`jobs.allowed`, the acquisition gate), and the
+/// most songs one folder copy takes here (`jobs.maxFolderSongs`).
 class PluginListing {
   final List<DiscoveryPlugin> plugins;
   final bool jobsAllowed;
 
-  const PluginListing(this.plugins, {this.jobsAllowed = false});
+  /// The admin's discoveryJobs.maxFolderSongs, a whole number ≥ 1 (mStream
+  /// since 2026-10-23); null when the listing does not say — an older
+  /// server: no cap is known, and a folder job past it fails in the server's
+  /// own words (the webapp's maxFolderSongs).
+  final int? maxFolderSongs;
+
+  const PluginListing(this.plugins,
+      {this.jobsAllowed = false, this.maxFolderSongs});
 
   factory PluginListing.fromServerMap(Map m) {
     final jobs = m['jobs'];
     return PluginListing(
       _listOf(m['plugins'], DiscoveryPlugin.fromServerMap),
       jobsAllowed: jobs is Map && jobs['allowed'] == true,
+      maxFolderSongs: jobs is Map ? _cap(jobs['maxFolderSongs']) : null,
     );
+  }
+
+  /// JS `Math.floor(Number(v))` when that is a finite number ≥ 1.
+  static int? _cap(dynamic v) {
+    final n = v is num
+        ? v
+        : (v is String ? num.tryParse(v.trim()) : null);
+    if (n == null || !n.isFinite || n < 1) return null;
+    return n.floor();
   }
 
   /// The listed plug-in [name] that can run, or null.
@@ -224,6 +247,14 @@ class DiscoveryJob {
   String get scope {
     final s = params?['scope'];
     return s is String && s.isNotEmpty ? s : kScopeSong;
+  }
+
+  /// A folder job's landing as it was started (`params.landing`, the
+  /// route's validateLanding): `{vpath, path}`, `{tags: true}`, or null — as
+  /// on the connected server. What Retry and Add again send again.
+  Map<String, dynamic>? get landing {
+    final l = params?['landing'];
+    return l is Map ? _map(l) : null;
   }
 
   bool get live => state?.live == true;
@@ -440,6 +471,57 @@ class JobResultView {
 
   int? get bytes => _int(_r['bytes']);
   bool get truncated => _r['truncated'] == true;
+
+  /// Where a folder copy's files went, by its own account of the folder
+  /// (`result.folder.landed`): the library and folders, '/'-joined
+  /// ("copies/Boukmanflow/Borrowed Tapes"); null for a copy by the layout,
+  /// whose songs each went their own way.
+  String? get folderLanded {
+    final f = _r['folder'];
+    return f is Map ? _str(f['landed'], max: 4096) : null;
+  }
+
+  /// Where a finished folder copy's files are (its "In copies › …" line,
+  /// "Show in your library"): where it landed once it copied a song. One
+  /// that copied none — every song already here — never made that folder,
+  /// so the folder the songs it found share instead (their `at`, '/'-joined
+  /// from the library). Null for a copy by the layout, and when they share
+  /// none or the list stopped short of naming them all.
+  String? get folderFilesAt {
+    final landed = folderLanded;
+    if (landed == null || counts.copied > 0) return landed;
+    final s = _r['songs'];
+    final found =
+        s is Map && s['skipped'] is List ? s['skipped'] as List : const [];
+    if (found.isEmpty || truncated) return null;
+    List<String>? shared;
+    for (final e in found) {
+      final at = e is Map ? _str(e['at'], max: 4096) : null;
+      final parts = (at ?? '').split('/').where((p) => p.isNotEmpty).toList();
+      // A library and a file, at the least.
+      if (parts.length < 2) return null;
+      final dir = parts.sublist(0, parts.length - 1);
+      if (shared == null) {
+        shared = dir;
+        continue;
+      }
+      var n = 0;
+      while (n < shared.length && n < dir.length && shared[n] == dir[n]) {
+        n++;
+      }
+      if (n == 0) return null;
+      shared = shared.sublist(0, n);
+    }
+    return shared!.join('/');
+  }
+
+  /// The files a folder copy left out (`skippedFiles`: not music this
+  /// server plays, the scanner's ignored folders, a path that climbs) — how
+  /// many the list names (it stops at 500).
+  int get skippedFiles {
+    final s = _r['skippedFiles'];
+    return s is List ? s.length : 0;
+  }
 }
 
 /// One answer of `POST /plugin-jobs/lookup` (and each entry of
