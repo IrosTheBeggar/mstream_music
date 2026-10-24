@@ -11,6 +11,47 @@ import '../singletons/downloads.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
+import '../util/browse_keep_leads.dart' show FolderRef;
+
+/// The open folder of a file-explorer frame, from its path (the server's
+/// `path`, a slash at each end: "/music/Boukmanflow/"): its folders,
+/// library first, and which kind of place it is — the top of a server that
+/// shares several libraries (`/`, one row per library), a library's root
+/// (one folder), or a folder below it, the only kind Keep a copy offers.
+class FolderContext {
+  /// The frame's server (a connected server's virtual Server while browsing
+  /// it).
+  final Server? server;
+
+  /// Its path: a leading slash, no trailing one; '/' at the top.
+  final String path;
+  final List<String> segments;
+
+  const FolderContext._(this.server, this.path, this.segments);
+
+  /// [path] as a folder context, or null for a frame that is no folder.
+  static FolderContext? of(String? path, {Server? server}) {
+    if (path == null) return null;
+    final segs = path
+        .replaceAll('\\', '/')
+        .split('/')
+        .where((s) => s.isNotEmpty)
+        .toList();
+    return FolderContext._(
+        server, segs.isEmpty ? '/' : '/${segs.join('/')}', List.unmodifiable(segs));
+  }
+
+  /// Its own name ('' at the top).
+  String get name => segments.isEmpty ? '' : segments.last;
+
+  /// The library it is in (null at the top).
+  String? get library => segments.isEmpty ? null : segments.first;
+
+  /// The folder as Keep a copy takes it — null at a library's own root
+  /// ("/music") and at the top (`/`, whose rows are the libraries of a
+  /// server that shares more than one).
+  FolderRef? get ref => FolderRef.of(path);
+}
 
 class BrowserManager {
   /// Whether [list] is the home section list: its first row that is not a
@@ -35,6 +76,20 @@ class BrowserManager {
   static bool Function(Server server) homeCopiesRow = noCopiesRow;
   static bool noCopiesRow(Server server) => false;
 
+  /// Moving onto a connected server: its own server's Keep a copy gate is
+  /// read in parallel with the ping (screens/discovery/copies_hub.dart
+  /// installs CopiesHub.holdPeerHome). The answer is null when there is
+  /// nothing to wait for (the gate is known already), else the read: the
+  /// home holds its taps — the loading bar shows — until it answers or
+  /// [kPeerGateWait] passes, so the first page opened from it already knows
+  /// whether to offer Keep a copy (no way in pops in under the thumb).
+  static Future<void>? Function(Server peer) peerHomeGate = noPeerHomeGate;
+  static Future<void>? noPeerHomeGate(Server peer) => null;
+
+  /// The longest a connected server's home waits for the gate; past it the
+  /// gate counts as closed for that visit.
+  static const Duration kPeerGateWait = Duration(seconds: 4);
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip
@@ -54,6 +109,14 @@ class BrowserManager {
   // back-nav — and so the toolbar and the empty state can tell "a playlist
   // with no songs" apart from "a folder with no songs".
   final List<String?> playlistCache = [];
+  // 1:1 with browserCache. The bar's label per frame, as the call that
+  // pushed it set it (setBrowserLabel before addListToStack), so Back
+  // restores the label of the frame it lands on — "Artists" again under an
+  // artist's page that read "Boukmanflow".
+  final List<String> labelCache = [];
+  // 1:1 with browserCache. Whose page an artist frame is (getArtistAlbums),
+  // else null.
+  final List<ArtistContext?> artistCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -80,6 +143,28 @@ class BrowserManager {
   /// view isn't a playlist's contents.
   String? get currentPlaylist =>
       playlistCache.isNotEmpty ? playlistCache.last : null;
+
+  /// The artist the top frame lists, or null when it is no artist page.
+  ArtistContext? get currentArtist =>
+      artistCache.isNotEmpty ? artistCache.last : null;
+
+  /// Whether the bar's [label] is the library's own words, not a section's
+  /// name: an artist's page reads its artist's name ("Boukmanflow"), which
+  /// is shown as it is — an artist named "Recent" or "Library" is never
+  /// read as the chrome word and translated.
+  bool labelIsData(String? label) =>
+      label != null && currentArtist?.name == label;
+
+  /// The top frame's open folder, or null when it is no file-explorer
+  /// frame. Its server is the frame's rows' (an empty folder's: the
+  /// current server).
+  FolderContext? get currentFolder {
+    final path = currentPath;
+    if (path == null) return null;
+    final rows = browserCache.isNotEmpty ? browserCache.last : const <DisplayItem>[];
+    final server = rows.isNotEmpty ? rows.first.server : ServerManager().currentServer;
+    return FolderContext.of(path, server: server);
+  }
 
   String listName = 'Welcome';
 
@@ -272,6 +357,9 @@ class BrowserManager {
         searchTermCache.isNotEmpty ? searchTermCache[0] : null;
     String? holdPlaylist =
         playlistCache.isNotEmpty ? playlistCache[0] : null;
+    String holdLabel = labelCache.isNotEmpty ? labelCache[0] : 'Browser';
+    ArtistContext? holdArtist =
+        artistCache.isNotEmpty ? artistCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -291,6 +379,12 @@ class BrowserManager {
     playlistCache
       ..clear()
       ..add(holdPlaylist);
+    labelCache
+      ..clear()
+      ..add(holdLabel);
+    artistCache
+      ..clear()
+      ..add(holdArtist);
   }
 
   void goToNavScreen() {
@@ -308,6 +402,8 @@ class BrowserManager {
     pathCache.clear();
     searchTermCache.clear();
     playlistCache.clear();
+    labelCache.clear();
+    artistCache.clear();
 
     final Server? server = ServerManager().currentServer;
     if (server == null) {
@@ -453,6 +549,16 @@ class BrowserManager {
                   color: VelvetColors.textSecondary),
               null),
       ],
+      // A connected server's home: the same Copies card as the user's own
+      // home — the copies on the user's own server (the hub's jobsFor(peer)
+      // is the parent's) — so they are reached without going back.
+      if (federated && homeCopiesRow(server)) ...[
+        header('Server'),
+        DisplayItem(server, 'Copies', 'execAction', 'copies',
+            Icon(Icons.library_add_outlined,
+                color: VelvetColors.textSecondary),
+            null),
+      ],
     ];
 
     browserCache.add(sections);
@@ -461,10 +567,27 @@ class BrowserManager {
     pathCache.add(null); // home nav isn't the file explorer — no path row
     searchTermCache.add(null); // home nav isn't a search result — no term row
     playlistCache.add(null); // ...nor a playlist — no name row
+    labelCache.add('Browser');
+    artistCache.add(null);
     browserList.addAll(sections);
 
     _browserLabel.sink.add('Browser');
     _browserStream.sink.add(browserList);
+    if (federated) _holdForGate(server);
+  }
+
+  /// The hold [peerHomeGate] asks for: the browse calls' loading bar and
+  /// tap guard ([beginLoading]) while the gate is read, at most
+  /// [kPeerGateWait]. A switch or a Back while it waits lets go of it.
+  void _holdForGate(Server peer) {
+    final wait = peerHomeGate(peer);
+    if (wait == null) return;
+    final token = beginLoading();
+    unawaited(wait
+        .then<void>((_) {})
+        .timeout(kPeerGateWait, onTimeout: () {})
+        .catchError((_) {})
+        .whenComplete(() => endLoading(token)));
   }
 
   void noServerScreen() {
@@ -476,6 +599,8 @@ class BrowserManager {
     pathCache.clear();
     searchTermCache.clear();
     playlistCache.clear();
+    labelCache.clear();
+    artistCache.clear();
 
     browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -487,7 +612,8 @@ class BrowserManager {
       {bool alphabetical = false,
       String? path,
       String? searchTerm,
-      String? playlist}) {
+      String? playlist,
+      ArtistContext? artist}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -502,6 +628,8 @@ class BrowserManager {
     pathCache.add(path);
     searchTermCache.add(searchTerm);
     playlistCache.add(playlist);
+    labelCache.add(listName);
+    artistCache.add(artist);
 
     browserList
       ..clear()
@@ -645,6 +773,8 @@ class BrowserManager {
     if (pathCache.isNotEmpty) pathCache.removeLast();
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
     if (playlistCache.isNotEmpty) playlistCache.removeLast();
+    if (labelCache.isNotEmpty) labelCache.removeLast();
+    if (artistCache.isNotEmpty) artistCache.removeLast();
     browserList
       ..clear()
       ..addAll(browserCache.last);
@@ -665,8 +795,11 @@ class BrowserManager {
 
     _browserStream.sink.add(browserList);
 
+    // The label of the frame Back landed on (the home's is 'Browser').
     if (BrowserManager().browserCache.length == 1) {
       _browserLabel.sink.add('Browser');
+    } else if (labelCache.isNotEmpty) {
+      setBrowserLabel(labelCache.last);
     }
   }
 

@@ -67,6 +67,12 @@ Color keepTone(Color c) => _readable(c, VelvetColors.card);
 /// The same, on the page's ground (the row markers' glyphs).
 Color keepToneOnPage(Color c) => _readable(c, VelvetColors.bg);
 
+/// Quiet text (a secondary or tertiary grey) that reads at 4.5:1 on its
+/// [ground] — the Keep card's by default, or a raised box inside it: there
+/// Velvet's and Light's quiet greys fall just under it.
+Color keepQuiet(Color c, [Color? ground]) =>
+    _readable(c, ground ?? VelvetColors.card);
+
 // ── pieces ────────────────────────────────────────────────────────────────
 
 /// A 44 px tall hit band around a smaller control.
@@ -89,13 +95,15 @@ class KeepHitArea extends StatelessWidget {
 
 /// A pill (DiscoveryPill's shape): 36 px, radius 18, 13/600. [primary]
 /// fills it ([keepFill]); [expand] stretches it to the row; [busy] puts a
-/// 14 px ring before the label and ignores taps.
+/// 14 px ring before the label and ignores taps; [maxLines] lets its label
+/// wrap (the sheet's pinned Add at large text) rather than ellipsize.
 class KeepPill extends StatelessWidget {
   final String label;
   final IconData? icon;
   final bool primary;
   final bool expand;
   final bool busy;
+  final int maxLines;
   final VoidCallback? onTap;
   const KeepPill(
     this.label, {
@@ -104,6 +112,7 @@ class KeepPill extends StatelessWidget {
     this.primary = false,
     this.expand = false,
     this.busy = false,
+    this.maxLines = 1,
     this.onTap,
   });
 
@@ -119,7 +128,10 @@ class KeepPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Container(
           constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: maxLines > 1 ? 6 : 0,
+          ),
           child: Row(
             mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -138,8 +150,9 @@ class KeepPill extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
-                  maxLines: 1,
+                  maxLines: maxLines,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: maxLines > 1 ? TextAlign.center : null,
                   style: TextStyle(
                     color: fg,
                     fontSize: 13,
@@ -169,6 +182,10 @@ class KeepChoice extends StatelessWidget {
   final bool sizeLoading;
   final bool selected;
   final VoidCallback onTap;
+
+  /// What a screen reader hears instead of the label and size ("Folder:
+  /// Borrowed Tapes and everything in it"); null reads them as drawn.
+  final String? semanticsLabel;
   const KeepChoice({
     super.key,
     required this.label,
@@ -176,6 +193,7 @@ class KeepChoice extends StatelessWidget {
     this.sizeLoading = false,
     required this.selected,
     required this.onTap,
+    this.semanticsLabel,
   });
 
   @override
@@ -185,6 +203,9 @@ class KeepChoice extends StatelessWidget {
       inMutuallyExclusiveGroup: true,
       checked: selected,
       button: true,
+      label: semanticsLabel,
+      excludeSemantics: semanticsLabel != null,
+      onTap: semanticsLabel != null ? onTap : null,
       child: Material(
         color: selected ? VelvetColors.primaryDim : Colors.transparent,
         borderRadius: radius,
@@ -391,6 +412,7 @@ String keepSlotWord(AppLocalizations l, LayoutSlot slot) {
     LayoutSlot.year => l.discoverDestYearSlot,
     LayoutSlot.genre => l.discoverDestGenreSlot,
     LayoutSlot.serverFolder => l.discoverDestServerFolderSlot,
+    LayoutSlot.albumArtist => l.discoverDestAlbumArtistSlot,
   };
   return '‹$word›';
 }

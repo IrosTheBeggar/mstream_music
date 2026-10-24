@@ -82,6 +82,24 @@ class DestinationPreviewSong {
   );
 }
 
+/// A connected server's folder copied "By your layout" (Keep a copy's folder
+/// landing), previewed in a song's place: where its songs land by their own
+/// tags ([folderTarget]'s tags rule) — the folder's path there ([folder], no
+/// leading slash), its [name], the songs the copy takes and their tags once
+/// read (null until then: the path shows slots).
+class DestinationPreviewFolder {
+  final String folder;
+  final String name;
+  final List<FolderSong>? songs;
+  final List<FolderSongTags>? tags;
+  const DestinationPreviewFolder({
+    required this.folder,
+    required this.name,
+    this.songs,
+    this.tags,
+  });
+}
+
 /// The "Artist / Album" preset when the server names no default layout:
 /// by the album's credit (the server's own default), so a compilation copied
 /// whole stays in one folder; ALBUMARTIST falls back to the song's artist.
@@ -99,6 +117,7 @@ Future<void> showDestinationSheet(
   BuildContext context,
   DiscoveryJobsController jobs, {
   DestinationPreviewSong? song,
+  DestinationPreviewFolder? folder,
   String peerName = '',
 }) => showModalBottomSheet<void>(
   context: context,
@@ -110,17 +129,27 @@ Future<void> showDestinationSheet(
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
   ),
-  builder: (_) => DestinationSheet(jobs: jobs, song: song, peerName: peerName),
+  builder: (_) => DestinationSheet(
+    jobs: jobs,
+    song: song,
+    folder: folder,
+    peerName: peerName,
+  ),
 );
 
 class DestinationSheet extends StatefulWidget {
   final DiscoveryJobsController jobs;
   final DestinationPreviewSong? song;
+
+  /// Opened from a folder's "By your layout": the preview renders the folder
+  /// by the folder rule instead of one song ([song] is then unused).
+  final DestinationPreviewFolder? folder;
   final String peerName;
   const DestinationSheet({
     super.key,
     required this.jobs,
     this.song,
+    this.folder,
     this.peerName = '',
   });
 
@@ -621,30 +650,44 @@ class _DestinationSheetState extends State<DestinationSheet> {
   /// the keyboard is up ([compact]) it keeps to the path, two lines at most.
   Widget? _preview(AppLocalizations l, {bool compact = false}) {
     final song = widget.song;
-    if (song == null) return null;
+    final folder = widget.folder;
+    if (song == null && folder == null) return null;
     // The song's own values ([scopeTarget]'s song scope), its own folders on
     // the connected server among them: a genre the phone cannot tell stands
     // as a slot where the server puts the file's, so the path is never
     // shallower than the one written. No base folder: one set elsewhere is
     // the start of the layout — and the layout as it opened is drawn as the
     // server holds it, so that folder reads as the Keep card reads it,
-    // whatever a layout would make of its name.
+    // whatever a layout would make of its name. A folder copy by the layout
+    // ([folder]) files each of its songs by its own tags: the folder rule.
     final opened = _asOpened ? _from : null;
-    final st = scopeTarget(
-      vpath: _vpath,
-      base: opened?.base,
-      layout: opened?.layout ?? _chosenLayout,
-      tags: {
-        'artist': song.artist,
-        'album': song.album,
-        'year': song.year,
-        'genre': song.genre,
-        'albumartist': song.albumArtist,
-      },
-      serverFolder: serverFolderOf(song.filepath),
-      peerName: widget.peerName,
-      fileName: song.filepath ?? song.title,
-    );
+    final st = folder != null
+        ? scopeTarget(
+            vpath: _vpath,
+            base: opened?.base,
+            layout: opened?.layout ?? _chosenLayout,
+            scope: kScopeFolder,
+            landing: const {'tags': true},
+            folder: folder.folder,
+            folderSongs: folder.songs,
+            folderTags: folder.tags,
+            peerName: widget.peerName,
+          )
+        : scopeTarget(
+            vpath: _vpath,
+            base: opened?.base,
+            layout: opened?.layout ?? _chosenLayout,
+            tags: {
+              'artist': song!.artist,
+              'album': song.album,
+              'year': song.year,
+              'genre': song.genre,
+              'albumartist': song.albumArtist,
+            },
+            serverFolder: serverFolderOf(song.filepath),
+            peerName: widget.peerName,
+            fileName: song.filepath ?? song.title,
+          );
     final t = st.target;
     final quiet = TextStyle(
       color: VelvetColors.textSecondary,
@@ -695,9 +738,15 @@ class _DestinationSheetState extends State<DestinationSheet> {
         size: 16,
         color: VelvetColors.textSecondary,
       );
-      final crumbs = [...st.crumbs, t.file];
+      // A folder's songs land in its folders, no one file named; past the
+      // first folder that names an album, one folder per album.
+      final crumbs = folder != null ? st.crumbs : [...st.crumbs, t.file];
       // One song lands in one folder: the note in a song's words.
-      final slots = keepSlotNote(l, st.slots, scope: kScopeSong);
+      final slots = keepSlotNote(
+        l,
+        st.slots,
+        scope: folder != null ? kScopeFolder : kScopeSong,
+      );
       final soft = TextStyle(color: VelvetColors.textSecondary);
       final note = TextStyle(
         color: VelvetColors.textSecondary,
@@ -710,7 +759,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
         children: [
           if (!compact)
             Text(
-              l.discoverDestLandsAt(song.title),
+              l.discoverDestLandsAt(folder?.name ?? song!.title),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -735,6 +784,13 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 for (var i = 0; i < crumbs.length; i++) ...[
                   if (i > 0) TextSpan(text: ' › ', style: soft),
                   ...keepCrumbSpans(l, crumbs[i], hold: _hold),
+                ],
+                if (st.perAlbum) ...[
+                  TextSpan(text: ' › ', style: soft),
+                  TextSpan(
+                    text: _hold(l.discoverKeepFolderPerAlbum),
+                    style: soft,
+                  ),
                 ],
               ],
             ),
@@ -878,7 +934,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
               runSpacing: 8,
               children: [
                 for (final lib in libs)
-                  _LibraryChip(
+                  KeepLibraryChip(
                     key: ValueKey('destination-library-${lib.vpath}'),
                     name: lib.vpath,
                     selected: lib.vpath == vpath,
@@ -1181,12 +1237,14 @@ class _GrabHandle extends StatelessWidget {
 }
 
 /// A library choice (FedChipRow's chip in the canvas's size): 40 px, radius
-/// 10; the chosen one primary-dim with a 1.5 px primary edge and a check.
-class _LibraryChip extends StatelessWidget {
+/// 10, a 44 px band, at least 96 wide; the chosen one primary-dim with a
+/// 1.5 px primary edge and a check. Keep a copy's "Into a folder…" lists the
+/// libraries with it too.
+class KeepLibraryChip extends StatelessWidget {
   final String name;
   final bool selected;
   final VoidCallback? onTap;
-  const _LibraryChip({
+  const KeepLibraryChip({
     super.key,
     required this.name,
     required this.selected,
@@ -1200,6 +1258,8 @@ class _LibraryChip extends StatelessWidget {
       inMutuallyExclusiveGroup: true,
       checked: selected,
       button: true,
+      // The hit band leaves itself out of semantics: the tap is the chip's.
+      onTap: onTap,
       child: KeepHitArea(
         onTap: onTap,
         child: Material(

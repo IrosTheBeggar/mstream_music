@@ -689,7 +689,7 @@ void main() {
     expect([s.running, s.failed, s.shown], [2, 2, true], reason: 'a copy stopped because the peer went away counts as failed');
     expect([for (final j in c.copies) j.state], [JobState.running, JobState.queued, JobState.done, JobState.failed]);
   });
-  test("only the phone's copies: another plug-in's jobs and the webapp's folder copies are neither counted, listed, marked, retried, polled for nor news", () async {
+  test("only the phone's copies: another plug-in's jobs are neither counted, listed, marked, retried, polled for nor news; a folder copy is counted and retried with its landing, never marked on Discover", () async {
     final yt = fake.addJob(late.raw, state: 'failed')..['plugin'] = 'youtube';
     final ytLive = fake.addJob(corner.raw, state: 'running')..['plugin'] = 'youtube';
     final folder = fake.addJob(late.raw, scope: 'folder', state: 'failed');
@@ -701,28 +701,32 @@ void main() {
     await c.activate();
     await c.setRows(rows);
     expect(c.jobs, hasLength(3), reason: 'the list as the server sent it');
-    expect([c.summary.running, c.summary.failed, c.summary.shown], [0, 0, false],
-        reason: 'no "Copying 1 · 2 failed" for jobs that are not Keep a copy');
-    expect(c.copies, isEmpty);
-    expect(c.markerFor(late), isNull, reason: "a YouTube job on the row is not Keep a copy's");
+    expect([c.summary.running, c.summary.failed, c.summary.shown], [0, 1, true],
+        reason: 'the folder copy is the phone\'s now (kept while browsing): "1 failed"');
+    expect([for (final j in c.copies) j.id], [folder['id']]);
+    expect(c.markerFor(late), isNull,
+        reason: "neither a YouTube job nor a folder copy marks a Discover row");
     expect(c.markerFor(corner), isNull);
     expect(c.sheetJob(corner, 'song'), isNull);
     expect(c.anyLive, isFalse);
     expect(timers.active, isNull, reason: "nothing of the phone's is live: no poll");
 
-    // Retry would POST them to federation-copy without their plug-in or
-    // landing: nothing is sent.
-    for (final id in [yt['id'], folder['id']]) {
-      final r = await c.retry(c.jobs.firstWhere((j) => j.id == id));
-      expect(r.ignored, isTrue);
-    }
+    // Retry would POST the YouTube job to federation-copy without its
+    // plug-in: nothing is sent. The folder copy goes again with its landing.
+    expect((await c.retry(c.jobs.firstWhere((j) => j.id == yt['id']))).ignored, isTrue);
     expect(fake.count('POST', '/jobs'), 0);
+    final again = await c.retry(c.jobs.firstWhere((j) => j.id == folder['id']));
+    expect(again.ok, isTrue);
+    final body = jsonDecode(fake.calls('POST', '/jobs').single.body) as Map;
+    expect([body['scope'], body['landing']], ['folder', {'vpath': 'music', 'path': 'mine'}]);
+    fake.jobs.removeWhere((j) => j['id'] == again.job!.id);
+    await c.refreshJobs();
 
     // A copy beside them counts, and keeps the poll going.
     final copy = fake.addJob(glass.raw, state: 'running');
     await c.refreshJobs();
-    expect([c.summary.running, c.summary.failed], [1, 0]);
-    expect([for (final j in c.copies) j.id], [copy['id']]);
+    expect([c.summary.running, c.summary.failed], [1, 1]);
+    expect([for (final j in c.copies) j.id], [copy['id'], folder['id']]);
     expect(timers.active?.delay, DiscoveryJobsController.kDiscoverBeat);
 
     // The YouTube download ending is no news.

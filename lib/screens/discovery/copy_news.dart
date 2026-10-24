@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
+
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery_plugins.dart';
 import '../../util/discover_jobs.dart';
@@ -14,6 +16,10 @@ import 'keep_toast.dart';
 /// something landed (done is not kept), "Already in your library", "Stopped
 /// early: (why)" and "Copy failed: (the server's words)". A cancel, nothing
 /// to copy, and a file already at the path say nothing: the row says it.
+/// A folder copy from a connected server's file explorer says the same,
+/// under the folder's name. A copy started while browsing a connected
+/// server offers "View" on its start toast ([showCopyStarted]): there, the
+/// Copies sheet is otherwise out of reach.
 
 /// The start toast for [job] ([peer] when the job names no server).
 String copyStartedToast(
@@ -31,6 +37,8 @@ String copyStartedToast(
       return l.discoverToastCopyingMissing(s('artist'), from);
     case kScopeAlbum:
       return l.discoverToastCopying(s('album'), from);
+    case kScopeFolder:
+      return l.discoverToastCopying(folderTitle(rec), from);
     default:
       final title = s('title');
       return l.discoverToastCopying(
@@ -39,6 +47,22 @@ String copyStartedToast(
       );
   }
 }
+
+/// Put up [job]'s start toast ([copyStartedToast]); [onView] adds its
+/// "View" — the Copies sheet of the user's own server.
+void showCopyStarted(
+  BuildContext? context,
+  AppLocalizations l,
+  DiscoveryJob job, {
+  String peer = '',
+  VoidCallback? onView,
+}) =>
+    KeepToast.show(
+      context,
+      copyStartedToast(l, job, peer: peer),
+      action: onView == null ? null : l.discoverToastView,
+      onAction: onView,
+    );
 
 /// Why a copy failed, for its toast and its row: the server's words, else
 /// what its counts say ("Nothing copied · 3 failed").

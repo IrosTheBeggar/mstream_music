@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Tout juste terminées",
   "discoverCopiesClearFinished": "Effacer les terminées",
   "discoverCopiesEmpty": "Aucune copie en cours",
-  "discoverCopiesEmptySub": "Appuyez longuement sur un morceau ou un album d’un serveur connecté dans Découvrir pour en garder une copie.",
   "discoverCopiesOpenDiscover": "Ouvrir Découvrir",
   "discoverCopiesLoadFailed": "Impossible de charger vos copies",
   "discoverCopiesLoadFailedSub": "Votre serveur n’a pas répondu. Les copies continuent là-bas.",
