@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Только что завершены",
   "discoverCopiesClearFinished": "Убрать завершённые",
   "discoverCopiesEmpty": "Ничего не копируется",
-  "discoverCopiesEmptySub": "Нажмите и удерживайте трек или альбом с подключённого сервера в «Открытиях», чтобы сохранить копию.",
   "discoverCopiesOpenDiscover": "Открыть «Открытия»",
   "discoverCopiesLoadFailed": "Не удалось загрузить ваши копии",
   "discoverCopiesLoadFailedSub": "Ваш сервер не ответил. Копирование там продолжается.",

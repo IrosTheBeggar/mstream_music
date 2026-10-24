@@ -192,19 +192,35 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   // Filled accent Play, sized to the 44px the bar leaves after its bottom
   // padding (a default IconButton's 48px minimum would overflow). Deliberately
   // the same treatment as the album banner's play control, so the two verbs
-  // rank identically wherever they appear.
-  Widget _playButton(AppLocalizations l, List<DisplayItem> rows) => Padding(
+  // rank identically wherever they appear. [hit44]: the album bar's — the
+  // 36 px disc drawn inside a 44 px target, the app's touch floor.
+  Widget _playButton(AppLocalizations l, List<DisplayItem> rows,
+      {bool hit44 = false}) {
+    final disc = IconButton.filled(
+      onPressed: () => playFromHere(rows, 0),
+      tooltip: l.play,
+      iconSize: 20,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      icon: Icon(Icons.play_arrow, color: accentInk),
+      style: IconButton.styleFrom(backgroundColor: VelvetColors.primary),
+    );
+    if (!hit44) {
+      return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
-        child: IconButton.filled(
-          onPressed: () => playFromHere(rows, 0),
-          tooltip: l.play,
-          iconSize: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-          icon: Icon(Icons.play_arrow, color: accentInk),
-          style: IconButton.styleFrom(backgroundColor: VelvetColors.primary),
-        ),
+        child: disc,
       );
+    }
+    // The band around the disc takes the tap too; a screen reader sees the
+    // one button.
+    return GestureDetector(
+      key: const ValueKey('album-bar-play'),
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => playFromHere(rows, 0),
+      child: SizedBox(width: 44, height: 44, child: Center(child: disc)),
+    );
+  }
 
   Widget _shuffleButton(AppLocalizations l, List<DisplayItem> rows) =>
       _icon(Icons.shuffle, l.shuffle, () => playFromHere(rows, 0, shuffle: true));
@@ -413,7 +429,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         const Spacer(),
         if (_enqueueable(albumSongs).isNotEmpty) ...[
           _shuffleButton(l, albumSongs),
-          _playButton(l, albumSongs),
+          _playButton(l, albumSongs, hit44: true),
           _icon(Icons.library_add, l.addAll,
               () => _addAll(context, albumSongs)),
         ],
@@ -519,7 +535,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         })
       else
         const SizedBox(width: 12),
-      _title(browserChromeLabel(l, s.label)),
+      // An artist's name as it is; a section's name in the user's language.
+      _title(BrowserManager().labelIsData(s.label)
+          ? s.label
+          : browserChromeLabel(l, s.label)),
       if (discover) ...[
         _newSeedsButton(l),
         const SizedBox(width: 12),

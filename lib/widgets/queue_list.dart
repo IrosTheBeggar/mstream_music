@@ -1,25 +1,32 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
+import '../objects/discovery_plugins.dart' show kScopeSong;
 import '../singletons/api.dart';
 import '../singletons/track_capture.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
+import '../screens/discovery/copies_hub.dart';
+import '../screens/discovery/keep_copy_ui.dart' show keepInk;
 import '../screens/metadata_screen.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
+import '../util/browse_keep_leads.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import 'auto_dj_start_sheet.dart';
+import 'browse_keep_entry.dart';
+import 'keep_folder_glyph.dart';
 
 /// Active-row state — which queue slot is playing, and whether it's playing —
 /// pushed down to each row (see [QueueList.build]) so a track advancing rebuilds
@@ -55,6 +62,31 @@ bool _canFindSimilar(MediaItem item) {
   return server?.discoveryAvailable == true && item.extras?['path'] is String;
 }
 
+/// The connected server whose "Keep a copy…" a queued track offers (its
+/// own server's gate open for songs) — a track downloaded to this phone
+/// still is that server's song — or null: the user's own server's track, a
+/// file on this phone, a server no longer listed or hidden, a closed gate.
+Server? _keepPeerOf(MediaItem item) => queueKeepPeer(
+      item,
+      byLocalname: ServerManager().byLocalname,
+      gateOpen: (peer) => CopiesHub().gateFor(peer).allows(kScopeSong),
+    );
+
+/// Keep a copy of a queued connected-server track: its song sheet on the
+/// track's own server (its jobs, gate and destination its parent's).
+void _keepQueued(BuildContext context, MediaItem item, Server peer) {
+  final req = BrowseKeepRequest.queued(item, peer);
+  if (req == null) return;
+  BrowseKeepEntry.open(context, req);
+}
+
+void _openInfo(BuildContext context, MediaItem item) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => MetadataScreen(item: item)),
+  );
+}
+
 /// The "Up Next" queue list (design Variant B rows). Reads/writes the queue
 /// purely through `MediaManager().audioHandler`, so it works identically
 /// wherever it's mounted. Swipe a row for download / remove / info.
@@ -76,175 +108,330 @@ class QueueList extends StatelessWidget {
 
         if (queue.isEmpty) return const _EmptyQueue();
 
-        return ReorderableListView.builder(
-          // We supply our own per-row drag grip so reorder never competes with
-          // the Slidable's horizontal swipe; the default long-press-anywhere
-          // reorder is off.
-          buildDefaultDragHandles: false,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 8),
-          itemCount: queue.length,
-          // Haptic tick on pickup / drop — every polished native reorder does
-          // this, and ReorderableListView fires none by default.
-          onReorderStart: (_) => HapticFeedback.mediumImpact(),
-          onReorderEnd: (_) => HapticFeedback.selectionClick(),
-          // Lift the dragged row: scale it up slightly with an accent-tinted
-          // shadow so it clearly detaches (vs the flat default elevation).
-          proxyDecorator: (child, index, animation) => AnimatedBuilder(
-            animation: animation,
-            child: child,
-            builder: (context, child) {
-              final t = Curves.easeInOut.transform(animation.value);
-              return Transform.scale(
-                scale: 1 + 0.03 * t,
-                child: Material(
-                  color: VelvetColors.surface,
-                  elevation: 8 * t,
-                  shadowColor: VelvetColors.primary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(10),
-                  child: child,
+        // Built again once a queued connected server's own gate answers:
+        // its rows' Keep a copy… offers itself only once known open.
+        return _GateWatch(
+          queue: queue,
+          builder: (context) => ReorderableListView.builder(
+            // We supply our own per-row drag grip so reorder never competes with
+            // the Slidable's horizontal swipe; the default long-press-anywhere
+            // reorder is off.
+            buildDefaultDragHandles: false,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 8),
+            itemCount: queue.length,
+            // Haptic tick on pickup / drop — every polished native reorder does
+            // this, and ReorderableListView fires none by default.
+            onReorderStart: (_) => HapticFeedback.mediumImpact(),
+            onReorderEnd: (_) => HapticFeedback.selectionClick(),
+            // Lift the dragged row: scale it up slightly with an accent-tinted
+            // shadow so it clearly detaches (vs the flat default elevation).
+            proxyDecorator: (child, index, animation) => AnimatedBuilder(
+              animation: animation,
+              child: child,
+              builder: (context, child) {
+                final t = Curves.easeInOut.transform(animation.value);
+                return Transform.scale(
+                  scale: 1 + 0.03 * t,
+                  child: Material(
+                    color: VelvetColors.surface,
+                    elevation: 8 * t,
+                    shadowColor: VelvetColors.primary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(10),
+                    child: child,
+                  ),
+                );
+              },
+            ),
+            // onReorderItem (vs the deprecated onReorder) hands us the
+            // post-removal target index already — matching what the handler and
+            // just_audio's moveAudioSource expect, so no off-by-one fixup here.
+            onReorderItem: (oldIndex, newIndex) {
+              if (newIndex == oldIndex) return;
+              MediaManager().audioHandler.customAction(
+                  'moveQueueItem', {'from': oldIndex, 'to': newIndex});
+            },
+            itemBuilder: (BuildContext context, int index) {
+              final item = queue[index];
+              final downloaded = item.extras?['localPath'] != null;
+
+              // This row's (active, playing) from the shared active-state stream,
+              // distinct() per row so only the two rows whose active flag actually
+              // flips rebuild on a track change (not the whole visible list).
+              ({bool active, bool playing}) rowState(
+                  ({int? index, bool playing}) s) {
+                final on = s.index == index;
+                return (active: on, playing: on && s.playing);
+              }
+
+              final activeNow = _activeStream.valueOrNull;
+
+              // Remove this row from the queue. Re-resolves the row's CURRENT
+              // position at dismiss time by IDENTITY: the build-time index can be
+              // stale if the queue shifted during the swipe (e.g. the playing
+              // track auto-advanced). We match the exact MediaItem instance —
+              // not `indexOf`, whose `==` is id-only — so that when two entries
+              // share an id (e.g. the same playlist track loaded twice) we delete
+              // the row the user actually swiped, not its twin. The ObjectKey
+              // below guarantees every queue entry is a distinct instance.
+              // -1 → already gone.
+              void removeItem() {
+                final live = MediaManager().audioHandler.queue.value;
+                final at = live.indexWhere((e) => identical(e, item));
+                if (at >= 0) {
+                  MediaManager().audioHandler.removeQueueItemAt(at);
+                }
+              }
+
+              // A connected server's track: Keep a copy… beside Info (a peer
+              // never has Find similar — its discovery flags are pinned off).
+              final keepPeer = _keepPeerOf(item);
+              final similar = _canFindSimilar(item);
+              final paneActions = 1 + (similar ? 1 : 0) + (keepPeer != null ? 1 : 0);
+
+              return Slidable(
+                // Identity key (also the ReorderableListView item key): follows
+                // the *item* across reorders; distinct MediaItem instances avoid a
+                // duplicate-key clash.
+                key: ObjectKey(item),
+                // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
+                // similar when this track's server has discovery data, or Keep
+                // a copy… for a connected server's track (the pane widens to fit
+                // the second action; hidden on older servers and for local
+                // files, never probed).
+                startActionPane: ActionPane(
+                  motion: const DrawerMotion(),
+                  extentRatio: 0.25 * paneActions,
+                  // A full right-swipe past the actions also removes the track,
+                  // so a full swipe in EITHER direction removes.
+                  dismissible: DismissiblePane(onDismissed: removeItem),
+                  children: [
+                    SlidableAction(
+                      backgroundColor: VelvetColors.raised,
+                      foregroundColor: VelvetColors.textPrimary,
+                      icon: Icons.info,
+                      label: l.info,
+                      onPressed: (context) => _openInfo(context, item),
+                    ),
+                    if (keepPeer != null)
+                      // A custom action: SlidableAction draws one ellipsized
+                      // line, and "Keep a copy…" needs two at large text.
+                      CustomSlidableAction(
+                        key: const ValueKey('queue-keep-action'),
+                        backgroundColor: VelvetColors.raised,
+                        foregroundColor: keepInk(),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        onPressed: (context) =>
+                            _keepQueued(context, item, keepPeer),
+                        child: _KeepPaneLabel(title: item.title),
+                      ),
+                    if (_canFindSimilar(item))
+                      SlidableAction(
+                        backgroundColor: VelvetColors.raised,
+                        foregroundColor: VelvetColors.primary,
+                        icon: Icons.explore,
+                        label: l.discoverFindSimilar,
+                        onPressed: (context) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DiscoverScreen(
+                                seedServer: ServerManager().byLocalname(
+                                    item.extras?['server'] as String?),
+                                seedPath: item.extras?['path'] as String?,
+                                seedTitle: item.title,
+                                seedArtist: item.artist,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+                // LEFT swipe → Remove; a full left-swipe also removes (the
+                // DismissiblePane), so swipe-to-remove is back — on this side.
+                endActionPane: ActionPane(
+                  motion: const DrawerMotion(),
+                  extentRatio: 0.25,
+                  dismissible: DismissiblePane(onDismissed: removeItem),
+                  children: [
+                    SlidableAction(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                      icon: Icons.delete_outline,
+                      label: l.mainRemove,
+                      onPressed: (_) => removeItem(),
+                    ),
+                  ],
+                ),
+                // RepaintBoundary so a highlight flip repaints only this row's
+                // layer — the panel wraps QueueList in one RepaintBoundary, so
+                // without this every advance would re-raster all visible rows.
+                child: RepaintBoundary(
+                  child: StreamBuilder<({bool active, bool playing})>(
+                    initialData: activeNow == null
+                        ? (active: false, playing: false)
+                        : rowState(activeNow),
+                    stream: _activeStream.map(rowState).distinct(),
+                    builder: (context, snap) {
+                      final st = snap.data ?? (active: false, playing: false);
+                      return _QueueRow(
+                        item: item,
+                        index: index,
+                        active: st.active,
+                        playing: st.playing,
+                        downloaded: downloaded,
+                        // The panes' actions, for a screen reader: the row's
+                        // swipe and grip are its only handles (on the grip's
+                        // node — see _QueueRow.actions).
+                        actions: {
+                          CustomSemanticsAction(label: l.info): () =>
+                              _openInfo(context, item),
+                          if (keepPeer != null)
+                            CustomSemanticsAction(
+                                    label: l.browseKeepOfItem(item.title)):
+                                () => _keepQueued(context, item, keepPeer),
+                          CustomSemanticsAction(label: l.mainRemove): removeItem,
+                        },
+                        focusKey: keepPeer == null
+                            ? null
+                            : BrowseKeepRequest.queued(item, keepPeer)?.focusKey,
+                        onTap: () {
+                          MediaManager().audioHandler.skipToQueueItem(index);
+                          MediaManager().audioHandler.play();
+                        },
+                      );
+                    },
+                  ),
                 ),
               );
             },
           ),
-          // onReorderItem (vs the deprecated onReorder) hands us the
-          // post-removal target index already — matching what the handler and
-          // just_audio's moveAudioSource expect, so no off-by-one fixup here.
-          onReorderItem: (oldIndex, newIndex) {
-            if (newIndex == oldIndex) return;
-            MediaManager().audioHandler.customAction(
-                'moveQueueItem', {'from': oldIndex, 'to': newIndex});
-          },
-          itemBuilder: (BuildContext context, int index) {
-            final item = queue[index];
-            final downloaded = item.extras?['localPath'] != null;
-
-            // This row's (active, playing) from the shared active-state stream,
-            // distinct() per row so only the two rows whose active flag actually
-            // flips rebuild on a track change (not the whole visible list).
-            ({bool active, bool playing}) rowState(
-                ({int? index, bool playing}) s) {
-              final on = s.index == index;
-              return (active: on, playing: on && s.playing);
-            }
-
-            final activeNow = _activeStream.valueOrNull;
-
-            // Remove this row from the queue. Re-resolves the row's CURRENT
-            // position at dismiss time by IDENTITY: the build-time index can be
-            // stale if the queue shifted during the swipe (e.g. the playing
-            // track auto-advanced). We match the exact MediaItem instance —
-            // not `indexOf`, whose `==` is id-only — so that when two entries
-            // share an id (e.g. the same playlist track loaded twice) we delete
-            // the row the user actually swiped, not its twin. The ObjectKey
-            // below guarantees every queue entry is a distinct instance.
-            // -1 → already gone.
-            void removeItem() {
-              final live = MediaManager().audioHandler.queue.value;
-              final at = live.indexWhere((e) => identical(e, item));
-              if (at >= 0) {
-                MediaManager().audioHandler.removeQueueItemAt(at);
-              }
-            }
-
-            return Slidable(
-              // Identity key (also the ReorderableListView item key): follows
-              // the *item* across reorders; distinct MediaItem instances avoid a
-              // duplicate-key clash.
-              key: ObjectKey(item),
-              // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
-              // similar when this track's server has discovery data (the pane
-              // widens to fit the second action; hidden on older servers and
-              // for local files, never probed).
-              startActionPane: ActionPane(
-                motion: const DrawerMotion(),
-                extentRatio: _canFindSimilar(item) ? 0.5 : 0.25,
-                // A full right-swipe past the actions also removes the track,
-                // so a full swipe in EITHER direction removes.
-                dismissible: DismissiblePane(onDismissed: removeItem),
-                children: [
-                  SlidableAction(
-                    backgroundColor: VelvetColors.raised,
-                    foregroundColor: VelvetColors.textPrimary,
-                    icon: Icons.info,
-                    label: l.info,
-                    onPressed: (context) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MetadataScreen(item: item),
-                        ),
-                      );
-                    },
-                  ),
-                  if (_canFindSimilar(item))
-                    SlidableAction(
-                      backgroundColor: VelvetColors.raised,
-                      foregroundColor: VelvetColors.primary,
-                      icon: Icons.explore,
-                      label: l.discoverFindSimilar,
-                      onPressed: (context) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DiscoverScreen(
-                              seedServer: ServerManager().byLocalname(
-                                  item.extras?['server'] as String?),
-                              seedPath: item.extras?['path'] as String?,
-                              seedTitle: item.title,
-                              seedArtist: item.artist,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-              // LEFT swipe → Remove; a full left-swipe also removes (the
-              // DismissiblePane), so swipe-to-remove is back — on this side.
-              endActionPane: ActionPane(
-                motion: const DrawerMotion(),
-                extentRatio: 0.25,
-                dismissible: DismissiblePane(onDismissed: removeItem),
-                children: [
-                  SlidableAction(
-                    backgroundColor: Colors.red.shade700,
-                    foregroundColor: Colors.white,
-                    icon: Icons.delete_outline,
-                    label: l.mainRemove,
-                    onPressed: (_) => removeItem(),
-                  ),
-                ],
-              ),
-              // RepaintBoundary so a highlight flip repaints only this row's
-              // layer — the panel wraps QueueList in one RepaintBoundary, so
-              // without this every advance would re-raster all visible rows.
-              child: RepaintBoundary(
-                child: StreamBuilder<({bool active, bool playing})>(
-                  initialData: activeNow == null
-                      ? (active: false, playing: false)
-                      : rowState(activeNow),
-                  stream: _activeStream.map(rowState).distinct(),
-                  builder: (context, snap) {
-                    final st = snap.data ?? (active: false, playing: false);
-                    return _QueueRow(
-                      item: item,
-                      index: index,
-                      active: st.active,
-                      playing: st.playing,
-                      downloaded: downloaded,
-                      onTap: () {
-                        MediaManager().audioHandler.skipToQueueItem(index);
-                        MediaManager().audioHandler.play();
-                      },
-                    );
-                  },
-                ),
-              ),
-            );
-          },
         );
       },
+    );
+  }
+}
+
+/// The queue, built again when the Keep a copy gate of a queued connected
+/// server's own server answers after it was unread (the panel reads it as
+/// it opens and as the queue changes: readQueueKeepGates). It listens only
+/// while such a gate is still unread.
+class _GateWatch extends StatefulWidget {
+  final List<MediaItem> queue;
+  final WidgetBuilder builder;
+  const _GateWatch({required this.queue, required this.builder});
+
+  @override
+  State<_GateWatch> createState() => _GateWatchState();
+}
+
+class _GateWatchState extends State<_GateWatch> {
+  List<Listenable> _watched = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _watch();
+  }
+
+  @override
+  void didUpdateWidget(_GateWatch old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.queue, widget.queue)) _watch();
+  }
+
+  @override
+  void dispose() {
+    for (final w in _watched) {
+      w.removeListener(_changed);
+    }
+    super.dispose();
+  }
+
+  /// The own servers' controllers whose gate is still unread, once each.
+  void _watch() {
+    for (final w in _watched) {
+      w.removeListener(_changed);
+    }
+    final hub = CopiesHub();
+    final seen = <Listenable>{};
+    for (final item in widget.queue) {
+      final server =
+          ServerManager().byLocalname(item.extras?['server'] as String?);
+      if (!isKeepPeer(server)) continue;
+      if (hub.gateFor(server).state != KeepGateState.unknown) continue;
+      seen.add(hub.jobsFor(server!));
+    }
+    _watched = seen.toList();
+    for (final w in _watched) {
+      w.addListener(_changed);
+    }
+  }
+
+  void _changed() {
+    if (!mounted) return;
+    setState(_watch);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context);
+}
+
+/// The queue pane's "Keep a copy…": Keep a copy's glyph over a two-line
+/// label — the glyph dropped above 1.6× text, and below that too wherever
+/// it and the label as laid out would not fit the row (measured: the label
+/// keeps the room); the label ellipsized rather than ever overflowing.
+class _KeepPaneLabel extends StatelessWidget {
+  final String title;
+  const _KeepPaneLabel({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final style = TextStyle(
+      color: keepInk(),
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    );
+    return Semantics(
+      label: l.browseKeepOfItem(title),
+      excludeSemantics: true,
+      child: LayoutBuilder(builder: (context, box) {
+        var glyph = MediaQuery.textScalerOf(context).scale(1) <= 1.6;
+        if (glyph && box.maxWidth.isFinite && box.maxHeight.isFinite) {
+          final p = TextPainter(
+            text: TextSpan(
+              text: l.browseKeepButton,
+              style: DefaultTextStyle.of(context).style.merge(style),
+            ),
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+            textScaler: MediaQuery.textScalerOf(context),
+            maxLines: 2,
+          )..layout(maxWidth: box.maxWidth);
+          glyph = 22 + 4 + p.height <= box.maxHeight;
+          p.dispose();
+        }
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (glyph) ...[
+              KeepFolderGlyph(size: 22, color: keepInk()),
+              const SizedBox(height: 4),
+            ],
+            Flexible(
+              child: Text(
+                l.browseKeepButton,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: style,
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -256,6 +443,18 @@ class _QueueRow extends StatelessWidget {
   final bool playing;
   final bool downloaded;
   final VoidCallback onTap;
+
+  /// What the start and end panes do, as the grip's screen-reader actions
+  /// ("Actions for {title}…": Info, Keep a copy…, Remove). The row's own
+  /// node is the reorderable list's — its Move up / Move down / to the
+  /// start / to the end, the swipe, the tap — and a node holds one set of
+  /// custom actions: these on the row would split it from the list's, its
+  /// moves left on a node that says nothing.
+  final Map<CustomSemanticsAction, VoidCallback> actions;
+
+  /// The grip's stable key, for focus to come back to once a Keep sheet
+  /// from this row closes.
+  final String? focusKey;
   const _QueueRow({
     required this.item,
     required this.index,
@@ -263,169 +462,206 @@ class _QueueRow extends StatelessWidget {
     required this.playing,
     required this.downloaded,
     required this.onTap,
+    this.actions = const {},
+    this.focusKey,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final url = item.extras?['artUrl'] as String?;
     final dur = _fmtDur(item.duration);
     final edgeColor = active
         ? VelvetColors.primary
         : (downloaded ? VelvetColors.success : Colors.transparent);
 
-    return Material(
-      color: active ? VelvetColors.active : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: edgeColor, width: 2),
-              bottom: BorderSide(color: VelvetColors.border, width: 0.5),
+    // Its name joins the list's own node for the row (see [actions]).
+    return Semantics(
+      label: [
+        item.title,
+        if (item.artist != null && item.artist!.isNotEmpty) item.artist!,
+        if (dur.isNotEmpty) dur,
+      ].join(', '),
+      child: Material(
+        color: active ? VelvetColors.active : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: edgeColor, width: 2),
+                bottom: BorderSide(color: VelvetColors.border, width: 0.5),
+              ),
             ),
-          ),
-          padding: const EdgeInsets.fromLTRB(14, 9, 16, 9),
-          child: Row(
-            children: [
-              // Art + active EQ / paused badge.
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: url != null
-                          ? Image.network(url,
-                              fit: BoxFit.cover,
-                              cacheWidth: artCacheSize(40),
-                              errorBuilder: (_, _, _) => _artFallback())
-                          : _artFallback(),
-                    ),
-                    if (active)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          color: Colors.black.withValues(alpha:0.45),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            playing ? Icons.graphic_eq : Icons.play_arrow,
-                            color: VelvetColors.primary,
-                            size: playing ? 20 : 16,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Title + artist.
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        // DJ-pick badge (Finamp's radio-icon / Spotify's
-                        // sparkle pattern): explore = sonic-pool pick,
-                        // album = classic random DJ pick. User-queued rows
-                        // carry no badge.
-                        if (item.extras?['djPick'] == true) ...[
-                          Icon(
-                            item.extras?['djSonic'] == true
-                                ? Icons.explore
-                                : Icons.album,
-                            size: 12,
-                            color: active
-                                ? VelvetColors.primary
-                                : VelvetColors.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w500,
-                              color: active
-                                  ? VelvetColors.primary
-                                  : VelvetColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // The duration rides the ARTIST line, right-aligned,
-                    // rather than sitting in its own column beside both. Its
-                    // column used to run the full row height and take that
-                    // width from the title on every row — the title is the
-                    // thing that gets truncated, and the artist line almost
-                    // never fills its width. Same x as before: the text
-                    // column now extends into the space the duration column
-                    // occupied, so a right-aligned readout lands where the
-                    // old one did.
-                    //
-                    // Rendered whenever there is EITHER an artist or a
-                    // duration: a row with no artist still has a length.
-                    if (item.artist != null || dur.isNotEmpty) ...[
-                      const SizedBox(height: 1),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.artist ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: VelvetColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          if (dur.isNotEmpty) ...[
-                            const SizedBox(width: 10),
-                            Text(
-                              dur,
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 11.5,
-                                color: VelvetColors.textTertiary,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. HOLD
-              // then drag to reorder, or TAP it to open the action drawer (the
-              // start/left pane). The GestureDetector also keeps the tap from
-              // falling through to the row's play-on-tap.
-              _HeldDragStartListener(
-                index: index,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  // Tap → open the download/info drawer; drag → reorder.
-                  onTap: () => Slidable.of(context)?.openStartActionPane(),
+            padding: const EdgeInsets.fromLTRB(14, 9, 16, 9),
+            child: Row(
+              children: [
+                // Art + active EQ / paused badge.
+                ExcludeSemantics(
                   child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Center(
-                      child: Icon(Icons.drag_handle,
-                          color: VelvetColors.textTertiary, size: 20),
+                    width: 40,
+                    height: 40,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: url != null
+                              ? Image.network(url,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: artCacheSize(40),
+                                  errorBuilder: (_, _, _) => _artFallback())
+                              : _artFallback(),
+                        ),
+                        if (active)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              color: Colors.black.withValues(alpha:0.45),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                playing ? Icons.graphic_eq : Icons.play_arrow,
+                                color: VelvetColors.primary,
+                                size: playing ? 20 : 16,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                // Title + artist (the row's label says them).
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // DJ-pick badge (Finamp's radio-icon / Spotify's
+                            // sparkle pattern): explore = sonic-pool pick,
+                            // album = classic random DJ pick. User-queued rows
+                            // carry no badge.
+                            if (item.extras?['djPick'] == true) ...[
+                              Icon(
+                                item.extras?['djSonic'] == true
+                                    ? Icons.explore
+                                    : Icons.album,
+                                size: 12,
+                                color: active
+                                    ? VelvetColors.primary
+                                    : VelvetColors.textTertiary,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Expanded(
+                              child: Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: active
+                                      ? VelvetColors.primary
+                                      : VelvetColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // The duration rides the ARTIST line, right-aligned,
+                        // rather than sitting in its own column beside both. Its
+                        // column used to run the full row height and take that
+                        // width from the title on every row — the title is the
+                        // thing that gets truncated, and the artist line almost
+                        // never fills its width. Same x as before: the text
+                        // column now extends into the space the duration column
+                        // occupied, so a right-aligned readout lands where the
+                        // old one did.
+                        //
+                        // Rendered whenever there is EITHER an artist or a
+                        // duration: a row with no artist still has a length.
+                        if (item.artist != null || dur.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.artist ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: VelvetColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              if (dur.isNotEmpty) ...[
+                                const SizedBox(width: 10),
+                                Text(
+                                  dur,
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11.5,
+                                    color: VelvetColors.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // Drag-to-reorder grip — a comfortable 44px touch target. HOLD
+                // then drag to reorder, or TAP it to open the action drawer (the
+                // start/left pane). The GestureDetector also keeps the tap from
+                // falling through to the row's play-on-tap. A screen reader
+                // hears what it does: "Actions for Late Train Verse, or hold to
+                // reorder" — its actions the panes' (Info, Keep a copy…,
+                // Remove), its focus its own node's.
+                _HeldDragStartListener(
+                  index: index,
+                  child: KeepFocusAnchor(
+                    focusKey: focusKey,
+                    builder: (context, node) => Semantics(
+                      key: const ValueKey('queue-row-grip'),
+                      container: true,
+                      button: true,
+                      label: l.queueRowGripLabel(item.title),
+                      onTap: () => Slidable.of(context)?.openStartActionPane(),
+                      customSemanticsActions: actions,
+                      child: Focus(
+                        focusNode: node,
+                        child: ExcludeSemantics(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            // Tap → open the download/info drawer; drag →
+                            // reorder.
+                            onTap: () =>
+                                Slidable.of(context)?.openStartActionPane(),
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                child: Icon(Icons.drag_handle,
+                                    color: VelvetColors.textTertiary,
+                                    size: 20),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

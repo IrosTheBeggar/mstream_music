@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Recém-concluídas",
   "discoverCopiesClearFinished": "Limpar concluídas",
   "discoverCopiesEmpty": "Nada sendo copiado",
-  "discoverCopiesEmptySub": "Toque e segure uma música ou um álbum de um servidor conectado em Descobrir para guardar uma cópia.",
   "discoverCopiesOpenDiscover": "Abrir Descobrir",
   "discoverCopiesLoadFailed": "Não foi possível carregar suas cópias",
   "discoverCopiesLoadFailedSub": "Seu servidor não respondeu. As cópias continuam lá.",

@@ -10,6 +10,51 @@ import '../util/image_cache.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
+/// What an album item knows of its album's credit — the album artist a
+/// copy of the whole album is keyed on (Keep a copy's Album choice):
+///   known     [DisplayItem.albumArtist] is it (a compilation's is "Various
+///             Artists")
+///   disagree  the album's songs name different album artists: no album copy,
+///             its songs go one by one
+///   unknown   nothing has said yet (an older server's listing, a search hit,
+///             a card built from tracks) — the album page's resolver
+///             (util/browse_keep_leads.dart AlbumCreditResolver) asks on
+/// The albums listing says known or disagree by itself, since 6.28: its
+/// `album_artist` key is there, null when the group's rows disagree.
+enum AlbumCredit { known, disagree, unknown }
+
+/// Whose page an artist frame is (getArtistAlbums): the artist the page
+/// lists, the server it lists them from — a connected server's artist page
+/// can sit on the user's own server's stack (Discover's "Open artist") — and
+/// the page's own `artists-albums` answer as the server sent it, the singles
+/// bucket (`name: null`) included. The artist header counts its albums from
+/// that answer, and Keep a copy plans the artist copy from it
+/// (util/plan_artist_albums.dart) without asking a second time.
+class ArtistContext {
+  final Server? server;
+  final String name;
+
+  /// The answer's `albums`, each entry as sent (the maps that were maps).
+  final List<Map<String, dynamic>> albums;
+
+  const ArtistContext({
+    required this.server,
+    required this.name,
+    this.albums = const [],
+  });
+
+  static bool _named(Map a) => a['name'] is String && (a['name'] as String).trim().isNotEmpty;
+
+  /// The albums the page lists by name ("4 albums on Stage Peer B"): the
+  /// singles bucket is no album.
+  int get albumCount => albums.where(_named).length;
+
+  /// The server names its albums' credits (`album_artist` on a named album,
+  /// mStream since 6.28): without it nothing on the page can tell the
+  /// artist's own albums from the ones they only appear on.
+  bool get namesCredits => albums.any((a) => _named(a) && a.containsKey('album_artist'));
+}
+
 class DisplayItem {
   final Server? server;
   final String type;
@@ -37,6 +82,37 @@ class DisplayItem {
   // album list, so no album credit is known (Discover's connected-server
   // albums, grouped by album + track artist). Null everywhere else.
   String? trackArtist;
+
+  // Album items only: what the album listing says about the album beyond its
+  // name (mStream since 6.28; each absent on an older server). [creditState]
+  // says what [albumArtist] is worth: the listing sets it known or disagree
+  // (its `album_artist` key present, non-null or null), and the album page's
+  // resolver fills in the rest, storing the answer here so Back reuses it.
+  AlbumCredit creditState = AlbumCredit.unknown;
+
+  // The listing's `compilation` (its credit names none of its own track
+  // artists: "Various Artists"), its distinct track `artists`, its song
+  // count and length (`track_count`, `duration` in seconds), and the years
+  // its collapsed rows span (`year_min` / `year_max`). The last four are
+  // kept as the listing sends them (the phone spec's model); nothing on the
+  // phone reads them yet — the album page's resolver matches years on the
+  // artist list's own answer.
+  bool? compilation;
+  List<String> artists = const [];
+  int? trackCount;
+  Duration? duration;
+  int? yearMin;
+  int? yearMax;
+
+  // Album items from a search hit only: the server's `album_artist` and
+  // `year` for the hit, as HINTS. Before mStream #1076 a hit's credit is the
+  // album's primary artist, not the listing's credit (search.js
+  // likeAlbumsRows), so nothing keys on it alone; the album page's resolver
+  // may use a non-null one beside the songs' own. Kept apart from
+  // [albumArtist] / [year] so the album page asks album-songs by name as it
+  // always did.
+  String? creditHint;
+  int? yearHint;
 
   int downloadProgress = 0;
 

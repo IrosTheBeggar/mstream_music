@@ -19,14 +19,21 @@ import 'package:mstream_music/util/discovery_plugins_api.dart';
 String _norm(Object? v) => '${v ?? ''}'.trim().toLowerCase();
 bool _has(Object? v) => v is String && v.trim().isNotEmpty;
 
-/// The server's jobKeysFor, in shape.
+/// The server's jobKeysFor, in shape. A folder's recommendation (a path and
+/// its name, no artist) also gets the folder key — the peer and the path,
+/// case kept (the server gives every rec with a path and a peer one; a
+/// song's is meaningless and left out here).
 Map<String, String> fakeKeysOf(Map rec, [String? scope]) {
+  final peer = rec['peer'];
+  final folder = _has(rec['filepath']) && !_has(rec['artist']) && peer is Map;
   final keys = <String, String>{
     'song': 'text:${_norm(rec['artist'])}|${_norm(rec['title'])}|${_norm(rec['album'])}',
     if (_has(rec['album']))
       'album': 'album:${_norm(_has(rec['albumArtist']) ? rec['albumArtist'] : rec['artist'])}|${_norm(rec['album'])}',
     if (_has(rec['artist'])) 'artist': 'artist:${_norm(rec['artist'])}',
     if (_has(rec['artist'])) 'artist-missing': 'artist-missing:${_norm(rec['artist'])}',
+    if (folder)
+      'folder': 'folder:${peer['id']}|${'${rec['filepath']}'.replaceAll(RegExp(r'^/+|/+$'), '')}',
   };
   return keys;
 }
@@ -224,7 +231,11 @@ class FakePluginServer {
       // The jobs route's check: the place the client showed must still be
       // where files land; every new job is pinned to the one in force.
       final effective = destination['destination'] as Map?;
-      if (shown && !fakeSamePlace(body['destination'] as Map?, effective)) {
+      // A folder given a library and a folder of its own reads none of the
+      // destination (destination.js sameDestinationFor).
+      final land = body['landing'];
+      final ownPlace = land is Map && land['tags'] != true && land['path'] is String && land['vpath'] is String;
+      if (shown && !ownPlace && !fakeSamePlace(body['destination'] as Map?, effective)) {
         return _json({
           'error': 'destination_changed',
           'message': 'your collection destination has changed — check where this will land and ask again',
@@ -232,7 +243,15 @@ class FakePluginServer {
         }, 409);
       }
       final j = addJob(body['recommendation'] as Map, scope: body['scope'] as String?);
-      j['params'] = {...?j['params'] as Map?, 'destination': effective};
+      j['params'] = {
+        ...?j['params'] as Map?,
+        'destination': effective,
+        // validateLanding's form: a library of its own or none (null)
+        if (body['landing'] is Map)
+          'landing': (body['landing'] as Map)['tags'] == true
+              ? {'tags': true}
+              : {'vpath': (body['landing'] as Map)['vpath'], 'path': (body['landing'] as Map)['path'] ?? ''},
+      };
       return _json({'job': j, 'created': true}, 202);
     }
     final cancel = RegExp(r'/plugin-jobs/(\d+)/cancel$').firstMatch(path);

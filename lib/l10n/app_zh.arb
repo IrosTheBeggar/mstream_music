@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "刚刚完成",
   "discoverCopiesClearFinished": "清除已完成",
   "discoverCopiesEmpty": "没有正在复制的内容",
-  "discoverCopiesEmptySub": "在“发现”中长按已连接服务器的歌曲或专辑，即可保留副本。",
   "discoverCopiesOpenDiscover": "打开“发现”",
   "discoverCopiesLoadFailed": "无法加载你的副本",
   "discoverCopiesLoadFailedSub": "你的服务器没有响应。复制仍在服务器上进行。",

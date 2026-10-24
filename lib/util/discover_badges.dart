@@ -685,3 +685,133 @@ final RegExp _albumHead = RegExp(r'^album \d+ of \d+ · (.+?) · \d+ of \d+ song
   if (done == null || total == null || total <= 0 || done > total) return null;
   return (done, total);
 }
+
+// ── a connected server's pages, while browsing it ────────────────────────
+// What a browse page marks (the phone spec's "which job a mark shows"):
+// each mark its own scope's newest job of the user's server, read through
+// the same rules as Discover's — album and artist jobs only when their
+// recommendation names THIS server ([otherPeerJob]), a song job from any
+// server (it is the recording), a folder job by its key (which names the
+// server). Discover's own markers ([badgeOf], its rows and cards) are left
+// as they were: they never show a folder copy.
+
+JobBadge _badgeFor(DiscoveryJob job) => JobBadge(
+      row: jobRowState(job, plugin: job.plugin),
+      slot: jobSlot(job.plugin, jobScope(job)),
+      plugin: job.plugin,
+      scope: jobScope(job),
+      kind: jobKind(job),
+      jobId: job.id,
+      job: job,
+    );
+
+/// The marker [job] speaks for, whatever its scope (a folder copy's too):
+/// null for none, a cancelled job, nothing of theirs to copy.
+CopyMarker? markerOfJob(DiscoveryJob? job, {String? album}) =>
+    job == null ? null : copyMarkerOf(_badgeFor(job), album: album);
+
+/// The job a page pill of [scope] shows among [held] (a page lookup's jobs
+/// by slot): the artist pill reads both artist scopes, a live one first,
+/// else the newer. This server's live job first; another server's only
+/// while it runs ([KeepChoiceJob.fromOtherPeer]: "Copying from {peer}");
+/// else this server's last one (a cancelled one is the idle pill). Null:
+/// the idle pill.
+KeepChoiceJob? pagePillJob(Map<String, DiscoveryJob> held, String scope,
+    {int? peerId}) {
+  final artist = scope == kScopeArtist || scope == kScopeArtistMissing;
+  bool ours(DiscoveryJob j) => artist
+      ? (jobScope(j) == kScopeArtist || jobScope(j) == kScopeArtistMissing)
+      : jobScope(j) == scope;
+  bool before(DiscoveryJob a, DiscoveryJob b) =>
+      a.live != b.live ? a.live : a.id > b.id;
+  DiscoveryJob? mine;
+  DiscoveryJob? other;
+  for (final job in held.values) {
+    if (!isKeepCopy(job) || !ours(job)) continue;
+    if (otherPeerJob(job, peerId)) {
+      if (job.live && (other == null || job.id > other.id)) other = job;
+      continue;
+    }
+    if (mine == null || before(job, mine)) mine = job;
+  }
+  if (mine != null && mine.live) return KeepChoiceJob(mine);
+  if (other != null) return KeepChoiceJob(other, fromOtherPeer: true);
+  return mine == null ? null : KeepChoiceJob(mine);
+}
+
+/// A browse page's album card: the copies of its [album] on THIS server —
+/// its album jobs, and a FINISHED artist job as its walk saw that album
+/// ([jobForAlbum]) — ranked as a row's badge is. Never a live artist job
+/// (a walk names only the album it is on in words, so no card guesses
+/// while it runs), a song job, a folder job, or another server's copy.
+JobBadge? pageCardBadge(Map<String, DiscoveryJob> held,
+    {String? album, int? peerId}) {
+  final mine = <String, DiscoveryJob>{};
+  for (final e in held.entries) {
+    final job = e.value;
+    if (!isKeepCopy(job) || otherPeerJob(job, peerId)) continue;
+    final s = jobScope(job);
+    final artist = s == kScopeArtist || s == kScopeArtistMissing;
+    if (s == kScopeAlbum || (artist && job.state == JobState.done)) {
+      mine[e.key] = job;
+    }
+  }
+  return badgeOf(heldForAlbum(mine, album));
+}
+
+/// [pageCardBadge] as its marker.
+CopyMarker? pageCardMarker(Map<String, DiscoveryJob> held,
+        {String? album, int? peerId}) =>
+    copyMarkerOf(pageCardBadge(held, album: album, peerId: peerId),
+        album: album);
+
+/// What a finished many-song copy ([view]: an album job) says of the one
+/// song whose file on the connected server is [filepath] — its entry in the
+/// song lists: copied → in your collection, skipped as owned → already
+/// yours, skipped as a file already there → skipped, failed → failed. Null
+/// when no list names it.
+CopyMarker? _listedMark(DiscoveryJob view, String filepath) {
+  final songs = view.result?['songs'];
+  final want = _peerPath(filepath);
+  if (songs is! Map || want.isEmpty) return null;
+  bool named(String list) => _arr(songs[list])
+      .any((e) => e is Map && _peerPath(e['from']) == want);
+  if (named('copied')) return const CopyMarker(CopyMarkerKind.inCollection);
+  if (named('failed')) return const CopyMarker(CopyMarkerKind.failed);
+  for (final e in _arr(songs['skipped'])) {
+    if (e is! Map || _peerPath(e['from']) != want) continue;
+    return e['why'] == 'exists'
+        ? const CopyMarker(CopyMarkerKind.skipped)
+        : const CopyMarker(CopyMarkerKind.alreadyYours);
+  }
+  return null;
+}
+
+/// An album page's song row ([song]: the row's own job, from any server;
+/// [album]: the page's album job of THIS server; [filepath] the row's file
+/// on the connected server): nothing while the album copy runs (its rows
+/// cannot say which song it is on), else the newer of the song's own marker
+/// and what the finished album copy says of this song — a song in a job's
+/// failed list never reads "in your collection". A live song job always
+/// wins.
+CopyMarker? pageSongMarker(
+    {DiscoveryJob? song, DiscoveryJob? album, String? filepath}) {
+  if (album != null && album.live) return null;
+  final own = markerOfJob(song);
+  if (song != null && song.live) return own;
+  final listed = album == null ||
+          album.state != JobState.done ||
+          filepath == null
+      ? null
+      : _listedMark(album, filepath);
+  if (own == null) return listed;
+  if (listed == null) return own;
+  return jobNewer(album!, song!) ? listed : own;
+}
+
+/// A folder row's marker: its folder copies only (a folder kept as an album
+/// or an artist shows nothing). [held] is the folder's lookup jobs by slot.
+CopyMarker? pageFolderMarker(Map<String, DiscoveryJob> held) {
+  final job = held[jobSlot(kCopyPlugin, kScopeFolder)];
+  return isKeepCopy(job) ? markerOfJob(job) : null;
+}

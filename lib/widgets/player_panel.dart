@@ -7,11 +7,15 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/player_layout.dart';
+import '../objects/server.dart';
+import '../screens/discovery/copies_hub.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
+import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
+import '../util/browse_keep_leads.dart' show isKeepPeer;
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import '../visualizer/shader_visualizer_screen.dart';
@@ -59,8 +63,28 @@ class PlayerPanelState extends State<PlayerPanel>
   void collapse() => _ctrl.animateTo(0.0, curve: Curves.easeOutCubic);
   void toggle() => isExpanded ? collapse() : expand();
 
+  StreamSubscription<List<MediaItem>>? _queueSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // The queue's "Keep a copy…" asks a queued connected-server track's own
+    // server whether copies can be made there: read when the panel opens or
+    // the queue changes while it is open, as long as it was never read.
+    _ctrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _readQueueGates();
+    });
+    _queueSub = MediaManager().audioHandler.queue.listen((_) {
+      if (isExpanded) _readQueueGates();
+    });
+  }
+
+  void _readQueueGates() => readQueueKeepGates(
+      MediaManager().audioHandler.queue.valueOrNull ?? const []);
+
   @override
   void dispose() {
+    _queueSub?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -187,6 +211,22 @@ class PlayerPanelState extends State<PlayerPanel>
         );
       },
     );
+  }
+}
+
+/// Read Keep a copy's gate on the own server of each connected server whose
+/// tracks are in [queue] — once per own server, only while it was never
+/// read — so the queue's "Keep a copy…" knows whether to offer itself. The
+/// answer applies from the queue's next build.
+void readQueueKeepGates(Iterable<MediaItem> queue) {
+  final asked = Set<Server>.identity();
+  for (final item in queue) {
+    final server =
+        ServerManager().byLocalname(item.extras?['server'] as String?);
+    if (!isKeepPeer(server) || !asked.add(server!.parentServer!)) continue;
+    if (CopiesHub().gateFor(server).state == KeepGateState.unknown) {
+      unawaited(CopiesHub().ensureGate(server));
+    }
   }
 }
 

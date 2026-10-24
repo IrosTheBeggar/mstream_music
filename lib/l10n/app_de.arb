@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Gerade fertig",
   "discoverCopiesClearFinished": "Erledigte entfernen",
   "discoverCopiesEmpty": "Nichts wird kopiert",
-  "discoverCopiesEmptySub": "Halte auf „Entdecken“ einen Titel oder ein Album eines verbundenen Servers gedrückt, um eine Kopie zu behalten.",
   "discoverCopiesOpenDiscover": "„Entdecken“ öffnen",
   "discoverCopiesLoadFailed": "Deine Kopien konnten nicht geladen werden",
   "discoverCopiesLoadFailedSub": "Dein Server hat nicht geantwortet. Die Kopien laufen dort weiter.",

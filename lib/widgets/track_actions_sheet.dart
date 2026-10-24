@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../screens/discover_screen.dart';
+import '../screens/discovery/browse_copy_marks.dart';
+import '../screens/discovery/copies_hub.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
@@ -10,7 +12,9 @@ import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import '../util/media_format.dart';
+import '../util/browse_keep_leads.dart' show BrowseKeepRequest;
 import '../util/stream_url.dart';
+import 'browse_keep_entry.dart';
 import 'fact_badge.dart';
 import 'player_panel.dart';
 import 'playlist_picker_sheet.dart';
@@ -32,7 +36,11 @@ import 'star_rating.dart';
 /// album detail, the Discover panel — because "the same actions wherever you
 /// meet a song" is the point, and three copies of the same showModalBottomSheet
 /// is how that quietly stops being true.
-void showTrackActionsSheet(BuildContext context, DisplayItem item) {
+///
+/// [keep] adds "Keep a copy…" for a connected server's song whose Keep a
+/// copy gate is open (the caller's page knows both).
+void showTrackActionsSheet(BuildContext context, DisplayItem item,
+    {TrackSheetKeep? keep}) {
   showModalBottomSheet(
     context: context,
     backgroundColor: VelvetColors.surface,
@@ -44,15 +52,45 @@ void showTrackActionsSheet(BuildContext context, DisplayItem item) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (_) => TrackActionsSheet(item: item, parentContext: context),
+    builder: (_) =>
+        TrackActionsSheet(item: item, parentContext: context, keep: keep),
   );
+}
+
+/// The track sheet's "Keep a copy…" row (a connected server's song, its
+/// gate open): what its Keep sheet opens with ([request]), what the page
+/// knows of the song's copy ([state]), and where focus goes back once that
+/// sheet closes ([from]: the ⋮ or the row the menu opened from; else the
+/// anchor of the request's key; [fallback]: the page's header) — [closed]
+/// runs then (the page reads its gate again).
+class TrackSheetKeep {
+  final BrowseKeepRequest request;
+  final KeepMenuState state;
+
+  /// The page's own marks, handed to the Keep sheet.
+  final BrowseCopyMarks? marks;
+  final FocusNode? from;
+  final FocusNode? fallback;
+  final VoidCallback? closed;
+  const TrackSheetKeep({
+    required this.request,
+    this.state = const KeepMenuState.ask(),
+    this.marks,
+    this.from,
+    this.fallback,
+    this.closed,
+  });
 }
 
 class TrackActionsSheet extends StatelessWidget {
   final DisplayItem item;
   final BuildContext parentContext;
+  final TrackSheetKeep? keep;
   const TrackActionsSheet(
-      {super.key, required this.item, required this.parentContext});
+      {super.key,
+      required this.item,
+      required this.parentContext,
+      this.keep});
 
   // Floating so it clears the docked mini-player overlay (a plain bottom
   // snackbar renders behind it) — same fix as the browser's other toasts.
@@ -278,6 +316,25 @@ class TrackActionsSheet extends StatelessWidget {
               await addToQueueEnd(item);
               _queuedToast();
             }),
+          // The library verb before the device verb: a copy on the user's
+          // server, then Download to this phone.
+          if (keep != null && isServerTrack)
+            KeepMenuRow(
+              label: l.browseKeepOfItem(title),
+              peerName: keep!.request.peerName,
+              state: keep!.state,
+              ask: () => KeepMenuState.lookupSong(
+                  CopiesHub().jobsFor(keep!.request.peer), keep!.request),
+              onTap: () {
+                final k = keep!;
+                Navigator.of(context).pop();
+                BrowseKeepEntry.open(parentContext, k.request,
+                    marks: k.marks,
+                    from: k.from,
+                    fallback: k.fallback,
+                    closed: k.closed);
+              },
+            ),
           // Playlists live on the user's OWN server: adding a peer's path
           // would store one the parent cannot resolve (and every playlist
           // route is off the federation allowlist besides).
