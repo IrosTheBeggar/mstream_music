@@ -11,8 +11,11 @@ import '../../objects/server.dart';
 import '../../singletons/api.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/album_songs_body.dart';
+import '../../util/browse_keep_leads.dart'
+    show AlbumCreditResolver, ResolvedCredit;
 import '../../util/discover_badges.dart' show nameKey;
 import '../../util/discover_jobs.dart' show LayoutSong, serverFolderOf;
+import '../../util/plan_artist_albums.dart';
 
 /// The sizes a connected server's song and album sheets show beside the
 /// Keep a copy choices, and the Listen verbs' songs: the album on that
@@ -53,13 +56,79 @@ class KeepFacts {
   /// says it is "not answering" and leaves its sizes blank.
   final bool peerFailed;
 
+  /// The connected server's `artists-albums` answer for the artist as it
+  /// came — each album's `album_artist`, `artists`, `compilation`, and the
+  /// singles bucket (`name: null`) — what an artist copy is planned from
+  /// ([planFor]). Null until it answers, or when it did not.
+  final List<Map<String, dynamic>>? peerListing;
+
   const KeepFacts({
     this.albumSongs,
     this.peerAlbums,
     this.peerAlbumYears,
     this.libraryAlbums,
     this.peerFailed = false,
+    this.peerListing,
   });
+
+  /// What an artist copy of [artist] takes and leaves out, as the copy
+  /// plans it ([planArtistAlbums]): their own albums — not the ones they
+  /// only appear on — and, with [onlyMissing], not the ones the library has
+  /// by name. Null until the peer's list (and, for [onlyMissing], the
+  /// library's) answered.
+  ArtistAlbumsPlan? planFor(String artist, {bool onlyMissing = false}) {
+    final listing = peerListing;
+    if (listing == null) return null;
+    final mine = libraryAlbums;
+    if (onlyMissing && mine == null) return null;
+    return planArtistAlbums(
+      listing,
+      artist,
+      localKeys: {for (final n in mine ?? const <String>[]) nameKey(n)},
+      onlyMissing: onlyMissing,
+    );
+  }
+
+  /// The artist copy's "left out" line ([artistLeftOut]); null when nothing
+  /// is left out, or the peer's list has not answered.
+  ArtistLeftOut? leftOutFor(String artist) =>
+      artistLeftOut(peerListing, artist);
+
+  /// [artist]'s own albums there, as an artist copy takes them ([planFor]):
+  /// what a browse sheet's Artist choice counts ("3 albums" — never the
+  /// ones they only appear on). Null until the peer's list answered.
+  List<String>? theirsOf(String artist) =>
+      planFor(artist)?.plan.map((a) => a.name).toList();
+
+  /// Their albums the library lacks by name — what "Only the 2 albums you
+  /// don't have" copies from a browse sheet. Null until both lists
+  /// answered.
+  List<String>? missingTheirs(String artist) =>
+      planFor(artist, onlyMissing: true)?.plan.map((a) => a.name).toList();
+
+  /// Of their albums, the ones the library has by name ("you have 1").
+  /// Null until both lists answered.
+  int? haveTheirs(String artist) {
+    final theirs = theirsOf(artist);
+    final missing = missingTheirs(artist);
+    if (theirs == null || missing == null) return null;
+    return theirs.length - missing.length;
+  }
+
+  /// A song's album credit from the peer's list (the album page's step 3,
+  /// [AlbumCreditResolver.fromArtistAlbums]): the one album of [album]'s
+  /// name — and [year] — gives it. Unknown until the list answered.
+  ResolvedCredit creditOf(String? album, {int? year}) {
+    final listing = peerListing;
+    if (listing == null || album == null || album.trim().isEmpty) {
+      return ResolvedCredit.unknown;
+    }
+    return AlbumCreditResolver.fromArtistAlbums(
+      {'albums': listing},
+      album: album,
+      year: year,
+    );
+  }
 
   /// How many songs the album has there; null until it answered, or when
   /// it answered none (no album of that name to take).
@@ -171,12 +240,14 @@ class KeepFacts {
     Map<String, int>? peerAlbumYears,
     List<String>? libraryAlbums,
     bool? peerFailed,
+    List<Map<String, dynamic>>? peerListing,
   }) => KeepFacts(
     albumSongs: albumSongs ?? this.albumSongs,
     peerAlbums: peerAlbums ?? this.peerAlbums,
     peerAlbumYears: peerAlbumYears ?? this.peerAlbumYears,
     libraryAlbums: libraryAlbums ?? this.libraryAlbums,
     peerFailed: peerFailed ?? this.peerFailed,
+    peerListing: peerListing ?? this.peerListing,
   );
 }
 
@@ -220,7 +291,9 @@ Future<dynamic> keepFactsPost(
 /// server's virtual Server, [own] the user's server. [album] null asks no
 /// album; [artist] empty asks no artist lists. [albumArtist] is the album's
 /// credit — a compilation's album songs are asked by it, so they are the
-/// whole album, what its album copy takes.
+/// whole album, what its album copy takes. [peerListing] is an answer the
+/// page already holds (an artist page's own `artists-albums`): the peer is
+/// not asked again.
 class KeepFactsLoader extends ChangeNotifier {
   final Server? peer;
   final Server? own;
@@ -231,6 +304,7 @@ class KeepFactsLoader extends ChangeNotifier {
   /// Whether to ask the artist lists at all (a compilation offers no artist
   /// copy, so its sheet needs none).
   final bool wantArtist;
+  final List<Map<String, dynamic>>? peerListing;
   final KeepFactsFetch _fetch;
 
   KeepFactsLoader({
@@ -240,8 +314,10 @@ class KeepFactsLoader extends ChangeNotifier {
     required this.artist,
     this.albumArtist,
     this.wantArtist = true,
+    this.peerListing,
     KeepFactsFetch? fetch,
-  }) : _fetch = fetch ?? keepFactsFetch;
+  }) : _fetch = fetch ?? keepFactsFetch,
+       _credit = albumArtist;
 
   /// For a connected server's row.
   factory KeepFactsLoader.forLead(
@@ -266,6 +342,11 @@ class KeepFactsLoader extends ChangeNotifier {
   bool _started = false;
   bool _disposed = false;
   Future<void>? _albumDone;
+
+  /// The credit the album's songs are asked by ([albumArtist], or one
+  /// learnt since: [albumCreditKnown]); the latest ask's number.
+  String? _credit;
+  int _albumAsk = 0;
 
   bool get loadingAlbum => _albumOut;
   bool get loadingArtist => _artistOut;
@@ -297,9 +378,26 @@ class KeepFactsLoader extends ChangeNotifier {
     return facts.albumSongs;
   }
 
+  /// The album's credit became known after its songs were asked by the
+  /// artist (a browse sheet's song: its own tags, or the peer's album
+  /// list): they are asked again by the credit — a compilation's whole
+  /// album, what its album copy takes. Nothing when they were asked by it
+  /// already, or the sheet has no album.
+  void albumCreditKnown(String credit) {
+    final c = credit.trim();
+    if (_disposed || !asksAlbum || c.isEmpty) return;
+    if (nameKey(c) == nameKey(_credit)) return;
+    _credit = c;
+    if (!_started) return;
+    _albumOut = true;
+    _albumDone = _loadAlbum();
+    _notify();
+  }
+
   Future<void> _loadAlbum() async {
     final p = peer!;
-    final credit = albumArtist?.trim();
+    final ask = ++_albumAsk;
+    final credit = _credit?.trim();
     final hasCredit = credit != null && credit.isNotEmpty;
     try {
       final res = await _fetch(
@@ -328,14 +426,17 @@ class KeepFactsLoader extends ChangeNotifier {
           songs.add(row);
         }
       }
-      if (_disposed) return;
+      if (_disposed || ask != _albumAsk) return;
       facts = facts._with(albumSongs: List.unmodifiable(songs));
     } catch (_) {
-      if (_disposed) return;
+      if (_disposed || ask != _albumAsk) return;
       facts = facts._with(peerFailed: true);
     } finally {
-      _albumOut = false;
-      _notify();
+      // An ask overtaken by a later one leaves the answer to it.
+      if (ask == _albumAsk) {
+        _albumOut = false;
+        _notify();
+      }
     }
   }
 
@@ -365,12 +466,35 @@ class KeepFactsLoader extends ChangeNotifier {
     return Map.unmodifiable(out);
   }
 
+  /// An artists-albums answer's albums as they came (the maps).
+  static List<Map<String, dynamic>> _listing(dynamic res) {
+    final albums = res is Map ? res['albums'] : null;
+    if (albums is! List) return const [];
+    return List.unmodifiable([
+      for (final a in albums)
+        if (a is Map)
+          Map<String, dynamic>.unmodifiable({
+            for (final e in a.entries)
+              if (e.key is String) e.key as String: e.value,
+          }),
+    ]);
+  }
+
   Future<void> _loadArtist() async {
     final body = {'artist': artist};
     final p = peer;
     final o = own;
+    final held = peerListing;
+    if (held != null) {
+      final res = {'albums': held};
+      facts = facts._with(
+        peerAlbums: _names(res),
+        peerAlbumYears: _years(res),
+        peerListing: _listing(res),
+      );
+    }
     await Future.wait([
-      if (p != null)
+      if (p != null && held == null)
         () async {
           try {
             final res = await _fetch(p, '/api/v1/db/artists-albums', body);
@@ -378,6 +502,7 @@ class KeepFactsLoader extends ChangeNotifier {
             facts = facts._with(
               peerAlbums: _names(res),
               peerAlbumYears: _years(res),
+              peerListing: _listing(res),
             );
           } catch (_) {
             if (_disposed) return;

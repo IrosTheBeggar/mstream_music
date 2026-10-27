@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Appena finite",
   "discoverCopiesClearFinished": "Cancella le finite",
   "discoverCopiesEmpty": "Nessuna copia in corso",
-  "discoverCopiesEmptySub": "Tieni premuto un brano o un album di un server collegato in Scopri per tenerne una copia.",
   "discoverCopiesOpenDiscover": "Apri Scopri",
   "discoverCopiesLoadFailed": "Impossibile caricare le tue copie",
   "discoverCopiesLoadFailedSub": "Il tuo server non ha risposto. Le copie continuano lì.",

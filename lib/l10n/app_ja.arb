@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "完了したばかり",
   "discoverCopiesClearFinished": "完了済みを消去",
   "discoverCopiesEmpty": "コピー中のものはありません",
-  "discoverCopiesEmptySub": "ディスカバーで接続中のサーバーの曲やアルバムを長押しすると、コピーを保存できます。",
   "discoverCopiesOpenDiscover": "ディスカバーを開く",
   "discoverCopiesLoadFailed": "コピーを読み込めませんでした",
   "discoverCopiesLoadFailedSub": "サーバーが応答しませんでした。コピーはサーバー上で続いています。",

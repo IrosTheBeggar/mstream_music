@@ -30,6 +30,49 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
 
+/// What an album listing's item says beyond its name (mStream since 6.28),
+/// kept on [item]: whether its `album_artist` key names one credit (known),
+/// null (the group's rows disagree) or is absent (an older server: unknown);
+/// `compilation`, its track `artists`, `track_count`, `duration` and the
+/// years its rows span. A connected server's album whose credits disagree
+/// reads as its artists ("ALM, Night Owl Radio") rather than a bare year.
+void _keepAlbumFacts(DisplayItem item, Map e) {
+  if (e.containsKey('album_artist')) {
+    item.creditState = item.albumArtist != null
+        ? AlbumCredit.known
+        : AlbumCredit.disagree;
+  }
+  final c = e['compilation'];
+  if (c is bool) item.compilation = c;
+  final artists = e['artists'];
+  if (artists is List) {
+    item.artists = List.unmodifiable([
+      for (final a in artists)
+        if (a is String && a.trim().isNotEmpty) a,
+    ]);
+  }
+  item.trackCount = _whole(e['track_count']);
+  final d = e['duration'];
+  if (d is num && d.isFinite && d > 0) {
+    item.duration = Duration(milliseconds: (d * 1000).round());
+  }
+  item.yearMin = _whole(e['year_min']);
+  item.yearMax = _whole(e['year_max']);
+  if (item.creditState == AlbumCredit.disagree &&
+      item.artists.isNotEmpty &&
+      item.server?.isFederated == true) {
+    item.subtext = item.artists.join(', ');
+  }
+}
+
+/// A whole number from an int, a num or a numeric string; null otherwise.
+int? _whole(dynamic v) {
+  if (v is int) return v;
+  if (v is num) return v.isFinite ? v.toInt() : null;
+  if (v is String) return int.tryParse(v.trim());
+  return null;
+}
+
 class ApiManager {
   ApiManager._privateConstructor();
   static final ApiManager _instance = ApiManager._privateConstructor();
@@ -57,6 +100,28 @@ class ApiManager {
   /// ApiManager (DiscoveryPluginsApi). Read it per call: [resetDirectClient]
   /// replaces it.
   http.Client get directClient => _direct;
+
+  /// Told when a connected server's browse call got no answer — the
+  /// network, a timeout, a 5xx — so the app can say so: "Stage Peer B not
+  /// answering" (screens/discovery/copies_hub.dart installs it). Never for a
+  /// refusal (a 4xx), nor a call Back cancelled. The page stays as it was.
+  static void Function(Server peer)? onPeerNotAnswering;
+
+  /// When each connected server was last said not to answer: one browse
+  /// step fires several calls, and says so once.
+  final Map<Server, DateTime> _peerToldAt = Map.identity();
+
+  void _peerNotAnswering(Server server, int loadToken) {
+    if (!server.isFederated) return;
+    if (BrowserManager().isLoadCancelled(loadToken)) return;
+    final now = DateTime.now();
+    final last = _peerToldAt[server];
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      return;
+    }
+    _peerToldAt[server] = now;
+    onPeerNotAnswering?.call(server);
+  }
 
   /// POST /api/v1/db/genres — returns the server's distinct genre
   /// list with track counts. Used by the AutoDJ screen to populate
@@ -207,6 +272,7 @@ class ApiManager {
               .awaitTunnelReady(server: server, caller: 'browse');
           if (!ready) {
             appLog('[api] iroh tunnel down; $getOrPost $location failed: $e');
+            _peerNotAnswering(server, loadToken);
             rethrow;
           }
           currentUri = server.apiUri(location);
@@ -214,6 +280,7 @@ class ApiManager {
         } else {
           appLog('[api] $getOrPost $location → error: $e '
               '(${sw.elapsedMilliseconds}ms)');
+          _peerNotAnswering(server, loadToken);
           rethrow;
         }
       }
@@ -226,6 +293,7 @@ class ApiManager {
         unawaited(ServerManager().onDirectAuthRejected(server));
       }
       if (response.statusCode > 299) {
+        if (response.statusCode >= 500) _peerNotAnswering(server, loadToken);
         throw Exception('Server Call Failed');
       }
 
@@ -503,6 +571,10 @@ class ApiManager {
             Icon(Icons.library_music, color: VelvetColors.textSecondary),
             'album');
         newItem.altAlbumArt = e['album_art_file'];
+        // Hints only (DisplayItem.creditHint): the album page opens by name
+        // as it always did and resolves its credit itself.
+        newItem.creditHint = albumArtistOf(e['album_artist']);
+        newItem.yearHint = albumYearOf(e['year']);
         newList.add(newItem);
       });
 
@@ -615,6 +687,7 @@ class ApiManager {
         // album when two share a name (see albumSongsBody).
         newItem.albumArtist = albumArtistOf(e['album_artist']);
         newItem.year = albumYearOf(e['year']);
+        _keepAlbumFacts(newItem, e);
         newList.add(newItem);
       });
 
@@ -758,6 +831,64 @@ class ApiManager {
     if (response.statusCode > 299) {
       throw Exception('Rating failed (HTTP ${response.statusCode})');
     }
+  }
+
+  /// One POST to [server] off the browse stack — no loading bar, no
+  /// Back-cancel, no "not answering" toast: Keep a copy's quiet reads (a
+  /// folder's count, a library's folders, an album's credit). JSON both
+  /// ways, a large answer decoded off the UI isolate; throws on a non-2xx
+  /// answer or a transport failure, bounded by [timeout].
+  Future<dynamic> headlessPost(
+    Server server,
+    String location,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final res = await _direct
+        .post(
+          server.apiUri(location),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.authToken ?? '',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(timeout);
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw http.ClientException('HTTP ${res.statusCode}', res.request?.url);
+    }
+    return decodeJsonBody(res.body);
+  }
+
+  /// POST /api/v1/file-explorer/recursive on [server], headless: every file
+  /// under [directory] (its path there, library first), as the server lists
+  /// them — what Keep a copy counts a connected server's folder by, never
+  /// on a page view. Throws when the server does not answer one.
+  Future<List<String>> recursiveListing(Server server, String directory,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    final res = await headlessPost(
+        server, '/api/v1/file-explorer/recursive', {'directory': directory},
+        timeout: timeout);
+    if (res is! List) throw const FormatException('not a listing');
+    return [for (final e in res) if (e is String) e];
+  }
+
+  /// POST /api/v1/file-explorer on [server] (the user's OWN server),
+  /// headless: the folders in [directory] ("/copies/Borrowed Tapes"), by
+  /// name, alphabetical — "Into a folder…"'s list. A folder that does not
+  /// exist answers with an error, and so throws.
+  Future<List<String>> ownFolderListing(Server server, String directory) async {
+    final res = await headlessPost(
+        server, '/api/v1/file-explorer', {'directory': directory});
+    final dirs = res is Map ? res['directories'] : null;
+    if (dirs is! List) throw const FormatException('not a folder');
+    final names = [
+      for (final d in dirs)
+        if (d is Map && d['name'] is String && (d['name'] as String).isNotEmpty)
+          d['name'] as String,
+    ];
+    names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
   }
 
   /// POST /api/v1/db/metadata/batch — the full metadata block for many tracks
@@ -1293,7 +1424,14 @@ class ApiManager {
           '/api/v1/db/artists-albums', {'artist': artist}, 'POST');
 
       List<DisplayItem> newList = [];
+      final albums = <Map<String, dynamic>>[];
       res['albums'].forEach((e) {
+        if (e is Map) {
+          albums.add({
+            for (final x in e.entries)
+              if (x.key is String) x.key as String: x.value,
+          });
+        }
         String name = e['name'] ?? 'SINGLES';
 
         // TODO: Errors on singles
@@ -1307,11 +1445,22 @@ class ApiManager {
         newItem.altAlbumArt = e['album_art_file'];
         newItem.albumArtist = albumArtistOf(e['album_artist']);
         newItem.year = albumYearOf(e['year']);
+        // The singles bucket is no album: it keeps no credit.
+        if (e['name'] != null) _keepAlbumFacts(newItem, e);
 
         newList.add(newItem);
       });
 
-      BrowserManager().addListToStack(newList);
+      // The bar names whose page this is ("Boukmanflow"), and the frame
+      // keeps the answer: the artist header counts its albums from it, and
+      // Keep a copy plans an artist copy from it without asking again.
+      BrowserManager().setBrowserLabel(artist);
+      BrowserManager().addListToStack(newList,
+          artist: ArtistContext(
+            server: useThisServer,
+            name: artist,
+            albums: List.unmodifiable(albums),
+          ));
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtistAlbums failed: $err');
@@ -1350,7 +1499,10 @@ class ApiManager {
     }
   }
 
-  Future<void> getFileList(String directory, {Server? useThisServer}) async {
+  /// The explorer's listing of [directory], pushed onto the browse stack.
+  /// False when it was not: the server did not list it (a folder that is
+  /// not there answers 404), or the call went nowhere.
+  Future<bool> getFileList(String directory, {Server? useThisServer}) async {
     try {
       final res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
         "directory": directory,
@@ -1407,9 +1559,11 @@ class ApiManager {
 
       BrowserManager()
           .addListToStack(newList, alphabetical: true, path: res['path']);
+      return true;
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getFileList failed: $err');
+      return false;
     }
   }
 

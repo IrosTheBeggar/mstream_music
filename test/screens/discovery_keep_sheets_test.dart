@@ -24,6 +24,7 @@ import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
+import 'package:mstream_music/widgets/album_grid.dart';
 
 import 'discovery_keep_fixtures.dart';
 
@@ -995,11 +996,21 @@ void main() {
           ),
         );
         expect(rest.style!.color, VelvetColors.textSecondary);
-        // The cards: B's says how far it is; C's says nothing.
+        // The cards: B's says how far it is; C's says nothing. Discover's
+        // strip keeps its word (the glyph-only rule is browsing's), and the
+        // card's accessible label carries it too.
         expect(find.text('copying 2 of 3'), findsOneWidget);
+        final badge = find.byKey(
+          const ValueKey('discovery-card-badge-copying'),
+        );
+        expect(badge, findsOneWidget);
         expect(
-          find.byKey(const ValueKey('discovery-card-badge-copying')),
-          findsOneWidget,
+          tester
+              .widget<AlbumGridCard>(
+                find.ancestor(of: badge, matching: find.byType(AlbumGridCard)),
+              )
+              .mark,
+          'copying 2 of 3',
         );
       },
     );
@@ -1148,6 +1159,13 @@ void main() {
       expect(find.text('1 wird kopiert'), findsOneWidget);
       expect(find.text('1 fehlgeschlagen'), findsOneWidget);
       expect(find.text('kopiert 1 von 3'), findsOneWidget);
+      // The card's word, in its accessible label too.
+      expect(
+        tester
+            .widgetList<AlbumGridCard>(find.byType(AlbumGridCard))
+            .map((c) => c.mark),
+        contains('kopiert 1 von 3'),
+      );
       await tester.longPress(find.text('Borrowed Tapes').first);
       await frames(tester, 8);
       expect(tester.takeException(), isNull);

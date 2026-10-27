@@ -15,6 +15,7 @@ import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_facts.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
+import 'package:mstream_music/util/browse_keep_leads.dart' show ResolvedCredit;
 import 'package:mstream_music/util/discover_jobs.dart';
 
 import 'discovery_keep_fixtures.dart';
@@ -201,6 +202,7 @@ void main() {
     final en = lookupAppLocalizations(const Locale('en'));
     expect(keepSlotWord(en, LayoutSlot.artist), '‹artist›');
     expect(keepSlotWord(en, LayoutSlot.serverFolder), '‹server folder›');
+    expect(keepSlotWord(en, LayoutSlot.albumArtist), '‹album artist›');
     expect(keepSlotNote(en, const [], scope: kScopeAlbum), isNull);
     expect(
       keepSlotNote(en, const [LayoutSlot.artist], scope: kScopeAlbum),
@@ -282,7 +284,8 @@ void main() {
     for (final locale in AppLocalizations.supportedLocales) {
       final l = lookupAppLocalizations(locale);
       final words = [for (final s in LayoutSlot.values) keepSlotWord(l, s)];
-      expect(words.toSet(), hasLength(4), reason: '$locale');
+      expect(words.toSet(), hasLength(LayoutSlot.values.length),
+          reason: '$locale');
       final note = keepSlotNote(l, LayoutSlot.values, scope: kScopeAlbum)!;
       for (final w in words) {
         expect(note, contains(w), reason: '$locale');
@@ -370,5 +373,73 @@ void main() {
     expect(keepFormatOf('x/y.flac'), 'FLAC');
     expect(keepFormatOf('x.y/z'), isNull);
     expect(keepFormatOf(null), isNull);
+  });
+
+  // Keep a copy while browsing a connected server: the artist copy planned
+  // as the copy plans it (their own albums, not the ones they only appear
+  // on), its left-out line, a song's album credit from the same answer, and
+  // an artist page's own answer used without asking again.
+  group("the peer's artist listing, kept whole", () {
+    final listing = [
+      {'name': 'Borrowed Tapes', 'year': 2019, 'album_artist': 'Boukmanflow', 'artists': ['Boukmanflow'], 'compilation': false, 'track_count': 3},
+      {'name': 'Harbour Lights', 'year': 2021, 'album_artist': 'Boukmanflow', 'artists': ['Boukmanflow'], 'compilation': false, 'track_count': 3},
+      {'name': 'Night Market Sampler', 'year': 2024, 'album_artist': 'Various Artists', 'artists': ['Color Out', 'Boukmanflow'], 'compilation': true, 'track_count': 3},
+      {'name': null, 'year': null, 'album_artist': 'Boukmanflow'},
+    ];
+    Future<dynamic> fetch(Server s, String location, Map<String, dynamic> body) async {
+      if (location.endsWith('/db/artists-albums')) {
+        return s.isFederated
+            ? {'albums': listing}
+            : {
+                'albums': [
+                  {'name': 'Harbour Lights', 'year': 2021},
+                ],
+              };
+      }
+      return [];
+    }
+
+    Future<KeepFactsLoader> loaded({List<Map<String, dynamic>>? held, KeepFactsFetch? f}) async {
+      final l = KeepFactsLoader(peer: peer, own: own, album: null, artist: 'Boukmanflow', peerListing: held, fetch: f ?? fetch)..load();
+      for (var i = 0; i < 10 && l.loading; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      return l;
+    }
+
+    test('theirs, and only the missing, as planArtistAlbums plans them; the left-out line', () async {
+      final l = await loaded();
+      final f = l.facts;
+      expect(f.peerAlbums, ['Borrowed Tapes', 'Harbour Lights', 'Night Market Sampler'], reason: "Discover's names, as they were");
+      expect(f.planFor('Boukmanflow')!.plan.map((a) => a.name), ['Borrowed Tapes', 'Harbour Lights']);
+      expect(f.planFor('Boukmanflow', onlyMissing: true)!.plan.map((a) => a.name), ['Borrowed Tapes']);
+      final left = f.leftOutFor('Boukmanflow')!;
+      expect([left.one, left.singles], ['Night Market Sampler', true]);
+      expect(f.creditOf('Night Market Sampler', year: 2024), const ResolvedCredit.known('Various Artists'));
+      expect(f.creditOf('Borrowed Tapes'), const ResolvedCredit.known('Boukmanflow'));
+      expect(f.creditOf('Elsewhere'), ResolvedCredit.unknown);
+      l.dispose();
+    });
+
+    test("an artist page's own answer: the peer is not asked again", () async {
+      final asked = <String>[];
+      final l = await loaded(
+        held: listing,
+        f: (s, location, body) {
+          asked.add('${s.localname} $location');
+          return fetch(s, location, body);
+        },
+      );
+      expect(asked, ['home /api/v1/db/artists-albums'], reason: 'only the library, for "you have"');
+      expect(l.facts.planFor('Boukmanflow')!.plan, hasLength(2));
+      l.dispose();
+    });
+
+    test('before the answers: nothing planned', () {
+      const f = KeepFacts();
+      expect([f.planFor('x'), f.leftOutFor('x'), f.creditOf('x')], [null, null, ResolvedCredit.unknown]);
+      expect(KeepFacts(peerListing: listing).planFor('Boukmanflow', onlyMissing: true), isNull,
+          reason: "only the missing needs the library's list too");
+    });
   });
 }

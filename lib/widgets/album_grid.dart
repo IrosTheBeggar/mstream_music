@@ -10,9 +10,33 @@ import 'package:material_ui/material_ui.dart';
 
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
+import 'browse_keep_entry.dart' show KeepFocusAnchor;
 import 'letter_strip.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
+
+/// What one card of an [AlbumGrid] carries beyond its tap (a connected
+/// server's album while browsing it: Keep a copy's ⋯ and long-press, its
+/// copy's badge, the badge's word for a screen reader). See
+/// [AlbumGridCard].
+class AlbumCardExtras {
+  final VoidCallback? onMore;
+  final VoidCallback? onLongPress;
+  final String? moreLabel;
+  final Widget? coverBadge;
+  final String? mark;
+  final String? moreFocusKey;
+  final String? cardFocusKey;
+  const AlbumCardExtras({
+    this.onMore,
+    this.onLongPress,
+    this.moreLabel,
+    this.coverBadge,
+    this.mark,
+    this.moreFocusKey,
+    this.cardFocusKey,
+  });
+}
 
 class AlbumGrid extends StatelessWidget {
   final List<DisplayItem> items;
@@ -26,12 +50,23 @@ class AlbumGrid extends StatelessWidget {
   /// last column runs underneath the letters.
   final double gutter;
 
+  /// Scrolled first, above the cards (a connected server's artist page:
+  /// its header). Null: the cards start at the top.
+  final Widget? header;
+
+  /// What card [index] carries beyond its tap; null for a plain card.
+  /// Asked as the card is laid out — on screen, or about to be — so a
+  /// page's copy marks can ask for the cards a scroll brings in.
+  final AlbumCardExtras? Function(int index)? extrasOf;
+
   const AlbumGrid({
     super.key,
     required this.items,
     required this.onTap,
     this.controller,
     this.gutter = 0,
+    this.header,
+    this.extrasOf,
   });
 
   // Layout constants exposed so the parent can compute the per-row
@@ -69,30 +104,49 @@ class AlbumGrid extends StatelessWidget {
     // not the full source resolution — see artCacheSize.
     final cacheW = artCacheSize(itemWidthFor(width, gutter));
 
+    // A scroll view of slivers rather than a GridView so a header can be
+    // the first thing it scrolls; with none it lays out as the grid did.
     return Container(
       color: VelvetColors.bg,
-      child: GridView.builder(
+      child: CustomScrollView(
         controller: controller,
-        padding: EdgeInsets.fromLTRB(
-            padHorizontal + (LetterStrip.onLeft ? gutter : 0),
-            padTop,
-            padHorizontal + (LetterStrip.onLeft ? 0 : gutter),
-            80),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: spacing,
-          childAspectRatio: aspectRatio,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, i) {
-          final item = items[i];
-          return AlbumGridCard(
-            item: item,
-            onTap: () => onTap(i),
-            cacheWidth: cacheW,
-          );
-        },
+        slivers: [
+          if (header != null) SliverToBoxAdapter(child: header),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+                padHorizontal + (LetterStrip.onLeft ? gutter : 0),
+                padTop,
+                padHorizontal + (LetterStrip.onLeft ? 0 : gutter),
+                80),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: aspectRatio,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final item = items[i];
+                  final x = extrasOf?.call(i);
+                  return AlbumGridCard(
+                    item: item,
+                    onTap: () => onTap(i),
+                    cacheWidth: cacheW,
+                    onMore: x?.onMore,
+                    onLongPress: x?.onLongPress,
+                    moreLabel: x?.moreLabel,
+                    coverBadge: x?.coverBadge,
+                    mark: x?.mark,
+                    moreFocusKey: x?.moreFocusKey,
+                    cardFocusKey: x?.cardFocusKey,
+                  );
+                },
+                childCount: items.length,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -119,6 +173,19 @@ class AlbumGridCard extends StatelessWidget {
   /// Drawn inside the cover, bottom-left (a copy's state on Discover).
   final Widget? coverBadge;
 
+  /// The badge's word, said after the card's title and subtext
+  /// ("Borrowed Tapes, Boukmanflow · 2019, in your collection") — the
+  /// badge itself is drawn, never read.
+  final String? mark;
+
+  /// The ⋯'s stable key: focus comes back to it when the sheet it opened
+  /// closes (BrowseKeepEntry).
+  final String? moreFocusKey;
+
+  /// The card's own stable key (its long-press opened the sheet: focus goes
+  /// back to the card, not its ⋯).
+  final String? cardFocusKey;
+
   const AlbumGridCard(
       {super.key,
       required this.item,
@@ -127,7 +194,18 @@ class AlbumGridCard extends StatelessWidget {
       this.onLongPress,
       this.onMore,
       this.moreLabel,
-      this.coverBadge});
+      this.coverBadge,
+      this.mark,
+      this.moreFocusKey,
+      this.cardFocusKey});
+
+  /// What a screen reader says for the card: its title, its subtext and
+  /// its copy's word, joined with ", ".
+  String get semanticsLabel => [
+        item.name,
+        if (item.subtext != null && item.subtext!.isNotEmpty) item.subtext!,
+        if (mark != null && mark!.isNotEmpty) mark!,
+      ].join(', ');
 
   @override
   Widget build(BuildContext context) {
@@ -136,85 +214,101 @@ class AlbumGridCard extends StatelessWidget {
       color: VelvetColors.card,
       borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        splashColor: VelvetColors.primaryDim,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(VelvetColors.radiusLarge),
-                  topRight: Radius.circular(VelvetColors.radiusLarge),
-                ),
-                child: coverBadge == null
-                    ? image
-                    : Stack(
-                        fit: StackFit.expand,
+      // One node for the card, its tap (and long-press) on it; the texts and
+      // the badge inside are drawn, the label says them.
+      child: Semantics(
+        container: true,
+        button: true,
+        label: semanticsLabel,
+        child: KeepFocusAnchor(
+          focusKey: cardFocusKey,
+          builder: (context, node) => InkWell(
+            focusNode: node,
+            onTap: onTap,
+            onLongPress: onLongPress,
+            splashColor: VelvetColors.primaryDim,
+            child: ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(VelvetColors.radiusLarge),
+                        topRight: Radius.circular(VelvetColors.radiusLarge),
+                      ),
+                      child: coverBadge == null
+                          ? image
+                          : Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                image,
+                                Positioned(
+                                  left: 6,
+                                  bottom: 6,
+                                  right: 6,
+                                  child: Align(
+                                    alignment: Alignment.bottomLeft,
+                                    child: coverBadge!,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      // Room on the title's right for the ⋯ when there is one.
+                      padding:
+                          EdgeInsets.fromLTRB(8, 6, onMore == null ? 8 : 26, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          image,
-                          Positioned(
-                            left: 6,
-                            bottom: 6,
-                            right: 6,
-                            child: Align(
-                              alignment: Alignment.bottomLeft,
-                              child: coverBadge!,
+                          Flexible(
+                            child: Text(
+                              item.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: VelvetColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
+                          if (item.subtext != null && item.subtext!.isNotEmpty)
+                            Flexible(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 1),
+                                child: Text(
+                                  item.subtext!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: VelvetColors.textSecondary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                // Room on the title's right for the ⋯ when there is one.
-                padding: EdgeInsets.fromLTRB(8, 6, onMore == null ? 8 : 26, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: VelvetColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
                     ),
-                    if (item.subtext != null && item.subtext!.isNotEmpty)
-                      Flexible(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 1),
-                          child: Text(
-                            item.subtext!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: VelvetColors.textSecondary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
     if (onMore == null) return card;
     // The ⋯'s 44 px hit area covers the text block's right end only — the
-    // cover above it keeps the tap that opens the album.
+    // cover above it keeps the tap that opens the album. Its own node (the
+    // band's rect, after the card's in reading order), its tap and focus
+    // the InkWell's: focus coming back to it is where a screen reader is.
     return LayoutBuilder(builder: (context, box) {
       final textHeight = box.maxHeight.isFinite
           ? (box.maxHeight - box.maxWidth).clamp(0.0, double.infinity)
@@ -228,23 +322,30 @@ class AlbumGridCard extends StatelessWidget {
             width: 44,
             height: textHeight < 44 ? 44 : textHeight,
             child: Semantics(
+              key: ValueKey('album-card-more-node-${item.name}'),
+              container: true,
               button: true,
               label: moreLabel,
-              excludeSemantics: true,
               child: Material(
                 type: MaterialType.transparency,
-                child: InkWell(
-                  key: ValueKey('album-card-more-${item.name}'),
-                  onTap: onMore,
-                  borderRadius: BorderRadius.only(
-                    bottomRight: Radius.circular(VelvetColors.radiusLarge),
-                  ),
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 5, right: 6),
-                      child: Icon(Icons.more_horiz,
-                          size: 18, color: VelvetColors.textSecondary),
+                child: KeepFocusAnchor(
+                  focusKey: moreFocusKey,
+                  builder: (context, node) => InkWell(
+                    key: ValueKey('album-card-more-${item.name}'),
+                    focusNode: node,
+                    onTap: onMore,
+                    borderRadius: BorderRadius.only(
+                      bottomRight: Radius.circular(VelvetColors.radiusLarge),
+                    ),
+                    child: ExcludeSemantics(
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 5, right: 6),
+                          child: Icon(Icons.more_horiz,
+                              size: 18, color: VelvetColors.textSecondary),
+                        ),
+                      ),
                     ),
                   ),
                 ),

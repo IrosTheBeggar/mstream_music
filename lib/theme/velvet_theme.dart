@@ -334,6 +334,12 @@ class VelvetColors {
   static const radiusLarge = 12.0;
 }
 
+/// What `fontFamily: 'monospace'` falls back to, so a monospaced line is
+/// monospaced everywhere: the generic name is Android's (and the
+/// desktops'), but iOS knows no family by it and draws the system's
+/// proportional face — Menlo there, then Courier New.
+const kMonoFallback = ['Menlo', 'Courier New'];
+
 ThemeData buildAppTheme(VelvetPalette p) {
   return ThemeData(
     useMaterial3: true,

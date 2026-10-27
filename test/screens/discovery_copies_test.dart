@@ -559,7 +559,7 @@ void main() {
         expect(find.text('Nothing copying'), findsOneWidget);
         expect(
           find.text(
-            "Long-press a connected server's song or album on Discover to keep a copy.",
+            "Keep a copy of a connected server's music from Discover, or while you browse that server.",
           ),
           findsOneWidget,
         );
@@ -725,21 +725,61 @@ void main() {
       },
     );
 
-    test('a peer\'s home never has it', () async {
+    // The user's call (2026-10-24): a connected server's home has the same
+    // Copies card — the copies on THEIR server — reached without going back.
+    test("a peer's home: its own server's gate is read on the way in, the "
+        'home holds its taps until it answers, then shows the same card', () async {
       final peer = Server('federated://home/1', null, null, null, 'peer-1')
         ..federationParent = 'home'
         ..federationPeerId = 1
         ..federationPeerName = 'Stage Peer B'
-        ..parentServer = h.server
-        ..discoveryPluginsAvailable = true;
+        ..parentServer = h.server;
+      ServerManager().serverList.add(peer);
+      ServerManager().currentServer = peer;
+      final gate = Completer<void>();
+      h.fake.destinationGate = gate;
+      BrowserManager().goToNavScreen();
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isFalse,
+          reason: 'not known yet');
+      expect(BrowserManager().isLoading, isTrue,
+          reason: 'the loading bar and the tap guard while the gate is read');
+      await settle();
+      // The listing answered (the card needs no destination); the gate
+      // waits for where files land.
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isTrue);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.unknown);
+      expect(BrowserManager().isLoading, isTrue);
+      gate.complete();
+      await settle();
+      await settle();
+      expect(BrowserManager().isLoading, isFalse);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.open);
+      final card = BrowserManager().browserList.firstWhere((i) => i.data == 'copies');
+      expect(identical(card.server, peer), isTrue,
+          reason: "the card's sheet is CopiesHub().jobsFor(peer): the parent's");
+      expect(identical(CopiesHub().jobsFor(peer), CopiesHub().jobsFor(h.server)), isTrue);
+      // Moving onto it again re-reads the gate, but nothing waits for it.
+      final lists = h.fake.count('GET', '/api/v1/discovery/plugins');
+      BrowserManager().goToNavScreen();
+      expect(BrowserManager().isLoading, isFalse);
+      await settle();
+      expect(h.fake.count('GET', '/api/v1/discovery/plugins'), lists + 1);
+    });
+
+    test("a peer's home: none while its own server cannot copy", () async {
+      final peer = Server('federated://home/1', null, null, null, 'peer-1')
+        ..federationParent = 'home'
+        ..federationPeerId = 1
+        ..federationPeerName = 'Stage Peer B'
+        ..parentServer = h.server;
+      h.server.noUpload = true;
       ServerManager().serverList.add(peer);
       ServerManager().currentServer = peer;
       BrowserManager().goToNavScreen();
       await settle();
-      expect(
-        BrowserManager().browserList.any((i) => i.data == 'copies'),
-        isFalse,
-      );
+      await settle();
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isFalse);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.closed);
     });
 
     test(

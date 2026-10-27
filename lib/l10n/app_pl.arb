@@ -1298,7 +1298,6 @@
   "discoverCopiesSectionFinished": "Właśnie zakończone",
   "discoverCopiesClearFinished": "Wyczyść zakończone",
   "discoverCopiesEmpty": "Nic się nie kopiuje",
-  "discoverCopiesEmptySub": "Przytrzymaj utwór lub album z połączonego serwera w Odkrywaj, aby zachować kopię.",
   "discoverCopiesOpenDiscover": "Otwórz Odkrywaj",
   "discoverCopiesLoadFailed": "Nie udało się wczytać twoich kopii",
   "discoverCopiesLoadFailedSub": "Twój serwer nie odpowiedział. Kopie trwają tam dalej.",
