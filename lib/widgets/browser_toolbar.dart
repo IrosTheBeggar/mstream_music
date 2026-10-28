@@ -576,12 +576,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         // buried to make room for buttons that aren't being shown. The overflow
         // collapses to a spacer — with no playable rows there is no Add All,
         // and Download needs server files, which are a subset of those.
+        // The genre list's switch goes before search, so search keeps the
+        // bar's end, where it sits on every other list.
+        if (genreFrame != null && genreFrame.offersChoice) ...[
+          const SizedBox(width: 4),
+          _genreSourceSwitch(l, genreFrame),
+        ],
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
-        if (genreFrame != null && genreFrame.offersChoice) ...[
-          _genreSourceSwitch(l, genreFrame),
-          const SizedBox(width: 4),
-        ],
         _overflow(context, l, targets, showSearch: false),
       ],
     ]);

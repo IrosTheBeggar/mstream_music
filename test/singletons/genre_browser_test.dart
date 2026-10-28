@@ -255,8 +255,9 @@ void main() {
             find.byType(SegmentedButton<GenreSource>))
         .selected;
 
-    testWidgets('shows on the genre list with Tags selected; Generated '
-        're-lists in place and is remembered', (tester) async {
+    testWidgets('shows on the genre list, left of search, with Tags '
+        'selected; Generated re-lists in place and is remembered',
+        (tester) async {
       final fake = _FakeServer();
       await fake.run(() async {
         await ApiManager().getGenreList(useThisServer: _server);
@@ -265,6 +266,12 @@ void main() {
         expect(find.text('Generated'), findsOneWidget);
         expect(find.text('Both'), findsOneWidget);
         expect(selected(tester), {GenreSource.tag});
+        expect(
+            tester.getRect(find.byIcon(Icons.search)).left,
+            greaterThan(tester
+                .getRect(find.byType(SegmentedButton<GenreSource>))
+                .right),
+            reason: 'search sits at the bar\'s end, right of the switch');
 
         final depth = BrowserManager().browserCache.length;
         await tester.tap(find.text('Generated'));
