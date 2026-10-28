@@ -152,6 +152,8 @@ void main() {
         ('genre', 'Ambient', '3'),
         ('genre', 'Electronic', '5'),
       ]);
+      expect(rows.map((e) => e.icon), everyElement(isNull),
+          reason: 'genre rows draw no icon');
     });
 
     test('a genre\'s songs carry the list\'s kind; Back brings the list '

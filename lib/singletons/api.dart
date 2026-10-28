@@ -1344,14 +1344,10 @@ class ApiManager {
       for (final g in (res['genres'] as List? ?? const [])) {
         final name = g['name']?.toString() ?? '';
         if (name.isEmpty) continue;
-        // The row's second line is its song count (getSubText localizes it).
+        // No leading icon: the row is the genre's name over its song count
+        // (getSubText localizes it).
         final count = g['track_count'];
-        newList.add(DisplayItem(
-            useThisServer,
-            name,
-            'genre',
-            name,
-            Icon(Icons.category_outlined, color: VelvetColors.textSecondary),
+        newList.add(DisplayItem(useThisServer, name, 'genre', name, null,
             count is num ? '${count.toInt()}' : null));
       }
 
