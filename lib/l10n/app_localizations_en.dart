@@ -1060,6 +1060,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserArtists => 'Artists';
 
   @override
+  String get browserGenres => 'Genres';
+
+  @override
+  String get genreSourceTags => 'Tags';
+
+  @override
+  String get genreSourceGenerated => 'Generated';
+
+  @override
+  String get genreSourceBoth => 'Both';
+
+  @override
+  String get genreSourceLabel => 'Genre source';
+
+  @override
   String get browserRecent => 'Recent';
 
   @override

@@ -1084,6 +1084,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserArtists => 'Исполнители';
 
   @override
+  String get browserGenres => 'Жанры';
+
+  @override
+  String get genreSourceTags => 'Теги';
+
+  @override
+  String get genreSourceGenerated => 'Сгенерированные';
+
+  @override
+  String get genreSourceBoth => 'Оба';
+
+  @override
+  String get genreSourceLabel => 'Источник жанров';
+
+  @override
   String get browserRecent => 'Недавние';
 
   @override

@@ -9,6 +9,7 @@ import '../singletons/migration_manager.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/downloads.dart';
 import '../objects/display_item.dart';
+import '../objects/genre_source.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
 
@@ -54,6 +55,11 @@ class BrowserManager {
   // back-nav — and so the toolbar and the empty state can tell "a playlist
   // with no songs" apart from "a folder with no songs".
   final List<String?> playlistCache = [];
+  // 1:1 with browserCache. The Genres list's state per frame (null for every
+  // other frame): which kind it lists and what the server has, so the toolbar
+  // draws the Tags | Generated | Both switch there and nowhere else, and
+  // back-nav from a genre's songs brings it back as it was.
+  final List<GenreListFrame?> genreFrameCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -80,6 +86,11 @@ class BrowserManager {
   /// view isn't a playlist's contents.
   String? get currentPlaylist =>
       playlistCache.isNotEmpty ? playlistCache.last : null;
+
+  /// The Genres list's state for the top frame, or null when the current
+  /// view isn't the genre list.
+  GenreListFrame? get currentGenreFrame =>
+      genreFrameCache.isNotEmpty ? genreFrameCache.last : null;
 
   String listName = 'Welcome';
 
@@ -272,6 +283,8 @@ class BrowserManager {
         searchTermCache.isNotEmpty ? searchTermCache[0] : null;
     String? holdPlaylist =
         playlistCache.isNotEmpty ? playlistCache[0] : null;
+    GenreListFrame? holdGenre =
+        genreFrameCache.isNotEmpty ? genreFrameCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -291,6 +304,9 @@ class BrowserManager {
     playlistCache
       ..clear()
       ..add(holdPlaylist);
+    genreFrameCache
+      ..clear()
+      ..add(holdGenre);
   }
 
   void goToNavScreen() {
@@ -308,6 +324,7 @@ class BrowserManager {
     pathCache.clear();
     searchTermCache.clear();
     playlistCache.clear();
+    genreFrameCache.clear();
 
     final Server? server = ServerManager().currentServer;
     if (server == null) {
@@ -370,6 +387,9 @@ class BrowserManager {
           Icon(Icons.album, color: VelvetColors.textSecondary), null),
       DisplayItem(server, 'Artists', 'execAction', 'artists',
           Icon(Icons.library_music, color: VelvetColors.textSecondary), null),
+      DisplayItem(server, 'Genres', 'execAction', 'genres',
+          Icon(Icons.category_outlined, color: VelvetColors.textSecondary),
+          null),
       if (!federated)
         DisplayItem(server, 'Rated', 'execAction', 'rated',
             Icon(Icons.star, color: VelvetColors.textSecondary), null),
@@ -461,6 +481,7 @@ class BrowserManager {
     pathCache.add(null); // home nav isn't the file explorer — no path row
     searchTermCache.add(null); // home nav isn't a search result — no term row
     playlistCache.add(null); // ...nor a playlist — no name row
+    genreFrameCache.add(null); // ...nor the genre list — no source switch
     browserList.addAll(sections);
 
     _browserLabel.sink.add('Browser');
@@ -476,6 +497,7 @@ class BrowserManager {
     pathCache.clear();
     searchTermCache.clear();
     playlistCache.clear();
+    genreFrameCache.clear();
 
     browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -487,7 +509,8 @@ class BrowserManager {
       {bool alphabetical = false,
       String? path,
       String? searchTerm,
-      String? playlist}) {
+      String? playlist,
+      GenreListFrame? genreFrame}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -502,6 +525,7 @@ class BrowserManager {
     pathCache.add(path);
     searchTermCache.add(searchTerm);
     playlistCache.add(playlist);
+    genreFrameCache.add(genreFrame);
 
     browserList
       ..clear()
@@ -559,6 +583,16 @@ class BrowserManager {
     DownloadManager().rebindActiveDownloads(newList);
     _browserStream.sink.add(browserList);
     unawaited(_resolveDownloadBadges(newList));
+  }
+
+  /// The genre list again, as another kind (its toolbar switch): the top
+  /// frame's rows and state replaced in place, no push. Dropped when the top
+  /// frame is no longer the genre list (the user moved on mid-load).
+  void replaceGenreList(List<DisplayItem> newList, GenreListFrame frame) {
+    if (currentGenreFrame == null) return;
+    genreFrameCache[genreFrameCache.length - 1] = frame;
+    if (sc.hasClients) sc.jumpTo(0);
+    replaceTop(newList);
   }
 
   /// Swaps the frame [old] (matched by identity) for [newList] wherever it
@@ -645,6 +679,7 @@ class BrowserManager {
     if (pathCache.isNotEmpty) pathCache.removeLast();
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
     if (playlistCache.isNotEmpty) playlistCache.removeLast();
+    if (genreFrameCache.isNotEmpty) genreFrameCache.removeLast();
     browserList
       ..clear()
       ..addAll(browserCache.last);

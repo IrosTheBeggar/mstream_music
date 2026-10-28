@@ -1034,6 +1034,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserArtists => 'アーティスト';
 
   @override
+  String get browserGenres => 'ジャンル';
+
+  @override
+  String get genreSourceTags => 'タグ';
+
+  @override
+  String get genreSourceGenerated => '自動生成';
+
+  @override
+  String get genreSourceBoth => '両方';
+
+  @override
+  String get genreSourceLabel => 'ジャンルの取得元';
+
+  @override
   String get browserRecent => '最近';
 
   @override

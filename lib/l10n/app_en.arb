@@ -869,6 +869,26 @@
   "browserPlaylists": "Playlists",
   "browserAlbums": "Albums",
   "browserArtists": "Artists",
+  "browserGenres": "Genres",
+  "@browserGenres": {
+    "description": "Browser home card and list title: the server's genres."
+  },
+  "genreSourceTags": "Tags",
+  "@genreSourceTags": {
+    "description": "Genre list switch: genres from the files' own tags."
+  },
+  "genreSourceGenerated": "Generated",
+  "@genreSourceGenerated": {
+    "description": "Genre list switch: genres the server's discovery model generated."
+  },
+  "genreSourceBoth": "Both",
+  "@genreSourceBoth": {
+    "description": "Genre list switch: tag and generated genres together."
+  },
+  "genreSourceLabel": "Genre source",
+  "@genreSourceLabel": {
+    "description": "Accessibility label for the genre list's Tags / Generated / Both switch."
+  },
   "browserRecent": "Recent",
   "browserRated": "Rated",
   "browserSectionLibrary": "Library",
