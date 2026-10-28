@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../objects/discovery.dart' show kTasteDefaultWindow, kTasteWindows;
+import '../objects/genre_source.dart';
 import '../objects/player_layout.dart';
 import '../theme/velvet_theme.dart';
 import '../util/write_chain.dart';
@@ -157,6 +158,9 @@ class SettingsManager {
   // predates the key keeps addToQueue — see [_readTapBehavior].
   TapBehavior tapBehavior = TapBehavior.playFromHere;
   StartupView startupView = StartupView.browser;
+  // Which genres the Genres browser lists (its toolbar switch): the files'
+  // own tags, the server's generated genres, or both.
+  GenreSource genreSource = GenreSource.tag;
   // Whether the first-run setup flow (SetupFlowScreen) has been dismissed.
   // Same fresh-install trick as [tapBehavior]: false here so a brand new
   // install runs the flow, but load() reads a MISSING key as `true` so an
@@ -352,6 +356,7 @@ class SettingsManager {
       welcomeShown = m['welcomeShown'] ?? true;
       torrentSkipChooser = m['torrentSkipChooser'] ?? false;
       startupView = _readStartupView(m);
+      genreSource = genreSourceFromName(m['genreSource']);
       searchCategories = _readSearchCategories(m);
       appTheme = _readTheme(m);
       playerLayout = _readPlayerLayout(m);
@@ -569,6 +574,7 @@ class SettingsManager {
       'welcomeShown': welcomeShown,
       'torrentSkipChooser': torrentSkipChooser,
       'startupView': startupView.name,
+      'genreSource': genreSource.name,
       'searchCategories': searchCategories.map((c) => c.name).toList(),
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
@@ -653,6 +659,11 @@ class SettingsManager {
 
   Future<void> setStartupView(StartupView v) async {
     startupView = v;
+    await _save();
+  }
+
+  Future<void> setGenreSource(GenreSource v) async {
+    genreSource = v;
     await _save();
   }
 
@@ -851,6 +862,7 @@ class SettingsManager {
     letterStripSide = LetterStripSide.right;
     tapBehavior = TapBehavior.playFromHere;
     startupView = StartupView.browser;
+    genreSource = GenreSource.tag;
     // onboardingComplete is deliberately NOT reset — "restore defaults"
     // shouldn't drop the user back into the first-run flow.
     searchCategories = {...defaultSearchCategories};

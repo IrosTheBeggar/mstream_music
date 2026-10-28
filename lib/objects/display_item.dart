@@ -161,10 +161,14 @@ class DisplayItem {
     // browse row that has metadata leaves subtext null (or sets it to the artist
     // itself), so those fall through to the artist exactly as before.
     if (subtext != null) {
+      // A genre row carries its song count as a bare number.
+      final genreTracks = type == 'genre' ? int.tryParse(subtext!) : null;
       return Text(
-        (l != null && (type == 'addServer' || type == 'note'))
-            ? browserChromeLabel(l, subtext!)
-            : subtext!,
+        (l != null && genreTracks != null)
+            ? l.trackCount(genreTracks)
+            : (l != null && (type == 'addServer' || type == 'note'))
+                ? browserChromeLabel(l, subtext!)
+                : subtext!,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

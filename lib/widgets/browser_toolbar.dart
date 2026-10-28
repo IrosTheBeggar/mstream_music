@@ -12,6 +12,8 @@
 //                          back · label · search · (no songs to act on)
 //   • Discover           → back · label · New seeds (no search, no verbs:
 //                          its footers carry them)
+//   • Genres (the list)  → back · label · search · Tags | Generated | Both
+//                          (only when the server has both kinds)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -25,6 +27,7 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
+import '../objects/genre_source.dart';
 import '../screens/discovery/discovery_listing.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
@@ -294,6 +297,40 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     );
   }
 
+  // The genre list's Tags | Generated | Both switch: re-lists the open list
+  // in place (no new frame) and remembers the choice for next time.
+  Widget _genreSourceSwitch(AppLocalizations l, GenreListFrame frame) =>
+      Semantics(
+        label: l.genreSourceLabel,
+        child: SegmentedButton<GenreSource>(
+          segments: [
+            ButtonSegment(
+                value: GenreSource.tag, label: Text(l.genreSourceTags)),
+            ButtonSegment(
+                value: GenreSource.model, label: Text(l.genreSourceGenerated)),
+            ButtonSegment(
+                value: GenreSource.both, label: Text(l.genreSourceBoth)),
+          ],
+          selected: {frame.source},
+          showSelectedIcon: false,
+          onSelectionChanged: (set) {
+            if (set.isEmpty || set.first == frame.source) return;
+            unawaited(SettingsManager().setGenreSource(set.first));
+            unawaited(ApiManager()
+                .getGenreList(useThisServer: frame.server, replace: true));
+          },
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            // Tight: the segments are as wide as the widest label, and the
+            // bar's title still has to fit beside them on a phone.
+            padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 4)),
+            textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+          ),
+        ),
+      );
+
   Widget _title(String text) => Expanded(
         child: Text(
           text,
@@ -509,6 +546,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // from a new random batch of songs you finished ([_newSeedsButton]).
     final canBack = BrowserManager().browserCache.length > 1;
     final discover = DiscoveryListing.isListing(s.list);
+    final genreFrame = BrowserManager().currentGenreFrame;
     final targets = discover ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
@@ -540,6 +578,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         // and Download needs server files, which are a subset of those.
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
+        if (genreFrame != null && genreFrame.offersChoice) ...[
+          _genreSourceSwitch(l, genreFrame),
+          const SizedBox(width: 4),
+        ],
         _overflow(context, l, targets, showSearch: false),
       ],
     ]);

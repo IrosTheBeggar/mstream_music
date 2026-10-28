@@ -1902,6 +1902,36 @@ abstract class AppLocalizations {
   /// **'Artists'**
   String get browserArtists;
 
+  /// Browser home card and list title: the server's genres.
+  ///
+  /// In en, this message translates to:
+  /// **'Genres'**
+  String get browserGenres;
+
+  /// Genre list switch: genres from the files' own tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get genreSourceTags;
+
+  /// Genre list switch: genres the server's discovery model generated.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated'**
+  String get genreSourceGenerated;
+
+  /// Genre list switch: tag and generated genres together.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get genreSourceBoth;
+
+  /// Accessibility label for the genre list's Tags / Generated / Both switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Genre source'**
+  String get genreSourceLabel;
+
   /// No description provided for @browserRecent.
   ///
   /// In en, this message translates to:

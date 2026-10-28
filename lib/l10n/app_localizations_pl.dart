@@ -1080,6 +1080,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get browserArtists => 'Wykonawcy';
 
   @override
+  String get browserGenres => 'Gatunki';
+
+  @override
+  String get genreSourceTags => 'Tagi';
+
+  @override
+  String get genreSourceGenerated => 'Wygenerowane';
+
+  @override
+  String get genreSourceBoth => 'Oba';
+
+  @override
+  String get genreSourceLabel => 'Źródło gatunków';
+
+  @override
   String get browserRecent => 'Ostatnie';
 
   @override

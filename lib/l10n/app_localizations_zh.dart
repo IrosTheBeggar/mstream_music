@@ -1018,6 +1018,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserArtists => '艺术家';
 
   @override
+  String get browserGenres => '流派';
+
+  @override
+  String get genreSourceTags => '标签';
+
+  @override
+  String get genreSourceGenerated => '自动生成';
+
+  @override
+  String get genreSourceBoth => '全部';
+
+  @override
+  String get genreSourceLabel => '流派来源';
+
+  @override
   String get browserRecent => '最近添加';
 
   @override

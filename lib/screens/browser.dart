@@ -149,6 +149,12 @@ class _BrowserState extends State<Browser> {
       return;
     }
 
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'genres') {
+      ApiManager().getGenreList(useThisServer: browserList[index].server);
+      return;
+    }
+
     // Discover is a browser listing like Albums: a frame on this stack that
     // fills itself in as the server answers (discovery_listing.dart), so it
     // draws with the browser's own rows and Back returns to the home.
@@ -215,6 +221,15 @@ class _BrowserState extends State<Browser> {
     if (browserList[index].type == 'artist') {
       ApiManager().getArtistAlbums(browserList[index].data ?? '',
           useThisServer: browserList[index].server);
+      return;
+    }
+
+    // A genre opens its songs the way the list shows genres: the one kind
+    // (tags or generated), or every song with it for both.
+    if (browserList[index].type == 'genre') {
+      ApiManager().getGenreSongs(browserList[index].data ?? '',
+          useThisServer: browserList[index].server,
+          source: BrowserManager().currentGenreFrame?.songsSource);
       return;
     }
 

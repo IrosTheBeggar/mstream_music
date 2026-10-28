@@ -146,6 +146,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserAlbums;
     case 'Artists':
       return l.browserArtists;
+    case 'Genres':
+      return l.browserGenres;
     case 'Recent':
       return l.browserRecent;
     case 'Rated':

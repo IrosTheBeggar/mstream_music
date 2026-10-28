@@ -12,6 +12,7 @@ import '../objects/server.dart';
 import 'auto_dj_manager.dart';
 import '../objects/discovery.dart';
 import '../objects/display_item.dart';
+import '../objects/genre_source.dart';
 import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
@@ -1315,6 +1316,89 @@ class ApiManager {
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtistAlbums failed: $err');
+    }
+  }
+
+  /// The Genres browser's list: POST /api/v1/db/genres for the kind the
+  /// toolbar switch last chose (SettingsManager.genreSource — the files'
+  /// tags, the server's generated genres, or both). A server with none of a
+  /// single chosen kind lists the other; a server that predates the filter
+  /// ignores it and sends every genre (see genre_source.dart). [replace]
+  /// re-lists the open genre list in place (the switch) instead of pushing.
+  Future<void> getGenreList(
+      {Server? useThisServer, bool replace = false}) async {
+    try {
+      var source = SettingsManager().genreSource;
+      var res = await makeServerCall(
+          useThisServer, '/api/v1/db/genres', source.listBody, 'POST');
+      final sources = GenreSources.fromJson(res['sources']);
+      final fallback = genreSourceFallback(source, sources);
+      if (fallback != null) {
+        source = fallback;
+        res = await makeServerCall(
+            useThisServer, '/api/v1/db/genres', source.listBody, 'POST');
+      }
+
+      final frame = GenreListFrame(useThisServer, source, sources);
+      final List<DisplayItem> newList = [];
+      for (final g in (res['genres'] as List? ?? const [])) {
+        final name = g['name']?.toString() ?? '';
+        if (name.isEmpty) continue;
+        // The row's second line is its song count (getSubText localizes it).
+        final count = g['track_count'];
+        newList.add(DisplayItem(
+            useThisServer,
+            name,
+            'genre',
+            name,
+            Icon(Icons.category_outlined, color: VelvetColors.textSecondary),
+            count is num ? '${count.toInt()}' : null));
+      }
+
+      if (replace) {
+        BrowserManager().replaceGenreList(newList, frame);
+      } else {
+        BrowserManager().setBrowserLabel('Genres');
+        BrowserManager()
+            .addListToStack(newList, alphabetical: true, genreFrame: frame);
+      }
+    } catch (err) {
+      // TODO: Handle Errors
+      appLog('[api] getGenreList failed: $err');
+    }
+  }
+
+  /// A genre's songs: POST /api/v1/db/genre-songs, with [source] when the
+  /// list showed one kind, so a generated genre never brings in songs that
+  /// carry it only from their tags (and the other way round).
+  Future<void> getGenreSongs(String genre,
+      {Server? useThisServer, GenreSource? source}) async {
+    try {
+      final res = await makeServerCall(
+          useThisServer,
+          '/api/v1/db/genre-songs',
+          {
+            'genre': genre,
+            if (source?.apiValue != null) 'source': source!.apiValue,
+          },
+          'POST');
+
+      final List<DisplayItem> newList = [];
+      res.forEach((e) {
+        final newItem = DisplayItem(
+            useThisServer,
+            e['filepath'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            null);
+        newItem.metadata = MusicMetadata.fromServerMap(e['metadata']);
+        newList.add(newItem);
+      });
+      BrowserManager().addListToStack(newList);
+    } catch (err) {
+      // TODO: Handle Errors
+      appLog('[api] getGenreSongs failed: $err');
     }
   }
 
