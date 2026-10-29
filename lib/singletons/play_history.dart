@@ -421,7 +421,10 @@ class PlayHistory {
       final dropped = OutboxFold.ageOut(_outbox, DateTime.now().toUtc());
       if (dropped > 0) {
         appLog('[history] outbox: dropped $dropped play(s) older than ${kOutboxMaxAge.inDays} days');
-        _saveOutbox();
+        // Awaited: a load that reports done with its own write still in
+        // flight hands whatever touches the file next a race — on Windows,
+        // the test teardown deleting the directory around an open file.
+        await _saveOutbox();
       }
     } catch (e) {
       appLog('[history] outbox load failed, starting empty: $e');
@@ -431,8 +434,16 @@ class PlayHistory {
   }
 
   /// Under test: forget everything in memory (the files are the caller's).
-  void resetForTest() {
+  /// A load or write still in flight is waited out first: the singleton
+  /// outlives the test, and a load landing after the reset would mark the
+  /// next test's store loaded before it had read its own files, while a
+  /// write would land in the next test's directory.
+  Future<void> resetForTest() async {
     _statsTimer?.cancel();
+    await _loading;
+    for (final chain in [_ringChain, _statsChain, _outboxChain]) {
+      await chain.run(() async {});
+    }
     _stats = PlayStatsData();
     _outbox.clear();
     _ring = null;

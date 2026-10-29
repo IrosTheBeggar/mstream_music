@@ -36,8 +36,8 @@ void main() {
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('play-sync-');
     PlayHistory.storageDirectory = () async => dir;
-    history.resetForTest();
-    sync.resetForTest();
+    await history.resetForTest();
+    await sync.resetForTest();
     calls.clear();
     clock = DateTime.utc(2026, 9, 10, 20);
     sync.now = () => clock;
@@ -50,8 +50,8 @@ void main() {
     answer = (t, b) async => PostPlaysResult(accepted: b.map((e) => e.id).toList());
   });
   tearDown(() async {
-    sync.resetForTest();
-    history.resetForTest();
+    await sync.resetForTest();
+    await history.resetForTest();
     await dir.delete(recursive: true);
   });
 
@@ -72,7 +72,10 @@ void main() {
     expect(identical(first, second), isTrue, reason: 'folded into the running pass');
     gate.complete();
     await first;
-    for (var i = 0; i < 100 && (attempts < 2 || history.outboxCount > 0); i++) {
+    // The pass goes once more on its own. Its last word is `posted`, after
+    // the settle's write — the outbox empties a moment before that, and a
+    // wait on the outbox read the counter too early (flaky, 2026-10-20).
+    for (var i = 0; i < 200 && sync.posted < 1; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 5));
     }
     expect(attempts, 2, reason: 'the pass ran once more after the doomed attempt');

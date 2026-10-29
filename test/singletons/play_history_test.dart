@@ -47,7 +47,7 @@ void main() {
       final dir = await Directory.systemTemp.createTemp('play-history-init-');
       PlayHistory.storageDirectory = () async => dir;
       final h = PlayHistory();
-      h.resetForTest();
+      await h.resetForTest();
       await File('${dir.path}/play_outbox.json').writeAsString(jsonEncode({
         'home': [ev('on-disk', t0).toJson()],
       }));
@@ -57,7 +57,7 @@ void main() {
       expect(h.pending('home').map((e) => e.id).toList(), ['on-disk', 'recovered']);
       final saved = jsonDecode(await File('${dir.path}/play_outbox.json').readAsString()) as Map;
       expect((saved['home'] as List).length, 2, reason: 'the file carries both too');
-      h.resetForTest();
+      await h.resetForTest();
       await dir.delete(recursive: true);
     });
   });
@@ -168,10 +168,10 @@ void main() {
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('play-history-');
       PlayHistory.storageDirectory = () async => dir;
-      PlayHistory().resetForTest();
+      await PlayHistory().resetForTest();
     });
     tearDown(() async {
-      PlayHistory().resetForTest();
+      await PlayHistory().resetForTest();
       await dir.delete(recursive: true);
     });
 
@@ -190,7 +190,7 @@ void main() {
       expect(h.statFor('home', '/music/a.mp3')!.skips, 1);
 
       // a fresh process sees the same aggregates without touching the ring
-      h.resetForTest();
+      await h.resetForTest();
       await h.init();
       expect(h.stats.ringCount, 2);
       expect(h.stats.tracks.values.single.events, 2);
@@ -244,7 +244,7 @@ void main() {
       expect(h.pending('home', limit: 1).map((e) => e.id), ['a']);
       await h.settle('home', ['a']);
       expect(h.pending('home').map((e) => e.id), ['b']);
-      h.resetForTest();
+      await h.resetForTest();
       await h.init();
       expect(h.outboxCount, 2);
       expect(h.pending('work').single.id, 'c');
@@ -255,7 +255,7 @@ void main() {
       await File('${dir.path}/play_outbox.json').writeAsString(jsonEncode({
         'home': [ev('stale', DateTime.now().subtract(const Duration(days: 40))).toJson(), ev('fresh', DateTime.now()).toJson()]
       }));
-      h.resetForTest();
+      await h.resetForTest();
       await h.init();
       expect(h.pending('home').map((e) => e.id), ['fresh']);
     });
