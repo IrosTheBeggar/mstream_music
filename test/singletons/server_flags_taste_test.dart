@@ -228,4 +228,46 @@ void main() {
       expect(Server.fromJson(j).noUpload, isNull);
     });
   });
+
+  // Discover by mood (mStream #1092): the flag follows the server's scores,
+  // and the route has to be generation 2 — a generation-1 taste body
+  // refuses the `moods` key.
+  group('moodFilters (Discover by mood)', () {
+    test('needs generation 2 and the flag, from /api and from ping', () {
+      final s = _plain();
+      manager.applyServerInfoForTest(
+          s, _info({'discoveryTaste': 2, 'moodFilters': true}));
+      expect(s.moodFiltersAvailable, isTrue);
+      manager.applyServerInfoForTest(
+          s, _info({'discoveryTaste': 1, 'moodFilters': true}));
+      expect(s.moodFiltersAvailable, isFalse,
+          reason: 'a generation-1 route refuses the key');
+      manager.applyServerInfoForTest(
+          s, _info({'discoveryTaste': 2, 'moodFilters': false}));
+      expect(s.moodFiltersAvailable, isFalse, reason: 'no scores yet');
+      manager.applyServerInfoForTest(s, _info({'discoveryTaste': 2}));
+      expect(s.moodFiltersAvailable, isFalse);
+      manager.applyPingForTest(
+          s, _ping({'discoveryTaste': 2, 'moodFilters': true}));
+      expect(s.moodFiltersAvailable, isTrue);
+      manager.applyPingForTest(
+          s, _ping({'discoveryTaste': 2, 'moodFilters': 'yes'}));
+      expect(s.moodFiltersAvailable, isFalse);
+    });
+
+    test('a federated peer is pinned off; the flag round-trips', () {
+      final peer = Server('federated://home/3', null, null, null, 'peer-basement')
+        ..federationParent = 'home'
+        ..federationPeerId = 3
+        ..parentServer = _plain();
+      manager.applyServerInfoForTest(
+          peer, _info({'discoveryTaste': 2, 'moodFilters': true}));
+      expect(peer.moodFiltersAvailable, isFalse);
+      final back =
+          Server.fromJson((_plain()..moodFiltersAvailable = true).toJson());
+      expect(back.moodFiltersAvailable, isTrue);
+      final j = _plain().toJson()..['moodFiltersAvailable'] = 1;
+      expect(Server.fromJson(j).moodFiltersAvailable, isNull);
+    });
+  });
 }

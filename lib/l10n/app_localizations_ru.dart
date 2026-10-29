@@ -1099,6 +1099,51 @@ class AppLocalizationsRu extends AppLocalizations {
   String get genreSourceLabel => 'Источник жанров';
 
   @override
+  String get moodFilters => 'Фильтры';
+
+  @override
+  String get moodValenceGroup => 'Весёлые, нейтральные или грустные';
+
+  @override
+  String get moodEnergyGroup => 'Спокойные, нейтральные или агрессивные';
+
+  @override
+  String get moodVoiceGroup => 'Инструментальные или с вокалом';
+
+  @override
+  String get moodTagsGroup => 'Теги';
+
+  @override
+  String get moodHappy => 'Весёлые';
+
+  @override
+  String get moodNeutral => 'Нейтральные';
+
+  @override
+  String get moodSad => 'Грустные';
+
+  @override
+  String get moodRelaxed => 'Спокойные';
+
+  @override
+  String get moodAggressive => 'Агрессивные';
+
+  @override
+  String get moodInstrumental => 'Инструментальные';
+
+  @override
+  String get moodVocals => 'С вокалом';
+
+  @override
+  String get moodAcoustic => 'Акустические';
+
+  @override
+  String get moodParty => 'Для вечеринки';
+
+  @override
+  String get moodDanceable => 'Танцевальные';
+
+  @override
   String get browserRecent => 'Недавние';
 
   @override

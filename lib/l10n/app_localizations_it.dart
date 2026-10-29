@@ -1086,6 +1086,51 @@ class AppLocalizationsIt extends AppLocalizations {
   String get genreSourceLabel => 'Origine dei generi';
 
   @override
+  String get moodFilters => 'Filtri';
+
+  @override
+  String get moodValenceGroup => 'Allegro, neutro o triste';
+
+  @override
+  String get moodEnergyGroup => 'Rilassato, neutro o aggressivo';
+
+  @override
+  String get moodVoiceGroup => 'Strumentale o voce';
+
+  @override
+  String get moodTagsGroup => 'Tag';
+
+  @override
+  String get moodHappy => 'Allegro';
+
+  @override
+  String get moodNeutral => 'Neutro';
+
+  @override
+  String get moodSad => 'Triste';
+
+  @override
+  String get moodRelaxed => 'Rilassato';
+
+  @override
+  String get moodAggressive => 'Aggressivo';
+
+  @override
+  String get moodInstrumental => 'Strumentale';
+
+  @override
+  String get moodVocals => 'Voce';
+
+  @override
+  String get moodAcoustic => 'Acustico';
+
+  @override
+  String get moodParty => 'Festa';
+
+  @override
+  String get moodDanceable => 'Ballabile';
+
+  @override
   String get browserRecent => 'Recenti';
 
   @override

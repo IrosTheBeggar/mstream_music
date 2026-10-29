@@ -10,6 +10,7 @@ import '../singletons/file_explorer.dart';
 import '../singletons/downloads.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
+import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
 
@@ -60,6 +61,11 @@ class BrowserManager {
   // draws the Tags | Generated | Both switch there and nowhere else, and
   // back-nav from a genre's songs brings it back as it was.
   final List<GenreListFrame?> genreFrameCache = [];
+  // 1:1 with browserCache. An Albums or Artists list whose server can filter
+  // by mood (its answer echoed `moods`), null for every other frame: the
+  // toolbar offers Filters there, and back-nav from an artist's albums
+  // brings the Artists list back with it.
+  final List<MoodListFrame?> moodFrameCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -91,6 +97,11 @@ class BrowserManager {
   /// view isn't the genre list.
   GenreListFrame? get currentGenreFrame =>
       genreFrameCache.isNotEmpty ? genreFrameCache.last : null;
+
+  /// The top frame's mood state, or null when the current view is not an
+  /// Albums / Artists list its server can filter.
+  MoodListFrame? get currentMoodFrame =>
+      moodFrameCache.isNotEmpty ? moodFrameCache.last : null;
 
   String listName = 'Welcome';
 
@@ -285,6 +296,8 @@ class BrowserManager {
         playlistCache.isNotEmpty ? playlistCache[0] : null;
     GenreListFrame? holdGenre =
         genreFrameCache.isNotEmpty ? genreFrameCache[0] : null;
+    MoodListFrame? holdMood =
+        moodFrameCache.isNotEmpty ? moodFrameCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -307,6 +320,9 @@ class BrowserManager {
     genreFrameCache
       ..clear()
       ..add(holdGenre);
+    moodFrameCache
+      ..clear()
+      ..add(holdMood);
   }
 
   void goToNavScreen() {
@@ -325,6 +341,7 @@ class BrowserManager {
     searchTermCache.clear();
     playlistCache.clear();
     genreFrameCache.clear();
+    moodFrameCache.clear();
 
     final Server? server = ServerManager().currentServer;
     if (server == null) {
@@ -482,6 +499,7 @@ class BrowserManager {
     searchTermCache.add(null); // home nav isn't a search result — no term row
     playlistCache.add(null); // ...nor a playlist — no name row
     genreFrameCache.add(null); // ...nor the genre list — no source switch
+    moodFrameCache.add(null); // ...nor a list to filter by mood
     browserList.addAll(sections);
 
     _browserLabel.sink.add('Browser');
@@ -498,6 +516,7 @@ class BrowserManager {
     searchTermCache.clear();
     playlistCache.clear();
     genreFrameCache.clear();
+    moodFrameCache.clear();
 
     browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -510,7 +529,8 @@ class BrowserManager {
       String? path,
       String? searchTerm,
       String? playlist,
-      GenreListFrame? genreFrame}) {
+      GenreListFrame? genreFrame,
+      MoodListFrame? moodFrame}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -526,6 +546,7 @@ class BrowserManager {
     searchTermCache.add(searchTerm);
     playlistCache.add(playlist);
     genreFrameCache.add(genreFrame);
+    moodFrameCache.add(moodFrame);
 
     browserList
       ..clear()
@@ -591,6 +612,19 @@ class BrowserManager {
   void replaceGenreList(List<DisplayItem> newList, GenreListFrame frame) {
     if (currentGenreFrame == null) return;
     genreFrameCache[genreFrameCache.length - 1] = frame;
+    if (sc.hasClients) sc.jumpTo(0);
+    replaceTop(newList);
+  }
+
+  /// The Albums or Artists list again under a new mood filter: the top
+  /// frame's rows and state replaced in place, no push. Dropped when the
+  /// top frame is no longer that [page]'s list (the user moved on
+  /// mid-load). A [frame] of null — the server stopped echoing (its scores
+  /// went) — takes the Filters button and strip away.
+  void replaceMoodList(
+      MoodPage page, List<DisplayItem> newList, MoodListFrame? frame) {
+    if (currentMoodFrame?.page != page) return;
+    moodFrameCache[moodFrameCache.length - 1] = frame;
     if (sc.hasClients) sc.jumpTo(0);
     replaceTop(newList);
   }
@@ -680,6 +714,7 @@ class BrowserManager {
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
     if (playlistCache.isNotEmpty) playlistCache.removeLast();
     if (genreFrameCache.isNotEmpty) genreFrameCache.removeLast();
+    if (moodFrameCache.isNotEmpty) moodFrameCache.removeLast();
     browserList
       ..clear()
       ..addAll(browserCache.last);

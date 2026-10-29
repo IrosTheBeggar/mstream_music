@@ -1033,6 +1033,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get genreSourceLabel => '流派来源';
 
   @override
+  String get moodFilters => '筛选';
+
+  @override
+  String get moodValenceGroup => '欢快、中性或悲伤';
+
+  @override
+  String get moodEnergyGroup => '放松、中性或激烈';
+
+  @override
+  String get moodVoiceGroup => '纯音乐或人声';
+
+  @override
+  String get moodTagsGroup => '标签';
+
+  @override
+  String get moodHappy => '欢快';
+
+  @override
+  String get moodNeutral => '中性';
+
+  @override
+  String get moodSad => '悲伤';
+
+  @override
+  String get moodRelaxed => '放松';
+
+  @override
+  String get moodAggressive => '激烈';
+
+  @override
+  String get moodInstrumental => '纯音乐';
+
+  @override
+  String get moodVocals => '人声';
+
+  @override
+  String get moodAcoustic => '原声';
+
+  @override
+  String get moodParty => '派对';
+
+  @override
+  String get moodDanceable => '适合跳舞';
+
+  @override
   String get browserRecent => '最近添加';
 
   @override

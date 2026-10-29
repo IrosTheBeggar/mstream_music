@@ -1095,6 +1095,51 @@ class AppLocalizationsPl extends AppLocalizations {
   String get genreSourceLabel => 'Źródło gatunków';
 
   @override
+  String get moodFilters => 'Filtry';
+
+  @override
+  String get moodValenceGroup => 'Radosne, neutralne lub smutne';
+
+  @override
+  String get moodEnergyGroup => 'Spokojne, neutralne lub agresywne';
+
+  @override
+  String get moodVoiceGroup => 'Instrumentalne lub z wokalem';
+
+  @override
+  String get moodTagsGroup => 'Tagi';
+
+  @override
+  String get moodHappy => 'Radosne';
+
+  @override
+  String get moodNeutral => 'Neutralne';
+
+  @override
+  String get moodSad => 'Smutne';
+
+  @override
+  String get moodRelaxed => 'Spokojne';
+
+  @override
+  String get moodAggressive => 'Agresywne';
+
+  @override
+  String get moodInstrumental => 'Instrumentalne';
+
+  @override
+  String get moodVocals => 'Z wokalem';
+
+  @override
+  String get moodAcoustic => 'Akustyczne';
+
+  @override
+  String get moodParty => 'Imprezowe';
+
+  @override
+  String get moodDanceable => 'Taneczne';
+
+  @override
   String get browserRecent => 'Ostatnie';
 
   @override

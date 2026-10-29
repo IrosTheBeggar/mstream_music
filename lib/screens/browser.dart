@@ -9,9 +9,11 @@ import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
+import '../objects/mood_filter.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
+import '../widgets/mood_filter_sheet.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -1234,6 +1236,16 @@ class _BrowserState extends State<Browser> {
             case kDiscoverBar:
               if (c != null) {
                 children.add(DiscoveryConfigBar(controller: c));
+                // The mood filter's strip, under the bar, while anything
+                // is set (the toolbar's Filters sets it).
+                if (c.moodsAvailable && !c.moods.isEmpty) {
+                  children.add(MoodFilterStrip(
+                    filter: c.moods,
+                    onClear: c.disabled
+                        ? null
+                        : () => unawaited(c.setMoods(MoodFilter.empty)),
+                  ));
+                }
                 // What the server is copying for you, under the bar.
                 children.add(DiscoveryCopiesStrip(controller: c));
               }
@@ -1276,6 +1288,21 @@ class _BrowserState extends State<Browser> {
           ),
         );
       },
+    );
+  }
+
+  /// The open Albums / Artists list's mood strip, or nothing: no list its
+  /// server can filter, or nothing set.
+  Widget _moodStrip() {
+    final frame = BrowserManager().currentMoodFrame;
+    final filter = frame == null ? null : MoodFilters().of(frame.page);
+    if (frame == null || filter == null || filter.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return MoodFilterStrip(
+      filter: filter,
+      onClear: () =>
+          unawaited(ApiManager().setMoodFilter(frame, MoodFilter.empty)),
     );
   }
 
@@ -1454,6 +1481,12 @@ class _BrowserState extends State<Browser> {
       // In-flow context strip under the toolbar (search term / file path) —
       // see _browserSubheader.
       _browserSubheader(context, l),
+      // An Albums / Artists list's mood strip, while its filter is set
+      // (Discover draws its own, under its bar).
+      StreamBuilder<List<DisplayItem>>(
+        stream: BrowserManager().browserListStream,
+        builder: (context, _) => _moodStrip(),
+      ),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
       // slot — empty when idle — so the list never jumps.

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../objects/discovery.dart';
 import '../../objects/display_item.dart';
 import '../../objects/metadata.dart';
+import '../../objects/mood_filter.dart';
 import '../../objects/server.dart';
 import '../../singletons/api.dart';
 import '../../singletons/server_list.dart';
@@ -204,6 +205,17 @@ class DiscoveryPageController extends ChangeNotifier {
   /// otherwise the route would answer `peers: null` for nothing.
   bool get asksPeers => server.federationDiscoveryAvailable == true;
 
+  /// The server filters Discover by mood (its `moodFilters` flag, on a
+  /// taste route that takes the key): the toolbar offers Filters, and every
+  /// call carries the page's filter.
+  bool get moodsAvailable => server.moodFiltersAvailable == true;
+
+  /// The page's mood filter — Discover's own, kept while the app runs.
+  MoodFilter get moods => MoodFilters().of(MoodPage.discover);
+
+  /// What a call sends as `moods`: the filter, where the server takes it.
+  Map<String, dynamic>? get _moodsSent => moodsAvailable ? moods.toJson() : null;
+
   bool get isRandom =>
       seeded?.seedSource == TasteSeedSource.random || seeded?.fallback == true;
 
@@ -260,6 +272,7 @@ class DiscoveryPageController extends ChangeNotifier {
         sources: const {TasteSource.library},
         limit: kDiscoveryMainLimits,
         newArtistsOnly: false,
+        moods: _moodsSent,
       );
 
   /// The peers call of one ask, built once the library answer [main] has
@@ -290,6 +303,9 @@ class DiscoveryPageController extends ChangeNotifier {
       limit:
           TasteLimits(seeds: pins.length, peers: kDiscoveryPeersLimits.peers),
       newArtistsOnly: false,
+      // The connected servers filter too (the server hands it on, and
+      // drops the rows of one that cannot).
+      moods: _moodsSent,
     );
   }
 
@@ -506,6 +522,17 @@ class DiscoveryPageController extends ChangeNotifier {
       _saveWindow(before);
       notifyListeners();
     }
+  }
+
+  /// The Filters sheet's Done, or the strip's Clear: [filter] becomes the
+  /// page's, shown at once, and every source is asked again under it (a new
+  /// random batch of seeds, the history songs that match first — the
+  /// server's choice).
+  Future<void> setMoods(MoodFilter filter) async {
+    if (_disposed || !moodsAvailable || filter == moods) return;
+    MoodFilters().set(MoodPage.discover, filter);
+    notifyListeners();
+    await load();
   }
 
   /// The seeds sheet's "Use these N": [drop] are seed hashes switched off

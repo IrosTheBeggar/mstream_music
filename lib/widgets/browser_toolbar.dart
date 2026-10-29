@@ -10,10 +10,13 @@
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
 //                          back · label · search · (no songs to act on)
-//   • Discover           → back · label · New seeds (no search, no verbs:
-//                          its footers carry them)
+//   • Discover           → back · label · Filters · New seeds (no search, no
+//                          verbs: its footers carry them; Filters when the
+//                          server filters by mood)
 //   • Genres (the list)  → back · label · search · Tags | Generated | Both
 //                          (only when the server has both kinds)
+//   • Albums / Artists   → back · label · Filters · search (Filters when the
+//                          list's server answered that it filters by mood)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -28,6 +31,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
+import '../objects/mood_filter.dart';
 import '../screens/discovery/discovery_listing.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
@@ -38,6 +42,7 @@ import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import 'local_search_bar.dart';
+import 'mood_filter_sheet.dart';
 
 // Combined snapshot the toolbar renders from.
 typedef _Tb = ({
@@ -297,6 +302,35 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     );
   }
 
+  // The Filters sheet on [current]: Done hands back the choices, applied
+  // through [apply] when they changed; closing it any other way changes
+  // nothing.
+  Future<void> _openMoodSheet(
+      MoodFilter current, Future<void> Function(MoodFilter) apply) async {
+    final next = await showMoodFilterSheet(context, current);
+    if (next != null && next != current) await apply(next);
+  }
+
+  // Discover's Filters: opens the mood sheet, its badge counting the
+  // choices set. Only where the server filters Discover by mood; it follows
+  // the controller (the filter is the page's), and is off while the route
+  // refuses.
+  Widget _discoverMoodButton() {
+    final c = DiscoveryListing().controller;
+    if (c == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: c,
+      builder: (_, _) => c.moodsAvailable
+          ? MoodFilterButton(
+              count: c.moods.count,
+              onPressed: c.disabled
+                  ? null
+                  : () => unawaited(_openMoodSheet(c.moods, c.setMoods)),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
   // The genre list's Tags | Generated | Both switch: re-lists the open list
   // in place (no new frame) and remembers the choice for next time.
   Widget _genreSourceSwitch(AppLocalizations l, GenreListFrame frame) =>
@@ -547,6 +581,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     final canBack = BrowserManager().browserCache.length > 1;
     final discover = DiscoveryListing.isListing(s.list);
     final genreFrame = BrowserManager().currentGenreFrame;
+    final moodFrame = BrowserManager().currentMoodFrame;
     final targets = discover ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
@@ -559,6 +594,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         const SizedBox(width: 12),
       _title(browserChromeLabel(l, s.label)),
       if (discover) ...[
+        _discoverMoodButton(),
         _newSeedsButton(l),
         const SizedBox(width: 12),
       ] else if (canPlay) ...[
@@ -582,6 +618,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           const SizedBox(width: 4),
           _genreSourceSwitch(l, genreFrame),
         ],
+        // Albums / Artists on a server that filters by mood: Filters goes
+        // before search, which keeps the bar's end.
+        if (moodFrame != null)
+          MoodFilterButton(
+            count: MoodFilters().of(moodFrame.page).count,
+            onPressed: () => unawaited(_openMoodSheet(
+                MoodFilters().of(moodFrame.page),
+                (f) => ApiManager().setMoodFilter(moodFrame, f))),
+          ),
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
         _overflow(context, l, targets, showSearch: false),

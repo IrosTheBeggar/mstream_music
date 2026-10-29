@@ -18,10 +18,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/objects/display_item.dart';
+import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/browser.dart';
 import 'package:mstream_music/screens/discovery/discovery_listing.dart';
 import 'package:mstream_music/screens/discovery/discovery_page_controller.dart';
+import 'package:mstream_music/screens/discovery/discovery_widgets.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/track_capture.dart';
@@ -839,6 +841,45 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byTooltip('New seeds'), findsOneWidget);
       expect(inBar(Icons.search), findsNothing);
+    });
+
+    testWidgets('Filters on Discover: Done asks again under the choices and '
+        'the strip under the bar names them; its Clear lets them go',
+        (tester) async {
+      MoodFilters().reset();
+      addTearDown(MoodFilters().reset);
+      server.moodFiltersAvailable = true;
+      final asked = await pumpBrowser(tester, toolbar: true);
+      final button = find.byKey(const ValueKey('mood-filters'));
+      final strip = find.byKey(const ValueKey('mood-strip'));
+      expect(tester.getRect(button).right,
+          lessThanOrEqualTo(tester.getRect(find.byTooltip('New seeds')).left));
+      expect(strip, findsNothing);
+
+      final before = asked.length;
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Relaxed'));
+      await tester.pumpAndSettle();
+      expect(asked, hasLength(before), reason: 'nothing asked before Done');
+      await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
+      await tester.pumpAndSettle();
+      final main = asked.skip(before).where((r) => !isPeersCall(r)).toList();
+      expect(main.single.toJson()['moods'], {'energy': 'relaxed'});
+      expect(find.descendant(of: strip, matching: find.text('Relaxed')),
+          findsOneWidget);
+      expect(find.descendant(of: button, matching: find.text('1')),
+          findsOneWidget);
+      expect(tester.getRect(strip).top,
+          tester.getRect(find.byType(DiscoveryConfigBar)).bottom,
+          reason: 'right under the bar');
+
+      await tester.tap(find.byKey(const ValueKey('mood-strip-clear')));
+      await tester.pumpAndSettle();
+      expect(strip, findsNothing);
+      expect(
+          asked.where((r) => !isPeersCall(r)).last.toJson().containsKey('moods'),
+          isFalse);
     });
 
     testWidgets('pull to refresh asks again', (tester) async {

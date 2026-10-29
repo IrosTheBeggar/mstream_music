@@ -104,6 +104,15 @@ class Server {
   //                                  first (DiscoveryJobsController): off,
   //                                  no plug-in route is asked at all.
   bool? discoveryPluginsAvailable;
+  //   moodFiltersAvailable         — Discover can be filtered by mood: the
+  //                                  server has mood scores to filter by
+  //                                  (`features.moodFilters`, ping
+  //                                  `moodFilters`) AND a taste route that
+  //                                  takes the `moods` key (discoveryTaste
+  //                                  generation ≥ 2 — its body refuses a key
+  //                                  it does not know). Albums and Artists
+  //                                  need no flag: their answers say so.
+  bool? moodFiltersAvailable;
   //   noUpload                     — this ACCOUNT may not add files to the
   //                                  server (caller-scoped: `user.noUpload`
   //                                  on /api, `noUpload` on ping — the
@@ -439,6 +448,9 @@ class Server {
         discoveryPluginsAvailable = json['discoveryPluginsAvailable'] is bool
             ? json['discoveryPluginsAvailable']
             : null,
+        moodFiltersAvailable = json['moodFiltersAvailable'] is bool
+            ? json['moodFiltersAvailable']
+            : null,
         noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
@@ -488,6 +500,7 @@ class Server {
         'federationInbox': federationInbox,
         'discoveryTasteAvailable': discoveryTasteAvailable,
         'discoveryPluginsAvailable': discoveryPluginsAvailable,
+        'moodFiltersAvailable': moodFiltersAvailable,
         'noUpload': noUpload,
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,

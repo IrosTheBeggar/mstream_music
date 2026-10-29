@@ -889,6 +889,66 @@
   "@genreSourceLabel": {
     "description": "Accessibility label for the genre list's Tags / Generated / Both switch."
   },
+  "moodFilters": "Filters",
+  "@moodFilters": {
+    "description": "Albums, Artists and Discover: the button that shows the mood filters, and its tooltip."
+  },
+  "moodValenceGroup": "Happy, neutral or sad",
+  "@moodValenceGroup": {
+    "description": "Accessibility label for the happy / neutral / sad mood choice."
+  },
+  "moodEnergyGroup": "Relaxed, neutral or aggressive",
+  "@moodEnergyGroup": {
+    "description": "Accessibility label for the relaxed / neutral / aggressive mood choice."
+  },
+  "moodVoiceGroup": "Instrumental or vocals",
+  "@moodVoiceGroup": {
+    "description": "Accessibility label for the instrumental / vocals choice."
+  },
+  "moodTagsGroup": "Tags",
+  "@moodTagsGroup": {
+    "description": "Accessibility label for the acoustic / party / danceable mood tags."
+  },
+  "moodHappy": "Happy",
+  "@moodHappy": {
+    "description": "Mood filter: songs that sound happy."
+  },
+  "moodNeutral": "Neutral",
+  "@moodNeutral": {
+    "description": "Mood filter: neither end of its scale (neither happy nor sad, or neither relaxed nor aggressive)."
+  },
+  "moodSad": "Sad",
+  "@moodSad": {
+    "description": "Mood filter: songs that sound sad."
+  },
+  "moodRelaxed": "Relaxed",
+  "@moodRelaxed": {
+    "description": "Mood filter: songs that sound relaxed."
+  },
+  "moodAggressive": "Aggressive",
+  "@moodAggressive": {
+    "description": "Mood filter: songs that sound aggressive."
+  },
+  "moodInstrumental": "Instrumental",
+  "@moodInstrumental": {
+    "description": "Mood filter: songs without vocals."
+  },
+  "moodVocals": "Vocals",
+  "@moodVocals": {
+    "description": "Mood filter: songs with vocals."
+  },
+  "moodAcoustic": "Acoustic",
+  "@moodAcoustic": {
+    "description": "Mood filter tag: acoustic songs."
+  },
+  "moodParty": "Party",
+  "@moodParty": {
+    "description": "Mood filter tag: party songs."
+  },
+  "moodDanceable": "Danceable",
+  "@moodDanceable": {
+    "description": "Mood filter tag: songs you can dance to."
+  },
   "browserRecent": "Recent",
   "browserRated": "Rated",
   "browserSectionLibrary": "Library",
