@@ -54,15 +54,15 @@ void main() {
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('listening-screen-');
     PlayHistory.storageDirectory = () async => dir;
-    PlayHistory().resetForTest();
-    PlaySync().resetForTest();
+    await PlayHistory().resetForTest();
+    await PlaySync().resetForTest();
     ServerManager().serverList.clear();
     // Warm the store here so the page's load is pure microtasks.
     await PlayHistory().events();
   });
   tearDown(() async {
-    PlayHistory().resetForTest();
-    PlaySync().resetForTest();
+    await PlayHistory().resetForTest();
+    await PlaySync().resetForTest();
     ServerManager().serverList.clear();
     await dir.delete(recursive: true);
   });

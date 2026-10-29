@@ -332,7 +332,14 @@ class PlaySync {
   }
 
   /// Under test: forget parked targets, backoff, counters, subscriptions.
-  void resetForTest() {
+  /// A pass still running is waited out first (and the one it may start on
+  /// finishing): the singleton outlives the test, and a pass landing in the
+  /// next one would clear its `_draining` — two passes posting one batch —
+  /// or purge the targets it no longer resolves.
+  Future<void> resetForTest() async {
+    while (_draining != null) {
+      await _draining;
+    }
     dispose();
     _parked.clear();
     _drainAgain = false;
