@@ -23,8 +23,14 @@ void main() {
       expect(ids(DownloadManager.cacheWindow(queue(10), -5, 0)).length, 10);
     });
 
-    test('a queue shorter than the cap is returned whole', () {
+    // A short queue used to come back whole, so the sweep walked it from the
+    // top and fetched the tracks BEHIND the playhead first (2026-10-20: two
+    // already-played tracks landed while the one playing streamed).
+    test('a queue shorter than the cap still starts at the playing track',
+        () {
       expect(ids(DownloadManager.cacheWindow(queue(8), 50, 0)).length, 8);
+      expect(ids(DownloadManager.cacheWindow(queue(8), 50, 3)),
+          ['t3', 't4', 't5', 't6', 't7']);
     });
 
     test('caches forward from the playing track, not from the top', () {
@@ -56,6 +62,24 @@ void main() {
 
     test('empty queue is safe', () {
       expect(DownloadManager.cacheWindow(const [], 10, 0), isEmpty);
+    });
+  });
+
+  group('DownloadManager.clippedAhead', () {
+    test('counts only tracks ahead of the window, never played ones', () {
+      // Galaxy smoke 2026-10-30: an 8-track queue under a cap of 50 logged
+      // "1 queued track(s) beyond the cache window" at track 2 — the one
+      // behind the playhead.
+      expect(DownloadManager.clippedAhead(8, 50, 1), 0);
+      expect(DownloadManager.clippedAhead(8, 3, 2), 3); // t5..t7 past t2..t4
+      expect(DownloadManager.clippedAhead(8, 3, 5), 0); // t5..t7 fit
+    });
+
+    test('clamps the playhead and ignores an unlimited cap', () {
+      expect(DownloadManager.clippedAhead(8, 3, -1), 5);
+      expect(DownloadManager.clippedAhead(8, 3, 99), 0);
+      expect(DownloadManager.clippedAhead(8, 0, 2), 0);
+      expect(DownloadManager.clippedAhead(0, 3, 0), 0);
     });
   });
 }
