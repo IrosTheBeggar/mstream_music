@@ -377,6 +377,18 @@ class DownloadManager {
     return items.sublist(start, end > items.length ? items.length : end);
   }
 
+  /// Queued tracks past the far edge of [cacheWindow]: ahead of the playhead
+  /// and beyond the cap. What lies behind the playhead was played, not
+  /// clipped — the window starts at the playhead, so the plain difference
+  /// between the queue and the window counted played tracks too (Galaxy
+  /// smoke 2026-10-30: "1 queued track(s) beyond the cache window" on an
+  /// 8-track queue under a cap of 50). Pure; unit-tested.
+  static int clippedAhead(int length, int cap, int startIndex) {
+    if (cap <= 0 || length == 0) return 0;
+    final ahead = length - startIndex.clamp(0, length - 1);
+    return ahead > cap ? ahead - cap : 0;
+  }
+
   /// With [slotsFor], at most that many candidates per server are picked (and
   /// marked) in one sweep; the rest stay unmarked, so the next sweep — every
   /// queue change, every landing — picks them up as transfers finish.
@@ -473,12 +485,13 @@ class DownloadManager {
     // window are never marked in _autoAttempted, so they become candidates the
     // moment playback advances far enough to pull them into it.
     final cap = SettingsManager().autoDownloadCap;
-    final window = cacheWindow(items, cap, _playingIndex());
+    final playing = _playingIndex();
+    final window = cacheWindow(items, cap, playing);
     // Say when the cap clips a sweep — once per distinct count, not per
     // sweep (this runs on every queue change and advance). "Added N,
     // setting's on, two never downloaded" is indistinguishable from a
     // download bug without this line; the two were simply beyond the window.
-    final clipped = items.length - window.length;
+    final clipped = clippedAhead(items.length, cap, playing);
     if (clipped != _lastClippedLogged) {
       _lastClippedLogged = clipped;
       if (clipped > 0) {
