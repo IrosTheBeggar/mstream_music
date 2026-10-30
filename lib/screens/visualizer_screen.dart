@@ -20,6 +20,11 @@ import '../singletons/visualizer_audio.dart';
 import '../theme/velvet_theme.dart';
 
 class VisualizerScreen extends StatefulWidget {
+  /// Which engine to bring up — the drawer has an entry for each.
+  final VisualizerEngine engine;
+
+  const VisualizerScreen({super.key, required this.engine});
+
   @override
   State<VisualizerScreen> createState() => _VisualizerScreenState();
 }
@@ -34,17 +39,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   // Tracks whether we've parked the bridge so didChangeAppLifecycleState
   // doesn't double-pause / double-resume.
   bool _backgroundPaused = false;
-  // Snapshot at bringup so engine swaps via Settings only take effect
-  // next time the visualizer opens — no half-swapped GL state.
-  late final VisualizerEngine _engine =
-      SettingsManager().visualizerEngine;
+  // Fixed for the screen's life (one route per engine), so the GL state is
+  // never half-swapped.
+  VisualizerEngine get _engine => widget.engine;
   VisualizerPresetKind get _presetKind => _engine == VisualizerEngine.shader
       ? VisualizerPresetKind.shader
       : VisualizerPresetKind.milkdrop;
 
   // --- Tuning panel (Shader engine + showVisualizerKnobs only) ---------
   // Whether to surface the live tuning sliders at all. Snapshotted at
-  // bringup like _engine (the setting can't change while we're open).
+  // bringup (the setting can't change while we're open).
   late final bool _knobsEnabled = _engine == VisualizerEngine.shader &&
       SettingsManager().showVisualizerKnobs;
   bool _panelOpen = false;

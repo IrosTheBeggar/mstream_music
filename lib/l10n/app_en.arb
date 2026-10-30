@@ -75,11 +75,6 @@
   "@tapAddToQueue": {
     "description": "TapBehavior option: append to queue."
   },
-  "visualizerEngineMilkdrop": "Milkdrop",
-  "visualizerEngineShaders": "Shaders",
-  "@visualizerEngineMilkdrop": {
-    "description": "VisualizerEngine option label."
-  },
   "visualizerSourceSynthesized": "Synthesized",
   "visualizerSourceReal": "Real audio",
   "@visualizerSourceSynthesized": {
@@ -201,12 +196,6 @@
   "@settingsEqSubtitle": {
     "description": "Subtitle on the Equalizer row in Settings."
   },
-  "settingsVisualizerEngine": "Visualizer engine",
-  "visualizerEngineSubtitleMilkdrop": "Milkdrop presets via projectM (default). Richer effects, heavier on the GPU.",
-  "visualizerEngineSubtitleShaders": "Shadertoy-style fragment shaders. Lighter, modular — drop .glsl files in assets/shaders/ to extend the catalog.",
-  "@settingsVisualizerEngine": {
-    "description": "Visualizer-engine picker row label + per-engine subtitles."
-  },
   "settingsVisualizerSource": "Visualizer audio source",
   "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
   "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",
@@ -251,11 +240,11 @@
     "description": "Reset-to-defaults row + confirmation snackbar."
   },
   "realAudioDialogTitle": "Use real audio?",
-  "realAudioDialogBody": "Real audio mode reads the waveform of music your phone is playing so the visualizer can react to it. Android requires the RECORD_AUDIO permission for this — the app does not record or send any audio anywhere. You can switch back to synthesized at any time.",
+  "realAudioDialogBody": "To react to the song that's playing, the visualizer reads mStream's own audio output, and Android only allows that with the microphone permission.",
   "realAudioPermPermanentlyDenied": "Permission permanently denied. Enable it in system settings to use real audio.",
   "realAudioPermDenied": "Permission denied. Staying on synthesized audio.",
   "@realAudioDialogTitle": {
-    "description": "RECORD_AUDIO consent dialog + denial snackbars."
+    "description": "Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer audio source — plus the denial snackbars."
   },
   "visualizerTapHint": "Tap = next preset · back arrow (top-left) or long-press to exit",
   "@visualizerTapHint": {
@@ -816,7 +805,6 @@
   "@queueEmptyDjChoose": {
     "description": "Empty-queue button: browse the library and pick the Auto DJ opening song."
   },
-  "visualizerTitle": "Visualizer",
   "mainClearQueue": "Clear queue",
   "mainSync": "Sync",
   "@tabBrowser": {
@@ -995,7 +983,7 @@
     "description": "Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated."
   },
   "settingsVisualizerKnobs": "Visualizer tuning knobs",
-  "settingsVisualizerKnobsSubtitle": "Show live sliders over the visualizer to tweak each shader's audio reactivity. Shader engine only.",
+  "settingsVisualizerKnobsSubtitle": "Show live sliders over the visualizer to tweak each shader's audio reactivity. ShaderToy Visualizer only.",
   "visualizerTuningTitle": "Tuning",
   "close": "Close",
   "@settingsVisualizerKnobs": {
@@ -1247,7 +1235,7 @@
   "@importedShadersTitle": {
     "description": "Title of the Imported Shaders screen and its Settings entry."
   },
-  "importedShadersSettingsSubtitle": "Add your own .glsl files to the Shader engine rotation.",
+  "importedShadersSettingsSubtitle": "Add your own .glsl files to the ShaderToy Visualizer's rotation.",
   "@importedShadersSettingsSubtitle": {
     "description": "Subtitle under the Imported shaders entry in Settings."
   },
@@ -1263,7 +1251,7 @@
   "@importedShadersCopyPath": {
     "description": "Tooltip for the button that copies the shader folder path to the clipboard."
   },
-  "importedShadersReachableHint": "Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.",
+  "importedShadersReachableHint": "Reachable over USB or a file manager (under Android/data). Imported shaders join the ShaderToy Visualizer's rotation.",
   "@importedShadersReachableHint": {
     "description": "Help text explaining where the shader folder is and when imported shaders are used."
   },
@@ -2030,20 +2018,8 @@
   "@setupAccentBody": {
     "description": "Setup flow page 1 body copy."
   },
-  "setupVisualizerTitle": "Real audio for the visualizer",
-  "@setupVisualizerTitle": {
-    "description": "Setup flow page 2 title (visualizer audio source). Android only."
-  },
-  "setupVisualizerBody": "The visualizer uses synthesized data until this is enabled.",
-  "@setupVisualizerBody": {
-    "description": "Setup flow page 2 body copy."
-  },
-  "setupVisualizerWarning": "Turning this on asks for the microphone permission — Android requires this for apps that decode the device's audio stream (which the visualizer does).",
-  "@setupVisualizerWarning": {
-    "description": "Setup flow page 2: explains up front why a music app requests RECORD_AUDIO. Rendered immediately before setupVisualizerNoMic, which is bold — keep them readable as one paragraph."
-  },
-  "@setupVisualizerNoMic": {
-    "description": "Setup flow page 2: the reassurance sentence closing the mic explanation. Rendered BOLD, so it is a separate string rather than part of setupVisualizerWarning."
+  "@realAudioNoMic": {
+    "description": "Real-audio consent dialog: the reassurance closing the explanation (realAudioDialogBody). Rendered BOLD, so it is a separate string rather than part of that one."
   },
   "setupPlaybackTitle": "When you tap a song",
   "@setupPlaybackTitle": {
@@ -2053,7 +2029,7 @@
   "@setupOfflineTitle": {
     "description": "Setup flow final page title (auto-download of queued tracks + how many to keep)."
   },
-  "setupVisualizerNoMic": "mStream never uses your microphone.",
+  "realAudioNoMic": "mStream never uses your microphone.",
   "playlistEmpty": "Playlist is empty",
   "@playlistEmpty": {
     "description": "Shown in the browser body when an opened playlist has no songs."
@@ -5897,5 +5873,21 @@
   "discoverElsewhereOpensOutside": "Opens outside the app",
   "@discoverElsewhereOpensOutside": {
     "description": "Accessibility hint on an Open elsewhere row."
+  },
+  "visualizerMilkdropTitle": "Milkdrop Visualizer",
+  "@visualizerMilkdropTitle": {
+    "description": "Drawer entries that open each visualizer. Milkdrop and ShaderToy are product names: keep them as written."
+  },
+  "visualizerShadertoyTitle": "ShaderToy Visualizer",
+  "realAudioSynthesizedNote": "Without the permission, the visualizer runs on synthesized data instead.",
+  "@realAudioSynthesizedNote": {
+    "description": "Real-audio consent dialog: the line under the explanation, then the checkbox (offered only when a visualizer is being opened) and the two buttons."
+  },
+  "realAudioDontAskAgain": "Don't ask again",
+  "realAudioUseSynthesized": "Use synthesized data",
+  "realAudioUseReal": "Use real audio",
+  "queueSharePlaylist": "Share playlist",
+  "@queueSharePlaylist": {
+    "description": "Now-playing queue ⋮ menu: opens the Share Playlist dialog for the queue. Sentence case like the menu's other rows."
   }
 }

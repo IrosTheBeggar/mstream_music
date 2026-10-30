@@ -61,17 +61,6 @@ extension StartupViewLabel on StartupView {
   }
 }
 
-extension VisualizerEngineLabel on VisualizerEngine {
-  String label(AppLocalizations l) {
-    switch (this) {
-      case VisualizerEngine.milkdrop:
-        return l.visualizerEngineMilkdrop;
-      case VisualizerEngine.shader:
-        return l.visualizerEngineShaders;
-    }
-  }
-}
-
 extension VisualizerAudioSourceLabel on VisualizerAudioSource {
   String label(AppLocalizations l) {
     switch (this) {

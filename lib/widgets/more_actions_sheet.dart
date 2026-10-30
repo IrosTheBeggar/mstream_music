@@ -1,23 +1,21 @@
-import 'dart:io' show Platform;
-
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../media/cast_target.dart';
-import '../screens/visualizer_screen.dart';
+import '../screens/share_playlist_dialog.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
-import '../visualizer/shader_visualizer_screen.dart';
 import 'cast_picker_sheet.dart';
 import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
 /// "More" actions bottom sheet — collects the session/secondary controls that
-/// used to crowd the bottom bar (Auto DJ, sleep timer, visualizer, clear
-/// queue), leaving the bar to transport + shuffle/repeat.
+/// used to crowd the bottom bar (Auto DJ, sleep timer, clear queue), leaving
+/// the bar to transport + shuffle/repeat. Sharing the queue came here from
+/// the drawer.
 ///
 /// [parentContext] is a context ABOVE this sheet (the bottom bar's), used to
 /// launch follow-on navigation / sheets after this one is dismissed — the
@@ -37,25 +35,12 @@ class MoreActionsSheet extends StatelessWidget {
           // Auto DJ is deliberately absent: it is a labelled button a few
           // pixels away in the queue header and again in the mini player.
           // Discover is absent for the same reason — the collapsible bar
-          // under the queue is its home.
+          // under the queue is its home. The visualizers live in the drawer.
           //
-          // Visualizer and cast moved DOWN here from the now-playing header.
-          // They were two glyphs competing with the art and the transport for
-          // a strip that is mostly about the song; here they sit with the
-          // other things you do to a session rather than to a track.
-          ListTile(
-            leading:
-                Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-            title: Text(l.visualizerTitle,
-                style: TextStyle(color: VelvetColors.textPrimary)),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(parentContext).push(MaterialPageRoute(
-                  builder: (_) => Platform.isAndroid
-                      ? VisualizerScreen()
-                      : const ShaderVisualizerScreen()));
-            },
-          ),
+          // Cast moved DOWN here from the now-playing header. It was a glyph
+          // competing with the art and the transport for a strip that is
+          // mostly about the song; here it sits with the other things you do
+          // to a session rather than to a track.
           StreamBuilder<CastTarget>(
             stream: CastManager().activeTargetStream,
             initialData: CastManager().activeTarget,
@@ -111,6 +96,16 @@ class MoreActionsSheet extends StatelessWidget {
                   );
                 },
               );
+            },
+          ),
+          // Share the queue as a playlist link.
+          ListTile(
+            leading: Icon(Icons.share, color: VelvetColors.textSecondary),
+            title: Text(l.queueSharePlaylist,
+                style: TextStyle(color: VelvetColors.textPrimary)),
+            onTap: () {
+              Navigator.of(context).pop();
+              showSharePlaylistDialog(parentContext);
             },
           ),
           // Download queue — save every downloadable track to the device.

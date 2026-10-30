@@ -35,7 +35,7 @@ import 'screens/welcome_screen.dart';
 import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
 import 'screens/transcode_screen.dart';
-import 'screens/share_playlist_dialog.dart';
+import 'screens/visualizer_launcher.dart';
 import 'native/torrent_channel.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
@@ -1316,13 +1316,27 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         //   },
         // ),
         // Auto DJ, Sonic path and torrents live on the home screen's LISTEN
-        // and SERVER groups now, next to the library they act on.
+        // and SERVER groups now, next to the library they act on. Share
+        // Playlist shares the queue, so it lives in the queue's ⋮ menu.
+        //
+        // One entry per visualizer, so the engine is picked where it is
+        // opened. Milkdrop is projectM on the native Android bridge; other
+        // platforms only have the ShaderToy engine.
+        if (Platform.isAndroid)
+          ListTile(
+            leading: Icon(Icons.auto_awesome),
+            title: Text(l.visualizerMilkdropTitle),
+            onTap: () {
+              Navigator.of(context).pop();
+              openVisualizer(context, VisualizerEngine.milkdrop);
+            },
+          ),
         ListTile(
-          leading: Icon(Icons.share),
-          title: Text(l.shareTitle),
+          leading: Icon(Icons.gradient),
+          title: Text(l.visualizerShadertoyTitle),
           onTap: () {
             Navigator.of(context).pop();
-            showSharePlaylistDialog(context);
+            openVisualizer(context, VisualizerEngine.shader);
           },
         ),
         // Local playlists drawer entry hidden — having both this and

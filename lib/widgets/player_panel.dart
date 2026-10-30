@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,14 +6,12 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/player_layout.dart';
-import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
-import '../visualizer/shader_visualizer_screen.dart';
 import 'more_actions_sheet.dart';
 import 'discover_queue_bar.dart';
 import 'fact_badge.dart';
@@ -373,7 +370,6 @@ Widget _grabHandle() => Container(
       ),
     );
 
-/// Discoverable quick actions above the scrubber: Visualizer + Cast. (Cast
 // ---------------------------------------------------------------------------
 // Layout MEDIUM — art-left banner + slim seek bar (design "Banner", default).
 // ---------------------------------------------------------------------------
@@ -1188,7 +1184,7 @@ class _MiniPlayer extends StatelessWidget {
               ),
             ),
             // Transport row. Pared back to what a mini player is for: get it
-            // going, skip forward, jump to the visualizer, arm the DJ.
+            // going, skip forward, arm the DJ.
             // Previous, shuffle, repeat and the overflow all live in the full
             // player a swipe away — duplicating them here bought a crowded
             // strip of identical grey glyphs where the one control people
@@ -1217,14 +1213,6 @@ class _MiniPlayer extends StatelessWidget {
                     ),
                     _btn(Icons.skip_next, handler.skipToNext),
                   ]),
-                  // Centre: straight into the visualizer.
-                  _btn(
-                    Icons.auto_awesome,
-                    () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => Platform.isAndroid
-                            ? VisualizerScreen()
-                            : const ShaderVisualizerScreen())),
-                  ),
                   // Right: one labelled button rather than three glyphs. Wide
                   // on purpose — it is the only thing over here, and a word
                   // reads faster than an icon nobody has learned yet.
@@ -1348,7 +1336,7 @@ class _TrackFacts extends StatelessWidget {
 /// out where the performer ends and the record begins, and the album is what
 /// gets truncated because it happens to come second. Stacking says which is
 /// which by position instead, and the header has the room for it now that the
-/// visualizer and cast glyphs have moved into the queue menu.
+/// visualizer and cast glyphs have moved out of it.
 ///
 /// The year rides on the album line because that is what it dates — it used to
 /// sit down in the rating row, where it read as a fact about the song.

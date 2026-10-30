@@ -234,18 +234,6 @@ abstract class AppLocalizations {
   /// **'Add and play'**
   String get tapAppendAndJump;
 
-  /// VisualizerEngine option label.
-  ///
-  /// In en, this message translates to:
-  /// **'Milkdrop'**
-  String get visualizerEngineMilkdrop;
-
-  /// No description provided for @visualizerEngineShaders.
-  ///
-  /// In en, this message translates to:
-  /// **'Shaders'**
-  String get visualizerEngineShaders;
-
   /// VisualizerAudioSource option label.
   ///
   /// In en, this message translates to:
@@ -516,24 +504,6 @@ abstract class AppLocalizations {
   /// **'Tune bass, mids, and treble. Android only.'**
   String get settingsEqSubtitle;
 
-  /// Visualizer-engine picker row label + per-engine subtitles.
-  ///
-  /// In en, this message translates to:
-  /// **'Visualizer engine'**
-  String get settingsVisualizerEngine;
-
-  /// No description provided for @visualizerEngineSubtitleMilkdrop.
-  ///
-  /// In en, this message translates to:
-  /// **'Milkdrop presets via projectM (default). Richer effects, heavier on the GPU.'**
-  String get visualizerEngineSubtitleMilkdrop;
-
-  /// No description provided for @visualizerEngineSubtitleShaders.
-  ///
-  /// In en, this message translates to:
-  /// **'Shadertoy-style fragment shaders. Lighter, modular — drop .glsl files in assets/shaders/ to extend the catalog.'**
-  String get visualizerEngineSubtitleShaders;
-
   /// Visualizer audio-source picker row label + per-source subtitles.
   ///
   /// In en, this message translates to:
@@ -630,7 +600,7 @@ abstract class AppLocalizations {
   /// **'Settings restored to defaults'**
   String get settingsResetDone;
 
-  /// RECORD_AUDIO consent dialog + denial snackbars.
+  /// Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer audio source — plus the denial snackbars.
   ///
   /// In en, this message translates to:
   /// **'Use real audio?'**
@@ -639,7 +609,7 @@ abstract class AppLocalizations {
   /// No description provided for @realAudioDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'Real audio mode reads the waveform of music your phone is playing so the visualizer can react to it. Android requires the RECORD_AUDIO permission for this — the app does not record or send any audio anywhere. You can switch back to synthesized at any time.'**
+  /// **'To react to the song that\'s playing, the visualizer reads mStream\'s own audio output, and Android only allows that with the microphone permission.'**
   String get realAudioDialogBody;
 
   /// No description provided for @realAudioPermPermanentlyDenied.
@@ -1800,12 +1770,6 @@ abstract class AppLocalizations {
   /// **'Choose a song'**
   String get queueEmptyDjChoose;
 
-  /// No description provided for @visualizerTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Visualizer'**
-  String get visualizerTitle;
-
   /// No description provided for @mainClearQueue.
   ///
   /// In en, this message translates to:
@@ -2109,7 +2073,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsVisualizerKnobsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. Shader engine only.'**
+  /// **'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. ShaderToy Visualizer only.'**
   String get settingsVisualizerKnobsSubtitle;
 
   /// No description provided for @visualizerTuningTitle.
@@ -2937,7 +2901,7 @@ abstract class AppLocalizations {
   /// Subtitle under the Imported shaders entry in Settings.
   ///
   /// In en, this message translates to:
-  /// **'Add your own .glsl files to the Shader engine rotation.'**
+  /// **'Add your own .glsl files to the ShaderToy Visualizer\'s rotation.'**
   String get importedShadersSettingsSubtitle;
 
   /// Tooltip for the button that re-scans the shader folder for new files.
@@ -2961,7 +2925,7 @@ abstract class AppLocalizations {
   /// Help text explaining where the shader folder is and when imported shaders are used.
   ///
   /// In en, this message translates to:
-  /// **'Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.'**
+  /// **'Reachable over USB or a file manager (under Android/data). Imported shaders join the ShaderToy Visualizer\'s rotation.'**
   String get importedShadersReachableHint;
 
   /// Tooltip for the button that deletes an imported shader file.
@@ -3996,24 +3960,6 @@ abstract class AppLocalizations {
   /// **'The accent color highlights buttons, sliders and the player controls. Tap one to try it.'**
   String get setupAccentBody;
 
-  /// Setup flow page 2 title (visualizer audio source). Android only.
-  ///
-  /// In en, this message translates to:
-  /// **'Real audio for the visualizer'**
-  String get setupVisualizerTitle;
-
-  /// Setup flow page 2 body copy.
-  ///
-  /// In en, this message translates to:
-  /// **'The visualizer uses synthesized data until this is enabled.'**
-  String get setupVisualizerBody;
-
-  /// Setup flow page 2: explains up front why a music app requests RECORD_AUDIO. Rendered immediately before setupVisualizerNoMic, which is bold — keep them readable as one paragraph.
-  ///
-  /// In en, this message translates to:
-  /// **'Turning this on asks for the microphone permission — Android requires this for apps that decode the device\'s audio stream (which the visualizer does).'**
-  String get setupVisualizerWarning;
-
   /// Setup flow page 3 title (tap behaviour).
   ///
   /// In en, this message translates to:
@@ -4026,11 +3972,11 @@ abstract class AppLocalizations {
   /// **'Keep your queue offline'**
   String get setupOfflineTitle;
 
-  /// Setup flow page 2: the reassurance sentence closing the mic explanation. Rendered BOLD, so it is a separate string rather than part of setupVisualizerWarning.
+  /// Real-audio consent dialog: the reassurance closing the explanation (realAudioDialogBody). Rendered BOLD, so it is a separate string rather than part of that one.
   ///
   /// In en, this message translates to:
   /// **'mStream never uses your microphone.'**
-  String get setupVisualizerNoMic;
+  String get realAudioNoMic;
 
   /// Shown in the browser body when an opened playlist has no songs.
   ///
@@ -8547,6 +8493,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opens outside the app'**
   String get discoverElsewhereOpensOutside;
+
+  /// Drawer entries that open each visualizer. Milkdrop and ShaderToy are product names: keep them as written.
+  ///
+  /// In en, this message translates to:
+  /// **'Milkdrop Visualizer'**
+  String get visualizerMilkdropTitle;
+
+  /// No description provided for @visualizerShadertoyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ShaderToy Visualizer'**
+  String get visualizerShadertoyTitle;
+
+  /// Real-audio consent dialog: the line under the explanation, then the checkbox (offered only when a visualizer is being opened) and the two buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Without the permission, the visualizer runs on synthesized data instead.'**
+  String get realAudioSynthesizedNote;
+
+  /// No description provided for @realAudioDontAskAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t ask again'**
+  String get realAudioDontAskAgain;
+
+  /// No description provided for @realAudioUseSynthesized.
+  ///
+  /// In en, this message translates to:
+  /// **'Use synthesized data'**
+  String get realAudioUseSynthesized;
+
+  /// No description provided for @realAudioUseReal.
+  ///
+  /// In en, this message translates to:
+  /// **'Use real audio'**
+  String get realAudioUseReal;
+
+  /// Now-playing queue ⋮ menu: opens the Share Playlist dialog for the queue. Sentence case like the menu's other rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Share playlist'**
+  String get queueSharePlaylist;
 }
 
 class _AppLocalizationsDelegate

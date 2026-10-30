@@ -80,12 +80,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tapAppendAndJump => '追加して再生';
 
   @override
-  String get visualizerEngineMilkdrop => 'Milkdrop';
-
-  @override
-  String get visualizerEngineShaders => 'シェーダー';
-
-  @override
   String get visualizerSourceSynthesized => 'シンセサイズ';
 
   @override
@@ -234,17 +228,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsEqSubtitle => '低音・中音・高音を調整します。Android のみ。';
 
   @override
-  String get settingsVisualizerEngine => 'ビジュアライザーエンジン';
-
-  @override
-  String get visualizerEngineSubtitleMilkdrop =>
-      'projectM による Milkdrop プリセット（デフォルト）。効果が豊かで、GPU への負荷が高めです。';
-
-  @override
-  String get visualizerEngineSubtitleShaders =>
-      'Shadertoy スタイルのフラグメントシェーダー。軽量でモジュール式 — assets/shaders/ に .glsl ファイルを置くとカタログを拡張できます。';
-
-  @override
   String get settingsVisualizerSource => 'ビジュアライザーの音声ソース';
 
   @override
@@ -303,7 +286,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get realAudioDialogBody =>
-      '実音声モードでは、ビジュアライザーが反応できるよう、スマートフォンが再生中の音楽の波形を読み取ります。Android ではこのために RECORD_AUDIO 権限が必要です — アプリが音声を録音したり、どこかに送信したりすることはありません。いつでもシンセサイズ音声に戻せます。';
+      '再生中の曲に反応するため、ビジュアライザーは mStream 自身の音声出力を読み取ります。Android では、これにマイクの権限が必要です。';
 
   @override
   String get realAudioPermPermanentlyDenied =>
@@ -971,9 +954,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get queueEmptyDjChoose => '曲を選ぶ';
 
   @override
-  String get visualizerTitle => 'ビジュアライザー';
-
-  @override
   String get mainClearQueue => 'キューをクリア';
 
   @override
@@ -1144,7 +1124,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsVisualizerKnobsSubtitle =>
-      '各シェーダーの音声反応をその場で調整できるスライダーをビジュアライザー上に表示します。シェーダーエンジンのみ。';
+      '各シェーダーの音声反応をその場で調整できるスライダーをビジュアライザー上に表示します。ShaderToy ビジュアライザーのみ。';
 
   @override
   String get visualizerTuningTitle => '調整';
@@ -1628,7 +1608,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      '独自の .glsl ファイルをシェーダーエンジンのローテーションに追加します。';
+      '独自の .glsl ファイルを ShaderToy ビジュアライザーのローテーションに追加します。';
 
   @override
   String get importedShadersRescan => 'フォルダを再スキャン';
@@ -1641,7 +1621,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーはシェーダーエンジンが有効なときにローテーションに加わります。';
+      'USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーは ShaderToy ビジュアライザーのローテーションに加わります。';
 
   @override
   String get importedShadersRemove => '削除';
@@ -2231,23 +2211,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'アクセントカラーはボタン・スライダー・プレーヤーの操作部分に使われます。タップして試してみてください。';
 
   @override
-  String get setupVisualizerTitle => 'ビジュアライザーで実際の音声を使う';
-
-  @override
-  String get setupVisualizerBody => 'この設定を有効にするまで、ビジュアライザーはシンセサイズされたデータを使用します。';
-
-  @override
-  String get setupVisualizerWarning =>
-      'オンにするとマイクの権限を求めます。Android は、端末の音声ストリームをデコードするアプリにこの権限を要求します（ビジュアライザーがこれに当たります）。';
-
-  @override
   String get setupPlaybackTitle => '曲をタップしたときの動作';
 
   @override
   String get setupOfflineTitle => 'キューをオフラインで保持';
 
   @override
-  String get setupVisualizerNoMic => 'mStream がマイクを使用することはありません。';
+  String get realAudioNoMic => 'mStream がマイクを使用することはありません。';
 
   @override
   String get playlistEmpty => 'プレイリストは空です';
@@ -5158,4 +5128,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverElsewhereOpensOutside => 'アプリの外で開きます';
+
+  @override
+  String get visualizerMilkdropTitle => 'Milkdrop ビジュアライザー';
+
+  @override
+  String get visualizerShadertoyTitle => 'ShaderToy ビジュアライザー';
+
+  @override
+  String get realAudioSynthesizedNote => '権限がない場合、ビジュアライザーはシンセサイズされたデータを使用します。';
+
+  @override
+  String get realAudioDontAskAgain => '今後確認しない';
+
+  @override
+  String get realAudioUseSynthesized => 'シンセサイズデータを使う';
+
+  @override
+  String get realAudioUseReal => '実音声を使う';
+
+  @override
+  String get queueSharePlaylist => 'プレイリストを共有';
 }

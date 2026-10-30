@@ -84,12 +84,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tapAppendAndJump => 'Добавить и воспроизвести';
 
   @override
-  String get visualizerEngineMilkdrop => 'Milkdrop';
-
-  @override
-  String get visualizerEngineShaders => 'Шейдеры';
-
-  @override
   String get visualizerSourceSynthesized => 'Синтезированный';
 
   @override
@@ -241,17 +235,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Настройте низкие, средние и высокие частоты. Только на Android.';
 
   @override
-  String get settingsVisualizerEngine => 'Движок визуализации';
-
-  @override
-  String get visualizerEngineSubtitleMilkdrop =>
-      'Пресеты Milkdrop через projectM (по умолчанию). Более насыщенные эффекты, выше нагрузка на GPU.';
-
-  @override
-  String get visualizerEngineSubtitleShaders =>
-      'Фрагментные шейдеры в стиле Shadertoy. Легче и модульнее — добавляйте файлы .glsl в assets/shaders/, чтобы расширить каталог.';
-
-  @override
   String get settingsVisualizerSource => 'Источник звука визуализации';
 
   @override
@@ -313,7 +296,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get realAudioDialogBody =>
-      'Режим реального звука считывает форму волны музыки, которую воспроизводит телефон, чтобы визуализация могла реагировать на неё. Для этого Android требует разрешение RECORD_AUDIO — приложение никуда не записывает и не отправляет звук. Вы можете в любой момент вернуться к синтезированному режиму.';
+      'Чтобы реагировать на воспроизводимый трек, визуализация считывает собственный аудиовыход mStream, а Android позволяет это только при наличии разрешения на микрофон.';
 
   @override
   String get realAudioPermPermanentlyDenied =>
@@ -1017,9 +1000,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get queueEmptyDjChoose => 'Выбрать трек';
 
   @override
-  String get visualizerTitle => 'Визуализация';
-
-  @override
   String get mainClearQueue => 'Очистить очередь';
 
   @override
@@ -1197,7 +1177,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsVisualizerKnobsSubtitle =>
-      'Показывать живые ползунки поверх визуализации, чтобы подстраивать реакцию каждого шейдера на звук. Только для движка шейдеров.';
+      'Показывать живые ползунки поверх визуализации, чтобы подстраивать реакцию каждого шейдера на звук. Только для визуализации ShaderToy.';
 
   @override
   String get visualizerTuningTitle => 'Настройка';
@@ -1720,7 +1700,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Добавьте свои файлы .glsl в ротацию движка шейдеров.';
+      'Добавьте свои файлы .glsl в ротацию визуализации ShaderToy.';
 
   @override
   String get importedShadersRescan => 'Пересканировать папку';
@@ -1734,7 +1714,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок шейдеров.';
+      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию визуализации ShaderToy.';
 
   @override
   String get importedShadersRemove => 'Удалить';
@@ -2367,25 +2347,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'Акцентный цвет выделяет кнопки, ползунки и элементы управления плеером. Коснитесь любого, чтобы попробовать.';
 
   @override
-  String get setupVisualizerTitle => 'Реальный звук для визуализации';
-
-  @override
-  String get setupVisualizerBody =>
-      'Пока это не включено, визуализация использует синтезированные данные.';
-
-  @override
-  String get setupVisualizerWarning =>
-      'При включении запрашивается разрешение на микрофон — Android требует его от приложений, которые декодируют аудиопоток устройства (а визуализация это делает).';
-
-  @override
   String get setupPlaybackTitle => 'При нажатии на трек';
 
   @override
   String get setupOfflineTitle => 'Очередь доступна и офлайн';
 
   @override
-  String get setupVisualizerNoMic =>
-      'mStream никогда не использует ваш микрофон.';
+  String get realAudioNoMic => 'mStream никогда не использует ваш микрофон.';
 
   @override
   String get playlistEmpty => 'Плейлист пуст';
@@ -5545,4 +5513,26 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverElsewhereOpensOutside => 'Откроется вне приложения';
+
+  @override
+  String get visualizerMilkdropTitle => 'Визуализация Milkdrop';
+
+  @override
+  String get visualizerShadertoyTitle => 'Визуализация ShaderToy';
+
+  @override
+  String get realAudioSynthesizedNote =>
+      'Без разрешения визуализация использует синтезированные данные.';
+
+  @override
+  String get realAudioDontAskAgain => 'Больше не спрашивать';
+
+  @override
+  String get realAudioUseSynthesized => 'Использовать синтезированные данные';
+
+  @override
+  String get realAudioUseReal => 'Использовать реальный звук';
+
+  @override
+  String get queueSharePlaylist => 'Поделиться плейлистом';
 }
