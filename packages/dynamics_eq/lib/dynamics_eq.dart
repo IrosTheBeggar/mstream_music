@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 /// and the other calls are no-ops.
 class DynamicsEq {
   static const MethodChannel _channel = MethodChannel('mstream/dynamics_eq');
+  static const EventChannel _route = EventChannel('mstream/dynamics_eq/route');
 
   /// API 28+ and the device's effect library can create the effect, probed
   /// once natively on a throwaway session.
@@ -59,5 +60,25 @@ class DynamicsEq {
   static Future<void> release() async {
     if (!Platform.isAndroid) return;
     await _channel.invokeMethod<void>('release');
+  }
+
+  /// The output media plays through right now, as `{kind, name, address}`;
+  /// null off Android or when the platform has no answer.
+  static Future<Map<String, Object?>?> currentRoute() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final m = await _channel.invokeMethod<Map<Object?, Object?>>('routeCurrent');
+      return m?.cast<String, Object?>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The route again whenever an audio device appears or goes.
+  static Stream<Map<String, Object?>> routeChanges() {
+    if (!Platform.isAndroid) return const Stream.empty();
+    return _route
+        .receiveBroadcastStream()
+        .map((e) => (e as Map).cast<String, Object?>());
   }
 }

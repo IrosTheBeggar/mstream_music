@@ -221,6 +221,82 @@ class AppLocalizationsEs extends AppLocalizations {
       'Un número sobre cada banda, no solo al arrastrar.';
 
   @override
+  String get eqOutputsTitle => 'Salidas';
+
+  @override
+  String get eqOutputsRowOff => 'Desactivado: una curva para todas las salidas';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name ahora';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Cambiar automáticamente';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Cuando cambia la salida, se aplica su curva. Arrastrar en la página del ecualizador edita la salida que suena ahora.';
+
+  @override
+  String get eqOutputsRemembered => 'Salidas recordadas';
+
+  @override
+  String get eqOutputSpeaker => 'Altavoz del teléfono';
+
+  @override
+  String get eqOutputWired => 'Auriculares con cable';
+
+  @override
+  String get eqOutputUsb => 'Audio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Otra salida';
+
+  @override
+  String get eqOutputPlayingNow => 'sonando ahora';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'último uso $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Las salidas aparecen aquí a medida que escuchas con ellas.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '¿Olvidar «$name»? Volverá como salida nueva la próxima vez que se conecte.';
+  }
+
+  @override
+  String get eqOutputForget => 'Olvidar';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preajuste para $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Toca una salida para elegir su preajuste. Deslízala para olvidarla.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Activado — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Ahora';
+
+  @override
   String get eqDisabledHint => 'Activa el ecualizador para ajustar las bandas.';
 
   @override

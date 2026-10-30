@@ -486,6 +486,132 @@ abstract class AppLocalizations {
   /// **'A number over every band, not only while dragging.'**
   String get eqShowValuesHint;
 
+  /// Title of the Outputs page and of the options-sheet row that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs'**
+  String get eqOutputsTitle;
+
+  /// Options-sheet row subtitle while per-output curves are off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — one curve for every output'**
+  String get eqOutputsRowOff;
+
+  /// Options-sheet row subtitle naming the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} now'**
+  String eqOutputsNow(String name);
+
+  /// Outputs page: the switch that makes the EQ follow the output.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch automatically'**
+  String get eqOutputsSwitch;
+
+  /// Subtitle of that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.'**
+  String get eqOutputsSwitchHint;
+
+  /// Section label over the remembered outputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Remembered outputs'**
+  String get eqOutputsRemembered;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone speaker'**
+  String get eqOutputSpeaker;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Wired headphones'**
+  String get eqOutputWired;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'USB audio'**
+  String get eqOutputUsb;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'HDMI'**
+  String get eqOutputHdmi;
+
+  /// Output kind (Bluetooth devices are shown by their own name; this word is the kind).
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get eqOutputBluetooth;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Other output'**
+  String get eqOutputOther;
+
+  /// Row subtitle part for the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'playing now'**
+  String get eqOutputPlayingNow;
+
+  /// Row subtitle part with a short date.
+  ///
+  /// In en, this message translates to:
+  /// **'last used {date}'**
+  String eqOutputLastUsed(String date);
+
+  /// Outputs page when nothing is remembered yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs appear here as you listen on them.'**
+  String get eqOutputsEmpty;
+
+  /// Confirmation when swiping an output away.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget “{name}”? It comes back as a new output the next time it connects.'**
+  String eqOutputForgetConfirm(String name);
+
+  /// Confirm button of that dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get eqOutputForget;
+
+  /// Title of the preset picker for one output.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset for {name}'**
+  String eqOutputPickPreset(String name);
+
+  /// Footer hint on the Outputs page.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an output to pick its preset. Swipe one away to forget it.'**
+  String get eqOutputsHint;
+
+  /// EQ enable switch subtitle when on and the curve follows the named output.
+  ///
+  /// In en, this message translates to:
+  /// **'On — {name}'**
+  String eqEnabledOnOutput(String name);
+
+  /// Small pill on the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get eqOutputNowPill;
+
   /// No description provided for @eqDisabledHint.
   ///
   /// In en, this message translates to:

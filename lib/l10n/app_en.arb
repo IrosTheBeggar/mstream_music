@@ -248,6 +248,95 @@
   "@eqShowValuesHint": {
     "description": "Subtitle of the Always show band values switch."
   },
+  "eqOutputsTitle": "Outputs",
+  "@eqOutputsTitle": {
+    "description": "Title of the Outputs page and of the options-sheet row that opens it."
+  },
+  "eqOutputsRowOff": "Off — one curve for every output",
+  "@eqOutputsRowOff": {
+    "description": "Options-sheet row subtitle while per-output curves are off."
+  },
+  "eqOutputsNow": "{name} now",
+  "@eqOutputsNow": {
+    "description": "Options-sheet row subtitle naming the output in use.",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "eqOutputsSwitch": "Switch automatically",
+  "@eqOutputsSwitch": {
+    "description": "Outputs page: the switch that makes the EQ follow the output."
+  },
+  "eqOutputsSwitchHint": "When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.",
+  "@eqOutputsSwitchHint": {
+    "description": "Subtitle of that switch."
+  },
+  "eqOutputsRemembered": "Remembered outputs",
+  "@eqOutputsRemembered": {
+    "description": "Section label over the remembered outputs."
+  },
+  "eqOutputSpeaker": "Phone speaker",
+  "@eqOutputSpeaker": {
+    "description": "Output kind."
+  },
+  "eqOutputWired": "Wired headphones",
+  "@eqOutputWired": {
+    "description": "Output kind."
+  },
+  "eqOutputUsb": "USB audio",
+  "@eqOutputUsb": {
+    "description": "Output kind."
+  },
+  "eqOutputHdmi": "HDMI",
+  "@eqOutputHdmi": {
+    "description": "Output kind."
+  },
+  "eqOutputBluetooth": "Bluetooth",
+  "@eqOutputBluetooth": {
+    "description": "Output kind (Bluetooth devices are shown by their own name; this word is the kind)."
+  },
+  "eqOutputOther": "Other output",
+  "@eqOutputOther": {
+    "description": "Output kind."
+  },
+  "eqOutputPlayingNow": "playing now",
+  "@eqOutputPlayingNow": {
+    "description": "Row subtitle part for the output in use."
+  },
+  "eqOutputLastUsed": "last used {date}",
+  "@eqOutputLastUsed": {
+    "description": "Row subtitle part with a short date.",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "eqOutputsEmpty": "Outputs appear here as you listen on them.",
+  "@eqOutputsEmpty": {
+    "description": "Outputs page when nothing is remembered yet."
+  },
+  "eqOutputForgetConfirm": "Forget “{name}”? It comes back as a new output the next time it connects.",
+  "@eqOutputForgetConfirm": {
+    "description": "Confirmation when swiping an output away.",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "eqOutputForget": "Forget",
+  "@eqOutputForget": {
+    "description": "Confirm button of that dialog."
+  },
+  "eqOutputPickPreset": "Preset for {name}",
+  "@eqOutputPickPreset": {
+    "description": "Title of the preset picker for one output.",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "eqOutputsHint": "Tap an output to pick its preset. Swipe one away to forget it.",
+  "@eqOutputsHint": {
+    "description": "Footer hint on the Outputs page."
+  },
+  "eqEnabledOnOutput": "On — {name}",
+  "@eqEnabledOnOutput": {
+    "description": "EQ enable switch subtitle when on and the curve follows the named output.",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "eqOutputNowPill": "Now",
+  "@eqOutputNowPill": {
+    "description": "Small pill on the output in use."
+  },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",

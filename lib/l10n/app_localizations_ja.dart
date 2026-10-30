@@ -214,6 +214,80 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqShowValuesHint => 'ドラッグ中だけでなく、各バンドの上に数値を表示します。';
 
   @override
+  String get eqOutputsTitle => '出力先';
+
+  @override
+  String get eqOutputsRowOff => 'オフ — すべての出力先で同じカーブ';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '現在: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => '自動で切り替える';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      '出力先が変わると、そのカーブが適用されます。イコライザー画面でのドラッグは、再生中の出力先を編集します。';
+
+  @override
+  String get eqOutputsRemembered => '記憶した出力先';
+
+  @override
+  String get eqOutputSpeaker => '本体スピーカー';
+
+  @override
+  String get eqOutputWired => '有線ヘッドホン';
+
+  @override
+  String get eqOutputUsb => 'USBオーディオ';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'その他の出力先';
+
+  @override
+  String get eqOutputPlayingNow => '再生中';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return '最終使用 $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => '出力先は、それで聴くとここに表示されます。';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '「$name」を忘れますか？ 次に接続したときに新しい出力先として表示されます。';
+  }
+
+  @override
+  String get eqOutputForget => '忘れる';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return '$name のプリセット';
+  }
+
+  @override
+  String get eqOutputsHint => '出力先をタップしてプリセットを選びます。スワイプすると忘れます。';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'オン — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => '現在';
+
+  @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';
 
   @override

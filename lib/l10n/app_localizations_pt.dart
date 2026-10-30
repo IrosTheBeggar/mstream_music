@@ -220,6 +220,82 @@ class AppLocalizationsPt extends AppLocalizations {
       'Um número sobre cada banda, não só ao arrastar.';
 
   @override
+  String get eqOutputsTitle => 'Saídas';
+
+  @override
+  String get eqOutputsRowOff => 'Desativado — uma curva para todas as saídas';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name agora';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Trocar automaticamente';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Quando a saída muda, a curva dela é aplicada. Arrastar na página do equalizador edita a saída que está tocando.';
+
+  @override
+  String get eqOutputsRemembered => 'Saídas lembradas';
+
+  @override
+  String get eqOutputSpeaker => 'Alto-falante do celular';
+
+  @override
+  String get eqOutputWired => 'Fones com fio';
+
+  @override
+  String get eqOutputUsb => 'Áudio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Outra saída';
+
+  @override
+  String get eqOutputPlayingNow => 'tocando agora';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'último uso $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'As saídas aparecem aqui conforme você ouve nelas.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Esquecer “$name”? Ela volta como uma saída nova na próxima vez que conectar.';
+  }
+
+  @override
+  String get eqOutputForget => 'Esquecer';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Predefinição para $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Toque em uma saída para escolher a predefinição dela. Deslize para esquecê-la.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Ligado — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Agora';
+
+  @override
   String get eqDisabledHint => 'Ative o equalizador para ajustar as bandas.';
 
   @override

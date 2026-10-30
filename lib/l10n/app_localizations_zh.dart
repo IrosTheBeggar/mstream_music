@@ -212,6 +212,79 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqShowValuesHint => '在每个频段上方显示数值，而不只是拖动时。';
 
   @override
+  String get eqOutputsTitle => '输出设备';
+
+  @override
+  String get eqOutputsRowOff => '已关闭 — 所有输出设备共用一条曲线';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '当前：$name';
+  }
+
+  @override
+  String get eqOutputsSwitch => '自动切换';
+
+  @override
+  String get eqOutputsSwitchHint => '输出设备变化时，会应用它的曲线。在均衡器页面拖动，编辑的是正在播放的输出设备。';
+
+  @override
+  String get eqOutputsRemembered => '已记住的输出设备';
+
+  @override
+  String get eqOutputSpeaker => '手机扬声器';
+
+  @override
+  String get eqOutputWired => '有线耳机';
+
+  @override
+  String get eqOutputUsb => 'USB 音频';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => '蓝牙';
+
+  @override
+  String get eqOutputOther => '其他输出设备';
+
+  @override
+  String get eqOutputPlayingNow => '正在播放';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return '上次使用 $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => '用某个输出设备听过后，它会出现在这里。';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '忘记“$name”？下次连接时它会作为新设备再次出现。';
+  }
+
+  @override
+  String get eqOutputForget => '忘记';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return '$name 的预设';
+  }
+
+  @override
+  String get eqOutputsHint => '点按输出设备可选择其预设。向左滑动可忘记它。';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return '已开启 — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => '当前';
+
+  @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
 
   @override

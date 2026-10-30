@@ -221,6 +221,83 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un nombre au-dessus de chaque bande, pas seulement pendant le glissement.';
 
   @override
+  String get eqOutputsTitle => 'Sorties';
+
+  @override
+  String get eqOutputsRowOff =>
+      'Désactivé — une courbe pour toutes les sorties';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name en ce moment';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Changer automatiquement';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Quand la sortie change, sa courbe est appliquée. Glisser sur la page Égaliseur modifie la sortie en cours de lecture.';
+
+  @override
+  String get eqOutputsRemembered => 'Sorties mémorisées';
+
+  @override
+  String get eqOutputSpeaker => 'Haut-parleur du téléphone';
+
+  @override
+  String get eqOutputWired => 'Casque filaire';
+
+  @override
+  String get eqOutputUsb => 'Audio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Autre sortie';
+
+  @override
+  String get eqOutputPlayingNow => 'en cours de lecture';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'dernière utilisation $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Les sorties apparaissent ici au fil de vos écoutes.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Oublier « $name » ? Elle réapparaîtra comme nouvelle sortie à sa prochaine connexion.';
+  }
+
+  @override
+  String get eqOutputForget => 'Oublier';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Préréglage pour $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Touchez une sortie pour choisir son préréglage. Balayez-la pour l\'oublier.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Activé — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Maintenant';
+
+  @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';
 
   @override

@@ -220,6 +220,82 @@ class AppLocalizationsIt extends AppLocalizations {
       'Un numero sopra ogni banda, non solo durante il trascinamento.';
 
   @override
+  String get eqOutputsTitle => 'Uscite';
+
+  @override
+  String get eqOutputsRowOff => 'Disattivato: una curva per tutte le uscite';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name adesso';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Cambia automaticamente';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Quando cambia l\'uscita, viene applicata la sua curva. Trascinare nella pagina dell\'equalizzatore modifica l\'uscita in riproduzione.';
+
+  @override
+  String get eqOutputsRemembered => 'Uscite memorizzate';
+
+  @override
+  String get eqOutputSpeaker => 'Altoparlante del telefono';
+
+  @override
+  String get eqOutputWired => 'Cuffie con filo';
+
+  @override
+  String get eqOutputUsb => 'Audio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Altra uscita';
+
+  @override
+  String get eqOutputPlayingNow => 'in riproduzione';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'ultimo uso $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Le uscite compaiono qui man mano che le usi per ascoltare.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Dimenticare “$name”? Tornerà come nuova uscita alla prossima connessione.';
+  }
+
+  @override
+  String get eqOutputForget => 'Dimentica';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset per $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tocca un\'uscita per scegliere il suo preset. Scorrila via per dimenticarla.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Attivo — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Adesso';
+
+  @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';
 
   @override

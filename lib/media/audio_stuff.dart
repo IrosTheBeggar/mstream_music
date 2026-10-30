@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:wifi_lock_shim/wifi_lock_shim.dart';
 import 'playback_backend.dart';
 import 'dynamics_equalizer.dart';
+import 'eq_output_router.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
@@ -123,6 +124,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// AndroidEqualizer above is the engine. Lives on the local backend for
   /// the app's life; the EQ screen reads it through LiveEqAudio.
   DynamicsEqualizer? get dynamicsEqualizer => _localBackend.dynamicsEqualizer;
+
+  /// Per-output EQ curves (ten-band engine only): follows the audio route
+  /// and swaps the engine's gains; null where the engine is the five-band
+  /// one, which has no fixed layout to store a curve in.
+  late final EqOutputRouter? eqOutputs = dynamicsEqualizer == null
+      ? null
+      : EqOutputRouter(
+          port: PluginRoutePort(),
+          store: SettingsEqOutputStore(),
+          applyGains: _applyRoutedEqGains,
+          readGains: () => dynamicsEqualizer?.gains ?? const [],
+        );
+
+  Future<void> _applyRoutedEqGains(List<double> gains) async {
+    final dyn = dynamicsEqualizer;
+    if (dyn == null) return;
+    await dyn.setGains(gains);
+    await SettingsManager().setEqDynamicsGains(gains);
+  }
 
   int? get index => _backend.currentIndex;
 
@@ -533,6 +553,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       castLog('Error seeding playback backend', error: e);
     }
     await _applySavedEqualizer();
+    try {
+      await eqOutputs?.start();
+    } catch (e) {
+      appLog('[eq] outputs: $e');
+    }
   }
 
   // Apply persisted EQ state. setEnabled is immediate; band gains can only be

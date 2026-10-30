@@ -1,12 +1,18 @@
 package music.mstream.dynamics_eq
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.audiofx.DynamicsProcessing
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.RequiresApi
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
@@ -27,23 +33,45 @@ import io.flutter.plugin.common.MethodChannel
  *   setEnabled(enabled)
  *   setLimiter(enabled)                         -> the limiter stage on/off
  *   release()
+ *   routeCurrent()                              -> {kind, name, address}: the
+ *       output media plays through (the device media routes to on Android
+ *       12+, the best available output below); kind is speaker / wired /
+ *       bluetooth / usb / hdmi / other
+ *
+ * Event channel "mstream/dynamics_eq/route": the same map whenever an audio
+ * device appears or goes (and once more shortly after, when routing has
+ * settled), plus once on subscribe.
  *
  * The effect is released when the engine detaches, so a killed engine can
  * never strand one on the session.
  */
 class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private var channel: MethodChannel? = null
+    private var routeChannel: EventChannel? = null
+    private var routes: RouteStream? = null
     private var impl: Impl? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         impl = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) Impl(binding.applicationContext) else null
         channel = MethodChannel(binding.binaryMessenger, "mstream/dynamics_eq")
         channel?.setMethodCallHandler(this)
+        impl?.let { i ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val r = RouteStream(i, binding.applicationContext)
+                routes = r
+                routeChannel = EventChannel(binding.binaryMessenger, "mstream/dynamics_eq/route")
+                routeChannel?.setStreamHandler(r)
+            }
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel?.setMethodCallHandler(null)
         channel = null
+        routeChannel?.setStreamHandler(null)
+        routeChannel = null
+        routes?.onCancel(null)
+        routes = null
         impl?.release()
         impl = null
     }
@@ -80,6 +108,7 @@ class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     i?.release()
                     result.success(null)
                 }
+                "routeCurrent" -> result.success(i?.currentRoute())
                 else -> result.notImplemented()
             }
         } catch (e: Exception) {
@@ -89,6 +118,36 @@ class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private companion object {
         const val TAG = "DynamicsEq"
+    }
+
+    /** The route on every device change, settled again 800 ms later. */
+    @RequiresApi(Build.VERSION_CODES.P)
+    private class RouteStream(private val impl: Impl, private val context: Context) : EventChannel.StreamHandler {
+        private var callback: AudioDeviceCallback? = null
+        private val main = Handler(Looper.getMainLooper())
+
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+            onCancel(null)
+            val cb = object : AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) = push(events)
+                override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = push(events)
+            }
+            am.registerAudioDeviceCallback(cb, main)
+            callback = cb
+            events?.success(impl.currentRoute())
+        }
+
+        private fun push(events: EventChannel.EventSink?) {
+            events?.success(impl.currentRoute())
+            main.postDelayed({ if (callback != null) events?.success(impl.currentRoute()) }, 800)
+        }
+
+        override fun onCancel(arguments: Any?) {
+            val cb = callback ?: return
+            callback = null
+            (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.unregisterAudioDeviceCallback(cb)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.P)
@@ -157,6 +216,45 @@ class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         fun release() {
             effect?.release()
             effect = null
+        }
+
+        fun currentRoute(): Map<String, Any?> {
+            val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return mapOf("kind" to "speaker", "name" to "", "address" to "")
+            val d = pickRoute(am)
+                ?: return mapOf("kind" to "speaker", "name" to "", "address" to "")
+            return mapOf(
+                "kind" to kindOf(d.type),
+                "name" to d.productName.toString(),
+                "address" to (d.address ?: ""),
+            )
+        }
+
+        // Android 12+ says where media routes; below, the best available
+        // output is what the policy would pick anyway.
+        private fun pickRoute(am: AudioManager): AudioDeviceInfo? {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()
+                val routed = am.getAudioDevicesForAttributes(attrs)
+                if (routed.isNotEmpty()) return routed[0]
+            }
+            val outs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            for (k in listOf("bluetooth", "usb", "wired", "hdmi", "speaker")) {
+                outs.firstOrNull { kindOf(it.type) == k }?.let { return it }
+            }
+            return outs.firstOrNull()
+        }
+
+        // Numeric literals for the types newer than this plugin's minimum:
+        // 24 = BUILTIN_SPEAKER_SAFE, 26/27/30 = BLE headset/speaker/broadcast.
+        private fun kindOf(type: Int): String = when (type) {
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLUETOOTH_SCO, 26, 27, 30 -> "bluetooth"
+            AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_LINE_ANALOG, AudioDeviceInfo.TYPE_LINE_DIGITAL -> "wired"
+            AudioDeviceInfo.TYPE_USB_DEVICE, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_ACCESSORY -> "usb"
+            AudioDeviceInfo.TYPE_HDMI, AudioDeviceInfo.TYPE_HDMI_ARC, AudioDeviceInfo.TYPE_DOCK -> "hdmi"
+            AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, 24 -> "speaker"
+            else -> "other"
         }
 
         // Stereo is a hint only: the framework keeps the session's real

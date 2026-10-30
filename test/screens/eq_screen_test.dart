@@ -9,8 +9,10 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
+import 'package:mstream_music/media/eq_output_router.dart';
 import 'package:mstream_music/screens/eq/eq_controller.dart';
 import 'package:mstream_music/screens/eq/eq_curve.dart';
+import 'package:mstream_music/screens/eq/eq_outputs_screen.dart';
 import 'package:mstream_music/screens/eq/eq_presets.dart';
 import 'package:mstream_music/screens/eq/eq_screen.dart';
 
@@ -475,5 +477,143 @@ void main() {
     audio.supported = false;
     await pumpScreen(tester);
     expect(find.byKey(const Key('eq-options')), findsNothing);
+  });
+
+  group('per output', () {
+    late FakeRoutePort port;
+    late FakeOutputStore store;
+    late List<List<double>> applied;
+    final carKey =
+        EqOutput.fromRoute(route('bluetooth', name: 'Mazda', address: 'A')).key;
+
+    Future<EqParams> pumpWithRouter(WidgetTester tester,
+        {bool on = false,
+        List<EqOutputProfile> profiles = const []}) async {
+      final p = fakeParams(gains: const [5, 3, -1, 3, 5]);
+      port = FakeRoutePort(route('bluetooth', name: 'Mazda', address: 'A'));
+      store = FakeOutputStore()
+        ..perOutput = on
+        ..profiles = List.of(profiles);
+      applied = [];
+      final r = EqOutputRouter(
+        port: port,
+        store: store,
+        applyGains: (g) async {
+          applied.add(List<double>.of(g));
+          for (var i = 0; i < p.bands.length; i++) {
+            await p.bands[i].setGain(g[i]);
+          }
+        },
+        readGains: () => [for (final b in p.bands) b.gain],
+        frequencies: const [60, 230, 910, 3600, 14000],
+        settle: const Duration(milliseconds: 1),
+      );
+      audio.outputs = r;
+      await r.start();
+      await pumpReady(tester, params: p);
+      return p;
+    }
+
+    tearDown(() => audio.outputs?.dispose());
+
+    testWidgets('the sheet row says Off and opens the page; switching on adopts the curve and names the output',
+        (tester) async {
+      await pumpWithRouter(tester);
+      expect(find.text('On — gains applied to playback'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('eq-options')));
+      await tester.pumpAndSettle();
+      final row = find.byKey(const Key('eq-opt-outputs'));
+      expect(
+          find.descendant(
+              of: row, matching: find.text('Off — one curve for every output')),
+          findsOneWidget);
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      final sw = find.byKey(const Key('eq-out-switch'));
+      expect(tester.widget<SwitchListTile>(sw).value, isFalse);
+      expect(find.text('Outputs appear here as you listen on them.'),
+          findsOneWidget);
+      await tester.tap(sw);
+      await tester.pumpAndSettle();
+      expect(store.perOutput, isTrue);
+      expect(store.profiles.single.gains, [5, 3, -1, 3, 5]);
+      expect(store.profiles.single.name, 'Mazda');
+      expect(applied, isEmpty);
+      expect(find.text('Mazda'), findsOneWidget);
+      expect(find.text('Bluetooth · Rock · playing now'), findsOneWidget);
+      expect(find.text('NOW'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('On — Mazda'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('eq-options')));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: row, matching: find.text('Mazda now')),
+          findsOneWidget);
+    });
+
+    testWidgets('the Outputs page: a preset per output, live for the one in use, swipe to forget',
+        (tester) async {
+      final p = await pumpWithRouter(tester, on: true, profiles: [
+        EqOutputProfile(
+            key: carKey,
+            kind: EqOutputKind.bluetooth,
+            name: 'Mazda',
+            gains: const [5, 3, -1, 3, 5],
+            lastUsed: DateTime(2026, 10, 30)),
+        EqOutputProfile(
+            key: 'speaker',
+            kind: EqOutputKind.speaker,
+            name: '',
+            gains: const [0, 0, 0, 0, 0],
+            lastUsed: DateTime(2026, 10, 12)),
+      ]);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        home: EqOutputsScreen(controller: controller),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Mazda'), findsOneWidget);
+      expect(find.text('Phone speaker'), findsOneWidget);
+      expect(find.text('Flat · last used Oct 12'), findsOneWidget);
+      expect(find.text('NOW'), findsOneWidget);
+      applied.clear();
+      // Another output: stored, not applied.
+      await tester.tap(find.byKey(const ValueKey('eq-out-row-speaker')));
+      await tester.pumpAndSettle();
+      expect(find.text('Preset for Phone speaker'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('eq-out-pick-classical')));
+      await tester.pumpAndSettle();
+      expect(store.profiles.firstWhere((q) => q.key == 'speaker').gains,
+          [5, 3, -2, 4, 4]);
+      expect(applied, isEmpty);
+      expect(find.text('Classical · last used Oct 12'), findsOneWidget);
+      // The one in use: live.
+      await tester.tap(find.byKey(ValueKey('eq-out-row-$carKey')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('eq-out-pick-flat')));
+      await tester.pumpAndSettle();
+      expect(applied, [
+        [0, 0, 0, 0, 0]
+      ]);
+      expect(p.bands.map((b) => b.gain), everyElement(0));
+      expect(find.text('Bluetooth · Flat · playing now'), findsOneWidget);
+      // Swipe the speaker away and confirm.
+      await tester.drag(find.byKey(const ValueKey('eq-out-row-speaker')),
+          const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('eq-out-forget-confirm')));
+      await tester.pumpAndSettle();
+      expect(store.profiles.map((q) => q.key), [carKey]);
+      expect(find.text('Phone speaker'), findsNothing);
+    });
+  });
+
+  testWidgets('no Outputs row where the engine keeps no per-output curves',
+      (tester) async {
+    await pumpReady(tester);
+    await tester.tap(find.byKey(const Key('eq-options')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('eq-opt-outputs')), findsNothing);
   });
 }

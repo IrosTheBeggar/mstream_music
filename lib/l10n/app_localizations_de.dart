@@ -221,6 +221,82 @@ class AppLocalizationsDe extends AppLocalizations {
       'Über jedem Band eine Zahl, nicht nur beim Ziehen.';
 
   @override
+  String get eqOutputsTitle => 'Ausgabegeräte';
+
+  @override
+  String get eqOutputsRowOff => 'Aus — eine Kurve für alle Ausgabegeräte';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Jetzt: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Automatisch wechseln';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Wechselt das Ausgabegerät, wird seine Kurve angewendet. Ziehen auf der Equalizer-Seite bearbeitet das Gerät, das gerade spielt.';
+
+  @override
+  String get eqOutputsRemembered => 'Gemerkte Ausgabegeräte';
+
+  @override
+  String get eqOutputSpeaker => 'Telefonlautsprecher';
+
+  @override
+  String get eqOutputWired => 'Kabelkopfhörer';
+
+  @override
+  String get eqOutputUsb => 'USB-Audio';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Anderes Ausgabegerät';
+
+  @override
+  String get eqOutputPlayingNow => 'spielt gerade';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'zuletzt $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Ausgabegeräte erscheinen hier, sobald du darüber hörst.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '„$name“ vergessen? Beim nächsten Verbinden erscheint es wieder als neues Gerät.';
+  }
+
+  @override
+  String get eqOutputForget => 'Vergessen';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset für $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tippe auf ein Gerät, um sein Preset zu wählen. Wische es weg, um es zu vergessen.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'An — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Jetzt';
+
+  @override
   String get eqDisabledHint =>
       'Schalte den Equalizer ein, um die Bänder anzupassen.';
 

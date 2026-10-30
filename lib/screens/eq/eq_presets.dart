@@ -103,35 +103,57 @@ class EqPreset {
     return curve.last.$2;
   }
 
-  /// One gain per band of [params], clamped to its range, to 0.1 dB.
-  List<double> gainsFor(EqParams params) => [
-        for (final b in params.bands)
-          (gainAt(b.centerFrequency).clamp(params.minDb, params.maxDb) * 10)
-                  .roundToDouble() /
-              10,
+  /// One gain per centre frequency in [freqs], clamped to the range, to
+  /// 0.1 dB.
+  List<double> gainsForLayout(
+          List<double> freqs, double minDb, double maxDb) =>
+      [
+        for (final f in freqs)
+          (gainAt(f).clamp(minDb, maxDb) * 10).roundToDouble() / 10,
       ];
 
-  /// Whether [gains] (one per band, in band order) are this curve as
-  /// [params] reads it, within 0.05 dB.
-  bool matches(EqParams params, List<double> gains) {
-    final mine = gainsFor(params);
+  /// One gain per band of [params], clamped to its range, to 0.1 dB.
+  List<double> gainsFor(EqParams params) => gainsForLayout(
+      [for (final b in params.bands) b.centerFrequency],
+      params.minDb,
+      params.maxDb);
+
+  /// Whether [gains] (one per band, in band order) are this curve as the
+  /// layout reads it, within 0.05 dB.
+  bool matchesLayout(
+      List<double> freqs, double minDb, double maxDb, List<double> gains) {
+    final mine = gainsForLayout(freqs, minDb, maxDb);
     if (gains.length != mine.length) return false;
     for (var i = 0; i < mine.length; i++) {
       if ((gains[i] - mine[i]).abs() > 0.05) return false;
     }
     return true;
   }
+
+  bool matches(EqParams params, List<double> gains) => matchesLayout(
+      [for (final b in params.bands) b.centerFrequency],
+      params.minDb,
+      params.maxDb,
+      gains);
 }
 
-/// The preset [gains] spell for [params], or null for a custom curve. The
+/// The preset [gains] spell for a layout, or null for a custom curve. The
 /// user's saved curves ([user]) are checked before the built-ins.
-EqPreset? presetFor(EqParams params, List<double> gains,
+EqPreset? presetForLayout(
+    List<double> freqs, double minDb, double maxDb, List<double> gains,
     {List<EqPreset> user = const []}) {
   for (final p in user.followedBy(kEqPresets)) {
-    if (p.matches(params, gains)) return p;
+    if (p.matchesLayout(freqs, minDb, maxDb, gains)) return p;
   }
   return null;
 }
+
+/// The preset [gains] spell for [params], or null for a custom curve.
+EqPreset? presetFor(EqParams params, List<double> gains,
+        {List<EqPreset> user = const []}) =>
+    presetForLayout([for (final b in params.bands) b.centerFrequency],
+        params.minDb, params.maxDb, gains,
+        user: user);
 
 /// Whether two preset names are the same name: case and surrounding spaces
 /// do not make a different preset.

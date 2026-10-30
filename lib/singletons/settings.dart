@@ -219,6 +219,12 @@ class SettingsManager {
   // "Always show band values": a readout over every band, not only the one
   // being dragged.
   bool eqShowValues = false;
+  // "Remember per output": a curve per output (speaker, wired, each Bluetooth
+  // device), swapped in as the route changes. Ten-band engine only.
+  bool eqPerOutput = false;
+  // The remembered outputs, as EqOutputProfile.toJson writes them (raw here,
+  // like the user presets). Their own work, so a settings reset keeps them.
+  List<Map<String, dynamic>> eqOutputProfiles = const [];
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -379,6 +385,14 @@ class SettingsManager {
       eqEnabled = m['eqEnabled'] ?? false;
       eqLimiter = m['eqLimiter'] ?? true;
       eqShowValues = m['eqShowValues'] ?? false;
+      eqPerOutput = m['eqPerOutput'] ?? false;
+      final rawOutputs = m['eqOutputProfiles'];
+      eqOutputProfiles = rawOutputs is List
+          ? [
+              for (final e in rawOutputs)
+                if (e is Map) Map<String, dynamic>.from(e),
+            ]
+          : const [];
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
       offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
@@ -609,6 +623,8 @@ class SettingsManager {
       'eqEnabled': eqEnabled,
       'eqLimiter': eqLimiter,
       'eqShowValues': eqShowValues,
+      'eqPerOutput': eqPerOutput,
+      'eqOutputProfiles': eqOutputProfiles,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
@@ -812,6 +828,16 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setEqPerOutput(bool v) async {
+    eqPerOutput = v;
+    await _save();
+  }
+
+  Future<void> setEqOutputProfiles(List<Map<String, dynamic>> v) async {
+    eqOutputProfiles = v;
+    await _save();
+  }
+
   Future<void> setResumeQueue(bool v) async {
     resumeQueue = v;
     await _save();
@@ -923,6 +949,7 @@ class SettingsManager {
     eqEnabled = false;
     eqLimiter = true;
     eqShowValues = false;
+    eqPerOutput = false;
     resumeQueue = true;
     offlineQueue = false;
     offlineQueueWifiOnly = true;

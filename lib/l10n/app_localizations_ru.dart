@@ -222,6 +222,82 @@ class AppLocalizationsRu extends AppLocalizations {
       'Число над каждой полосой, а не только при перетаскивании.';
 
   @override
+  String get eqOutputsTitle => 'Выходы';
+
+  @override
+  String get eqOutputsRowOff => 'Выключено — одна кривая для всех выходов';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Сейчас: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Переключать автоматически';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Когда выход меняется, применяется его кривая. Перетаскивание на странице эквалайзера меняет выход, который играет сейчас.';
+
+  @override
+  String get eqOutputsRemembered => 'Запомненные выходы';
+
+  @override
+  String get eqOutputSpeaker => 'Динамик телефона';
+
+  @override
+  String get eqOutputWired => 'Проводные наушники';
+
+  @override
+  String get eqOutputUsb => 'USB-аудио';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Другой выход';
+
+  @override
+  String get eqOutputPlayingNow => 'играет сейчас';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'последний раз $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Выходы появятся здесь, когда вы будете через них слушать.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Забыть «$name»? При следующем подключении он появится как новый выход.';
+  }
+
+  @override
+  String get eqOutputForget => 'Забыть';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Пресет для $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Нажмите на выход, чтобы выбрать его пресет. Смахните, чтобы забыть.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Вкл. — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Сейчас';
+
+  @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
 
   @override

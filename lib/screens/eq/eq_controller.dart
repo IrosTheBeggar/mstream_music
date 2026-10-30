@@ -23,6 +23,7 @@ import 'package:just_audio/just_audio.dart'
 
 import '../../media/audio_stuff.dart';
 import '../../media/dynamics_equalizer.dart';
+import '../../media/eq_output_router.dart';
 import '../../singletons/cast_manager.dart';
 import '../../singletons/log_manager.dart';
 import '../../singletons/media.dart';
@@ -115,6 +116,10 @@ abstract class EqAudio {
   /// The persisted "Always show band values" setting.
   bool get showValues;
   Future<void> setShowValues(bool on);
+
+  /// Per-output curves, where the engine supports them (ten-band); null on
+  /// the five-band engine.
+  EqOutputRouter? get outputs;
 }
 
 enum EqStatus {
@@ -150,7 +155,15 @@ class EqController extends ChangeNotifier {
   EqController(this.audio, {this.loadTimeout = const Duration(seconds: 8)}) {
     _castSub = audio.castingChanges.listen((_) => _refresh());
     _playerSub = audio.playerChanges.listen((_) => _refresh());
+    audio.outputs?.addListener(_onOutputs);
     _refresh();
+  }
+
+  /// Per-output curves, or null where the engine cannot keep them.
+  EqOutputRouter? get outputs => audio.outputs;
+
+  void _onOutputs() {
+    if (!_disposed) notifyListeners();
   }
 
   final EqAudio audio;
@@ -462,6 +475,7 @@ class EqController extends ChangeNotifier {
   void dispose() {
     _letGo();
     _disposed = true;
+    audio.outputs?.removeListener(_onOutputs);
     _castSub?.cancel();
     _playerSub?.cancel();
     _cancelGainSubs();
@@ -539,10 +553,14 @@ class LiveEqAudio implements EqAudio {
   Future<void> setEnabled(bool on) => _handler.setEqEnabled(on);
 
   @override
-  Future<void> saveGains(List<double> gains) =>
-      _handler.dynamicsEqualizer != null
-          ? SettingsManager().setEqDynamicsGains(gains)
-          : SettingsManager().setEqBandGains(gains);
+  Future<void> saveGains(List<double> gains) async {
+    if (_handler.dynamicsEqualizer != null) {
+      await SettingsManager().setEqDynamicsGains(gains);
+      await _handler.eqOutputs?.recordGains(gains);
+    } else {
+      await SettingsManager().setEqBandGains(gains);
+    }
+  }
 
   @override
   List<EqPreset> get userPresets => [
@@ -579,6 +597,9 @@ class LiveEqAudio implements EqAudio {
 
   @override
   Future<void> setShowValues(bool on) => SettingsManager().setEqShowValues(on);
+
+  @override
+  EqOutputRouter? get outputs => _handler.eqOutputs;
 }
 
 class _LiveUnit implements EqUnit {

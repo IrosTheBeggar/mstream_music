@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:mstream_music/media/eq_output_router.dart';
 import 'package:mstream_music/screens/eq/eq_controller.dart';
 import 'package:mstream_music/screens/eq/eq_presets.dart';
 import 'package:rxdart/rxdart.dart';
@@ -97,7 +98,12 @@ class FakeEqAudio implements EqAudio {
   Future<void> saveGains(List<double> gains) async {
     savedGains = List<double>.of(gains);
     saveCount++;
+    await outputs?.recordGains(gains);
   }
+
+  /// Per-output curves: a router over fakes when a test wants one.
+  @override
+  EqOutputRouter? outputs;
 
   @override
   List<EqPreset> userPresets = [];
@@ -141,3 +147,41 @@ class FakeEqAudio implements EqAudio {
     showValuesSets.add(on);
   }
 }
+
+/// A route the test sets and changes.
+class FakeRoutePort implements EqRoutePort {
+  FakeRoutePort([this.route]);
+  Map<String, Object?>? route;
+  final _changes = StreamController<Map<String, Object?>>.broadcast();
+
+  @override
+  Future<Map<String, Object?>?> current() async => route;
+
+  @override
+  Stream<Map<String, Object?>> get changes => _changes.stream;
+
+  void emit(Map<String, Object?> r) {
+    route = r;
+    _changes.add(r);
+  }
+}
+
+class FakeOutputStore implements EqOutputStore {
+  @override
+  bool perOutput = false;
+  @override
+  List<EqOutputProfile> profiles = [];
+  int saves = 0;
+
+  @override
+  Future<void> setPerOutput(bool on) async => perOutput = on;
+
+  @override
+  Future<void> saveProfiles(List<EqOutputProfile> p) async {
+    profiles = List<EqOutputProfile>.of(p);
+    saves++;
+  }
+}
+
+Map<String, Object?> route(String kind, {String name = '', String address = ''}) =>
+    {'kind': kind, 'name': name, 'address': address};

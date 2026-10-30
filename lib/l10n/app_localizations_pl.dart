@@ -222,6 +222,82 @@ class AppLocalizationsPl extends AppLocalizations {
       'Liczba nad każdym pasmem, nie tylko podczas przeciągania.';
 
   @override
+  String get eqOutputsTitle => 'Wyjścia';
+
+  @override
+  String get eqOutputsRowOff => 'Wyłączone — jedna krzywa dla wszystkich wyjść';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Teraz: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Przełączaj automatycznie';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Gdy zmieni się wyjście, zastosowana zostanie jego krzywa. Przeciąganie na stronie korektora edytuje wyjście, które teraz gra.';
+
+  @override
+  String get eqOutputsRemembered => 'Zapamiętane wyjścia';
+
+  @override
+  String get eqOutputSpeaker => 'Głośnik telefonu';
+
+  @override
+  String get eqOutputWired => 'Słuchawki przewodowe';
+
+  @override
+  String get eqOutputUsb => 'Dźwięk USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Inne wyjście';
+
+  @override
+  String get eqOutputPlayingNow => 'teraz gra';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'ostatnio $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Wyjścia pojawiają się tutaj, gdy przez nie słuchasz.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Zapomnieć „$name”? Przy następnym połączeniu pojawi się jako nowe wyjście.';
+  }
+
+  @override
+  String get eqOutputForget => 'Zapomnij';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset dla $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Dotknij wyjścia, aby wybrać jego preset. Przesuń je, aby zapomnieć.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Włączony — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Teraz';
+
+  @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';
 
   @override

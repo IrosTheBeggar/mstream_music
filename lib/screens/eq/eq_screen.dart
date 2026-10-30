@@ -15,8 +15,9 @@
 //     is held and the panel fades, so the shaped and the plain sound can be
 //     heard back to back;
 //   * an options sheet from the app bar: Prevent clipping (the ten-band
-//     engine's limiter) and Always show band values (a readout over every
-//     band, not only the dragged one);
+//     engine's limiter), Always show band values (a readout over every band,
+//     not only the dragged one) and, on the ten-band engine, the Outputs page
+//     (eq_outputs_screen.dart) — a curve per output the engine follows;
 //   * the band panel: one vertical slider per band on a hairline rail, and
 //     under the sliders a curve through every thumb with a fill down to 0 dB
 //     (eq_curve.dart), so the shape of the sound reads at a glance. The gain
@@ -34,9 +35,11 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../media/eq_output_router.dart';
 import '../../theme/velvet_theme.dart';
 import 'eq_controller.dart';
 import 'eq_curve.dart';
+import 'eq_outputs_screen.dart';
 import 'eq_presets.dart';
 
 /// How far each rail stops short of its column's ends (the overlay radius):
@@ -204,6 +207,30 @@ Future<void> _showOptions(BuildContext context, EqController c) {
                 onChanged: c.setShowValues,
                 activeThumbColor: VelvetColors.primary,
               ),
+              if (c.outputs case final out?)
+                ListTile(
+                  key: const Key('eq-opt-outputs'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  title: Text(l.eqOutputsTitle,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    _outputsSubtitle(l, out),
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 12),
+                  ),
+                  trailing: Icon(Icons.chevron_right,
+                      color: VelvetColors.textSecondary),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                          builder: (_) => EqOutputsScreen(controller: c)),
+                    );
+                  },
+                ),
               const SizedBox(height: 12),
             ],
           ),
@@ -211,6 +238,14 @@ Future<void> _showOptions(BuildContext context, EqController c) {
       );
     },
   );
+}
+
+String _outputsSubtitle(AppLocalizations l, EqOutputRouter out) {
+  final cur = out.current;
+  if (out.enabled && cur != null) {
+    return l.eqOutputsNow(eqOutputLabel(l, cur.kind, cur.name));
+  }
+  return l.eqOutputsRowOff;
 }
 
 /// Under the panel: Hold to compare where the engine allows it, and Save once
@@ -610,13 +645,24 @@ class _EnableTile extends StatelessWidget {
             color: VelvetColors.textPrimary, fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        controller.enabled ? l.eqEnabledOn : l.eqEnabledOff,
+        _subtitle(l),
         style: TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
       ),
       value: controller.enabled,
       onChanged: controller.canToggle ? controller.setEnabled : null,
       activeThumbColor: VelvetColors.primary,
     );
+  }
+
+  // On, and the engine follows the output: say which one it is on.
+  String _subtitle(AppLocalizations l) {
+    if (!controller.enabled) return l.eqEnabledOff;
+    final out = controller.outputs;
+    final cur = out?.current;
+    if (out != null && out.enabled && cur != null) {
+      return l.eqEnabledOnOutput(eqOutputLabel(l, cur.kind, cur.name));
+    }
+    return l.eqEnabledOn;
   }
 }
 

@@ -219,6 +219,81 @@ class AppLocalizationsEn extends AppLocalizations {
       'A number over every band, not only while dragging.';
 
   @override
+  String get eqOutputsTitle => 'Outputs';
+
+  @override
+  String get eqOutputsRowOff => 'Off — one curve for every output';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name now';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Switch automatically';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.';
+
+  @override
+  String get eqOutputsRemembered => 'Remembered outputs';
+
+  @override
+  String get eqOutputSpeaker => 'Phone speaker';
+
+  @override
+  String get eqOutputWired => 'Wired headphones';
+
+  @override
+  String get eqOutputUsb => 'USB audio';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Other output';
+
+  @override
+  String get eqOutputPlayingNow => 'playing now';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'last used $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => 'Outputs appear here as you listen on them.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Forget “$name”? It comes back as a new output the next time it connects.';
+  }
+
+  @override
+  String get eqOutputForget => 'Forget';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset for $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tap an output to pick its preset. Swipe one away to forget it.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'On — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Now';
+
+  @override
   String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
 
   @override
