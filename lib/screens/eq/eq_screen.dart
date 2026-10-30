@@ -1,18 +1,20 @@
-// Graphic equalizer UI for the Android-native AndroidEqualizer that
-// LocalPlaybackBackend attaches to the player's AudioPipeline while the EQ is
-// on. The state lives in EqController (eq_controller.dart); this file only
-// renders it:
+// Graphic equalizer UI over whichever Android engine the handler built
+// (the ten-band DynamicsProcessing engine, or the device's AndroidEqualizer
+// below Android 9). The state lives in EqController (eq_controller.dart);
+// this file only renders it:
 //
 //   * the enable switch (always shown on Android — it is how the user turns
 //     the EQ on while the pipeline, and so the equalizer object, does not
 //     exist yet), locked while casting or mid-toggle;
-//   * one vertical slider per band the device reports, filled from 0 dB to
-//     the thumb (not from the bottom), with the live gain above and the
-//     centre frequency below;
-//   * a row of preset chips (eq_presets.dart) above the bands; the chip
-//     whose curve the gains spell is the selected one, so a drag deselects;
-//   * a dB axis on the left and a 0 dB guide across the bands, both placed
-//     from the same rail geometry the sliders use;
+//   * a row of preset chips (eq_presets.dart); the chip whose curve the gains
+//     spell is the selected one, so a drag deselects;
+//   * the band panel: one vertical slider per band on a hairline rail, and
+//     under the sliders a curve through every thumb with a fill down to 0 dB
+//     (eq_curve.dart), so the shape of the sound reads at a glance. The gain
+//     of the band being dragged shows in a bubble over its thumb; the rest
+//     of the time only the frequencies are labelled;
+//   * a dB axis on the left and a 0 dB guide across the bands, placed from
+//     the same rail geometry the sliders and the curve use;
 //   * Reset-to-flat in the AppBar.
 //
 // Gains go to the native effect on every drag tick (audio follows the thumb)
@@ -25,15 +27,19 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
 import 'eq_controller.dart';
+import 'eq_curve.dart';
 import 'eq_presets.dart';
 
 /// How far each rail stops short of its column's ends (the overlay radius):
-/// the slider's track rect and the axis/guide positions are all derived from
-/// this one number, which is what keeps them aligned.
+/// the slider's track rect, the curve, the axis and the guide positions are
+/// all derived from this one number, which is what keeps them aligned.
 const double kEqRailInset = 14;
 
-/// Height of the label slot above (gain) and below (frequency) each rail.
-const double kEqLabelSlot = 36;
+/// Room above the rails for the value bubble over a thumb at max gain.
+const double kEqBubbleSlot = 30;
+
+/// Height of the frequency label slot under each rail.
+const double kEqLabelSlot = 24;
 
 class EqScreen extends StatefulWidget {
   const EqScreen({super.key, this.controller});
@@ -110,7 +116,11 @@ class _EqScreenState extends State<EqScreen> {
             children: [
               _PresetRow(c),
               Expanded(
-                child: _BandPanel(params: c.params!, onRelease: c.saveGains),
+                child: _BandPanel(
+                  params: c.params!,
+                  gains: c.gains,
+                  onRelease: c.saveGains,
+                ),
               ),
             ],
           ),
@@ -161,72 +171,193 @@ class _Message extends StatelessWidget {
   }
 }
 
-/// Where the rails sit inside a column of a given height: both label slots
-/// and both insets off, max gain at the top. Shared by the sliders (through
-/// [_ZeroCenteredTrack]), the axis and the 0 dB guide.
+/// Where the rails sit inside a column of a given height: the bubble slot,
+/// the label slot and both insets off, max gain at the top. Shared by the
+/// sliders (through [_RailTrack]), the curve painter, the axis and the 0 dB
+/// guide.
 class _Rail {
   const _Rail(this.columnHeight);
   final double columnHeight;
 
-  double get top => kEqLabelSlot + kEqRailInset;
-  double get length => math.max(0, columnHeight - 2 * top);
+  double get top => kEqBubbleSlot + kEqRailInset;
+  double get length =>
+      math.max(0, columnHeight - top - kEqLabelSlot - kEqRailInset);
 
   /// Screen y of the point `fraction` of the way from the min end (bottom)
   /// to the max end (top).
   double yFor(double fraction) => top + (1 - fraction) * length;
 }
 
-class _BandPanel extends StatelessWidget {
-  const _BandPanel({required this.params, required this.onRelease});
+/// The card with the axis, the curve, the sliders and the value bubble. Owns
+/// one piece of state: which band is being dragged.
+class _BandPanel extends StatefulWidget {
+  const _BandPanel(
+      {required this.params, required this.gains, required this.onRelease});
   final EqParams params;
+
+  /// The live gains in band order (the controller's, which it refreshes on
+  /// every tick of every band).
+  final List<double> gains;
   final VoidCallback onRelease;
 
   @override
+  State<_BandPanel> createState() => _BandPanelState();
+}
+
+class _BandPanelState extends State<_BandPanel> {
+  int? _active;
+
+  @override
   Widget build(BuildContext context) {
-    // Ten bands on a phone leave ~30 dp per column: a narrower axis and
-    // smaller readouts (see _BandColumn) keep them from crowding.
-    final dense = params.bands.length > 6;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(4, 8, dense ? 8 : 12, 8),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final rail = _Rail(box.maxHeight);
-          return Row(
-            children: [
-              SizedBox(
-                  width: dense ? 40 : 48,
-                  child: _DbAxis(params: params, rail: rail)),
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 0 dB guide under every rail, at the exact y the
-                    // sliders put their zero notch.
-                    Positioned(
-                      key: const Key('eq-zero-line'),
-                      left: 0,
-                      right: 0,
-                      top: rail.yFor(params.zeroFraction) - 0.5,
-                      child: Container(height: 1, color: VelvetColors.border),
-                    ),
-                    Row(
-                      children: [
-                        for (final band in params.bands)
-                          Expanded(
-                            child: _BandColumn(
-                              band: band,
-                              params: params,
-                              onRelease: onRelease,
+    final params = widget.params;
+    final n = params.bands.length;
+    final gains = widget.gains.length == n
+        ? widget.gains
+        : [for (final b in params.bands) b.gain];
+    // Ten bands on a phone leave ~32 dp per column: a narrower axis keeps
+    // them from crowding.
+    final dense = n > 6;
+    final active = _active;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.only(right: 8),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: VelvetColors.card,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      ),
+      // Low to high always reads left to right, whatever the locale: the
+      // curve is painted in band order, so the columns must be too.
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final rail = _Rail(box.maxHeight);
+            return Row(
+              children: [
+                SizedBox(
+                  width: dense ? 28 : 36,
+                  child: _DbAxis(params: params, rail: rail),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, plot) {
+                      final colW = plot.maxWidth / n;
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // 0 dB guide under every rail, at the exact y the
+                          // sliders put 0 dB.
+                          Positioned(
+                            key: const Key('eq-zero-line'),
+                            left: 0,
+                            right: 0,
+                            top: rail.yFor(params.zeroFraction) - 0.5,
+                            child: Container(
+                                height: 1, color: VelvetColors.border2),
+                          ),
+                          CustomPaint(
+                            key: const Key('eq-curve'),
+                            painter: EqCurvePainter(
+                              gains: gains,
+                              minDb: params.minDb,
+                              maxDb: params.maxDb,
+                              top: rail.top,
+                              length: rail.length,
+                              active: active,
+                              accent: VelvetColors.primary,
+                              ring: VelvetColors.card,
+                              grid: VelvetColors.border.withValues(alpha: 0.6),
                             ),
                           ),
-                      ],
-                    ),
-                  ],
+                          Row(
+                            children: [
+                              for (var i = 0; i < n; i++)
+                                Expanded(
+                                  child: _BandColumn(
+                                    band: params.bands[i],
+                                    gain: gains[i],
+                                    params: params,
+                                    active: active == i,
+                                    onStart: () =>
+                                        setState(() => _active = i),
+                                    onEnd: () {
+                                      setState(() => _active = null);
+                                      widget.onRelease();
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (active != null)
+                            _Bubble(
+                              x: colW * (active + 0.5),
+                              thumbY: rail.yFor(
+                                  params.fractionOf(gains[active])),
+                              plotWidth: plot.maxWidth,
+                              text: formatGain(gains[active]),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// The dragged band's gain, in a pill just above its thumb and centred on its
+/// column (shifted in at the panel's edges). Decoration only: the slider's
+/// own semantics announce the value.
+class _Bubble extends StatelessWidget {
+  const _Bubble({
+    required this.x,
+    required this.thumbY,
+    required this.plotWidth,
+    required this.text,
+  });
+  final double x;
+  final double thumbY;
+  final double plotWidth;
+  final String text;
+
+  static const double width = 52;
+  static const double height = 26;
+
+  /// Thumb radius plus a gap: the bubble's bottom sits this far above the
+  /// thumb's centre.
+  static const double lift = 14;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      key: const Key('eq-bubble'),
+      left: (x - width / 2).clamp(0.0, math.max(0.0, plotWidth - width)),
+      top: thumbY - lift - height,
+      width: width,
+      height: height,
+      child: ExcludeSemantics(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: VelvetColors.primary,
+            borderRadius: BorderRadius.circular(height / 2),
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: VelvetColors.onPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -239,147 +370,128 @@ class _DbAxis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget label(String text, double y) => Positioned(
-          right: 6,
+    Widget label(String text, double y, {Color? color, double size = 11}) =>
+        Positioned(
+          right: 4,
           top: y - 7,
           height: 14,
           child: Text(
             text,
-            style: TextStyle(color: VelvetColors.textTertiary, fontSize: 10),
+            style: TextStyle(
+                color: color ?? VelvetColors.textSecondary, fontSize: size),
           ),
         );
     return Stack(
       children: [
-        label('+${params.maxDb.round()} dB', rail.yFor(1)),
-        label('0 dB', rail.yFor(params.zeroFraction)),
-        label('${params.minDb.round()} dB', rail.yFor(0)),
+        label('dB', rail.top - 17, color: VelvetColors.textTertiary, size: 10),
+        label('+${params.maxDb.round()}', rail.yFor(1)),
+        label('0', rail.yFor(params.zeroFraction)),
+        label('${params.minDb.round()}', rail.yFor(0)),
+        label('Hz', rail.columnHeight - kEqLabelSlot / 2,
+            color: VelvetColors.textTertiary, size: 10),
       ],
     );
   }
 }
 
 class _BandColumn extends StatelessWidget {
-  const _BandColumn(
-      {required this.band, required this.params, required this.onRelease});
+  const _BandColumn({
+    required this.band,
+    required this.gain,
+    required this.params,
+    required this.active,
+    required this.onStart,
+    required this.onEnd,
+  });
   final EqBand band;
+  final double gain;
   final EqParams params;
-  final VoidCallback onRelease;
+  final bool active;
+  final VoidCallback onStart;
+  final VoidCallback onEnd;
 
   @override
   Widget build(BuildContext context) {
     final hz = formatFrequency(band.centerFrequency);
-    final dense = params.bands.length > 6;
-    return StreamBuilder<double>(
-      stream: band.gainStream,
-      initialData: band.gain,
-      builder: (context, snap) {
-        final gain = (snap.data ?? 0).clamp(params.minDb, params.maxDb);
-        return Column(
-          children: [
-            SizedBox(
-                height: kEqLabelSlot,
-                child: _Readout(
-                    value: formatGain(gain), unit: 'dB', dense: dense)),
-            Expanded(
-              // quarterTurns 3 (a quarter turn anticlockwise) puts the
-              // slider's min end at the bottom and its max end at the top.
-              // The Directionality pin keeps that true under an RTL locale,
-              // where a Slider would otherwise run the other way.
-              child: RotatedBox(
-                quarterTurns: 3,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Semantics(
-                    label: '$hz Hz',
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4,
-                        trackShape: _ZeroCenteredTrack(
-                          zeroFraction: params.zeroFraction,
-                          notchColor: VelvetColors.textTertiary,
-                        ),
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 8, elevation: 2),
-                        overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: kEqRailInset),
-                        activeTrackColor: VelvetColors.primary,
-                        inactiveTrackColor: VelvetColors.border,
-                        thumbColor: VelvetColors.primary,
-                        overlayColor: VelvetColors.primaryDim,
-                      ),
-                      child: Slider(
-                        value: gain,
-                        min: params.minDb,
-                        max: params.maxDb,
-                        // Per tick, fire-and-forget: the native effect
-                        // follows the thumb and gainStream feeds the
-                        // readout. Settings are written on release only.
-                        onChanged: band.setGain,
-                        onChangeEnd: (_) => onRelease(),
-                        semanticFormatterCallback: (v) =>
-                            '${formatGain(v)} dB',
-                      ),
-                    ),
+    final value = gain.clamp(params.minDb, params.maxDb);
+    return Column(
+      children: [
+        const SizedBox(height: kEqBubbleSlot),
+        Expanded(
+          // quarterTurns 3 (a quarter turn anticlockwise) puts the slider's
+          // min end at the bottom and its max end at the top. The
+          // Directionality pin keeps that true under an RTL locale, where a
+          // Slider would otherwise run the other way.
+          child: RotatedBox(
+            quarterTurns: 3,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Semantics(
+                label: '$hz Hz',
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2,
+                    trackShape: const _RailTrack(),
+                    thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 8,
+                        elevation: 0,
+                        pressedElevation: 0),
+                    overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: kEqRailInset),
+                    activeTrackColor: VelvetColors.primary,
+                    inactiveTrackColor: active
+                        ? VelvetColors.primary.withValues(alpha: 0.45)
+                        : VelvetColors.border2,
+                    thumbColor: VelvetColors.primary,
+                    overlayColor: VelvetColors.primaryDim,
+                  ),
+                  child: Slider(
+                    value: value,
+                    min: params.minDb,
+                    max: params.maxDb,
+                    onChangeStart: (_) => onStart(),
+                    // Per tick, fire-and-forget: the native effect follows
+                    // the thumb and the band's gain stream feeds the
+                    // controller, the curve and the bubble. Settings are
+                    // written on release only.
+                    onChanged: band.setGain,
+                    onChangeEnd: (_) => onEnd(),
+                    semanticFormatterCallback: (v) => '${formatGain(v)} dB',
                   ),
                 ),
               ),
             ),
-            SizedBox(
-                height: kEqLabelSlot,
-                child: _Readout(value: hz, unit: 'Hz', dense: dense)),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// A value over its unit, scaled down rather than overflowing its slot under
-/// a large system font.
-class _Readout extends StatelessWidget {
-  const _Readout(
-      {required this.value, required this.unit, this.dense = false});
-  final String value;
-  final String unit;
-  final bool dense;
-
-  @override
-  Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: VelvetColors.textPrimary,
-              fontSize: dense ? 10 : 12,
-              fontWeight: FontWeight.w700,
+          ),
+        ),
+        SizedBox(
+          height: kEqLabelSlot,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                hz,
+                style: TextStyle(
+                  color: active
+                      ? VelvetColors.textPrimary
+                      : VelvetColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+                ),
+              ),
             ),
           ),
-          Text(
-            unit,
-            style: TextStyle(
-                color: VelvetColors.textSecondary, fontSize: dense ? 8 : 9),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// A rail whose active segment runs from 0 dB to the thumb, with a notch at
-/// 0 dB. The stock track fills from the min end, which on an EQ reads as "every
-/// band half boosted" when all of them are flat.
-///
-/// Owns the rail geometry too (an inset of [kEqRailInset] at each end) so the
-/// thumb positions the slider computes from this rect match the axis and
-/// guide the panel draws from the same constant.
-class _ZeroCenteredTrack extends SliderTrackShape {
-  const _ZeroCenteredTrack({required this.zeroFraction, required this.notchColor});
-  final double zeroFraction;
-  final Color notchColor;
+/// A plain hairline rail: no active segment (the curve's fill says how far
+/// from 0 dB a band sits) and an inset of [kEqRailInset] at each end, so the
+/// thumb positions the slider computes from this rect match the curve, the
+/// axis and the guide drawn from the same constant.
+class _RailTrack extends SliderTrackShape {
+  const _RailTrack();
 
   @override
   Rect getPreferredRect({
@@ -389,7 +501,7 @@ class _ZeroCenteredTrack extends SliderTrackShape {
     bool isEnabled = false,
     bool isDiscrete = false,
   }) {
-    final h = sliderTheme.trackHeight ?? 4;
+    final h = sliderTheme.trackHeight ?? 2;
     return Rect.fromLTWH(
       offset.dx + kEqRailInset,
       offset.dy + (parentBox.size.height - h) / 2,
@@ -419,40 +531,15 @@ class _ZeroCenteredTrack extends SliderTrackShape {
       isDiscrete: isDiscrete,
     );
     if (rect.isEmpty) return;
-    final canvas = context.canvas;
-    final radius = Radius.circular(rect.height / 2);
     final railPaint = Paint()
       ..color = ColorTween(
             begin: sliderTheme.disabledInactiveTrackColor,
             end: sliderTheme.inactiveTrackColor,
           ).evaluate(enableAnimation) ??
           const Color(0x00000000);
-    final fillPaint = Paint()
-      ..color = ColorTween(
-            begin: sliderTheme.disabledActiveTrackColor,
-            end: sliderTheme.activeTrackColor,
-          ).evaluate(enableAnimation) ??
-          const Color(0x00000000);
-
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), railPaint);
-
-    final f = textDirection == TextDirection.rtl ? 1 - zeroFraction : zeroFraction;
-    final zeroX = rect.left + f * rect.width;
-    final a = math.min(zeroX, thumbCenter.dx);
-    final b = math.max(zeroX, thumbCenter.dx);
-    if (b - a > 0.5) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTRB(a, rect.top, b, rect.bottom), radius),
-        fillPaint,
-      );
-    }
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-            center: Offset(zeroX, rect.center.dy), width: 2, height: rect.height + 8),
-        const Radius.circular(1),
-      ),
-      Paint()..color = notchColor,
+    context.canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
+      railPaint,
     );
   }
 }

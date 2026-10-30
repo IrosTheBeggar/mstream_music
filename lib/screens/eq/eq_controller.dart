@@ -49,10 +49,13 @@ class EqParams {
   /// Where 0 dB sits along a band's travel: 0 at the min end, 1 at the max
   /// end. Half-way on the usual symmetric range; a degenerate range reads as
   /// half-way too so nothing divides by zero.
-  double get zeroFraction {
+  double get zeroFraction => fractionOf(0);
+
+  /// Where [gain] sits on a rail that runs from [minDb] (0) to [maxDb] (1).
+  double fractionOf(double gain) {
     final span = maxDb - minDb;
     if (span <= 0) return 0.5;
-    return ((0 - minDb) / span).clamp(0.0, 1.0);
+    return ((gain - minDb) / span).clamp(0.0, 1.0);
   }
 }
 
