@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'dynamics_equalizer.dart';
 import 'playback_backend.dart';
 
 /// The on-device playback backend: a thin wrapper around a single just_audio
@@ -21,9 +22,18 @@ class LocalPlaybackBackend implements PlaybackBackend {
   // active (and always on non-Android).
   AndroidEqualizer? _equalizer;
 
+  // The ten-band engine (Android 9+), when this device gets it: an effect on
+  // the player's audio session rather than in its pipeline, so it follows
+  // the session id below and never needs a rebuild. Null where the five-band
+  // AndroidEqualizer above is the engine.
+  final DynamicsEqualizer? _dynamics;
+  StreamSubscription<int?>? _sessionSub;
+
   late AudioPlayer _player;
 
-  LocalPlaybackBackend({bool withEqualizer = false}) {
+  LocalPlaybackBackend(
+      {bool withEqualizer = false, DynamicsEqualizer? dynamicsEqualizer})
+      : _dynamics = dynamicsEqualizer {
     _buildPlayer(withEqualizer);
   }
 
@@ -40,6 +50,14 @@ class LocalPlaybackBackend implements PlaybackBackend {
     } else {
       _equalizer = null;
       _player = AudioPlayer();
+    }
+    final dyn = _dynamics;
+    _sessionSub?.cancel();
+    if (dyn != null) {
+      // A new session id after every rebuild (and every stop/reload), null
+      // while there is no native player: the engine re-attaches or releases.
+      _sessionSub = _player.androidAudioSessionIdStream
+          .listen((id) => dyn.setSessionId(id));
     }
   }
 
@@ -272,11 +290,17 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   AndroidEqualizer? get equalizer => _equalizer;
 
+  /// The ten-band engine, or null where the five-band effect is in use.
+  DynamicsEqualizer? get dynamicsEqualizer => _dynamics;
+
   @override
   int? get androidAudioSessionId => _player.androidAudioSessionId;
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() {
+    _sessionSub?.cancel();
+    return _player.dispose();
+  }
 
   static BackendProcessingState _mapState(ProcessingState s) {
     switch (s) {

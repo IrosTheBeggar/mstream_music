@@ -183,14 +183,19 @@ class _BandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ten bands on a phone leave ~30 dp per column: a narrower axis and
+    // smaller readouts (see _BandColumn) keep them from crowding.
+    final dense = params.bands.length > 6;
     return Padding(
-      padding: EdgeInsets.fromLTRB(4, 8, 12, 8),
+      padding: EdgeInsets.fromLTRB(4, 8, dense ? 8 : 12, 8),
       child: LayoutBuilder(
         builder: (context, box) {
           final rail = _Rail(box.maxHeight);
           return Row(
             children: [
-              SizedBox(width: 48, child: _DbAxis(params: params, rail: rail)),
+              SizedBox(
+                  width: dense ? 40 : 48,
+                  child: _DbAxis(params: params, rail: rail)),
               Expanded(
                 child: Stack(
                   fit: StackFit.expand,
@@ -263,6 +268,7 @@ class _BandColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hz = formatFrequency(band.centerFrequency);
+    final dense = params.bands.length > 6;
     return StreamBuilder<double>(
       stream: band.gainStream,
       initialData: band.gain,
@@ -272,7 +278,8 @@ class _BandColumn extends StatelessWidget {
           children: [
             SizedBox(
                 height: kEqLabelSlot,
-                child: _Readout(value: formatGain(gain), unit: 'dB')),
+                child: _Readout(
+                    value: formatGain(gain), unit: 'dB', dense: dense)),
             Expanded(
               // quarterTurns 3 (a quarter turn anticlockwise) puts the
               // slider's min end at the bottom and its max end at the top.
@@ -318,7 +325,8 @@ class _BandColumn extends StatelessWidget {
               ),
             ),
             SizedBox(
-                height: kEqLabelSlot, child: _Readout(value: hz, unit: 'Hz')),
+                height: kEqLabelSlot,
+                child: _Readout(value: hz, unit: 'Hz', dense: dense)),
           ],
         );
       },
@@ -329,9 +337,11 @@ class _BandColumn extends StatelessWidget {
 /// A value over its unit, scaled down rather than overflowing its slot under
 /// a large system font.
 class _Readout extends StatelessWidget {
-  const _Readout({required this.value, required this.unit});
+  const _Readout(
+      {required this.value, required this.unit, this.dense = false});
   final String value;
   final String unit;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -344,13 +354,14 @@ class _Readout extends StatelessWidget {
             value,
             style: TextStyle(
               color: VelvetColors.textPrimary,
-              fontSize: 12,
+              fontSize: dense ? 10 : 12,
               fontWeight: FontWeight.w700,
             ),
           ),
           Text(
             unit,
-            style: TextStyle(color: VelvetColors.textSecondary, fontSize: 9),
+            style: TextStyle(
+                color: VelvetColors.textSecondary, fontSize: dense ? 8 : 9),
           ),
         ],
       ),

@@ -12,6 +12,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
 import 'package:wifi_lock_shim/wifi_lock_shim.dart';
 import 'playback_backend.dart';
+import 'dynamics_equalizer.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
@@ -89,8 +90,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   // Build the EQ pipeline only if the user has it enabled — a plain player is
   // the default (see LocalPlaybackBackend). SettingsManager().load() runs
   // before this handler is constructed (main.dart), so eqEnabled is populated.
-  late final LocalPlaybackBackend _localBackend =
-      LocalPlaybackBackend(withEqualizer: SettingsManager().eqEnabled);
+  // On Android 9+ the ten-band DynamicsProcessing engine replaces the
+  // pipelined five-band effect (DynamicsEqualizer.supported, probed in
+  // main.dart before this runs): it sits on the audio session instead, so
+  // the player is always plain there.
+  late final LocalPlaybackBackend _localBackend = LocalPlaybackBackend(
+      withEqualizer:
+          SettingsManager().eqEnabled && !DynamicsEqualizer.supported,
+      dynamicsEqualizer:
+          DynamicsEqualizer.supported ? DynamicsEqualizer() : null);
   late final BehaviorSubject<PlaybackBackend> _backendSubject =
       BehaviorSubject<PlaybackBackend>.seeded(_localBackend);
   PlaybackBackend get _backend => _backendSubject.value;
@@ -110,6 +118,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   // local backend (null on non-Android / remote backends). eq_screen.dart
   // reads this via MediaManager().audioHandler.equalizer.
   AndroidEqualizer? get equalizer => _backend.equalizer;
+
+  /// The ten-band engine (Android 9+), or null where the five-band
+  /// AndroidEqualizer above is the engine. Lives on the local backend for
+  /// the app's life; the EQ screen reads it through LiveEqAudio.
+  DynamicsEqualizer? get dynamicsEqualizer => _localBackend.dynamicsEqualizer;
 
   int? get index => _backend.currentIndex;
 
@@ -528,6 +541,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   // 'ready' handler pushes them on first load. This never blocks _init or the
   // _switchChain toggle on an idle player (where parameters never resolves).
   Future<void> _applySavedEqualizer([AndroidEqualizer? target]) async {
+    final dyn = dynamicsEqualizer;
+    if (dyn != null) {
+      // Ten-band engine: gains first, so they ride along with the attach the
+      // enable triggers once the player's session is known.
+      await dyn.setGains(SettingsManager().eqDynamicsGains);
+      await dyn.setEnabled(SettingsManager().eqEnabled);
+      return;
+    }
     final eq = target ?? equalizer;
     if (eq == null) return;
     try {
@@ -585,6 +606,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Don't race _init's seed/EQ on the single player (the same gate
     // restoreQueue waits on). Runs serialized on _switchChain — see above.
     await _initialized.future;
+
+    // Ten-band engine: the effect lives on the audio session, not in the
+    // player's pipeline, so there is nothing to rebuild — attach or release
+    // in place (the engine waits for a session if there is none yet), then
+    // persist. Casting needs no special case: the local player keeps its
+    // session id, and the engine follows it on return.
+    final dyn = dynamicsEqualizer;
+    if (dyn != null) {
+      if (enabled) await dyn.setGains(SettingsManager().eqDynamicsGains);
+      await dyn.setEnabled(enabled);
+      await SettingsManager().setEqEnabled(enabled);
+      return;
+    }
 
     // Casting: the local backend is inactive. Rebuild it so it's correct when
     // the user returns to the phone, but leave the active (cast) backend

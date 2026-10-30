@@ -205,6 +205,10 @@ class SettingsManager {
   // AndroidEqualizer.parameters.
   bool eqEnabled = false;
   List<double> eqBandGains = const [];
+  // Gains for the ten-band DynamicsProcessing engine (Android 9+), kept
+  // apart from eqBandGains because the two layouts' indices mean different
+  // frequencies (see DynamicsEqualizer.centerFrequencies). Empty = flat.
+  List<double> eqDynamicsGains = const [];
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -384,6 +388,10 @@ class SettingsManager {
       final rawGains = m['eqBandGains'];
       eqBandGains = rawGains is List
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
+      final rawDynamics = m['eqDynamicsGains'];
+      eqDynamicsGains = rawDynamics is List
+          ? rawDynamics.whereType<num>().map((n) => n.toDouble()).toList()
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
       visualizerEngine = _readVisualizerEngine(m);
@@ -593,6 +601,7 @@ class SettingsManager {
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
+      'eqDynamicsGains': eqDynamicsGains,
       'visualizerAudioSource': visualizerAudioSource.name,
       'visualizerEngine': visualizerEngine.name,
       'showVisualizerKnobs': showVisualizerKnobs,
@@ -806,6 +815,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setEqDynamicsGains(List<double> v) async {
+    eqDynamicsGains = v;
+    await _save();
+  }
+
   Future<void> setVisualizerAudioSource(VisualizerAudioSource v) async {
     visualizerAudioSource = v;
     await _save();
@@ -877,6 +891,7 @@ class SettingsManager {
     diagnosticsLogging = true;
     verboseLogging = false;
     eqBandGains = const [];
+    eqDynamicsGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
     visualizerEngine = VisualizerEngine.milkdrop;
     showVisualizerKnobs = false;

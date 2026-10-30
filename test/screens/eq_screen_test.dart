@@ -189,6 +189,20 @@ void main() {
     expect(find.byType(ChoiceChip), findsNothing);
   });
 
+  testWidgets('ten bands fit: every slider and label, no overflow',
+      (tester) async {
+    await pumpReady(tester,
+        params: fakeParams(freqs: const [
+          31.25, 62.5, 125, 250, 500, 1000, 2000, 4000, 8000, 16000,
+        ]));
+    expect(find.byType(Slider), findsNWidgets(10));
+    for (final f in ['31', '63', '125', '250', '500', '1k', '2k', '4k', '8k', '16k']) {
+      expect(find.text(f), findsOneWidget, reason: f);
+    }
+    expect(find.text('0.0'), findsNWidgets(10));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a failed read shows the error text', (tester) async {
     final unit = FakeUnit();
     audio

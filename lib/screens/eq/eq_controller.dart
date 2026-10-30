@@ -22,6 +22,7 @@ import 'package:just_audio/just_audio.dart'
     show AndroidEqualizer, AndroidEqualizerBand;
 
 import '../../media/audio_stuff.dart';
+import '../../media/dynamics_equalizer.dart';
 import '../../singletons/cast_manager.dart';
 import '../../singletons/log_manager.dart';
 import '../../singletons/media.dart';
@@ -364,9 +365,13 @@ class LiveEqAudio implements EqAudio {
   // check sees a new unit exactly when the handler built a new equalizer.
   AndroidEqualizer? _eq;
   _LiveUnit? _unit;
+  // The ten-band engine lives for the app's life, so one wrapper does.
+  _DynamicsUnit? _dynamicsUnit;
 
   @override
   EqUnit? get unit {
+    final dyn = _handler.dynamicsEqualizer;
+    if (dyn != null) return _dynamicsUnit ??= _DynamicsUnit(dyn);
     final eq = _handler.equalizer;
     if (eq == null) {
       _eq = null;
@@ -395,7 +400,9 @@ class LiveEqAudio implements EqAudio {
 
   @override
   Future<void> saveGains(List<double> gains) =>
-      SettingsManager().setEqBandGains(gains);
+      _handler.dynamicsEqualizer != null
+          ? SettingsManager().setEqDynamicsGains(gains)
+          : SettingsManager().setEqBandGains(gains);
 }
 
 class _LiveUnit implements EqUnit {
@@ -422,4 +429,36 @@ class _LiveBand implements EqBand {
   Stream<double> get gainStream => _band.gainStream;
   @override
   Future<void> setGain(double gain) => _band.setGain(gain);
+}
+
+/// The ten-band engine as a unit: its layout is fixed in code, so the params
+/// are known at once — no waiting for playback.
+class _DynamicsUnit implements EqUnit {
+  _DynamicsUnit(DynamicsEqualizer eq)
+      : params = Future.value(EqParams(
+          minDb: DynamicsEqualizer.minDb,
+          maxDb: DynamicsEqualizer.maxDb,
+          bands: [
+            for (var i = 0; i < DynamicsEqualizer.bandCount; i++)
+              _DynamicsBand(eq, i),
+          ],
+        ));
+
+  @override
+  final Future<EqParams> params;
+}
+
+class _DynamicsBand implements EqBand {
+  _DynamicsBand(this._eq, this._index);
+  final DynamicsEqualizer _eq;
+  final int _index;
+
+  @override
+  double get centerFrequency => DynamicsEqualizer.centerFrequencies[_index];
+  @override
+  double get gain => _eq.gain(_index);
+  @override
+  Stream<double> get gainStream => _eq.gainStream(_index);
+  @override
+  Future<void> setGain(double gain) => _eq.setGain(_index, gain);
 }
