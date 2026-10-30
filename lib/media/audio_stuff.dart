@@ -554,8 +554,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     try {
       final params = await eq.parameters.timeout(const Duration(seconds: 3));
+      // Clamp to this device's range: gains saved on another phone (a
+      // restored config) can exceed it, and an out-of-range setBandLevel
+      // throws — leaving the apply half done and retrying on every ready.
+      final lo = params.minDecibels;
+      final hi = params.maxDecibels;
       for (var i = 0; i < params.bands.length && i < saved.length; i++) {
-        await params.bands[i].setGain(saved[i]);
+        await params.bands[i].setGain(saved[i].clamp(lo, hi));
       }
       _eqGainsPending = false;
     } catch (e) {
