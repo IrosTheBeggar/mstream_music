@@ -368,6 +368,7 @@ class ServerManager {
       final int? prevStats = server.statsVersion;
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
+      final bool? prevMoodFilters = server.moodFiltersAvailable;
       final bool? prevNoUpload = server.noUpload;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
@@ -428,6 +429,7 @@ class ServerManager {
           server.discoveryPathAvailable != prevDiscoveryPath ||
           server.discoveryTasteAvailable != prevDiscoveryTaste ||
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
+          server.moodFiltersAvailable != prevMoodFilters ||
           server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
@@ -554,6 +556,8 @@ class ServerManager {
         features is Map && hasTasteGeneration(features['discoveryTaste']);
     server.discoveryPluginsAvailable =
         features is Map && features['discoveryPlugins'] == true;
+    server.moodFiltersAvailable = features is Map &&
+        hasMoodFilters(features['discoveryTaste'], features['moodFilters']);
     // Caller-scoped (the account's upload right), so under `user` here.
     server.noUpload = user is Map && user['noUpload'] is bool
         ? user['noUpload'] as bool
@@ -611,6 +615,8 @@ class ServerManager {
     // that has the Discover page (mStream docs/discovery-page-plan.md §2.10).
     server.discoveryTasteAvailable = hasTasteGeneration(res['discoveryTaste']);
     server.discoveryPluginsAvailable = res['discoveryPlugins'] == true;
+    server.moodFiltersAvailable =
+        hasMoodFilters(res['discoveryTaste'], res['moodFilters']);
     server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
   }
 
@@ -621,6 +627,14 @@ class ServerManager {
   /// on (flags, never probes).
   @visibleForTesting
   static bool hasTasteGeneration(dynamic v) => v is int && v >= 1;
+
+  /// Whether Discover can be filtered by mood: a taste route of generation
+  /// 2 or later (the one that takes `moods`) on a server that says it has
+  /// scores to filter by (`moodFilters`, which follows the scores, not the
+  /// build).
+  @visibleForTesting
+  static bool hasMoodFilters(dynamic taste, dynamic moodFilters) =>
+      taste is int && taste >= 2 && moodFilters == true;
 
   /// Test seam over [_applyServerInfo]: fold a layered `GET /api/` body into
   /// [server] exactly as a refresh would, minus the network.
@@ -2587,6 +2601,7 @@ class ServerManager {
     // parent's page; the plug-in routes are off the allowlist besides.
     server.discoveryTasteAvailable = false;
     server.discoveryPluginsAvailable = false;
+    server.moodFiltersAvailable = false; // Discover is the parent's page
     server.noUpload = null; // a copy lands on the parent, whose flag governs
     server.statsVersion = null; // its plays post to the parent, whose flag governs
     server.playlists.clear();

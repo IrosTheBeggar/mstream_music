@@ -1932,6 +1932,96 @@ abstract class AppLocalizations {
   /// **'Genre source'**
   String get genreSourceLabel;
 
+  /// Albums, Artists and Discover: the button that shows the mood filters, and its tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get moodFilters;
+
+  /// Accessibility label for the happy / neutral / sad mood choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Happy, neutral or sad'**
+  String get moodValenceGroup;
+
+  /// Accessibility label for the relaxed / neutral / aggressive mood choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxed, neutral or aggressive'**
+  String get moodEnergyGroup;
+
+  /// Accessibility label for the instrumental / vocals choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrumental or vocals'**
+  String get moodVoiceGroup;
+
+  /// Accessibility label for the acoustic / party / danceable mood tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get moodTagsGroup;
+
+  /// Mood filter: songs that sound happy.
+  ///
+  /// In en, this message translates to:
+  /// **'Happy'**
+  String get moodHappy;
+
+  /// Mood filter: neither end of its scale (neither happy nor sad, or neither relaxed nor aggressive).
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get moodNeutral;
+
+  /// Mood filter: songs that sound sad.
+  ///
+  /// In en, this message translates to:
+  /// **'Sad'**
+  String get moodSad;
+
+  /// Mood filter: songs that sound relaxed.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxed'**
+  String get moodRelaxed;
+
+  /// Mood filter: songs that sound aggressive.
+  ///
+  /// In en, this message translates to:
+  /// **'Aggressive'**
+  String get moodAggressive;
+
+  /// Mood filter: songs without vocals.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrumental'**
+  String get moodInstrumental;
+
+  /// Mood filter: songs with vocals.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocals'**
+  String get moodVocals;
+
+  /// Mood filter tag: acoustic songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Acoustic'**
+  String get moodAcoustic;
+
+  /// Mood filter tag: party songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Party'**
+  String get moodParty;
+
+  /// Mood filter tag: songs you can dance to.
+  ///
+  /// In en, this message translates to:
+  /// **'Danceable'**
+  String get moodDanceable;
+
   /// No description provided for @browserRecent.
   ///
   /// In en, this message translates to:

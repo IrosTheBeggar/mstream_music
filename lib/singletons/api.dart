@@ -14,6 +14,7 @@ import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
 import '../objects/lyrics.dart';
+import '../objects/mood_filter.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/decode_json.dart';
@@ -584,12 +585,19 @@ class ApiManager {
     }
   }
 
-  Future<void> getAlbums({Server? useThisServer}) async {
+  /// The Albums list, under the page's mood filter when one is set (a POST
+  /// with `moods`; a plain GET otherwise). [replace] re-lists the open list
+  /// in place (a filter change) instead of pushing it.
+  Future<void> getAlbums({Server? useThisServer, bool replace = false}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
-
-      BrowserManager().setBrowserLabel('Albums');
+      final asked = _moodAsk(MoodPage.albums);
+      final res = await makeServerCall(
+          useThisServer, '/api/v1/db/albums', asked.body, asked.method);
+      if (replace && asked.generation != MoodFilters().generation(MoodPage.albums)) {
+        return; // a newer filter was asked for meanwhile
+      }
+      final moodFrame =
+          MoodListFrame.fromAnswer(res, useThisServer, MoodPage.albums);
 
       List<DisplayItem> newList = [];
       res['albums'].forEach((e) {
@@ -619,10 +627,43 @@ class ApiManager {
         newList.add(newItem);
       });
 
-      BrowserManager().addListToStack(newList, alphabetical: true);
+      if (replace) {
+        BrowserManager().replaceMoodList(MoodPage.albums, newList, moodFrame);
+      } else {
+        BrowserManager().setBrowserLabel('Albums');
+        BrowserManager()
+            .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
+      }
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getAlbums failed: $err');
+    }
+  }
+
+  /// How a mood-filtered list is asked for: a POST carrying the page's
+  /// filter, or the plain GET every server answers when there is none —
+  /// and the filter's generation, so a re-list can tell it was overtaken.
+  ({Map body, String method, int generation}) _moodAsk(MoodPage page) {
+    final moods = MoodFilters().of(page).toJson();
+    return (
+      body: moods == null ? const {} : {'moods': moods},
+      method: moods == null ? 'GET' : 'POST',
+      generation: MoodFilters().generation(page),
+    );
+  }
+
+  /// The Filters sheet's Done (or the strip's Clear) on an Albums or
+  /// Artists list: remember [filter] for the page and re-list the open list
+  /// in place. The badge and the strip show the new choice at once; the
+  /// rows follow when the answer lands (an older answer landing later is
+  /// dropped).
+  Future<void> setMoodFilter(MoodListFrame frame, MoodFilter filter) async {
+    MoodFilters().set(frame.page, filter);
+    BrowserManager().updateStream();
+    if (frame.page == MoodPage.albums) {
+      await getAlbums(useThisServer: frame.server, replace: true);
+    } else if (frame.page == MoodPage.artists) {
+      await getArtists(useThisServer: frame.server, replace: true);
     }
   }
 
@@ -1268,12 +1309,18 @@ class ApiManager {
     );
   }
 
-  Future<void> getArtists({Server? useThisServer}) async {
+  /// The Artists list, under the page's mood filter when one is set — as
+  /// [getAlbums].
+  Future<void> getArtists({Server? useThisServer, bool replace = false}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/artists', {}, 'GET');
-
-      BrowserManager().setBrowserLabel('Artists');
+      final asked = _moodAsk(MoodPage.artists);
+      final res = await makeServerCall(
+          useThisServer, '/api/v1/db/artists', asked.body, asked.method);
+      if (replace && asked.generation != MoodFilters().generation(MoodPage.artists)) {
+        return; // a newer filter was asked for meanwhile
+      }
+      final moodFrame =
+          MoodListFrame.fromAnswer(res, useThisServer, MoodPage.artists);
 
       List<DisplayItem> newList = [];
       res['artists'].forEach((e) {
@@ -1281,7 +1328,13 @@ class ApiManager {
             Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
         newList.add(newItem);
       });
-      BrowserManager().addListToStack(newList, alphabetical: true);
+      if (replace) {
+        BrowserManager().replaceMoodList(MoodPage.artists, newList, moodFrame);
+      } else {
+        BrowserManager().setBrowserLabel('Artists');
+        BrowserManager()
+            .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
+      }
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtists failed: $err');

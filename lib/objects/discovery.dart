@@ -390,6 +390,11 @@ class TasteRequest {
   final bool? newArtistsOnly;
   final List<String>? ignoreVPaths;
 
+  /// The page's mood filter in its wire form (MoodFilter.toJson) — only to
+  /// a server whose `moodFilters` flag says the route takes it (generation
+  /// 2: the body schema refuses a key it does not know).
+  final Map<String, dynamic>? moods;
+
   const TasteRequest({
     this.window,
     this.pin,
@@ -398,6 +403,7 @@ class TasteRequest {
     this.limit,
     this.newArtistsOnly,
     this.ignoreVPaths,
+    this.moods,
   });
 
   Map<String, dynamic> toJson() {
@@ -422,6 +428,7 @@ class TasteRequest {
       if (newArtistsOnly != null) 'newArtistsOnly': newArtistsOnly,
       if (ignoreVPaths != null && ignoreVPaths!.isNotEmpty)
         'ignoreVPaths': ignoreVPaths,
+      if (moods != null && moods!.isNotEmpty) 'moods': moods,
     };
   }
 }

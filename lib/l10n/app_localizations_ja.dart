@@ -1049,6 +1049,51 @@ class AppLocalizationsJa extends AppLocalizations {
   String get genreSourceLabel => 'ジャンルの取得元';
 
   @override
+  String get moodFilters => 'フィルター';
+
+  @override
+  String get moodValenceGroup => '明るい・中間・悲しい';
+
+  @override
+  String get moodEnergyGroup => '落ち着いた・中間・激しい';
+
+  @override
+  String get moodVoiceGroup => 'インストまたはボーカル';
+
+  @override
+  String get moodTagsGroup => 'タグ';
+
+  @override
+  String get moodHappy => '明るい';
+
+  @override
+  String get moodNeutral => '中間';
+
+  @override
+  String get moodSad => '悲しい';
+
+  @override
+  String get moodRelaxed => '落ち着いた';
+
+  @override
+  String get moodAggressive => '激しい';
+
+  @override
+  String get moodInstrumental => 'インスト';
+
+  @override
+  String get moodVocals => 'ボーカル';
+
+  @override
+  String get moodAcoustic => 'アコースティック';
+
+  @override
+  String get moodParty => 'パーティー';
+
+  @override
+  String get moodDanceable => '踊れる';
+
+  @override
   String get browserRecent => '最近';
 
   @override

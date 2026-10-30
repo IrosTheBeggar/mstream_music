@@ -16,6 +16,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/discovery.dart';
+import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/discovery_jobs_controller.dart';
 import 'package:mstream_music/screens/discovery/discovery_page_controller.dart';
@@ -1410,6 +1411,71 @@ void main() {
       expect(c.jobs.pluginsOn, isFalse);
       expect(c.jobs.leads, hasLength(c.peerRows.length));
       expect(c.jobs.rows.every((r) => r.badge == null), isTrue);
+      c.dispose();
+    });
+  });
+
+  // mStream #1092: Discover filtered by mood, where the server's flag says
+  // its taste route takes `moods` (generation 2) and it has scores.
+  group('the mood filter', () {
+    const relaxed = MoodFilter(energy: 'relaxed', tags: ['acoustic']);
+    const wire = {
+      'energy': 'relaxed',
+      'tags': ['acoustic'],
+    };
+    setUp(() {
+      MoodFilters().reset();
+      server.moodFiltersAvailable = true;
+    });
+    tearDown(() => MoodFilters().reset());
+
+    test('rides in both calls, in the wire form, where the server takes it',
+        () async {
+      MoodFilters().set(MoodPage.discover, relaxed);
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      expect(c.moodsAvailable, isTrue);
+      expect(taste.mainCalls.single.toJson()['moods'], wire);
+      expect(taste.peersCalls.single.toJson()['moods'], wire,
+          reason: 'the server hands it on to the connected servers');
+      c.dispose();
+    });
+
+    test('never sent when nothing is set, nor to a server without the flag',
+        () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      expect(taste.requests.any((r) => r.toJson().containsKey('moods')),
+          isFalse);
+      MoodFilters().set(MoodPage.discover, relaxed);
+      server.moodFiltersAvailable = false;
+      await c.refresh();
+      expect(taste.requests.any((r) => r.toJson().containsKey('moods')),
+          isFalse,
+          reason: 'a generation-1 route answers 400 to a key it does not know');
+      final before = taste.mainCalls.length;
+      await c.setMoods(const MoodFilter(valence: 'happy'));
+      expect(taste.mainCalls.length, before,
+          reason: 'no Filters there, so nothing to apply');
+      c.dispose();
+    });
+
+    test("a change is the page's and asks again; the same one asks nothing",
+        () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      final before = taste.mainCalls.length;
+      await c.setMoods(relaxed);
+      expect(MoodFilters().of(MoodPage.discover), relaxed);
+      expect(taste.mainCalls.length, before + 1);
+      expect(taste.mainCalls.last.toJson()['moods'], wire);
+      await c.setMoods(relaxed);
+      expect(taste.mainCalls.length, before + 1,
+          reason: 'the same filter again asks nothing');
+      expect(make().moods, relaxed, reason: 'kept for the next visit');
       c.dispose();
     });
   });
