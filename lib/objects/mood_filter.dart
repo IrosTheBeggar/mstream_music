@@ -14,6 +14,9 @@
 // the key out, so the answer says whether to offer the filters. Discover's
 // /api/v1/discovery/taste takes it too, gated on the server's `moodFilters`
 // flag (Server.moodFiltersAvailable): its body schema refuses unknown keys.
+// So do the song lists, /api/v1/db/rated and /api/v1/db/recent/added
+// (mStream #1095): their answers are bare arrays, with no room for the
+// echo, and recent/added's schema refuses unknown keys too.
 
 import 'server.dart';
 
@@ -112,7 +115,7 @@ class MoodFilter {
 }
 
 /// The pages that filter by mood. Each keeps its own filter.
-enum MoodPage { albums, artists, discover }
+enum MoodPage { albums, artists, rated, recent, discover }
 
 /// Each page's filter for as long as the app runs (as in the webapp: a
 /// filter set on Albums is there on the next visit, and does not filter
@@ -142,8 +145,9 @@ class MoodFilters {
   }
 }
 
-/// An Albums or Artists list whose server answered with the echo: it can
-/// filter, so the toolbar offers Filters on it. One per browser frame
+/// A list the toolbar offers Filters on: an Albums or Artists list whose
+/// server answered with the echo, or a Rated or Recent list whose server's
+/// flag says it filters by mood. One per browser frame
 /// (BrowserManager.moodFrameCache), like the genre list's state.
 class MoodListFrame {
   final Server? server;

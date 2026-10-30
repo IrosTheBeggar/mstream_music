@@ -1,10 +1,13 @@
-// Albums and Artists against a fake mStream (mStream #1092's mood filters):
+// Albums, Artists, Rated and Recent against a fake mStream (mStream #1092's
+// and #1095's mood filters):
 // what each list asks for — a plain GET without a filter, a POST carrying
 // `moods` with one — the frame it leaves on BrowserManager's stack when the
 // answer echoes the filter (the toolbar's Filters reads it), a server that
-// cannot filter, re-listing in place, an overtaken answer — then, through
-// the real toolbar and Browser screen, the Filters button and its count,
-// the sheet (only Done applies) and the grey strip with its Clear.
+// cannot filter, re-listing in place, an overtaken answer; the song lists
+// (Rated, Recent), whose bare-array answers carry no echo, going by the
+// server's flag instead — then, through the real toolbar and Browser
+// screen, the Filters button and its count, the sheet (only Done applies)
+// and the grey strip with its Clear.
 //
 // Every request goes through ApiManager.makeServerCall's per-call
 // http.Client, so running a body inside http.runWithClient answers it.
@@ -34,6 +37,16 @@ const _albums = [
   {'name': 'Stim Pack Volume one', 'album_artist': 'Boukmanflow', 'year': 2019},
 ];
 const _artists = ['ALM', 'Boukmanflow', 'Color Out'];
+const _songs = [
+  {
+    'filepath': 'music/Color Out/High Hopes.mp3',
+    'metadata': {'title': 'High Hopes', 'artist': 'Color Out'}
+  },
+  {
+    'filepath': 'music/ALM/Swing.mp3',
+    'metadata': {'title': 'Swing', 'artist': 'ALM'}
+  },
+];
 
 /// A fake mStream: a relaxed filter keeps Stim Pack and ALM, any other
 /// filter keeps everything, and every answer echoes the filter it applied —
@@ -80,6 +93,15 @@ class _FakeServer {
           return http.Response(jsonEncode({'albums': [_albums[1]]}), 200,
               headers: {'content-type': 'application/json'});
         }
+        // The song lists: bare arrays, filtered by what they are sent.
+        if (req.url.path == '/api/v1/db/rated' ||
+            req.url.path == '/api/v1/db/recent/added') {
+          final songRelaxed =
+              (body['moods'] as Map?)?['energy'] == 'relaxed';
+          return http.Response(
+              jsonEncode(songRelaxed ? [_songs[1]] : _songs), 200,
+              headers: {'content-type': 'application/json'});
+        }
         return http.Response('not found', 404);
       });
 
@@ -120,6 +142,7 @@ void main() {
   });
   tearDown(() {
     MoodFilters().reset();
+    _server.moodFiltersAvailable = null;
     ServerManager().currentServer = null;
     ServerManager().serverList.clear();
   });
@@ -214,6 +237,91 @@ void main() {
           reason: "an artist's albums are not filtered");
       BrowserManager().popBrowser();
       expect(BrowserManager().currentMoodFrame?.page, MoodPage.artists);
+    });
+  });
+
+  group('the song lists', () {
+    const swing = 'music/ALM/Swing.mp3';
+    const both = ['music/Color Out/High Hopes.mp3', swing];
+
+    test('without the flag: Rated is the plain GET, Recent sends no moods, '
+        'and neither offers Filters — even with a filter set', () async {
+      MoodFilters().set(MoodPage.rated, _relaxed);
+      MoodFilters().set(MoodPage.recent, _relaxed);
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRated(useThisServer: _server);
+        expect(BrowserManager().currentMoodFrame, isNull);
+        await ApiManager().getRecentlyAdded(useThisServer: _server);
+        expect(BrowserManager().currentMoodFrame, isNull);
+      });
+      final rated = fake.to('/api/v1/db/rated').single;
+      expect(rated.method, 'GET');
+      expect(rated.body, isEmpty);
+      expect(fake.to('/api/v1/db/recent/added').single.body, {'limit': 100});
+      expect(_names(), both, reason: 'the old route ignores what it never got');
+    });
+
+    test('with it: Rated asks a GET while nothing is set and a POST with '
+        'moods once set, re-listing in place', () async {
+      _server.moodFiltersAvailable = true;
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRated(useThisServer: _server);
+        expect(BrowserManager().currentMoodFrame?.page, MoodPage.rated);
+        expect(fake.to('/api/v1/db/rated').single.method, 'GET');
+        final depth = BrowserManager().browserCache.length;
+        await ApiManager()
+            .setMoodFilter(BrowserManager().currentMoodFrame!, _relaxed);
+        expect(BrowserManager().browserCache.length, depth);
+      });
+      final last = fake.to('/api/v1/db/rated').last;
+      expect(last.method, 'POST');
+      expect(last.body, {
+        'moods': {'energy': 'relaxed'}
+      });
+      expect(_names(), [swing]);
+      expect(BrowserManager().listName, 'Rated');
+      expect(BrowserManager().currentMoodFrame?.page, MoodPage.rated);
+    });
+
+    test('Recent keeps its limit and adds moods; Clear asks it again without',
+        () async {
+      _server.moodFiltersAvailable = true;
+      MoodFilters().set(MoodPage.recent, _relaxed);
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRecentlyAdded(useThisServer: _server);
+        expect(BrowserManager().currentMoodFrame?.page, MoodPage.recent);
+        expect(_names(), [swing]);
+        await ApiManager().setMoodFilter(
+            BrowserManager().currentMoodFrame!, MoodFilter.empty);
+      });
+      final asked = fake.to('/api/v1/db/recent/added');
+      expect(asked.first.body, {
+        'limit': 100,
+        'moods': {'energy': 'relaxed'}
+      });
+      expect(asked.last.body, {'limit': 100});
+      expect(_names(), both);
+      expect(MoodFilters().of(MoodPage.rated).isEmpty, isTrue,
+          reason: 'each list keeps its own filter');
+    });
+
+    test('a Recent answer overtaken by a newer filter is dropped', () async {
+      _server.moodFiltersAvailable = true;
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRecentlyAdded(useThisServer: _server);
+        final frame = BrowserManager().currentMoodFrame!;
+        final gate = fake.gate = Completer<void>();
+        final slow = ApiManager().setMoodFilter(frame, _relaxed);
+        await pumpEventQueue();
+        await ApiManager().setMoodFilter(frame, MoodFilter.empty);
+        gate.complete();
+        await slow;
+      });
+      expect(_names(), both);
     });
   });
 
@@ -316,6 +424,40 @@ void main() {
       expect(MoodFilters().of(MoodPage.artists).isEmpty, isTrue);
       expect(fake.to('/api/v1/db/artists').last.method, 'GET');
       expect(_names(), _artists);
+    });
+
+    testWidgets('on Rated, Filters goes before Play; Done re-lists it and the '
+        'strip names the choice', (tester) async {
+      _server.moodFiltersAvailable = true;
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRated(useThisServer: _server);
+        await pumpBrowser(tester);
+        expect(tester.getRect(button).right,
+            lessThanOrEqualTo(tester.getRect(find.byTooltip('Play')).left));
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Relaxed'));
+        await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
+        await tester.pumpAndSettle();
+      });
+      expect(fake.to('/api/v1/db/rated').last.body, {
+        'moods': {'energy': 'relaxed'}
+      });
+      expect(_names(), ['music/ALM/Swing.mp3']);
+      expect(inStrip('Relaxed'), findsOneWidget);
+      expect(find.descendant(of: button, matching: find.text('1')),
+          findsOneWidget);
+    });
+
+    testWidgets('no Filters on Recent where the server has no flag',
+        (tester) async {
+      final fake = _FakeServer();
+      await fake.run(
+          () => ApiManager().getRecentlyAdded(useThisServer: _server));
+      await pumpBrowser(tester);
+      expect(button, findsNothing);
+      expect(find.byTooltip('Play'), findsOneWidget);
     });
 
     testWidgets('no Filters where the server cannot filter', (tester) async {
