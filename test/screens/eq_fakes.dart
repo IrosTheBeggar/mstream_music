@@ -120,4 +120,24 @@ class FakeEqAudio implements EqAudio {
 
   @override
   Future<void> setBypassed(bool on) async => bypasses.add(on);
+
+  @override
+  bool hasLimiter = true;
+  @override
+  bool limiter = true;
+  final List<bool> limiterSets = [];
+  @override
+  Future<void> setLimiter(bool on) async {
+    limiter = on;
+    limiterSets.add(on);
+  }
+
+  @override
+  bool showValues = false;
+  final List<bool> showValuesSets = [];
+  @override
+  Future<void> setShowValues(bool on) async {
+    showValues = on;
+    showValuesSets.add(on);
+  }
 }

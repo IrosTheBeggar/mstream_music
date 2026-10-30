@@ -197,6 +197,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqHoldToCompareHint => '按住即可聆听不经均衡器处理的声音。';
 
   @override
+  String get eqOptionsTitle => '均衡器选项';
+
+  @override
+  String get eqPreventClipping => '防止削波';
+
+  @override
+  String get eqPreventClippingHint => '在频段被提升时限制峰值。';
+
+  @override
+  String get eqShowValues => '始终显示频段数值';
+
+  @override
+  String get eqShowValuesHint => '在每个频段上方显示数值，而不只是拖动时。';
+
+  @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
 
   @override

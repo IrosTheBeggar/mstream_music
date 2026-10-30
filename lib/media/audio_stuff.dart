@@ -546,6 +546,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Ten-band engine: gains first, so they ride along with the attach the
       // enable triggers once the player's session is known.
       await dyn.setGains(SettingsManager().eqDynamicsGains);
+      await dyn.setLimiter(SettingsManager().eqLimiter);
       await dyn.setEnabled(SettingsManager().eqEnabled);
       return;
     }
@@ -614,7 +615,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     // session id, and the engine follows it on return.
     final dyn = dynamicsEqualizer;
     if (dyn != null) {
-      if (enabled) await dyn.setGains(SettingsManager().eqDynamicsGains);
+      if (enabled) {
+        await dyn.setGains(SettingsManager().eqDynamicsGains);
+        await dyn.setLimiter(SettingsManager().eqLimiter);
+      }
       await dyn.setEnabled(enabled);
       await SettingsManager().setEqEnabled(enabled);
       return;

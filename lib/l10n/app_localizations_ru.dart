@@ -206,6 +206,22 @@ class AppLocalizationsRu extends AppLocalizations {
       'Удерживайте, чтобы услышать звук без эквалайзера.';
 
   @override
+  String get eqOptionsTitle => 'Параметры эквалайзера';
+
+  @override
+  String get eqPreventClipping => 'Предотвращать клиппинг';
+
+  @override
+  String get eqPreventClippingHint => 'Ограничивает пики при усилении полос.';
+
+  @override
+  String get eqShowValues => 'Всегда показывать значения полос';
+
+  @override
+  String get eqShowValuesHint =>
+      'Число над каждой полосой, а не только при перетаскивании.';
+
+  @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
 
   @override

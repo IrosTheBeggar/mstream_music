@@ -228,6 +228,26 @@
   "@eqHoldToCompareHint": {
     "description": "Accessibility hint for the Hold to compare button."
   },
+  "eqOptionsTitle": "Equalizer options",
+  "@eqOptionsTitle": {
+    "description": "Title of the EQ options sheet and tooltip of the app-bar button that opens it."
+  },
+  "eqPreventClipping": "Prevent clipping",
+  "@eqPreventClipping": {
+    "description": "Options switch: the ten-band engine's limiter."
+  },
+  "eqPreventClippingHint": "Limits peaks when bands are boosted.",
+  "@eqPreventClippingHint": {
+    "description": "Subtitle of the Prevent clipping switch."
+  },
+  "eqShowValues": "Always show band values",
+  "@eqShowValues": {
+    "description": "Options switch: a dB readout over every band."
+  },
+  "eqShowValuesHint": "A number over every band, not only while dragging.",
+  "@eqShowValuesHint": {
+    "description": "Subtitle of the Always show band values switch."
+  },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",

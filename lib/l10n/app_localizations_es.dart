@@ -204,6 +204,23 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mantén pulsado para oír el sonido sin el ecualizador.';
 
   @override
+  String get eqOptionsTitle => 'Opciones del ecualizador';
+
+  @override
+  String get eqPreventClipping => 'Evitar la saturación';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Limita los picos cuando se realzan las bandas.';
+
+  @override
+  String get eqShowValues => 'Mostrar siempre los valores de las bandas';
+
+  @override
+  String get eqShowValuesHint =>
+      'Un número sobre cada banda, no solo al arrastrar.';
+
+  @override
   String get eqDisabledHint => 'Activa el ecualizador para ajustar las bandas.';
 
   @override

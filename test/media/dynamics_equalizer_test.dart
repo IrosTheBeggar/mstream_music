@@ -12,6 +12,7 @@ class FakePort implements DynamicsEqPort {
   List<double>? attachedCutoffs;
   int? attachedSession;
   bool? attachedEnabled;
+  bool? attachedLimiter;
   bool attachFails = false;
 
   @override
@@ -19,13 +20,15 @@ class FakePort implements DynamicsEqPort {
       {required int sessionId,
       required List<double> cutoffsHz,
       required List<double> gainsDb,
-      required bool enabled}) async {
+      required bool enabled,
+      required bool limiter}) async {
     if (attachFails) throw StateError('refused');
     calls.add('attach:$sessionId');
     attachedSession = sessionId;
     attachedCutoffs = List.of(cutoffsHz);
     attachedGains = List.of(gainsDb);
     attachedEnabled = enabled;
+    attachedLimiter = limiter;
   }
 
   @override
@@ -33,6 +36,8 @@ class FakePort implements DynamicsEqPort {
       calls.add('gain:$band=$gainDb');
   @override
   Future<void> setEnabled(bool enabled) async => calls.add('enabled:$enabled');
+  @override
+  Future<void> setLimiter(bool enabled) async => calls.add('limiter:$enabled');
   @override
   Future<void> release() async => calls.add('release');
 }
@@ -180,5 +185,24 @@ void main() {
     expect(port.attachedEnabled, isFalse);
     await eq.setBypassed(false);
     expect(port.calls, ['attach:7', 'enabled:true']);
+  });
+
+  test('the limiter rides into an attach and switches on the live effect',
+      () async {
+    expect(eq.limiter, isFalse);
+    await eq.setLimiter(true);
+    expect(eq.limiter, isTrue);
+    expect(port.calls, isEmpty, reason: 'nothing attached yet');
+    await eq.setSessionId(7);
+    await eq.setEnabled(true);
+    expect(port.attachedLimiter, isTrue);
+    port.calls.clear();
+    await eq.setLimiter(false);
+    expect(port.calls, ['limiter:false']);
+    await eq.setLimiter(false);
+    expect(port.calls, ['limiter:false'], reason: 'idempotent');
+    await eq.setLimiter(true);
+    expect(port.calls, ['limiter:false', 'limiter:true']);
+    expect(eq.attached, isTrue, reason: 'never rebuilt');
   });
 }

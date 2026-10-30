@@ -203,6 +203,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hold to hear the sound without the equalizer.';
 
   @override
+  String get eqOptionsTitle => 'Equalizer options';
+
+  @override
+  String get eqPreventClipping => 'Prevent clipping';
+
+  @override
+  String get eqPreventClippingHint => 'Limits peaks when bands are boosted.';
+
+  @override
+  String get eqShowValues => 'Always show band values';
+
+  @override
+  String get eqShowValuesHint =>
+      'A number over every band, not only while dragging.';
+
+  @override
   String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
 
   @override

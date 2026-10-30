@@ -199,6 +199,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqHoldToCompareHint => '長押しすると、イコライザーなしの音を聞けます。';
 
   @override
+  String get eqOptionsTitle => 'イコライザーのオプション';
+
+  @override
+  String get eqPreventClipping => 'クリッピングを防ぐ';
+
+  @override
+  String get eqPreventClippingHint => 'バンドをブーストしたときのピークを抑えます。';
+
+  @override
+  String get eqShowValues => 'バンドの値を常に表示';
+
+  @override
+  String get eqShowValuesHint => 'ドラッグ中だけでなく、各バンドの上に数値を表示します。';
+
+  @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';
 
   @override

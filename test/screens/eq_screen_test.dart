@@ -431,4 +431,49 @@ void main() {
     expect(find.byKey(const Key('eq-save-preset')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the options sheet: Prevent clipping and Always show band values',
+      (tester) async {
+    await pumpReady(tester, params: fakeParams(gains: const [3, 0, 0, 0, 3]));
+    expect(find.text('+3.0'), findsNothing, reason: 'readouts off by default');
+    await tester.tap(find.byKey(const Key('eq-options')));
+    await tester.pumpAndSettle();
+    expect(find.text('Equalizer options'), findsOneWidget);
+    final limiter = find.byKey(const Key('eq-opt-limiter'));
+    final values = find.byKey(const Key('eq-opt-values'));
+    expect(tester.widget<SwitchListTile>(limiter).value, isTrue);
+    expect(tester.widget<SwitchListTile>(values).value, isFalse);
+    await tester.tap(limiter);
+    await tester.pumpAndSettle();
+    expect(audio.limiterSets, [false]);
+    expect(tester.widget<SwitchListTile>(limiter).value, isFalse,
+        reason: 'the sheet follows the controller');
+    await tester.tap(values);
+    await tester.pumpAndSettle();
+    expect(audio.showValuesSets, [true]);
+    // Close the sheet: the readouts are up over every band.
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    expect(find.text('+3.0'), findsNWidgets(2));
+    expect(find.text('0.0'), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('no clipping row on the five-band engine; options reachable while off',
+      (tester) async {
+    audio.hasLimiter = false;
+    await pumpScreen(tester);
+    expect(find.byKey(const Key('eq-options')), findsOneWidget,
+        reason: 'the sheet is useful before the EQ is on');
+    await tester.tap(find.byKey(const Key('eq-options')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('eq-opt-limiter')), findsNothing);
+    expect(find.byKey(const Key('eq-opt-values')), findsOneWidget);
+  });
+
+  testWidgets('no options button where there is no equalizer', (tester) async {
+    audio.supported = false;
+    await pumpScreen(tester);
+    expect(find.byKey(const Key('eq-options')), findsNothing);
+  });
 }

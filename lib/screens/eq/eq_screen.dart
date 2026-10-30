@@ -14,6 +14,9 @@
 //   * Hold to compare, on the ten-band engine: the EQ is off while the button
 //     is held and the panel fades, so the shaped and the plain sound can be
 //     heard back to back;
+//   * an options sheet from the app bar: Prevent clipping (the ten-band
+//     engine's limiter) and Always show band values (a readout over every
+//     band, not only the dragged one);
 //   * the band panel: one vertical slider per band on a hairline rail, and
 //     under the sliders a curve through every thumb with a fill down to 0 dB
 //     (eq_curve.dart), so the shape of the sound reads at a glance. The gain
@@ -89,6 +92,13 @@ class _EqScreenState extends State<EqScreen> {
                     ),
                   ),
                 ),
+              if (c.status != EqStatus.unsupported)
+                IconButton(
+                  key: const Key('eq-options'),
+                  tooltip: l.eqOptionsTitle,
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () => _showOptions(context, c),
+                ),
             ],
           ),
           body: SafeArea(
@@ -126,6 +136,7 @@ class _EqScreenState extends State<EqScreen> {
                   params: c.params!,
                   gains: c.gains,
                   faded: c.bypassed,
+                  showValues: c.showValues,
                   onRelease: c.saveGains,
                 ),
               ),
@@ -133,6 +144,73 @@ class _EqScreenState extends State<EqScreen> {
             ],
           ),
       };
+}
+
+/// The options sheet: the limiter where the engine has one, and the readouts
+/// switch. Live against the controller, so a flip shows at once.
+Future<void> _showOptions(BuildContext context, EqController c) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: VelvetColors.raised,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) {
+      final l = AppLocalizations.of(ctx);
+      return ListenableBuilder(
+        listenable: c,
+        builder: (ctx, _) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              const _SheetHandle(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                child: Text(
+                  l.eqOptionsTitle,
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: VelvetColors.textPrimary),
+                ),
+              ),
+              if (c.hasLimiter)
+                SwitchListTile(
+                  key: const Key('eq-opt-limiter'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  title: Text(l.eqPreventClipping,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  subtitle: Text(l.eqPreventClippingHint,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12)),
+                  value: c.limiter,
+                  onChanged: c.setLimiter,
+                  activeThumbColor: VelvetColors.primary,
+                ),
+              SwitchListTile(
+                key: const Key('eq-opt-values'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                title: Text(l.eqShowValues,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary,
+                        fontWeight: FontWeight.w600)),
+                subtitle: Text(l.eqShowValuesHint,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 12)),
+                value: c.showValues,
+                onChanged: c.setShowValues,
+                activeThumbColor: VelvetColors.primary,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// Under the panel: Hold to compare where the engine allows it, and Save once
@@ -586,6 +664,7 @@ class _BandPanel extends StatefulWidget {
     required this.gains,
     required this.onRelease,
     this.faded = false,
+    this.showValues = false,
   });
   final EqParams params;
 
@@ -596,6 +675,9 @@ class _BandPanel extends StatefulWidget {
 
   /// The engine is held off (Compare): the curve and sliders dim.
   final bool faded;
+
+  /// A readout over every band, not only the dragged one.
+  final bool showValues;
 
   @override
   State<_BandPanel> createState() => _BandPanelState();
@@ -680,6 +762,7 @@ class _BandPanelState extends State<_BandPanel> {
                                     gain: gains[i],
                                     params: params,
                                     active: active == i,
+                                    showValue: widget.showValues,
                                     onStart: () =>
                                         setState(() => _active = i),
                                     onEnd: () {
@@ -804,11 +887,13 @@ class _BandColumn extends StatelessWidget {
     required this.active,
     required this.onStart,
     required this.onEnd,
+    this.showValue = false,
   });
   final EqBand band;
   final double gain;
   final EqParams params;
   final bool active;
+  final bool showValue;
   final VoidCallback onStart;
   final VoidCallback onEnd;
 
@@ -818,7 +903,26 @@ class _BandColumn extends StatelessWidget {
     final value = gain.clamp(params.minDb, params.maxDb);
     return Column(
       children: [
-        const SizedBox(height: kEqBubbleSlot),
+        SizedBox(
+          height: kEqBubbleSlot,
+          child: showValue
+              ? Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      formatGain(value),
+                      style: TextStyle(
+                        color: active
+                            ? VelvetColors.textPrimary
+                            : VelvetColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                )
+              : null,
+        ),
         Expanded(
           // quarterTurns 3 (a quarter turn anticlockwise) puts the slider's
           // min end at the bottom and its max end at the top. The

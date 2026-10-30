@@ -204,6 +204,23 @@ class AppLocalizationsFr extends AppLocalizations {
       'Maintenez appuyé pour entendre le son sans l\'égaliseur.';
 
   @override
+  String get eqOptionsTitle => 'Options de l\'égaliseur';
+
+  @override
+  String get eqPreventClipping => 'Éviter la saturation';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Limite les crêtes quand des bandes sont amplifiées.';
+
+  @override
+  String get eqShowValues => 'Toujours afficher les valeurs des bandes';
+
+  @override
+  String get eqShowValuesHint =>
+      'Un nombre au-dessus de chaque bande, pas seulement pendant le glissement.';
+
+  @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';
 
   @override

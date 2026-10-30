@@ -203,6 +203,23 @@ class AppLocalizationsIt extends AppLocalizations {
       'Tieni premuto per sentire il suono senza l\'equalizzatore.';
 
   @override
+  String get eqOptionsTitle => 'Opzioni dell\'equalizzatore';
+
+  @override
+  String get eqPreventClipping => 'Evita la distorsione';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Limita i picchi quando le bande vengono alzate.';
+
+  @override
+  String get eqShowValues => 'Mostra sempre i valori delle bande';
+
+  @override
+  String get eqShowValuesHint =>
+      'Un numero sopra ogni banda, non solo durante il trascinamento.';
+
+  @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';
 
   @override

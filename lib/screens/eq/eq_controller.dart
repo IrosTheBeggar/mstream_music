@@ -103,6 +103,18 @@ abstract class EqAudio {
   /// Hold the engine off ([on] true) or let it back, the persisted setting
   /// untouched.
   Future<void> setBypassed(bool on);
+
+  /// The engine has a limiter stage (the ten-band one); the five-band engine
+  /// has nothing to prevent clipping with.
+  bool get hasLimiter;
+
+  /// The persisted "Prevent clipping" setting.
+  bool get limiter;
+  Future<void> setLimiter(bool on);
+
+  /// The persisted "Always show band values" setting.
+  bool get showValues;
+  Future<void> setShowValues(bool on);
 }
 
 enum EqStatus {
@@ -210,6 +222,25 @@ class EqController extends ChangeNotifier {
     } catch (e) {
       appLog('[eq] compare failed: $e');
     }
+  }
+
+  bool get hasLimiter => audio.hasLimiter;
+  bool get limiter => audio.limiter;
+  bool get showValues => audio.showValues;
+
+  /// "Prevent clipping": persisted, and pushed to the engine where it exists.
+  Future<void> setLimiter(bool on) async {
+    try {
+      await audio.setLimiter(on);
+    } catch (e) {
+      appLog('[eq] limiter failed: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> setShowValues(bool on) async {
+    await audio.setShowValues(on);
+    notifyListeners();
   }
 
   // A hold cannot outlive the sliders (a toggle, a cast, the screen going):
@@ -530,6 +561,24 @@ class LiveEqAudio implements EqAudio {
   @override
   Future<void> setBypassed(bool on) =>
       _handler.dynamicsEqualizer?.setBypassed(on) ?? Future<void>.value();
+
+  @override
+  bool get hasLimiter => _handler.dynamicsEqualizer != null;
+
+  @override
+  bool get limiter => SettingsManager().eqLimiter;
+
+  @override
+  Future<void> setLimiter(bool on) async {
+    await SettingsManager().setEqLimiter(on);
+    await _handler.dynamicsEqualizer?.setLimiter(on);
+  }
+
+  @override
+  bool get showValues => SettingsManager().eqShowValues;
+
+  @override
+  Future<void> setShowValues(bool on) => SettingsManager().setEqShowValues(on);
 }
 
 class _LiveUnit implements EqUnit {

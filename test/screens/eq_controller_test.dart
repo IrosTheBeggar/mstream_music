@@ -469,6 +469,32 @@ void main() {
       expect(audio.bypasses, [true, false, true, false]);
     });
 
+    test('options: the limiter and the readouts persist through the seam and notify',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams());
+      await settle();
+      expect(c.hasLimiter, isTrue);
+      expect(c.limiter, isTrue, reason: 'on by default');
+      expect(c.showValues, isFalse);
+      var notified = 0;
+      c.addListener(() => notified++);
+      await c.setLimiter(false);
+      expect(c.limiter, isFalse);
+      expect(audio.limiterSets, [false]);
+      await c.setShowValues(true);
+      expect(c.showValues, isTrue);
+      expect(audio.showValuesSets, [true]);
+      expect(notified, 2);
+      audio.hasLimiter = false;
+      expect(c.hasLimiter, isFalse);
+      c.dispose();
+    });
+
     test('a late answer after dispose is ignored', () async {
       final unit = FakeUnit();
       audio

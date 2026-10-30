@@ -213,6 +213,12 @@ class SettingsManager {
   // here so settings stay free of the EQ's types). Their own content, so a
   // settings reset leaves them alone.
   List<Map<String, dynamic>> eqUserPresets = const [];
+  // "Prevent clipping": the ten-band engine's limiter stage. On by default —
+  // a boosted band on a loud master clips otherwise.
+  bool eqLimiter = true;
+  // "Always show band values": a readout over every band, not only the one
+  // being dragged.
+  bool eqShowValues = false;
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -371,6 +377,8 @@ class SettingsManager {
       final accent = m['accentColor'];
       accentColor = accent is int ? accent : null;
       eqEnabled = m['eqEnabled'] ?? false;
+      eqLimiter = m['eqLimiter'] ?? true;
+      eqShowValues = m['eqShowValues'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
       offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
@@ -599,6 +607,8 @@ class SettingsManager {
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
       'eqEnabled': eqEnabled,
+      'eqLimiter': eqLimiter,
+      'eqShowValues': eqShowValues,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
@@ -792,6 +802,16 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setEqLimiter(bool v) async {
+    eqLimiter = v;
+    await _save();
+  }
+
+  Future<void> setEqShowValues(bool v) async {
+    eqShowValues = v;
+    await _save();
+  }
+
   Future<void> setResumeQueue(bool v) async {
     resumeQueue = v;
     await _save();
@@ -901,6 +921,8 @@ class SettingsManager {
     playerLayout = PlayerLayout.medium;
     accentColor = null;
     eqEnabled = false;
+    eqLimiter = true;
+    eqShowValues = false;
     resumeQueue = true;
     offlineQueue = false;
     offlineQueueWifiOnly = true;

@@ -205,6 +205,23 @@ class AppLocalizationsPl extends AppLocalizations {
       'Przytrzymaj, aby usłyszeć dźwięk bez korektora.';
 
   @override
+  String get eqOptionsTitle => 'Opcje korektora';
+
+  @override
+  String get eqPreventClipping => 'Zapobiegaj przesterowaniu';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Ogranicza szczyty, gdy pasma są podbite.';
+
+  @override
+  String get eqShowValues => 'Zawsze pokazuj wartości pasm';
+
+  @override
+  String get eqShowValuesHint =>
+      'Liczba nad każdym pasmem, nie tylko podczas przeciągania.';
+
+  @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';
 
   @override

@@ -456,6 +456,36 @@ abstract class AppLocalizations {
   /// **'Hold to hear the sound without the equalizer.'**
   String get eqHoldToCompareHint;
 
+  /// Title of the EQ options sheet and tooltip of the app-bar button that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer options'**
+  String get eqOptionsTitle;
+
+  /// Options switch: the ten-band engine's limiter.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevent clipping'**
+  String get eqPreventClipping;
+
+  /// Subtitle of the Prevent clipping switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits peaks when bands are boosted.'**
+  String get eqPreventClippingHint;
+
+  /// Options switch: a dB readout over every band.
+  ///
+  /// In en, this message translates to:
+  /// **'Always show band values'**
+  String get eqShowValues;
+
+  /// Subtitle of the Always show band values switch.
+  ///
+  /// In en, this message translates to:
+  /// **'A number over every band, not only while dragging.'**
+  String get eqShowValuesHint;
+
   /// No description provided for @eqDisabledHint.
   ///
   /// In en, this message translates to:

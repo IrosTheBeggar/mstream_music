@@ -204,6 +204,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Gedrückt halten, um den Klang ohne Equalizer zu hören.';
 
   @override
+  String get eqOptionsTitle => 'Equalizer-Optionen';
+
+  @override
+  String get eqPreventClipping => 'Übersteuern verhindern';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Begrenzt Pegelspitzen, wenn Bänder angehoben werden.';
+
+  @override
+  String get eqShowValues => 'Bandwerte immer anzeigen';
+
+  @override
+  String get eqShowValuesHint =>
+      'Über jedem Band eine Zahl, nicht nur beim Ziehen.';
+
+  @override
   String get eqDisabledHint =>
       'Schalte den Equalizer ein, um die Bänder anzupassen.';
 

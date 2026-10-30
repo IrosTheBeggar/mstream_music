@@ -30,9 +30,11 @@ abstract class DynamicsEqPort {
     required List<double> cutoffsHz,
     required List<double> gainsDb,
     required bool enabled,
+    required bool limiter,
   });
   Future<void> setGain(int band, double gainDb);
   Future<void> setEnabled(bool enabled);
+  Future<void> setLimiter(bool enabled);
   Future<void> release();
 }
 
@@ -43,16 +45,20 @@ class _PluginPort implements DynamicsEqPort {
     required List<double> cutoffsHz,
     required List<double> gainsDb,
     required bool enabled,
+    required bool limiter,
   }) =>
       DynamicsEq.attach(
           sessionId: sessionId,
           cutoffsHz: cutoffsHz,
           gainsDb: gainsDb,
-          enabled: enabled);
+          enabled: enabled,
+          limiter: limiter);
   @override
   Future<void> setGain(int band, double gainDb) => DynamicsEq.setGain(band, gainDb);
   @override
   Future<void> setEnabled(bool enabled) => DynamicsEq.setEnabled(enabled);
+  @override
+  Future<void> setLimiter(bool enabled) => DynamicsEq.setLimiter(enabled);
   @override
   Future<void> release() => DynamicsEq.release();
 }
@@ -93,6 +99,7 @@ class DynamicsEqualizer {
   Future<void> _chain = Future<void>.value();
 
   bool _bypassed = false;
+  bool _limiter = false;
 
   bool get enabled => _enabled;
   bool get attached => _attached;
@@ -111,6 +118,16 @@ class DynamicsEqualizer {
         if (_enabled == on) return;
         _enabled = on;
         await _sync();
+      });
+
+  /// The limiter stage ("Prevent clipping"): kept here and pushed to the live
+  /// effect, or carried into the next attach.
+  bool get limiter => _limiter;
+
+  Future<void> setLimiter(bool on) => _run(() async {
+        if (_limiter == on) return;
+        _limiter = on;
+        if (_attached) await _port.setLimiter(on);
       });
 
   /// Hold the effect off ([on] true) or let it back. Nothing is released and
@@ -162,7 +179,8 @@ class DynamicsEqualizer {
             sessionId: _sessionId!,
             cutoffsHz: cutoffFrequencies,
             gainsDb: gains,
-            enabled: !_bypassed);
+            enabled: !_bypassed,
+            limiter: _limiter);
         _attached = true;
       } catch (e) {
         appLog('[eq] ten-band attach failed on session $_sessionId: $e');

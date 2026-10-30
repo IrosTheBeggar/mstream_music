@@ -28,6 +28,7 @@ class DynamicsEq {
     required List<double> cutoffsHz,
     required List<double> gainsDb,
     bool enabled = true,
+    bool limiter = false,
   }) async {
     if (!Platform.isAndroid) return;
     await _channel.invokeMethod<void>('attach', {
@@ -35,7 +36,14 @@ class DynamicsEq {
       'cutoffs': cutoffsHz,
       'gains': gainsDb,
       'enabled': enabled,
+      'limiter': limiter,
     });
+  }
+
+  /// The limiter stage that keeps boosted bands from clipping, on or off.
+  static Future<void> setLimiter(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('setLimiter', {'enabled': enabled});
   }
 
   static Future<void> setGain(int band, double gainDb) async {
