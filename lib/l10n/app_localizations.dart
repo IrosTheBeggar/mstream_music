@@ -315,7 +315,7 @@ abstract class AppLocalizations {
   /// Shown when the EQ band layout can't be read because nothing is playing.
   ///
   /// In en, this message translates to:
-  /// **'Start a song to configure the EQ.\n\nAndroid\'s native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.'**
+  /// **'This phone\'s equalizer reports its bands only once audio is playing. Your saved preset is applied the moment they appear.'**
   String get eqNeedsPlayback;
 
   /// Shown when the native equalizer throws while initializing.
@@ -611,6 +611,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Now'**
   String get eqOutputNowPill;
+
+  /// Heading of the EQ state that waits for playback (five-band engine).
+  ///
+  /// In en, this message translates to:
+  /// **'Start a song to set up the bands'**
+  String get eqNeedsPlaybackTitle;
+
+  /// Button in that state that plays the restored queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the queue'**
+  String get eqPlayQueue;
+
+  /// Caption under that button, with the queue length.
+  ///
+  /// In en, this message translates to:
+  /// **'Resumes where you left off · {count, plural, =1{1 song} other{{count} songs}}'**
+  String eqPlayQueueHint(int count);
 
   /// No description provided for @eqDisabledHint.
   ///

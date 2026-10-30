@@ -126,7 +126,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Запустите трек, чтобы настроить эквалайзер.\n\nНативный эквалайзер Android инициализируется вместе с аудиосессией, поэтому для считывания раскладки полос необходимо активное воспроизведение.';
+      'Эквалайзер этого телефона сообщает о своих полосах только во время воспроизведения. Сохранённый пресет применится, как только они появятся.';
 
   @override
   String eqInitFailed(String error) {
@@ -296,6 +296,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => 'Сейчас';
+
+  @override
+  String get eqNeedsPlaybackTitle => 'Запустите трек, чтобы настроить полосы';
+
+  @override
+  String get eqPlayQueue => 'Воспроизвести очередь';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count треков',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return 'Продолжит с того места, где вы остановились · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';

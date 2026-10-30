@@ -495,6 +495,37 @@ void main() {
       c.dispose();
     });
 
+    test('play the queue: offered while the bands wait and a queue exists',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit
+        ..playerInactive = true;
+      final c = EqController(audio);
+      expect(c.status, EqStatus.needsPlayback);
+      expect(c.canPlayQueue, isFalse, reason: 'nothing to play');
+      await c.playQueue();
+      expect(audio.plays, 0);
+      audio.queueLength = 41;
+      expect(c.canPlayQueue, isTrue);
+      expect(c.queueLength, 41);
+      await c.playQueue();
+      expect(audio.plays, 1);
+      // Playing activates the player; the layout follows and the offer goes.
+      audio.playerInactive = false;
+      audio.emitPlayer();
+      await settle();
+      expect(c.status, EqStatus.loading);
+      expect(c.canPlayQueue, isFalse);
+      unit.resolve(fakeParams());
+      await settle();
+      expect(c.status, EqStatus.ready);
+      await c.playQueue();
+      expect(audio.plays, 1, reason: 'not while the sliders are up');
+      c.dispose();
+    });
+
     test('a late answer after dispose is ignored', () async {
       final unit = FakeUnit();
       audio

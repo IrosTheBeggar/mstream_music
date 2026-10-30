@@ -122,7 +122,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      '曲を再生してからイコライザーを設定してください。\n\nAndroid のネイティブイコライザーはオーディオセッションとともに初期化されるため、バンド構成を読み取るには再生が有効になっている必要があります。';
+      'この端末のイコライザーは、音声の再生中にのみバンドを報告します。保存したプリセットは、バンドが表示され次第適用されます。';
 
   @override
   String eqInitFailed(String error) {
@@ -286,6 +286,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => '現在';
+
+  @override
+  String get eqNeedsPlaybackTitle => '曲を再生するとバンドを設定できます';
+
+  @override
+  String get eqPlayQueue => 'キューを再生';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '前回の続きから再生 · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';

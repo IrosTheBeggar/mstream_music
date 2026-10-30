@@ -124,7 +124,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Lancez un morceau pour configurer l\'égaliseur.\n\nL\'égaliseur natif d\'Android s\'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.';
+      'L\'égaliseur de ce téléphone n\'indique ses bandes qu\'une fois l\'audio en lecture. Votre préréglage enregistré s\'applique dès qu\'elles apparaissent.';
 
   @override
   String eqInitFailed(String error) {
@@ -296,6 +296,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => 'Maintenant';
+
+  @override
+  String get eqNeedsPlaybackTitle =>
+      'Lancez un morceau pour configurer les bandes';
+
+  @override
+  String get eqPlayQueue => 'Lire la file d\'attente';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count morceaux',
+      one: '$count morceau',
+    );
+    return 'Reprend là où vous en étiez · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';

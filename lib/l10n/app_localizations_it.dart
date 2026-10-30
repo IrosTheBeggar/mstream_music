@@ -124,7 +124,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Avvia un brano per configurare l’equalizzatore.\n\nL’equalizzatore nativo di Android si inizializza con la sessione audio, quindi la riproduzione deve essere attiva prima di poter leggere la disposizione delle bande.';
+      'L\'equalizzatore di questo telefono comunica le sue bande solo quando l\'audio è in riproduzione. Il preset salvato viene applicato appena compaiono.';
 
   @override
   String eqInitFailed(String error) {
@@ -294,6 +294,23 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => 'Adesso';
+
+  @override
+  String get eqNeedsPlaybackTitle => 'Avvia un brano per impostare le bande';
+
+  @override
+  String get eqPlayQueue => 'Riproduci la coda';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count brani',
+      one: '1 brano',
+    );
+    return 'Riprende da dove eri rimasto · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';

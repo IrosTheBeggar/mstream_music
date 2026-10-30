@@ -126,7 +126,7 @@
   "@eqOnlyAndroid": {
     "description": "Shown when the EQ is opened on a non-Android platform."
   },
-  "eqNeedsPlayback": "Start a song to configure the EQ.\n\nAndroid's native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.",
+  "eqNeedsPlayback": "This phone's equalizer reports its bands only once audio is playing. Your saved preset is applied the moment they appear.",
   "@eqNeedsPlayback": {
     "description": "Shown when the EQ band layout can't be read because nothing is playing."
   },
@@ -336,6 +336,19 @@
   "eqOutputNowPill": "Now",
   "@eqOutputNowPill": {
     "description": "Small pill on the output in use."
+  },
+  "eqNeedsPlaybackTitle": "Start a song to set up the bands",
+  "@eqNeedsPlaybackTitle": {
+    "description": "Heading of the EQ state that waits for playback (five-band engine)."
+  },
+  "eqPlayQueue": "Play the queue",
+  "@eqPlayQueue": {
+    "description": "Button in that state that plays the restored queue."
+  },
+  "eqPlayQueueHint": "Resumes where you left off · {count, plural, =1{1 song} other{{count} songs}}",
+  "@eqPlayQueueHint": {
+    "description": "Caption under that button, with the queue length.",
+    "placeholders": {"count": {"type": "int"}}
   },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",

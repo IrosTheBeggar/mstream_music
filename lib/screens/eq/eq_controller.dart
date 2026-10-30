@@ -120,6 +120,11 @@ abstract class EqAudio {
   /// Per-output curves, where the engine supports them (ten-band); null on
   /// the five-band engine.
   EqOutputRouter? get outputs;
+
+  /// What "Play the queue" has to work with while the five-band engine waits
+  /// for playback: the restored queue's length, and the handler's play.
+  int get queueLength;
+  Future<void> playQueue();
 }
 
 enum EqStatus {
@@ -161,6 +166,22 @@ class EqController extends ChangeNotifier {
 
   /// Per-output curves, or null where the engine cannot keep them.
   EqOutputRouter? get outputs => audio.outputs;
+
+  int get queueLength => audio.queueLength;
+
+  /// "Play the queue" is offered: the bands wait for playback and there is
+  /// a queue to play. Playing activates the player, and the layout follows.
+  bool get canPlayQueue =>
+      _status == EqStatus.needsPlayback && audio.queueLength > 0;
+
+  Future<void> playQueue() async {
+    if (!canPlayQueue) return;
+    try {
+      await audio.playQueue();
+    } catch (e) {
+      appLog('[eq] play failed: $e');
+    }
+  }
 
   void _onOutputs() {
     if (!_disposed) notifyListeners();
@@ -600,6 +621,12 @@ class LiveEqAudio implements EqAudio {
 
   @override
   EqOutputRouter? get outputs => _handler.eqOutputs;
+
+  @override
+  int get queueLength => _handler.queue.value.length;
+
+  @override
+  Future<void> playQueue() => _handler.play();
 }
 
 class _LiveUnit implements EqUnit {

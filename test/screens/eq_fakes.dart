@@ -106,6 +106,15 @@ class FakeEqAudio implements EqAudio {
   EqOutputRouter? outputs;
 
   @override
+  int queueLength = 0;
+
+  /// Every playQueue call.
+  int plays = 0;
+
+  @override
+  Future<void> playQueue() async => plays++;
+
+  @override
   List<EqPreset> userPresets = [];
 
   /// Every list handed to saveUserPresets, last one current.

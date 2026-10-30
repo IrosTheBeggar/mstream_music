@@ -126,7 +126,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Rozpocznij odtwarzanie utworu, aby skonfigurować korektor.\n\nNatywny korektor Androida inicjuje się wraz z sesją audio, dlatego do odczytania układu pasm potrzebne jest aktywne odtwarzanie.';
+      'Korektor tego telefonu zgłasza swoje pasma dopiero podczas odtwarzania dźwięku. Zapisany preset zostanie zastosowany, gdy tylko się pojawią.';
 
   @override
   String eqInitFailed(String error) {
@@ -296,6 +296,26 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => 'Teraz';
+
+  @override
+  String get eqNeedsPlaybackTitle =>
+      'Rozpocznij utwór, aby skonfigurować pasma';
+
+  @override
+  String get eqPlayQueue => 'Odtwórz kolejkę';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+    );
+    return 'Wznawia tam, gdzie skończyłeś · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';

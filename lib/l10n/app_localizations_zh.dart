@@ -120,8 +120,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqOnlyAndroid => '均衡器仅在 Android 上可用。';
 
   @override
-  String get eqNeedsPlayback =>
-      '请先播放一首歌曲以配置均衡器。\n\nAndroid 的原生均衡器会随音频会话一起初始化，因此需要正在播放时才能读取频段布局。';
+  String get eqNeedsPlayback => '本机的均衡器只有在播放音频时才会报告频段。频段出现后，会立即应用你保存的预设。';
 
   @override
   String eqInitFailed(String error) {
@@ -283,6 +282,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eqOutputNowPill => '当前';
+
+  @override
+  String get eqNeedsPlaybackTitle => '播放一首歌曲即可设置频段';
+
+  @override
+  String get eqPlayQueue => '播放队列';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '从上次停下的地方继续 · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => '开启均衡器以调整频段。';

@@ -85,16 +85,43 @@ void main() {
     expect(theSwitch(tester).onChanged, isNull);
   });
 
-  testWidgets('on with an idle player: the start-a-song hint, no spinner',
+  testWidgets('on with an idle player: the start-a-song hint, no spinner, no button without a queue',
       (tester) async {
     audio
       ..enabled = true
       ..unit = FakeUnit()
       ..playerInactive = true;
     await pumpScreen(tester);
-    expect(find.textContaining('Start a song'), findsOneWidget);
+    expect(find.text('Start a song to set up the bands'), findsOneWidget);
+    expect(find.textContaining('reports its bands only once'), findsOneWidget);
+    expect(find.byKey(const Key('eq-play-queue')), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(theSwitch(tester).value, isTrue);
+  });
+
+  testWidgets('waiting with a queue: Play the queue starts it, and the bands follow',
+      (tester) async {
+    final unit = FakeUnit();
+    audio
+      ..enabled = true
+      ..unit = unit
+      ..playerInactive = true
+      ..queueLength = 41;
+    await pumpScreen(tester);
+    final button = find.byKey(const Key('eq-play-queue'));
+    expect(button, findsOneWidget);
+    expect(find.text('Resumes where you left off · 41 songs'), findsOneWidget);
+    await tester.tap(button);
+    await tester.pump();
+    expect(audio.plays, 1);
+    audio.playerInactive = false;
+    audio.emitPlayer();
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(button, findsNothing);
+    unit.resolve(fakeParams());
+    await tester.pump();
+    expect(find.byType(Slider), findsNWidgets(5));
   });
 
   testWidgets('ready: a slider per band, frequencies, the axis, Reset',

@@ -125,7 +125,7 @@ class _EqScreenState extends State<EqScreen> {
         EqStatus.unsupported => _Message(l.eqOnlyAndroid),
         EqStatus.casting => _Message(l.eqCasting),
         EqStatus.off => _Message(l.eqDisabledHint),
-        EqStatus.needsPlayback => _Message(l.eqNeedsPlayback),
+        EqStatus.needsPlayback => _NeedsPlayback(c),
         EqStatus.failed => _Message(l.eqInitFailed(c.failure ?? 'timeout')),
         EqStatus.noBands => _Message(l.eqNoBands),
         EqStatus.busy || EqStatus.loading => Center(
@@ -663,6 +663,78 @@ class _EnableTile extends StatelessWidget {
       return l.eqEnabledOnOutput(eqOutputLabel(l, cur.kind, cur.name));
     }
     return l.eqEnabledOn;
+  }
+}
+
+/// The five-band engine waiting for playback (its bands are readable only
+/// once a song is loaded): say so, and offer to play the restored queue
+/// when there is one, which is what makes the bands appear.
+class _NeedsPlayback extends StatelessWidget {
+  const _NeedsPlayback(this.controller);
+  final EqController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 0, 32, 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: VelvetColors.raised,
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Icon(Icons.play_arrow,
+                  size: 28, color: VelvetColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l.eqNeedsPlaybackTitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l.eqNeedsPlayback,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 14, height: 1.5, color: VelvetColors.textSecondary),
+            ),
+            if (controller.canPlayQueue) ...[
+              const SizedBox(height: 22),
+              FilledButton.icon(
+                key: const Key('eq-play-queue'),
+                onPressed: controller.playQueue,
+                style: FilledButton.styleFrom(
+                  backgroundColor: VelvetColors.primary,
+                  foregroundColor: VelvetColors.onPrimary,
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                ),
+                icon: const Icon(Icons.play_arrow, size: 20),
+                label: Text(l.eqPlayQueue,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l.eqPlayQueueHint(controller.queueLength),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: VelvetColors.textTertiary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
