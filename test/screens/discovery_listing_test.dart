@@ -844,7 +844,8 @@ void main() {
     });
 
     testWidgets('Filters on Discover: Done asks again under the choices and '
-        'the strip under the bar names them; its Clear lets them go',
+        'the strip under the bar names them; its Strict asks for strong fits '
+        'only; its Clear lets them go',
         (tester) async {
       MoodFilters().reset();
       addTearDown(MoodFilters().reset);
@@ -873,6 +874,17 @@ void main() {
       expect(tester.getRect(strip).top,
           tester.getRect(find.byType(DiscoveryConfigBar)).bottom,
           reason: 'right under the bar');
+
+      final strict = find.byKey(const ValueKey('mood-strip-strict'));
+      expect(tester.widget<FilterChip>(strict).selected, isFalse);
+      await tester.tap(strict);
+      await tester.pumpAndSettle();
+      expect(asked.where((r) => !isPeersCall(r)).last.toJson()['moods'],
+          {'energy': 'relaxed', 'strict': true});
+      expect(tester.widget<FilterChip>(strict).selected, isTrue);
+      expect(find.descendant(of: button, matching: find.text('1')),
+          findsOneWidget,
+          reason: 'Strict is not a choice');
 
       await tester.tap(find.byKey(const ValueKey('mood-strip-clear')));
       await tester.pumpAndSettle();

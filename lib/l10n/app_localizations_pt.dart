@@ -1110,6 +1110,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get moodDanceable => 'Dançante';
 
   @override
+  String get moodStrict => 'Estrito';
+
+  @override
+  String get moodCloseMatches => 'Correspondências próximas';
+
+  @override
   String get browserRecent => 'Recentes';
 
   @override

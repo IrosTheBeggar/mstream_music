@@ -293,6 +293,8 @@
   "moodAcoustic": "アコースティック",
   "moodParty": "パーティー",
   "moodDanceable": "踊れる",
+  "moodStrict": "厳密",
+  "moodCloseMatches": "近い一致",
   "browserRecent": "最近",
   "browserRated": "評価済み",
   "browserSectionLibrary": "ライブラリ",

@@ -383,6 +383,10 @@ class _BrowserState extends State<Browser> {
         {
           return makeLocalFileWidget(b, i, c);
         }
+      case kMoodCloseMatches:
+        {
+          return const MoodCloseMatches();
+        }
       default:
         {
           return makeBasicWidget(b, i, c);
@@ -398,6 +402,7 @@ class _BrowserState extends State<Browser> {
   // scaler upward so larger accessibility text never clips, while staying at the
   // tuned base at the default (and smaller) text scales.
   static double _rowExtent(DisplayItem it, TextScaler ts) {
+    if (it.type == kMoodCloseMatches) return MoodCloseMatches.extentFor(ts);
     final base =
         (it.metadata?.artist != null || it.subtext != null) ? 74.0 : 58.0;
     final scaled = ts.scale(base);
@@ -1244,6 +1249,10 @@ class _BrowserState extends State<Browser> {
                     onClear: c.disabled
                         ? null
                         : () => unawaited(c.setMoods(MoodFilter.empty)),
+                    onStrict: c.disabled
+                        ? null
+                        : () => unawaited(
+                            c.setMoods(c.moods.withStrict(!c.moods.strict))),
                   ));
                 }
                 // What the server is copying for you, under the bar.
@@ -1303,6 +1312,8 @@ class _BrowserState extends State<Browser> {
       filter: filter,
       onClear: () =>
           unawaited(ApiManager().setMoodFilter(frame, MoodFilter.empty)),
+      onStrict: () => unawaited(ApiManager()
+          .setMoodFilter(frame, filter.withStrict(!filter.strict))),
     );
   }
 
@@ -1536,7 +1547,8 @@ class _BrowserState extends State<Browser> {
                     final bool filtering =
                         search.open && q.isNotEmpty && !isHome;
                     final List<DisplayItem> browserList = filtering
-                        ? rawList.where((it) => it.matchesQuery(q)).toList()
+                        ? narrowKeepingCloseMatches(
+                            rawList, (it) => it.matchesQuery(q))
                         : rawList;
 
                     if (filtering && browserList.isEmpty) {

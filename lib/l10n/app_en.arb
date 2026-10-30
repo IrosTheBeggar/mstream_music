@@ -937,6 +937,14 @@
   "@moodDanceable": {
     "description": "Mood filter tag: songs you can dance to."
   },
+  "moodStrict": "Strict",
+  "@moodStrict": {
+    "description": "Mood filter strip: the switch that keeps only the songs that fit the filter strongly."
+  },
+  "moodCloseMatches": "Close matches",
+  "@moodCloseMatches": {
+    "description": "Rated and Recent under a mood filter: the header over the songs that fit it, but not strongly. Shown in capitals."
+  },
   "browserRecent": "Recent",
   "browserRated": "Rated",
   "browserSectionLibrary": "Library",

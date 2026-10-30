@@ -1,8 +1,10 @@
 // The mood filter's model (mStream #1092): the wire form a page's filter is
-// sent in, the one-value-per-scale and toggling-tag choices, the answer's
-// echo that says a list can filter, and each page's own filter.
+// sent in, the one-value-per-scale and toggling-tag choices, Strict, the
+// answer's echo that says a list can filter, each page's own filter, and a
+// filtered song list's strong fits first.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/mood_filter.dart';
 
 void main() {
@@ -69,6 +71,79 @@ void main() {
               voice: 'vocals',
               tags: ['acoustic', 'party', 'danceable']).count,
           6);
+    });
+  });
+
+  group('strict', () {
+    test('sent beside the choices; never on its own', () {
+      final f = const MoodFilter(energy: 'relaxed').withStrict(true);
+      expect(f.toJson(), {'energy': 'relaxed', 'strict': true});
+      expect(f.withStrict(false).toJson(), {'energy': 'relaxed'});
+      expect(MoodFilter.empty.withStrict(true), MoodFilter.empty,
+          reason: 'nothing set: nothing to be strict about');
+      expect(f.count, 1, reason: 'not a choice: the badge does not count it');
+      expect(f == const MoodFilter(energy: 'relaxed'), isFalse);
+      expect(f, const MoodFilter(energy: 'relaxed', strict: true));
+    });
+
+    test('kept while a choice stays; gone with the last one', () {
+      final f = const MoodFilter(energy: 'relaxed', strict: true);
+      expect(f.toggleTag('party').strict, isTrue);
+      expect(f.withScale(MoodScale.voice, 'vocals').strict, isTrue);
+      final none = f.withScale(MoodScale.energy, null);
+      expect(none, MoodFilter.empty);
+      expect(none.toggleTag('party').strict, isFalse,
+          reason: 'not left behind for the next choice');
+    });
+  });
+
+  group('strong fits first', () {
+    DisplayItem song(String name, String? fit) =>
+        DisplayItem(null, name, 'file', '/$name', null, null)..moodFit = fit;
+    List<String> shown(List<DisplayItem> l) =>
+        [for (final e in l) e.type == kMoodCloseMatches ? '—' : e.name];
+
+    test("the strong fits in the list's own order, then the close ones "
+        'under one divider', () {
+      final list = [
+        song('a', 'close'),
+        song('b', 'strong'),
+        song('c', 'close'),
+        song('d', 'strong'),
+      ];
+      expect(shown(strongFirst(list)), ['b', 'd', '—', 'a', 'c']);
+      expect(shown(strongFirst([song('a', 'close')])), ['—', 'a'],
+          reason: 'none strong: the divider leads');
+      final plain = [song('a', null), song('b', null)];
+      expect(identical(strongFirst(plain), plain), isTrue,
+          reason: 'unfiltered: as it came');
+      final strict = [song('a', 'strong'), song('b', 'strong')];
+      expect(identical(strongFirst(strict), strict), isTrue);
+    });
+
+    test('a search keeps the divider while a close match stays under it',
+        () {
+      final list = strongFirst([
+        song('alpha', 'strong'),
+        song('beta', 'close'),
+        song('gamma', 'close'),
+      ]);
+      bool has(DisplayItem e, String q) => e.name.contains(q);
+      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'a'))),
+          ['alpha', '—', 'beta', 'gamma']);
+      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'alpha'))),
+          ['alpha']);
+      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'beta'))),
+          ['—', 'beta']);
+      expect(narrowKeepingCloseMatches(list, (e) => false), isEmpty);
+    });
+
+    test("a song's fit from the answer: strong, close or nothing", () {
+      expect(moodFitOf({'moodFit': 'strong'}), 'strong');
+      expect(moodFitOf({'moodFit': 'close'}), 'close');
+      expect(moodFitOf({'moodFit': 'loose'}), isNull);
+      expect(moodFitOf({'filepath': 'x'}), isNull);
+      expect(moodFitOf('junk'), isNull);
     });
   });
 

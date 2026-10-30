@@ -1124,6 +1124,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moodDanceable => 'Танцевальные';
 
   @override
+  String get moodStrict => 'Строго';
+
+  @override
+  String get moodCloseMatches => 'Близкие совпадения';
+
+  @override
   String get browserRecent => 'Недавние';
 
   @override

@@ -1113,6 +1113,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moodDanceable => 'Bailable';
 
   @override
+  String get moodStrict => 'Estricto';
+
+  @override
+  String get moodCloseMatches => 'Coincidencias cercanas';
+
+  @override
   String get browserRecent => 'Recientes';
 
   @override

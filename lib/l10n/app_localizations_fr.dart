@@ -1111,6 +1111,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get moodDanceable => 'Dansant';
 
   @override
+  String get moodStrict => 'Strict';
+
+  @override
+  String get moodCloseMatches => 'Correspondances proches';
+
+  @override
   String get browserRecent => 'Récents';
 
   @override

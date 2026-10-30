@@ -1058,6 +1058,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moodDanceable => '适合跳舞';
 
   @override
+  String get moodStrict => '严格';
+
+  @override
+  String get moodCloseMatches => '相近匹配';
+
+  @override
   String get browserRecent => '最近添加';
 
   @override
