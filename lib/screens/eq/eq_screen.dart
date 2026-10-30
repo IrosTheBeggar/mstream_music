@@ -11,6 +11,9 @@
 //     put a "Custom" chip first and a Save button under the panel, and the
 //     user's saved curves follow the built-ins after a divider (long-press one
 //     to rename or delete it);
+//   * Hold to compare, on the ten-band engine: the EQ is off while the button
+//     is held and the panel fades, so the shaped and the plain sound can be
+//     heard back to back;
 //   * the band panel: one vertical slider per band on a hairline rail, and
 //     under the sliders a curve through every thumb with a fill down to 0 dB
 //     (eq_curve.dart), so the shape of the sound reads at a glance. The gain
@@ -122,6 +125,7 @@ class _EqScreenState extends State<EqScreen> {
                 child: _BandPanel(
                   params: c.params!,
                   gains: c.gains,
+                  faded: c.bypassed,
                   onRelease: c.saveGains,
                 ),
               ),
@@ -131,9 +135,10 @@ class _EqScreenState extends State<EqScreen> {
       };
 }
 
-/// Under the panel: Save, once the gains spell no preset. The row keeps its
-/// height either way, so the first drag that leaves a preset does not shrink
-/// the panel under the finger.
+/// Under the panel: Hold to compare where the engine allows it, and Save once
+/// the gains spell no preset. The row keeps its height either way, so the
+/// first drag that leaves a preset does not shrink the panel under the
+/// finger.
 class _ActionRow extends StatelessWidget {
   const _ActionRow(this.controller);
   final EqController controller;
@@ -141,26 +146,120 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final compare = controller.canCompare;
+    final custom = controller.isCustom;
     return SizedBox(
       height: 60,
-      child: controller.isCustom
+      child: compare || custom
           ? Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: FilledButton.icon(
-                key: const Key('eq-save-preset'),
-                onPressed: () => _savePreset(context, controller),
-                style: FilledButton.styleFrom(
-                  backgroundColor: VelvetColors.primary,
-                  foregroundColor: VelvetColors.onPrimary,
-                  minimumSize: const Size.fromHeight(44),
-                ),
-                icon: const Icon(Icons.add, size: 20),
-                label: Text(l.eqSaveAsPreset,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+              child: Row(
+                children: [
+                  if (compare) Expanded(child: _CompareButton(controller)),
+                  if (compare && custom) const SizedBox(width: 12),
+                  if (custom)
+                    Expanded(
+                      child: FilledButton.icon(
+                        key: const Key('eq-save-preset'),
+                        onPressed: () => _savePreset(context, controller),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: VelvetColors.primary,
+                          foregroundColor: VelvetColors.onPrimary,
+                          minimumSize: const Size.fromHeight(44),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        icon: const Icon(Icons.add, size: 20),
+                        label: Text(l.eqSaveAsPreset,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                ],
               ),
             )
           : null,
+    );
+  }
+}
+
+/// Press and hold: the engine is off while any finger is down on it. Raw
+/// pointer events rather than a button's tap, so a hold of any length ends
+/// in a release, never a cancelled tap.
+class _CompareButton extends StatefulWidget {
+  const _CompareButton(this.controller);
+  final EqController controller;
+
+  @override
+  State<_CompareButton> createState() => _CompareButtonState();
+}
+
+class _CompareButtonState extends State<_CompareButton> {
+  final Set<int> _pointers = {};
+
+  void _down(PointerDownEvent e) {
+    _pointers.add(e.pointer);
+    widget.controller.setBypassed(true);
+  }
+
+  void _up(int pointer) {
+    _pointers.remove(pointer);
+    if (_pointers.isEmpty) widget.controller.setBypassed(false);
+  }
+
+  @override
+  void dispose() {
+    if (_pointers.isNotEmpty) widget.controller.setBypassed(false);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final held = widget.controller.bypassed;
+    return Semantics(
+      button: true,
+      label: l.eqHoldToCompare,
+      hint: l.eqHoldToCompareHint,
+      child: Listener(
+        key: const Key('eq-compare'),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _down,
+        onPointerUp: (e) => _up(e.pointer),
+        onPointerCancel: (e) => _up(e.pointer),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          height: 44,
+          decoration: BoxDecoration(
+            color: held ? VelvetColors.primaryDim : Colors.transparent,
+            border: Border.all(
+                color: held ? VelvetColors.primary : VelvetColors.border2),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.compare_arrows,
+                  size: 20,
+                  color: held ? VelvetColors.primary : VelvetColors.textPrimary),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  l.eqHoldToCompare,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: held ? VelvetColors.primary : VelvetColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -482,14 +581,21 @@ class _Rail {
 /// The card with the axis, the curve, the sliders and the value bubble. Owns
 /// one piece of state: which band is being dragged.
 class _BandPanel extends StatefulWidget {
-  const _BandPanel(
-      {required this.params, required this.gains, required this.onRelease});
+  const _BandPanel({
+    required this.params,
+    required this.gains,
+    required this.onRelease,
+    this.faded = false,
+  });
   final EqParams params;
 
   /// The live gains in band order (the controller's, which it refreshes on
   /// every tick of every band).
   final List<double> gains;
   final VoidCallback onRelease;
+
+  /// The engine is held off (Compare): the curve and sliders dim.
+  final bool faded;
 
   @override
   State<_BandPanel> createState() => _BandPanelState();
@@ -519,7 +625,11 @@ class _BandPanelState extends State<_BandPanel> {
       ),
       // Low to high always reads left to right, whatever the locale: the
       // curve is painted in band order, so the columns must be too.
-      child: Directionality(
+      child: AnimatedOpacity(
+        key: const Key('eq-bypass-fade'),
+        duration: const Duration(milliseconds: 120),
+        opacity: widget.faded ? 0.3 : 1,
+        child: Directionality(
         textDirection: TextDirection.ltr,
         child: LayoutBuilder(
           builder: (context, box) {
@@ -597,6 +707,7 @@ class _BandPanelState extends State<_BandPanel> {
             );
           },
         ),
+      ),
       ),
     );
   }

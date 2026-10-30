@@ -51,6 +51,8 @@
   "eqReplacePreset": "Remplacer",
   "eqPresetNameTaken": "Un autre préréglage enregistré porte déjà ce nom.",
   "eqDeletePresetConfirm": "Supprimer « {name} » ?",
+  "eqHoldToCompare": "Maintenir pour comparer",
+  "eqHoldToCompareHint": "Maintenez appuyé pour entendre le son sans l'égaliseur.",
   "eqDisabledHint": "Activez l'égaliseur pour régler les bandes.",
   "eqEnabledOn": "Activé — gains appliqués à la lecture",
   "eqEnabledOff": "Désactivé — mode contournement",

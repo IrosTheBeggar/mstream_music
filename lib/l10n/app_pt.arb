@@ -51,6 +51,8 @@
   "eqReplacePreset": "Substituir",
   "eqPresetNameTaken": "Outra predefinição salva já tem esse nome.",
   "eqDeletePresetConfirm": "Excluir “{name}”?",
+  "eqHoldToCompare": "Segure para comparar",
+  "eqHoldToCompareHint": "Toque e segure para ouvir o som sem o equalizador.",
   "eqDisabledHint": "Ative o equalizador para ajustar as bandas.",
   "eqEnabledOn": "Ligado — ganhos aplicados à reprodução",
   "eqEnabledOff": "Desligado — modo bypass",

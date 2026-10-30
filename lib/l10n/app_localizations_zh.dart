@@ -191,6 +191,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => '按住对比';
+
+  @override
+  String get eqHoldToCompareHint => '按住即可聆听不经均衡器处理的声音。';
+
+  @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
 
   @override

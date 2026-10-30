@@ -51,6 +51,8 @@
   "eqReplacePreset": "替换",
   "eqPresetNameTaken": "另一个已保存的预设已使用此名称。",
   "eqDeletePresetConfirm": "删除“{name}”？",
+  "eqHoldToCompare": "按住对比",
+  "eqHoldToCompareHint": "按住即可聆听不经均衡器处理的声音。",
   "eqDisabledHint": "开启均衡器以调整频段。",
   "eqEnabledOn": "开启 — 增益已应用到播放",
   "eqEnabledOff": "关闭 — 旁路模式",

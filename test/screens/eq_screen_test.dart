@@ -390,4 +390,45 @@ void main() {
     expect(audio.userPresets.first.curve[2].$2, p.bands[2].gain,
         reason: 'the replaced curve is the one just dragged');
   });
+
+  testWidgets('Hold to compare: a hold fades the panel and bypasses, a release restores',
+      (tester) async {
+    await pumpReady(tester);
+    final compare = find.byKey(const Key('eq-compare'));
+    expect(compare, findsOneWidget);
+    expect(find.text('Hold to compare'), findsOneWidget);
+    expect(find.byKey(const Key('eq-save-preset')), findsNothing);
+    final fade = find.byKey(const Key('eq-bypass-fade'));
+    expect(tester.widget<AnimatedOpacity>(fade).opacity, 1);
+    final gesture = await tester.startGesture(tester.getCenter(compare));
+    await tester.pump();
+    expect(controller.bypassed, isTrue);
+    expect(audio.bypasses, [true]);
+    expect(tester.widget<AnimatedOpacity>(fade).opacity, lessThan(1));
+    // A long hold is still a hold.
+    await tester.pump(const Duration(seconds: 2));
+    expect(controller.bypassed, isTrue);
+    await gesture.up();
+    await tester.pump();
+    expect(controller.bypassed, isFalse);
+    expect(audio.bypasses, [true, false]);
+    expect(tester.widget<AnimatedOpacity>(fade).opacity, 1);
+    expect(audio.toggles, isEmpty);
+  });
+
+  testWidgets('no Compare on the five-band engine, Save alone on a custom curve',
+      (tester) async {
+    audio.canBypassInPlace = false;
+    await pumpReady(tester, params: fakeParams(gains: const [1, 2, 3, 4, 5]));
+    expect(find.byKey(const Key('eq-compare')), findsNothing);
+    expect(find.byKey(const Key('eq-save-preset')), findsOneWidget);
+  });
+
+  testWidgets('Compare and Save share the row on a custom curve',
+      (tester) async {
+    await pumpReady(tester, params: fakeParams(gains: const [1, 2, 3, 4, 5]));
+    expect(find.byKey(const Key('eq-compare')), findsOneWidget);
+    expect(find.byKey(const Key('eq-save-preset')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

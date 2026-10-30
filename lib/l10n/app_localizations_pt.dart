@@ -196,6 +196,13 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => 'Segure para comparar';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Toque e segure para ouvir o som sem o equalizador.';
+
+  @override
   String get eqDisabledHint => 'Ative o equalizador para ajustar as bandas.';
 
   @override

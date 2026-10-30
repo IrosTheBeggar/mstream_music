@@ -11,6 +11,7 @@ class FakePort implements DynamicsEqPort {
   List<double>? attachedGains;
   List<double>? attachedCutoffs;
   int? attachedSession;
+  bool? attachedEnabled;
   bool attachFails = false;
 
   @override
@@ -24,6 +25,7 @@ class FakePort implements DynamicsEqPort {
     attachedSession = sessionId;
     attachedCutoffs = List.of(cutoffsHz);
     attachedGains = List.of(gainsDb);
+    attachedEnabled = enabled;
   }
 
   @override
@@ -144,5 +146,39 @@ void main() {
     final f4 = eq.setSessionId(null);
     await Future.wait([f1, f2, f3, f4]);
     expect(port.calls, ['attach:7', 'gain:2=3.0', 'release']);
+  });
+
+  test('a bypass disables the live effect without releasing it, and lifts',
+      () async {
+    await eq.setSessionId(7);
+    await eq.setEnabled(true);
+    expect(port.attachedEnabled, isTrue);
+    port.calls.clear();
+    await eq.setBypassed(true);
+    expect(eq.bypassed, isTrue);
+    expect(eq.attached, isTrue);
+    expect(port.calls, ['enabled:false']);
+    await eq.setBypassed(true);
+    expect(port.calls, ['enabled:false'], reason: 'idempotent');
+    await eq.setBypassed(false);
+    expect(eq.bypassed, isFalse);
+    expect(port.calls, ['enabled:false', 'enabled:true']);
+    // The on flag is its own thing: off still releases while held.
+    await eq.setBypassed(true);
+    await eq.setEnabled(false);
+    expect(port.calls.last, 'release');
+    expect(eq.enabled, isFalse);
+  });
+
+  test('a bypass with nothing attached only records; the next attach honours it',
+      () async {
+    await eq.setBypassed(true);
+    expect(port.calls, isEmpty);
+    await eq.setSessionId(7);
+    await eq.setEnabled(true);
+    expect(port.calls, ['attach:7']);
+    expect(port.attachedEnabled, isFalse);
+    await eq.setBypassed(false);
+    expect(port.calls, ['attach:7', 'enabled:true']);
   });
 }

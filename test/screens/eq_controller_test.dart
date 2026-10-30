@@ -392,6 +392,83 @@ void main() {
       c.dispose();
     });
 
+    test('compare: a hold bypasses in place, a release restores, both notify',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams());
+      await settle();
+      expect(c.canCompare, isTrue);
+      expect(c.bypassed, isFalse);
+      var notified = 0;
+      c.addListener(() => notified++);
+      await c.setBypassed(true);
+      expect(c.bypassed, isTrue);
+      expect(audio.bypasses, [true]);
+      await c.setBypassed(true);
+      expect(audio.bypasses, [true], reason: 'idempotent');
+      await c.setBypassed(false);
+      expect(c.bypassed, isFalse);
+      expect(audio.bypasses, [true, false]);
+      expect(notified, 2);
+      expect(audio.toggles, isEmpty, reason: 'the setting is never touched');
+      c.dispose();
+    });
+
+    test('compare: not offered on an engine that rebuilds to toggle, nor without bands',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit
+        ..canBypassInPlace = false;
+      final c = EqController(audio);
+      unit.resolve(fakeParams());
+      await settle();
+      expect(c.status, EqStatus.ready);
+      expect(c.canCompare, isFalse);
+      await c.setBypassed(true);
+      expect(c.bypassed, isFalse);
+      expect(audio.bypasses, isEmpty);
+      c.dispose();
+      final waiting = FakeEqAudio()
+        ..enabled = true
+        ..unit = FakeUnit();
+      final c2 = EqController(waiting);
+      expect(c2.status, EqStatus.needsPlayback);
+      expect(c2.canCompare, isFalse);
+      c2.dispose();
+    });
+
+    test('compare: a hold is let go when the sliders leave, and on dispose',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams());
+      await settle();
+      await c.setBypassed(true);
+      audio.casting = true;
+      audio.emitCast();
+      await settle();
+      expect(c.status, EqStatus.casting);
+      expect(c.bypassed, isFalse);
+      expect(audio.bypasses, [true, false]);
+      audio.casting = false;
+      audio.emitCast();
+      await settle();
+      expect(c.status, EqStatus.ready);
+      await c.setBypassed(true);
+      c.dispose();
+      await settle();
+      expect(audio.bypasses, [true, false, true, false]);
+    });
+
     test('a late answer after dispose is ignored', () async {
       final unit = FakeUnit();
       audio

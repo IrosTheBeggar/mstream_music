@@ -193,6 +193,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => '長押しで比較';
+
+  @override
+  String get eqHoldToCompareHint => '長押しすると、イコライザーなしの音を聞けます。';
+
+  @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';
 
   @override

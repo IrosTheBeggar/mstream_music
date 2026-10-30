@@ -51,6 +51,8 @@
   "eqReplacePreset": "Zastąp",
   "eqPresetNameTaken": "Inny zapisany preset ma już tę nazwę.",
   "eqDeletePresetConfirm": "Usunąć „{name}”?",
+  "eqHoldToCompare": "Przytrzymaj, aby porównać",
+  "eqHoldToCompareHint": "Przytrzymaj, aby usłyszeć dźwięk bez korektora.",
   "eqDisabledHint": "Włącz korektor, aby dostosować pasma.",
   "eqEnabledOn": "Włączony — wzmocnienia stosowane do odtwarzania",
   "eqEnabledOff": "Wyłączony — tryb obejścia",

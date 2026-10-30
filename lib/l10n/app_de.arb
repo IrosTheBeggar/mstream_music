@@ -51,6 +51,8 @@
   "eqReplacePreset": "Ersetzen",
   "eqPresetNameTaken": "Ein anderes gespeichertes Preset hat diesen Namen bereits.",
   "eqDeletePresetConfirm": "„{name}“ löschen?",
+  "eqHoldToCompare": "Zum Vergleichen halten",
+  "eqHoldToCompareHint": "Gedrückt halten, um den Klang ohne Equalizer zu hören.",
   "eqDisabledHint": "Schalte den Equalizer ein, um die Bänder anzupassen.",
   "eqEnabledOn": "An – Verstärkung auf Wiedergabe angewendet",
   "eqEnabledOff": "Aus – Bypass-Modus",

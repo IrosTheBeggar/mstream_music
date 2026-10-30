@@ -92,9 +92,15 @@ class DynamicsEqualizer {
   // toggle must not interleave native calls on two sessions.
   Future<void> _chain = Future<void>.value();
 
+  bool _bypassed = false;
+
   bool get enabled => _enabled;
   bool get attached => _attached;
   int? get sessionId => _sessionId;
+
+  /// Held off for the moment (the Compare button) with the on flag untouched:
+  /// the effect stays attached, only disabled, so letting go is instant.
+  bool get bypassed => _bypassed;
 
   double gain(int band) => _gains[band].value;
   Stream<double> gainStream(int band) => _gains[band].stream;
@@ -105,6 +111,14 @@ class DynamicsEqualizer {
         if (_enabled == on) return;
         _enabled = on;
         await _sync();
+      });
+
+  /// Hold the effect off ([on] true) or let it back. Nothing is released and
+  /// nothing persisted; an attach that happens while held comes up disabled.
+  Future<void> setBypassed(bool on) => _run(() async {
+        if (_bypassed == on) return;
+        _bypassed = on;
+        if (_attached) await _port.setEnabled(!on);
       });
 
   /// The player's audio session: a new id re-attaches, null releases.
@@ -148,7 +162,7 @@ class DynamicsEqualizer {
             sessionId: _sessionId!,
             cutoffsHz: cutoffFrequencies,
             gainsDb: gains,
-            enabled: true);
+            enabled: !_bypassed);
         _attached = true;
       } catch (e) {
         appLog('[eq] ten-band attach failed on session $_sessionId: $e');

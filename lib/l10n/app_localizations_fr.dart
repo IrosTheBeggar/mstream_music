@@ -197,6 +197,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => 'Maintenir pour comparer';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Maintenez appuyé pour entendre le son sans l\'égaliseur.';
+
+  @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';
 
   @override

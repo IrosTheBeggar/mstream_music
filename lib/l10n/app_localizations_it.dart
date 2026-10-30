@@ -196,6 +196,13 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => 'Tieni premuto per confrontare';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Tieni premuto per sentire il suono senza l\'equalizzatore.';
+
+  @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';
 
   @override

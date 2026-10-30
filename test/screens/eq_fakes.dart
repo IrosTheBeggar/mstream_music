@@ -110,4 +110,14 @@ class FakeEqAudio implements EqAudio {
     userPresets = List<EqPreset>.of(presets);
     userPresetSaves++;
   }
+
+  /// The ten-band engine unless a test says otherwise.
+  @override
+  bool canBypassInPlace = true;
+
+  /// Every setBypassed call's value, in order.
+  final List<bool> bypasses = [];
+
+  @override
+  Future<void> setBypassed(bool on) async => bypasses.add(on);
 }

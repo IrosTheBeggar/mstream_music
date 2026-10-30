@@ -199,6 +199,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => 'Удерживайте для сравнения';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Удерживайте, чтобы услышать звук без эквалайзера.';
+
+  @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
 
   @override

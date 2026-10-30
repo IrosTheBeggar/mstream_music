@@ -198,6 +198,13 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get eqHoldToCompare => 'Przytrzymaj, aby porównać';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Przytrzymaj, aby usłyszeć dźwięk bez korektora.';
+
+  @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';
 
   @override

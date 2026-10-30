@@ -51,6 +51,8 @@
   "eqReplacePreset": "Reemplazar",
   "eqPresetNameTaken": "Otro preajuste guardado ya tiene este nombre.",
   "eqDeletePresetConfirm": "¿Eliminar «{name}»?",
+  "eqHoldToCompare": "Mantén para comparar",
+  "eqHoldToCompareHint": "Mantén pulsado para oír el sonido sin el ecualizador.",
   "eqDisabledHint": "Activa el ecualizador para ajustar las bandas.",
   "eqEnabledOn": "Activado — ganancias aplicadas a la reproducción",
   "eqEnabledOff": "Desactivado — modo de derivación",

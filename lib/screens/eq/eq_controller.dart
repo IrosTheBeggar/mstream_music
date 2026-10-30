@@ -95,6 +95,14 @@ abstract class EqAudio {
   /// The user's saved curves, in the order they were saved.
   List<EqPreset> get userPresets;
   Future<void> saveUserPresets(List<EqPreset> presets);
+
+  /// This engine can be held off and let back in place (the ten-band one).
+  /// The five-band engine rebuilds the player to toggle, so no Compare there.
+  bool get canBypassInPlace;
+
+  /// Hold the engine off ([on] true) or let it back, the persisted setting
+  /// untouched.
+  Future<void> setBypassed(bool on);
 }
 
 enum EqStatus {
@@ -178,7 +186,40 @@ class EqController extends ChangeNotifier {
   void _refresh() {
     if (_disposed) return;
     _status = _derive();
+    if (_status != EqStatus.ready) _letGo();
     notifyListeners();
+  }
+
+  bool _bypassed = false;
+
+  /// The Compare button is held: the engine is off for the moment, the
+  /// persisted setting untouched.
+  bool get bypassed => _bypassed;
+
+  /// Compare is offered: sliders up, and this engine can bypass in place.
+  bool get canCompare => _status == EqStatus.ready && audio.canBypassInPlace;
+
+  /// Hold the engine off ([on] true) or let it back.
+  Future<void> setBypassed(bool on) async {
+    if (on && !canCompare) return;
+    if (_bypassed == on) return;
+    _bypassed = on;
+    notifyListeners();
+    try {
+      await audio.setBypassed(on);
+    } catch (e) {
+      appLog('[eq] compare failed: $e');
+    }
+  }
+
+  // A hold cannot outlive the sliders (a toggle, a cast, the screen going):
+  // let the engine back without waiting on it.
+  void _letGo() {
+    if (!_bypassed) return;
+    _bypassed = false;
+    audio
+        .setBypassed(false)
+        .catchError((Object e) => appLog('[eq] compare release failed: $e'));
   }
 
   EqStatus _derive() {
@@ -388,6 +429,7 @@ class EqController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _letGo();
     _disposed = true;
     _castSub?.cancel();
     _playerSub?.cancel();
@@ -481,6 +523,13 @@ class LiveEqAudio implements EqAudio {
   Future<void> saveUserPresets(List<EqPreset> presets) =>
       SettingsManager()
           .setEqUserPresets([for (final p in presets) p.toJson()]);
+
+  @override
+  bool get canBypassInPlace => _handler.dynamicsEqualizer != null;
+
+  @override
+  Future<void> setBypassed(bool on) =>
+      _handler.dynamicsEqualizer?.setBypassed(on) ?? Future<void>.value();
 }
 
 class _LiveUnit implements EqUnit {

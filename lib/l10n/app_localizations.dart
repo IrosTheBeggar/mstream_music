@@ -444,6 +444,18 @@ abstract class AppLocalizations {
   /// **'Delete “{name}”?'**
   String eqDeletePresetConfirm(String name);
 
+  /// Button under the EQ bands: while held, the equalizer is bypassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to compare'**
+  String get eqHoldToCompare;
+
+  /// Accessibility hint for the Hold to compare button.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to hear the sound without the equalizer.'**
+  String get eqHoldToCompareHint;
+
   /// No description provided for @eqDisabledHint.
   ///
   /// In en, this message translates to:

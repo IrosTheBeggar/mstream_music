@@ -220,6 +220,14 @@
     "description": "Confirmation when deleting a saved EQ preset.",
     "placeholders": {"name": {"type": "String"}}
   },
+  "eqHoldToCompare": "Hold to compare",
+  "@eqHoldToCompare": {
+    "description": "Button under the EQ bands: while held, the equalizer is bypassed."
+  },
+  "eqHoldToCompareHint": "Hold to hear the sound without the equalizer.",
+  "@eqHoldToCompareHint": {
+    "description": "Accessibility hint for the Hold to compare button."
+  },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",

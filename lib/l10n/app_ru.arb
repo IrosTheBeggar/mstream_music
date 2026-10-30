@@ -51,6 +51,8 @@
   "eqReplacePreset": "Заменить",
   "eqPresetNameTaken": "Другой сохранённый пресет уже носит это название.",
   "eqDeletePresetConfirm": "Удалить «{name}»?",
+  "eqHoldToCompare": "Удерживайте для сравнения",
+  "eqHoldToCompareHint": "Удерживайте, чтобы услышать звук без эквалайзера.",
   "eqDisabledHint": "Включите эквалайзер, чтобы настроить полосы.",
   "eqEnabledOn": "Включён — усиление применяется к воспроизведению",
   "eqEnabledOff": "Выключен — режим обхода",
