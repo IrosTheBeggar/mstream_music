@@ -767,9 +767,11 @@ class ApiManager {
             null);
 
         newItem.metadata = m;
+        newItem.moodFit = moodFitOf(e);
 
         newList.add(newItem);
       });
+      newList = strongFirst(newList);
       if (replace) {
         BrowserManager().replaceMoodList(MoodPage.recent, newList, asked.frame);
       } else {
@@ -811,9 +813,11 @@ class ApiManager {
             m.artist);
 
         newItem.metadata = m;
+        newItem.moodFit = moodFitOf(e);
 
         newList.add(newItem);
       });
+      newList = strongFirst(newList);
       if (replace) {
         BrowserManager().replaceMoodList(MoodPage.rated, newList, asked.frame);
       } else {

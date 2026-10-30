@@ -1113,6 +1113,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get moodDanceable => 'Tanzbar';
 
   @override
+  String get moodStrict => 'Streng';
+
+  @override
+  String get moodCloseMatches => 'Knappe Treffer';
+
+  @override
   String get browserRecent => 'Neueste';
 
   @override

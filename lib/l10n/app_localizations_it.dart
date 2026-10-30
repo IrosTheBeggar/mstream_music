@@ -1111,6 +1111,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get moodDanceable => 'Ballabile';
 
   @override
+  String get moodStrict => 'Rigoroso';
+
+  @override
+  String get moodCloseMatches => 'Corrispondenze vicine';
+
+  @override
   String get browserRecent => 'Recenti';
 
   @override

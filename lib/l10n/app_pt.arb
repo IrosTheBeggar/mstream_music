@@ -293,6 +293,8 @@
   "moodAcoustic": "Acústico",
   "moodParty": "Festa",
   "moodDanceable": "Dançante",
+  "moodStrict": "Estrito",
+  "moodCloseMatches": "Correspondências próximas",
   "browserRecent": "Recentes",
   "browserRated": "Avaliadas",
   "browserSectionLibrary": "Biblioteca",

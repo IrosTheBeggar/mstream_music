@@ -1,7 +1,8 @@
 // The mood Filters sheet, button and strip (widgets/mood_filter_sheet.dart):
 // one chosen value per scale, pressing it again lets it go, tags toggle,
 // Clear empties the choices in the sheet, only Done hands them back; the
-// button counts what is set; the strip names it and offers Clear.
+// button counts what is set; the strip names it and offers Strict and
+// Clear; the close matches' divider.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -172,6 +173,7 @@ void main() {
       filter: const MoodFilter(
           valence: 'happy', energy: 'relaxed', tags: ['acoustic', 'party']),
       onClear: () => cleared++,
+      onStrict: () {},
     )));
     expect(find.text('Happy · Relaxed · Acoustic · Party'), findsOneWidget);
     await tester.tap(find.text('Clear'));
@@ -179,7 +181,9 @@ void main() {
 
     // Off where it can do nothing (Discover while its route refuses).
     await tester.pumpWidget(_app(const MoodFilterStrip(
-        filter: MoodFilter(voice: 'instrumental'), onClear: null)));
+        filter: MoodFilter(voice: 'instrumental'),
+        onClear: null,
+        onStrict: null)));
     expect(find.text('Instrumental'), findsOneWidget);
     expect(
         tester
@@ -187,5 +191,61 @@ void main() {
                 find.byKey(const ValueKey('mood-strip-clear')))
             .enabled,
         isFalse);
+    expect(
+        tester
+            .widget<FilterChip>(
+                find.byKey(const ValueKey('mood-strip-strict')))
+            .onSelected,
+        isNull);
+  });
+
+  testWidgets("the strip's Strict: pressed while the filter is strict, and "
+      'calls back', (tester) async {
+    FilterChip chip() => tester
+        .widget<FilterChip>(find.byKey(const ValueKey('mood-strip-strict')));
+    var pressed = 0;
+    await tester.pumpWidget(_app(MoodFilterStrip(
+      filter: const MoodFilter(energy: 'relaxed'),
+      onClear: () {},
+      onStrict: () => pressed++,
+    )));
+    expect(chip().selected, isFalse);
+    expect(find.text('Relaxed'), findsOneWidget,
+        reason: 'Strict is the switch, not one of the words');
+    await tester.tap(find.text('Strict'));
+    expect(pressed, 1);
+    await tester.pumpWidget(_app(MoodFilterStrip(
+      filter: const MoodFilter(energy: 'relaxed', strict: true),
+      onClear: () {},
+      onStrict: () {},
+    )));
+    expect(chip().selected, isTrue);
+  });
+
+  testWidgets('the sheet keeps Strict while a choice stays; Clear lets it go',
+      (tester) async {
+    const start = MoodFilter(energy: 'relaxed', strict: true);
+    var answers = await openSheet(tester, start: start);
+    await tester.tap(find.text('Instrumental'));
+    await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
+    await tester.pumpAndSettle();
+    expect(answers.single,
+        const MoodFilter(energy: 'relaxed', voice: 'instrumental', strict: true));
+
+    answers = await openSheet(tester, start: start);
+    await tester.tap(find.byKey(const ValueKey('mood-sheet-clear')));
+    await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
+    await tester.pumpAndSettle();
+    expect(answers.single, MoodFilter.empty);
+  });
+
+  testWidgets('the close matches divider: its words, in capitals',
+      (tester) async {
+    await tester.pumpWidget(_app(SizedBox(
+        height: MoodCloseMatches.extentFor(TextScaler.noScaling),
+        child: const MoodCloseMatches())));
+    expect(find.text('CLOSE MATCHES'), findsOneWidget);
+    expect(MoodCloseMatches.extentFor(const TextScaler.linear(2)), 80);
+    expect(MoodCloseMatches.extentFor(const TextScaler.linear(0.8)), 40);
   });
 }

@@ -9,7 +9,9 @@
 // the tags, and Clear and Done: Done applies the choices, Clear empties
 // them, and closing the sheet any other way changes nothing. While anything
 // is set, a grey strip under the bar — the File Explorer's path strip —
-// names the choices, and its Clear lets them all go.
+// names the choices; its Strict keeps only the strong fits, and its Clear
+// lets them all go. A filtered Rated or Recent list draws its close
+// matches under a divider (MoodCloseMatches).
 
 import 'package:material_ui/material_ui.dart';
 
@@ -256,12 +258,13 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
 }
 
 /// While anything is set: the File Explorer's path strip under the bar,
-/// naming the choices, with Clear at its end.
+/// naming the choices, with Strict and Clear at its end.
 class MoodFilterStrip extends StatelessWidget {
   const MoodFilterStrip({
     super.key,
     required this.filter,
     required this.onClear,
+    required this.onStrict,
   });
 
   final MoodFilter filter;
@@ -269,9 +272,14 @@ class MoodFilterStrip extends StatelessWidget {
   /// Null draws Clear off (Discover while its route refuses).
   final VoidCallback? onClear;
 
+  /// Strict pressed (the caller flips [MoodFilter.strict]); null draws it
+  /// off, as Clear.
+  final VoidCallback? onStrict;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final strict = filter.strict;
     return Container(
       key: const ValueKey('mood-strip'),
       width: double.infinity,
@@ -292,6 +300,26 @@ class MoodFilterStrip extends StatelessWidget {
             style: TextStyle(fontSize: 11.5, color: VelvetColors.textSecondary),
           ),
         ),
+        FilterChip(
+          key: const ValueKey('mood-strip-strict'),
+          label: Text(l.moodStrict),
+          selected: strict,
+          showCheckmark: false,
+          onSelected: onStrict == null ? null : (_) => onStrict!(),
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          shape: const StadiumBorder(),
+          selectedColor: VelvetColors.primary,
+          backgroundColor: Colors.transparent,
+          side: BorderSide(
+              color: strict ? VelvetColors.primary : VelvetColors.border2),
+          labelStyle: TextStyle(
+            fontSize: 12,
+            color: strict ? VelvetColors.onPrimary : VelvetColors.textPrimary,
+            fontWeight: strict ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
         TextButton(
           key: const ValueKey('mood-strip-clear'),
           onPressed: onClear,
@@ -306,6 +334,46 @@ class MoodFilterStrip extends StatelessWidget {
           child: Text(l.clear),
         ),
       ]),
+    );
+  }
+}
+
+/// Over a filtered Rated or Recent list's close matches (the
+/// [kMoodCloseMatches] item): the strong fits run above it.
+class MoodCloseMatches extends StatelessWidget {
+  const MoodCloseMatches({super.key});
+
+  /// Its height in the browser's list, whose rows have fixed extents: more
+  /// with larger text, never less.
+  static double extentFor(TextScaler ts) {
+    const base = 40.0;
+    final scaled = ts.scale(base);
+    return scaled > base ? scaled : base;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Align(
+      key: const ValueKey('mood-close-matches'),
+      alignment: Alignment.bottomLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+        child: Row(children: [
+          Text(
+            l.moodCloseMatches.toUpperCase(),
+            maxLines: 1,
+            style: TextStyle(
+              color: VelvetColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Container(height: 1, color: VelvetColors.border)),
+        ]),
+      ),
     );
   }
 }

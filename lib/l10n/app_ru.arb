@@ -293,6 +293,8 @@
   "moodAcoustic": "Акустические",
   "moodParty": "Для вечеринки",
   "moodDanceable": "Танцевальные",
+  "moodStrict": "Строго",
+  "moodCloseMatches": "Близкие совпадения",
   "browserRecent": "Недавние",
   "browserRated": "С оценкой",
   "browserSectionLibrary": "Библиотека",

@@ -37,6 +37,10 @@ class DisplayItem {
   // album list, so no album credit is known (Discover's connected-server
   // albums, grouped by album + track artist). Null everywhere else.
   String? trackArtist;
+  // Song rows of a mood-filtered Rated or Recent list only: how the song
+  // fits the filter, 'strong' or 'close' (the server's moodFit — see
+  // strongFirst). Null everywhere else.
+  String? moodFit;
 
   int downloadProgress = 0;
 

@@ -93,13 +93,21 @@ class _FakeServer {
           return http.Response(jsonEncode({'albums': [_albums[1]]}), 200,
               headers: {'content-type': 'application/json'});
         }
-        // The song lists: bare arrays, filtered by what they are sent.
+        // The song lists: bare arrays, filtered by what they are sent. A
+        // sad filter keeps both, each with its fit — High Hopes closely,
+        // Swing strongly, in the list's own order; a strict one, Swing.
         if (req.url.path == '/api/v1/db/rated' ||
             req.url.path == '/api/v1/db/recent/added') {
-          final songRelaxed =
-              (body['moods'] as Map?)?['energy'] == 'relaxed';
-          return http.Response(
-              jsonEncode(songRelaxed ? [_songs[1]] : _songs), 200,
+          final m = body['moods'] as Map?;
+          final rows = m?['valence'] == 'sad'
+              ? [
+                  if (m?['strict'] != true) {..._songs[0], 'moodFit': 'close'},
+                  {..._songs[1], 'moodFit': 'strong'},
+                ]
+              : m?['energy'] == 'relaxed'
+                  ? [_songs[1]]
+                  : _songs;
+          return http.Response(jsonEncode(rows), 200,
               headers: {'content-type': 'application/json'});
         }
         return http.Response('not found', 404);
@@ -308,6 +316,27 @@ void main() {
           reason: 'each list keeps its own filter');
     });
 
+    test('a filtered answer: strong fits first, the close ones under the '
+        'divider; Strict asks for the strong fits only', () async {
+      _server.moodFiltersAvailable = true;
+      const sad = MoodFilter(valence: 'sad');
+      MoodFilters().set(MoodPage.recent, sad);
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRecentlyAdded(useThisServer: _server);
+        expect([for (final e in BrowserManager().browserList) e.type],
+            ['file', kMoodCloseMatches, 'file']);
+        expect(_names(), [swing, '', both[0]]);
+        await ApiManager().setMoodFilter(
+            BrowserManager().currentMoodFrame!, sad.withStrict(true));
+      });
+      expect(fake.to('/api/v1/db/recent/added').last.body, {
+        'limit': 100,
+        'moods': {'valence': 'sad', 'strict': true}
+      });
+      expect(_names(), [swing]);
+    });
+
     test('a Recent answer overtaken by a newer filter is dropped', () async {
       _server.moodFiltersAvailable = true;
       final fake = _FakeServer();
@@ -448,6 +477,35 @@ void main() {
       expect(inStrip('Relaxed'), findsOneWidget);
       expect(find.descendant(of: button, matching: find.text('1')),
           findsOneWidget);
+    });
+
+    testWidgets("Rated under a filter: the divider over the close matches; "
+        "the strip's Strict re-lists the strong fits only", (tester) async {
+      _server.moodFiltersAvailable = true;
+      MoodFilters().set(MoodPage.rated, const MoodFilter(valence: 'sad'));
+      final divider = find.byKey(const ValueKey('mood-close-matches'));
+      final strict = find.byKey(const ValueKey('mood-strip-strict'));
+      final fake = _FakeServer();
+      await fake.run(() async {
+        await ApiManager().getRated(useThisServer: _server);
+        await pumpBrowser(tester);
+        expect(divider, findsOneWidget);
+        final at = tester.getRect(divider).top;
+        expect(tester.getRect(find.text('Swing')).top, lessThan(at));
+        expect(tester.getRect(find.text('High Hopes')).top, greaterThan(at));
+        expect(tester.widget<FilterChip>(strict).selected, isFalse);
+        await tester.tap(strict);
+        await tester.pumpAndSettle();
+      });
+      expect(fake.to('/api/v1/db/rated').last.body, {
+        'moods': {'valence': 'sad', 'strict': true}
+      });
+      expect(divider, findsNothing);
+      expect(find.text('High Hopes'), findsNothing);
+      expect(tester.widget<FilterChip>(strict).selected, isTrue);
+      expect(find.descendant(of: button, matching: find.text('1')),
+          findsOneWidget,
+          reason: 'Strict is not a choice');
     });
 
     testWidgets('no Filters on Recent where the server has no flag',

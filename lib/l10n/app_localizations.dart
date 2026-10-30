@@ -1986,6 +1986,18 @@ abstract class AppLocalizations {
   /// **'Danceable'**
   String get moodDanceable;
 
+  /// Mood filter strip: the switch that keeps only the songs that fit the filter strongly.
+  ///
+  /// In en, this message translates to:
+  /// **'Strict'**
+  String get moodStrict;
+
+  /// Rated and Recent under a mood filter: the header over the songs that fit it, but not strongly. Shown in capitals.
+  ///
+  /// In en, this message translates to:
+  /// **'Close matches'**
+  String get moodCloseMatches;
+
   /// No description provided for @browserRecent.
   ///
   /// In en, this message translates to:

@@ -293,6 +293,8 @@
   "moodAcoustic": "原声",
   "moodParty": "派对",
   "moodDanceable": "适合跳舞",
+  "moodStrict": "严格",
+  "moodCloseMatches": "相近匹配",
   "browserRecent": "最近添加",
   "browserRated": "已评分",
   "browserSectionLibrary": "曲库",

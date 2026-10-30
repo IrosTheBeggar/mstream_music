@@ -17,7 +17,14 @@
 // So do the song lists, /api/v1/db/rated and /api/v1/db/recent/added
 // (mStream #1095): their answers are bare arrays, with no room for the
 // echo, and recent/added's schema refuses unknown keys too.
+//
+// A score is the model's confidence, not how strongly a song is relaxed.
+// `strict: true` (the strip's Strict) keeps only strong fits — 0.7 rather
+// than 0.5. Without it, a filtered song list's songs each carry `moodFit`,
+// 'strong' or 'close', and the list shows the strong fits first, the close
+// ones under a divider (strongFirst).
 
+import 'display_item.dart';
 import 'server.dart';
 
 /// The three single-choice scales. Enum names are the wire keys.
@@ -44,7 +51,16 @@ class MoodFilter {
   /// Picked tags, always in [kMoodTags] order.
   final List<String> tags;
 
-  const MoodFilter({this.valence, this.energy, this.voice, this.tags = const []});
+  /// Strong fits only. It belongs to a filter that filters: an empty one
+  /// drops it.
+  final bool strict;
+
+  const MoodFilter(
+      {this.valence,
+      this.energy,
+      this.voice,
+      this.tags = const [],
+      this.strict = false});
 
   static const empty = MoodFilter();
 
@@ -52,7 +68,7 @@ class MoodFilter {
       valence == null && energy == null && voice == null && tags.isEmpty;
 
   /// How many choices are set: the scales that filter, plus the tags (the
-  /// Filters button's badge).
+  /// Filters button's badge). Strict is not a choice.
   int get count =>
       [valence, energy, voice].where((v) => v != null).length + tags.length;
 
@@ -71,7 +87,8 @@ class MoodFilter {
       energy: scale == MoodScale.energy ? value : energy,
       voice: scale == MoodScale.voice ? value : voice,
       tags: tags,
-    );
+      strict: strict,
+    )._settled;
   }
 
   /// [tag] picked if it was not, let go if it was. An unknown tag changes
@@ -87,8 +104,22 @@ class MoodFilter {
         for (final t in kMoodTags)
           if (t == tag ? !on : tags.contains(t)) t
       ],
-    );
+      strict: strict,
+    )._settled;
   }
+
+  /// Strict on or off. A filter with nothing set stays as it is.
+  MoodFilter withStrict(bool on) => isEmpty || on == strict
+      ? this
+      : MoodFilter(
+          valence: valence,
+          energy: energy,
+          voice: voice,
+          tags: tags,
+          strict: on);
+
+  /// Strict goes with the last choice.
+  MoodFilter get _settled => strict && isEmpty ? MoodFilter.empty : this;
 
   /// The wire form: only the groups that filter, tags in a fixed order —
   /// or null when nothing filters, so no `moods` key is sent at all.
@@ -99,6 +130,7 @@ class MoodFilter {
           if (energy != null) 'energy': energy,
           if (voice != null) 'voice': voice,
           if (tags.isNotEmpty) 'tags': List.of(tags),
+          if (strict) 'strict': true,
         };
 
   @override
@@ -108,10 +140,12 @@ class MoodFilter {
       other.energy == energy &&
       other.voice == voice &&
       other.tags.length == tags.length &&
-      other.tags.every(tags.contains);
+      other.tags.every(tags.contains) &&
+      other.strict == strict;
 
   @override
-  int get hashCode => Object.hash(valence, energy, voice, Object.hashAll(tags));
+  int get hashCode =>
+      Object.hash(valence, energy, voice, Object.hashAll(tags), strict);
 }
 
 /// The pages that filter by mood. Each keeps its own filter.
@@ -159,4 +193,40 @@ class MoodListFrame {
   /// object), which a server that cannot filter leaves out.
   static MoodListFrame? fromAnswer(Object? res, Server? server, MoodPage page) =>
       res is Map && res['moods'] is Map ? MoodListFrame(server, page) : null;
+}
+
+/// A song row's fit in a filtered song list's answer, or null.
+String? moodFitOf(Object? song) => song is Map &&
+        (song['moodFit'] == 'strong' || song['moodFit'] == 'close')
+    ? song['moodFit'] as String
+    : null;
+
+/// The browser item over a filtered song list's close matches.
+const String kMoodCloseMatches = 'moodCloseMatches';
+
+/// A filtered Rated or Recent list, strong fits first: the songs the
+/// server marked 'strong', in the list's own order, then — under a
+/// [kMoodCloseMatches] item — the 'close' ones. A list with no close match
+/// (unfiltered, or strict) comes back as it is.
+List<DisplayItem> strongFirst(List<DisplayItem> songs) {
+  if (!songs.any((s) => s.moodFit == 'close')) return songs;
+  return [
+    for (final s in songs)
+      if (s.moodFit != 'close') s,
+    DisplayItem(null, '', kMoodCloseMatches, null, null, null),
+    for (final s in songs)
+      if (s.moodFit == 'close') s,
+  ];
+}
+
+/// [items] narrowed to the ones [keep] passes (a search), the close
+/// matches' item kept while a close match stays under it.
+List<DisplayItem> narrowKeepingCloseMatches(
+    List<DisplayItem> items, bool Function(DisplayItem) keep) {
+  final out = [
+    for (final it in items)
+      if (it.type == kMoodCloseMatches || keep(it)) it
+  ];
+  if (out.isNotEmpty && out.last.type == kMoodCloseMatches) out.removeLast();
+  return out;
 }
