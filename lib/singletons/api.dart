@@ -652,9 +652,9 @@ class ApiManager {
     );
   }
 
-  /// The Filters sheet's Done (or the strip's Clear) on an Albums or
-  /// Artists list: remember [filter] for the page and re-list the open list
-  /// in place. The badge and the strip show the new choice at once; the
+  /// The Filters sheet's Done (or the strip's Clear) on an Albums, Artists,
+  /// Rated or Recent list: remember [filter] for the page and re-list the
+  /// open list in place. The badge and the strip show the new choice at once; the
   /// rows follow when the answer lands (an older answer landing later is
   /// dropped).
   Future<void> setMoodFilter(MoodListFrame frame, MoodFilter filter) async {
@@ -664,6 +664,10 @@ class ApiManager {
       await getAlbums(useThisServer: frame.server, replace: true);
     } else if (frame.page == MoodPage.artists) {
       await getArtists(useThisServer: frame.server, replace: true);
+    } else if (frame.page == MoodPage.rated) {
+      await getRated(useThisServer: frame.server, replace: true);
+    } else if (frame.page == MoodPage.recent) {
+      await getRecentlyAdded(useThisServer: frame.server, replace: true);
     }
   }
 
@@ -716,12 +720,39 @@ class ApiManager {
     BrowserManager().addListToStack(newList);
   }
 
-  Future<void> getRecentlyAdded({Server? useThisServer}) async {
-    try {
-      final res = await makeServerCall(
-          useThisServer, '/api/v1/db/recent/added', {'limit': 100}, 'POST');
+  /// A song list's mood filter (Rated, Recent): their answers are bare
+  /// arrays with no echo, so the filters go by the server's flag
+  /// (Server.moodFiltersAvailable — off for a connected server, whose routes
+  /// may refuse the key). `moods` is the page's filter in its wire form, null
+  /// when the server cannot filter or nothing is set; `generation` lets a
+  /// re-list tell it was overtaken.
+  ({MoodListFrame? frame, Map<String, dynamic>? moods, int generation})
+      _songListMoods(MoodPage page, Server? useThisServer) {
+    final server = useThisServer ?? ServerManager().currentServer;
+    final can = server?.moodFiltersAvailable == true;
+    return (
+      frame: can ? MoodListFrame(useThisServer, page) : null,
+      moods: can ? MoodFilters().of(page).toJson() : null,
+      generation: MoodFilters().generation(page),
+    );
+  }
 
-      BrowserManager().setBrowserLabel('Recent');
+  /// The Recent list (the 100 newest songs), under the page's mood filter
+  /// where the server can filter — then the 100 newest that match.
+  /// [replace] re-lists the open list in place (a filter change).
+  Future<void> getRecentlyAdded(
+      {Server? useThisServer, bool replace = false}) async {
+    try {
+      final asked = _songListMoods(MoodPage.recent, useThisServer);
+      final res = await makeServerCall(
+          useThisServer,
+          '/api/v1/db/recent/added',
+          {'limit': 100, if (asked.moods != null) 'moods': asked.moods},
+          'POST');
+      if (replace &&
+          asked.generation != MoodFilters().generation(MoodPage.recent)) {
+        return; // a newer filter was asked for meanwhile
+      }
 
       List<DisplayItem> newList = [];
       res.forEach((e) {
@@ -739,19 +770,33 @@ class ApiManager {
 
         newList.add(newItem);
       });
-      BrowserManager().addListToStack(newList);
+      if (replace) {
+        BrowserManager().replaceMoodList(MoodPage.recent, newList, asked.frame);
+      } else {
+        BrowserManager().setBrowserLabel('Recent');
+        BrowserManager().addListToStack(newList, moodFrame: asked.frame);
+      }
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRecentlyAdded failed: $err');
     }
   }
 
-  Future<void> getRated({Server? useThisServer}) async {
+  /// The Rated list, under the page's mood filter where the server can
+  /// filter (a POST with `moods`; the plain GET otherwise). [replace]
+  /// re-lists the open list in place (a filter change).
+  Future<void> getRated({Server? useThisServer, bool replace = false}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
-
-      BrowserManager().setBrowserLabel('Rated');
+      final asked = _songListMoods(MoodPage.rated, useThisServer);
+      final res = await makeServerCall(
+          useThisServer,
+          '/api/v1/db/rated',
+          asked.moods == null ? {} : {'moods': asked.moods},
+          asked.moods == null ? 'GET' : 'POST');
+      if (replace &&
+          asked.generation != MoodFilters().generation(MoodPage.rated)) {
+        return; // a newer filter was asked for meanwhile
+      }
 
       List<DisplayItem> newList = [];
       res.forEach((e) {
@@ -769,7 +814,12 @@ class ApiManager {
 
         newList.add(newItem);
       });
-      BrowserManager().addListToStack(newList);
+      if (replace) {
+        BrowserManager().replaceMoodList(MoodPage.rated, newList, asked.frame);
+      } else {
+        BrowserManager().setBrowserLabel('Rated');
+        BrowserManager().addListToStack(newList, moodFrame: asked.frame);
+      }
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRated failed: $err');

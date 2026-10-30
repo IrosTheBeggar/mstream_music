@@ -17,6 +17,8 @@
 //                          (only when the server has both kinds)
 //   • Albums / Artists   → back · label · Filters · search (Filters when the
 //                          list's server answered that it filters by mood)
+//   • Rated / Recent     → back · label · Filters · Play · Add all · overflow
+//                          (Filters when the server filters by mood)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -311,6 +313,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     if (next != null && next != current) await apply(next);
   }
 
+  // A list's Filters (Albums, Artists, Rated, Recent): the sheet on the
+  // page's filter, applied by re-listing the open list in place.
+  Widget _moodButton(MoodListFrame frame) => MoodFilterButton(
+        count: MoodFilters().of(frame.page).count,
+        onPressed: () => unawaited(_openMoodSheet(MoodFilters().of(frame.page),
+            (f) => ApiManager().setMoodFilter(frame, f))),
+      );
+
   // Discover's Filters: opens the mood sheet, its badge counting the
   // choices set. Only where the server filters Discover by mood; it follows
   // the controller (the filter is the page's), and is off while the route
@@ -602,7 +612,9 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         // Add all rather than Shuffle: in a folder the usual intent is "put
         // this on the end of what I'm listening to", and shuffling a single
         // directory is the rarer one. They swapped places — Shuffle is in the
-        // overflow now.
+        // overflow now. Rated and Recent on a server that filters by mood:
+        // Filters goes first, and Play / Add all act on what it left.
+        if (moodFrame != null) _moodButton(moodFrame),
         _playButton(l, targets),
         _icon(Icons.library_add, l.addAll, () => _addAll(context, targets)),
         _overflow(context, l, targets, showShuffle: true),
@@ -618,15 +630,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           const SizedBox(width: 4),
           _genreSourceSwitch(l, genreFrame),
         ],
-        // Albums / Artists on a server that filters by mood: Filters goes
-        // before search, which keeps the bar's end.
-        if (moodFrame != null)
-          MoodFilterButton(
-            count: MoodFilters().of(moodFrame.page).count,
-            onPressed: () => unawaited(_openMoodSheet(
-                MoodFilters().of(moodFrame.page),
-                (f) => ApiManager().setMoodFilter(moodFrame, f))),
-          ),
+        // Albums / Artists on a server that filters by mood (and Rated or
+        // Recent left with nothing to play): Filters goes before search,
+        // which keeps the bar's end.
+        if (moodFrame != null) _moodButton(moodFrame),
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
         _overflow(context, l, targets, showSearch: false),
