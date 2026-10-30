@@ -68,6 +68,10 @@ abstract class EqUnit {
   /// exists once there is an audio session — and then stays resolved for the
   /// life of this unit. It never resolves on an idle player.
   Future<EqParams> get params;
+
+  /// The layout right now, where the engine fixes it in code (the ten-band
+  /// one): the screen is ready on its first frame instead of a frame after.
+  EqParams? get paramsNow => null;
 }
 
 /// What the screen needs from the audio side.
@@ -304,7 +308,8 @@ class EqController extends ChangeNotifier {
     }
     if (!identical(unit, _loadedUnit)) {
       _load(unit);
-      return _waiting();
+      // A layout known at once is adopted inside _load; otherwise wait.
+      if (!identical(unit, _loadedUnit)) return _waiting();
     }
     return _params!.bands.isEmpty ? EqStatus.noBands : EqStatus.ready;
   }
@@ -335,18 +340,14 @@ class EqController extends ChangeNotifier {
     if (identical(unit, _loadingUnit)) return;
     _drop();
     _loadingUnit = unit;
+    final now = unit.paramsNow;
+    if (now != null) {
+      _adopt(unit, now);
+      return;
+    }
     unit.params.then((p) {
       if (_disposed || !identical(unit, _loadingUnit)) return;
-      _params = p;
-      _loadedUnit = unit;
-      _stopTimer();
-      // Every band's gain feeds the preset chips: the selected one is
-      // whichever curve the gains spell, so a drag deselects it.
-      for (final b in p.bands) {
-        _gainSubs.add(b.gainStream.listen((_) {
-          if (!_disposed) notifyListeners();
-        }));
-      }
+      _adopt(unit, p);
       _refresh();
     }, onError: (Object e) {
       if (_disposed || !identical(unit, _loadingUnit)) return;
@@ -354,6 +355,19 @@ class EqController extends ChangeNotifier {
       _stopTimer();
       _refresh();
     });
+  }
+
+  void _adopt(EqUnit unit, EqParams p) {
+    _params = p;
+    _loadedUnit = unit;
+    _stopTimer();
+    // Every band's gain feeds the preset chips: the selected one is
+    // whichever curve the gains spell, so a drag deselects it.
+    for (final b in p.bands) {
+      _gainSubs.add(b.gainStream.listen((_) {
+        if (!_disposed) notifyListeners();
+      }));
+    }
   }
 
   void _drop() {
@@ -583,11 +597,21 @@ class LiveEqAudio implements EqAudio {
     }
   }
 
+  // Parsed once per saved list: every save replaces the list object in
+  // settings, and the screen reads this several times per drag tick.
+  List<Map<String, dynamic>>? _rawPresets;
+  List<EqPreset> _parsedPresets = const [];
+
   @override
-  List<EqPreset> get userPresets => [
-        for (final raw in SettingsManager().eqUserPresets)
-          ?EqPreset.fromJson(raw),
-      ];
+  List<EqPreset> get userPresets {
+    final raw = SettingsManager().eqUserPresets;
+    if (!identical(raw, _rawPresets)) {
+      _rawPresets = raw;
+      _parsedPresets = List.unmodifiable(
+          [for (final r in raw) ?EqPreset.fromJson(r)]);
+    }
+    return _parsedPresets;
+  }
 
   @override
   Future<void> saveUserPresets(List<EqPreset> presets) =>
@@ -639,6 +663,11 @@ class _LiveUnit implements EqUnit {
 
   @override
   final Future<EqParams> params;
+
+  /// Device bands come from the platform once something loads: never known
+  /// up front.
+  @override
+  EqParams? get paramsNow => null;
 }
 
 class _LiveBand implements EqBand {
@@ -659,17 +688,20 @@ class _LiveBand implements EqBand {
 /// are known at once — no waiting for playback.
 class _DynamicsUnit implements EqUnit {
   _DynamicsUnit(DynamicsEqualizer eq)
-      : params = Future.value(EqParams(
+      : paramsNow = EqParams(
           minDb: DynamicsEqualizer.minDb,
           maxDb: DynamicsEqualizer.maxDb,
           bands: [
             for (var i = 0; i < DynamicsEqualizer.bandCount; i++)
               _DynamicsBand(eq, i),
           ],
-        ));
+        );
 
   @override
-  final Future<EqParams> params;
+  final EqParams paramsNow;
+
+  @override
+  Future<EqParams> get params => Future.value(paramsNow);
 }
 
 class _DynamicsBand implements EqBand {

@@ -124,26 +124,31 @@ class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     @RequiresApi(Build.VERSION_CODES.P)
     private class RouteStream(private val impl: Impl, private val context: Context) : EventChannel.StreamHandler {
         private var callback: AudioDeviceCallback? = null
+        // The current subscriber: the delayed re-emit reads it at fire time,
+        // so a cancel-and-resubscribe inside the window reaches the new one.
+        private var sink: EventChannel.EventSink? = null
         private val main = Handler(Looper.getMainLooper())
 
         override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
             onCancel(null)
+            sink = events
             val cb = object : AudioDeviceCallback() {
-                override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) = push(events)
-                override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = push(events)
+                override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) = push()
+                override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = push()
             }
             am.registerAudioDeviceCallback(cb, main)
             callback = cb
-            events?.success(impl.currentRoute())
+            push()
         }
 
-        private fun push(events: EventChannel.EventSink?) {
-            events?.success(impl.currentRoute())
-            main.postDelayed({ if (callback != null) events?.success(impl.currentRoute()) }, 800)
+        private fun push() {
+            sink?.success(impl.currentRoute())
+            main.postDelayed({ sink?.success(impl.currentRoute()) }, 800)
         }
 
         override fun onCancel(arguments: Any?) {
+            sink = null
             val cb = callback ?: return
             callback = null
             (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.unregisterAudioDeviceCallback(cb)
@@ -230,19 +235,26 @@ class DynamicsEqPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             )
         }
 
-        // Android 12+ says where media routes; below, the best available
-        // output is what the policy would pick anyway.
+        // Android 13+ says where media routes (getAudioDevicesForAttributes
+        // is API 33); below, the best available output is what the policy
+        // would pick anyway. Nothing here may throw: the route stream calls
+        // this outside any catch.
         private fun pickRoute(am: AudioManager): AudioDeviceInfo? {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()
-                val routed = am.getAudioDevicesForAttributes(attrs)
-                if (routed.isNotEmpty()) return routed[0]
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()
+                    val routed = am.getAudioDevicesForAttributes(attrs)
+                    if (routed.isNotEmpty()) return routed[0]
+                }
+                val outs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                for (k in listOf("bluetooth", "usb", "wired", "hdmi", "speaker")) {
+                    outs.firstOrNull { kindOf(it.type) == k }?.let { return it }
+                }
+                return outs.firstOrNull()
+            } catch (e: Throwable) {
+                Log.w(TAG, "route lookup failed: $e")
+                return null
             }
-            val outs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            for (k in listOf("bluetooth", "usb", "wired", "hdmi", "speaker")) {
-                outs.firstOrNull { kindOf(it.type) == k }?.let { return it }
-            }
-            return outs.firstOrNull()
         }
 
         // Numeric literals for the types newer than this plugin's minimum:

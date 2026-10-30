@@ -14,6 +14,7 @@ import '../../theme/velvet_theme.dart';
 import 'eq_controller.dart';
 import 'eq_curve.dart';
 import 'eq_presets.dart';
+import 'eq_sheet_handle.dart';
 import 'eq_screen.dart' show eqPresetName;
 
 /// What to call an output: a Bluetooth device's own name, the kind otherwise.
@@ -254,16 +255,7 @@ Future<void> _pickPreset(BuildContext context, EqController controller,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
-          Center(
-            child: Container(
-              width: 32,
-              height: 4,
-              decoration: BoxDecoration(
-                color: VelvetColors.border2,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const EqSheetHandle(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
             child: Text(

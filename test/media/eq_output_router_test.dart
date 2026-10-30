@@ -154,6 +154,32 @@ void main() {
       r.dispose();
     });
 
+    test('switching on with no route yet asks the platform before adopting',
+        () async {
+      port.route = null;
+      final r = make();
+      await r.start();
+      expect(r.current, isNull);
+      port.route = route('bluetooth', name: 'Mazda', address: 'A');
+      await r.setEnabled(true);
+      expect(r.current!.name, 'Mazda');
+      expect(store.profiles.single.gains, [1, 2, 3, 4, 5],
+          reason: 'the curve in use, not Flat');
+      expect(applied, isEmpty);
+      r.dispose();
+    });
+
+    test('a failing save on a route change is logged, not thrown', () async {
+      store.perOutput = true;
+      final r = make();
+      await r.start();
+      store.failSaves = true;
+      port.emit(route('wired'));
+      await settle();
+      expect(r.current!.kind, EqOutputKind.wired);
+      r.dispose();
+    });
+
     test('route flaps settle to the last one', () async {
       store.perOutput = true;
       final r = make();

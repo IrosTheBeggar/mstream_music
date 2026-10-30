@@ -207,7 +207,10 @@ class EqOutputRouter extends ChangeNotifier {
     _timer = Timer(settle, () {
       final p = _pending;
       _pending = null;
-      if (p != null && !_disposed) _onRoute(p);
+      if (p != null && !_disposed) {
+        _onRoute(p).catchError(
+            (Object e) => appLog('[eq] output route failed: $e'));
+      }
     });
   }
 
@@ -253,10 +256,16 @@ class EqOutputRouter extends ChangeNotifier {
   }
 
   /// Switch the feature. Turning it on gives the output in use the curve in
-  /// use, so nothing changes under the listener's ears.
+  /// use, so nothing changes under the listener's ears — asking the platform
+  /// for the route first when none has arrived yet, or the first device
+  /// event would start that output from Flat over the curve just tuned.
   Future<void> setEnabled(bool on) async {
     await store.setPerOutput(on);
-    final c = _current;
+    var c = _current;
+    if (on && c == null) {
+      final m = await port.current();
+      if (m != null) c = _current = EqOutput.fromRoute(m);
+    }
     if (on && c != null) {
       await _upsert(EqOutputProfile(
         key: c.key,

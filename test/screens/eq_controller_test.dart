@@ -526,6 +526,26 @@ void main() {
       c.dispose();
     });
 
+    test('a layout known at once (the ten-band engine) is ready on the first derive',
+        () async {
+      final p = fakeParams(gains: const [3, 0, 0, 0, 3]);
+      audio
+        ..enabled = true
+        ..unit = FakeUnit(known: p)
+        ..playerInactive = true;
+      final c = EqController(audio);
+      expect(c.status, EqStatus.ready,
+          reason: 'no needs-playback frame for a fixed layout');
+      expect(c.params, same(p));
+      expect(c.activePreset!.id, 'normal');
+      var notified = 0;
+      c.addListener(() => notified++);
+      await p.bands[0].setGain(1);
+      await settle();
+      expect(notified, greaterThan(0), reason: 'the bands are subscribed');
+      c.dispose();
+    });
+
     test('a late answer after dispose is ignored', () async {
       final unit = FakeUnit();
       audio

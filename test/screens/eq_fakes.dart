@@ -42,11 +42,18 @@ EqParams fakeParams({
         FakeBand(freqs[i], gains == null ? 0 : gains[i]),
     ]);
 
-/// A unit whose params the test resolves (or fails) when it chooses.
+/// A unit whose params the test resolves (or fails) when it chooses — or,
+/// with [known], a unit whose layout is fixed in code like the ten-band
+/// engine's.
 class FakeUnit implements EqUnit {
+  FakeUnit({this.known});
   final Completer<EqParams> _c = Completer<EqParams>();
+  final EqParams? known;
   @override
-  Future<EqParams> get params => _c.future;
+  Future<EqParams> get params =>
+      known != null ? Future.value(known) : _c.future;
+  @override
+  EqParams? get paramsNow => known;
   void resolve(EqParams p) => _c.complete(p);
   void fail(Object e) => _c.completeError(e);
 }
@@ -185,8 +192,11 @@ class FakeOutputStore implements EqOutputStore {
   @override
   Future<void> setPerOutput(bool on) async => perOutput = on;
 
+  bool failSaves = false;
+
   @override
   Future<void> saveProfiles(List<EqOutputProfile> p) async {
+    if (failSaves) throw StateError('disk full');
     profiles = List<EqOutputProfile>.of(p);
     saves++;
   }

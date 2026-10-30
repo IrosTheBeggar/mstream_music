@@ -41,6 +41,7 @@ import 'eq_controller.dart';
 import 'eq_curve.dart';
 import 'eq_outputs_screen.dart';
 import 'eq_presets.dart';
+import 'eq_sheet_handle.dart';
 
 /// How far each rail stops short of its column's ends (the overlay radius):
 /// the slider's track rect, the curve, the axis and the guide positions are
@@ -167,7 +168,7 @@ Future<void> _showOptions(BuildContext context, EqController c) {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 8),
-              const _SheetHandle(),
+              const EqSheetHandle(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
                 child: Text(
@@ -406,7 +407,7 @@ Future<void> _showUserPresetMenu(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
-          const _SheetHandle(),
+          const EqSheetHandle(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
             child: Text(
@@ -546,7 +547,7 @@ class _PresetNameSheetState extends State<_PresetNameSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SheetHandle(),
+          const EqSheetHandle(),
           const SizedBox(height: 14),
           Text(
             widget.title,
@@ -607,24 +608,6 @@ class _PresetNameSheetState extends State<_PresetNameSheet> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SheetHandle extends StatelessWidget {
-  const _SheetHandle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 32,
-        height: 4,
-        decoration: BoxDecoration(
-          color: VelvetColors.border2,
-          borderRadius: BorderRadius.circular(2),
-        ),
       ),
     );
   }
