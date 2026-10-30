@@ -421,9 +421,18 @@ class DownloadManager {
   static int autoDownloadSlots({required bool federated}) =>
       federated ? 1 : 2;
 
-  // In-flight keys are `<serverName><filepath>`, and paths start with '/'.
+  /// Auto-downloads of [server] still in flight, counted off the trackers:
+  /// an in-flight key is `<serverName><filepath>`, and a queue path rarely
+  /// starts with '/', so `peer-x` + `techno/a.flac` is `peer-xtechno/a.flac`
+  /// — there is no prefix to match on. Pure; unit-tested.
+  static int inFlightFor(Iterable<DownloadTracker> trackers,
+          Set<String> inFlight, String server) =>
+      trackers
+          .where((t) => t.serverName == server && inFlight.contains(t.filePath))
+          .length;
+
   int _inFlightFor(String server) =>
-      _inFlight.where((k) => k.startsWith('$server/')).length;
+      inFlightFor(downloadMap.values, _inFlight, server);
 
   int _slotsFor(String server) =>
       autoDownloadSlots(

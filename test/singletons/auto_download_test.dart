@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/download_tracker.dart';
 import 'package:mstream_music/singletons/downloads.dart';
 
 void main() {
@@ -134,6 +135,37 @@ void main() {
     test('one transfer on a federated peer, two on a server of your own', () {
       expect(DownloadManager.autoDownloadSlots(federated: true), 1);
       expect(DownloadManager.autoDownloadSlots(federated: false), 2);
+    });
+  });
+
+  group('DownloadManager.inFlightFor', () {
+    DownloadTracker tracker(String server, String path) =>
+        DownloadTracker('http://host/media/$path', server + path)
+          ..serverName = server
+          ..dataPath = path;
+
+    test('counts an in-flight tracker of the server, path without a leading slash',
+        () {
+      // Galaxy smoke 2026-10-30: `peer-wstream` + `techno/a.flac` keyed as
+      // `peer-wstreamtechno/a.flac`, so a `peer-wstream/` prefix match counted
+      // nothing and every sweep opened one more download on the peer.
+      final t = tracker('peer-wstream', 'techno/a.flac');
+      expect(DownloadManager.inFlightFor([t], {t.filePath}, 'peer-wstream'), 1);
+    });
+
+    test('a sibling server and a finished tracker are not counted', () {
+      final mine = tracker('peer-wstream', 'techno/a.flac');
+      final sibling = tracker('peer-wstream-2', 'techno/b.flac');
+      final done = tracker('peer-wstream', 'bass/c.flac');
+      final inFlight = {mine.filePath, sibling.filePath}; // `done` landed
+      expect(
+          DownloadManager.inFlightFor(
+              [mine, sibling, done], inFlight, 'peer-wstream'),
+          1);
+      expect(
+          DownloadManager.inFlightFor(
+              [mine, sibling, done], inFlight, 'peer-wstream-2'),
+          1);
     });
   });
 }
