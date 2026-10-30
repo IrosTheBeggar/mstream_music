@@ -136,6 +136,36 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Audiotreiber dieses Geräts meldet keine Equalizer-Bänder.';
 
   @override
+  String get eqPresetFlat => 'Flach';
+
+  @override
+  String get eqPresetNormal => 'Normal';
+
+  @override
+  String get eqPresetClassical => 'Klassik';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy Metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-Hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
   String get eqDisabledHint =>
       'Schalte den Equalizer ein, um die Bänder anzupassen.';
 

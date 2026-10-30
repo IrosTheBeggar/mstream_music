@@ -26,6 +26,7 @@ import '../../singletons/cast_manager.dart';
 import '../../singletons/log_manager.dart';
 import '../../singletons/media.dart';
 import '../../singletons/settings.dart';
+import 'eq_presets.dart';
 
 /// One equalizer band: a centre frequency and a live gain in dB.
 abstract class EqBand {
@@ -164,6 +165,7 @@ class EqController extends ChangeNotifier {
   bool _disposed = false;
   StreamSubscription<void>? _castSub;
   StreamSubscription<void>? _playerSub;
+  final List<StreamSubscription<double>> _gainSubs = [];
 
   void _refresh() {
     if (_disposed) return;
@@ -224,6 +226,13 @@ class EqController extends ChangeNotifier {
       _params = p;
       _loadedUnit = unit;
       _stopTimer();
+      // Every band's gain feeds the preset chips: the selected one is
+      // whichever curve the gains spell, so a drag deselects it.
+      for (final b in p.bands) {
+        _gainSubs.add(b.gainStream.listen((_) {
+          if (!_disposed) notifyListeners();
+        }));
+      }
       _refresh();
     }, onError: (Object e) {
       if (_disposed || !identical(unit, _loadingUnit)) return;
@@ -234,12 +243,20 @@ class EqController extends ChangeNotifier {
   }
 
   void _drop() {
+    _cancelGainSubs();
     _loadingUnit = null;
     _loadedUnit = null;
     _params = null;
     _failure = null;
     _timedOut = false;
     _stopTimer();
+  }
+
+  void _cancelGainSubs() {
+    for (final s in _gainSubs) {
+      s.cancel();
+    }
+    _gainSubs.clear();
   }
 
   void _stopTimer() {
@@ -266,12 +283,31 @@ class EqController extends ChangeNotifier {
     _refresh();
   }
 
-  Future<void> resetToFlat() async {
+  /// Every band's current gain in band order; empty until the layout is read.
+  List<double> get gains {
+    final p = _params;
+    return p == null ? const [] : [for (final b in p.bands) b.gain];
+  }
+
+  /// The preset the current gains spell, or null for a custom curve.
+  EqPreset? get activePreset {
+    final p = _params;
+    return p == null ? null : presetFor(p, gains);
+  }
+
+  /// Put a preset's curve on every band, as this device's layout reads it,
+  /// and save it.
+  Future<void> applyPreset(EqPreset preset) async {
     final p = _params;
     if (p == null) return;
-    await Future.wait(p.bands.map((b) => b.setGain(0)));
+    final target = preset.gainsFor(p);
+    await Future.wait([
+      for (var i = 0; i < p.bands.length; i++) p.bands[i].setGain(target[i]),
+    ]);
     await saveGains();
   }
+
+  Future<void> resetToFlat() => applyPreset(EqPreset.flat);
 
   /// Snapshot every band's gain into settings. Called on slider release, not
   /// per drag tick, so the settings file is not rewritten dozens of times per
@@ -287,6 +323,7 @@ class EqController extends ChangeNotifier {
     _disposed = true;
     _castSub?.cancel();
     _playerSub?.cancel();
+    _cancelGainSubs();
     _stopTimer();
     super.dispose();
   }

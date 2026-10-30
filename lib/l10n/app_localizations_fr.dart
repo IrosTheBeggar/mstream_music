@@ -136,6 +136,36 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucune bande d\'égaliseur signalée par le pilote audio de cet appareil.';
 
   @override
+  String get eqPresetFlat => 'Plat';
+
+  @override
+  String get eqPresetNormal => 'Normal';
+
+  @override
+  String get eqPresetClassical => 'Classique';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';
 
   @override

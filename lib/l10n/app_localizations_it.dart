@@ -136,6 +136,36 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il driver audio di questo dispositivo non segnala bande di equalizzazione.';
 
   @override
+  String get eqPresetFlat => 'Piatto';
+
+  @override
+  String get eqPresetNormal => 'Normale';
+
+  @override
+  String get eqPresetClassical => 'Classica';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';
 
   @override

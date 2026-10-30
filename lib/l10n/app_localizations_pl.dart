@@ -138,6 +138,36 @@ class AppLocalizationsPl extends AppLocalizations {
       'Sterownik audio tego urządzenia nie zgłasza żadnych pasm korektora.';
 
   @override
+  String get eqPresetFlat => 'Płaski';
+
+  @override
+  String get eqPresetNormal => 'Normalny';
+
+  @override
+  String get eqPresetClassical => 'Klasyczna';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';
 
   @override

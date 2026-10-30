@@ -151,6 +151,44 @@ void main() {
     expect(theSwitch(tester).onChanged, isNotNull);
   });
 
+  testWidgets('preset chips: the device default is Normal, a tap applies',
+      (tester) async {
+    final p = await pumpReady(tester, params: fakeParams(gains: const [3, 0, 0, 0, 3]));
+    expect(find.byType(ChoiceChip), findsWidgets);
+    ChoiceChip chip(String id) =>
+        tester.widget<ChoiceChip>(find.byKey(ValueKey('eq-preset-$id')));
+    expect(chip('normal').selected, isTrue);
+    expect(chip('flat').selected, isFalse);
+    expect(find.text('Heavy Metal'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('eq-preset-classical')));
+    await tester.pump();
+    expect(p.bands.map((b) => b.gain), [5, 3, -2, 4, 4]);
+    expect(chip('classical').selected, isTrue);
+    expect(chip('normal').selected, isFalse);
+    expect(find.text('+5.0'), findsOneWidget);
+    expect(audio.savedGains, [5, 3, -2, 4, 4]);
+  });
+
+  testWidgets('a drag deselects the preset; Reset selects Flat',
+      (tester) async {
+    await pumpReady(tester, params: fakeParams(gains: const [3, 0, 0, 0, 3]));
+    ChoiceChip chip(String id) =>
+        tester.widget<ChoiceChip>(find.byKey(ValueKey('eq-preset-$id')));
+    expect(chip('normal').selected, isTrue);
+    await tester.drag(find.byType(Slider).at(2), const Offset(0, -80));
+    await tester.pump();
+    expect(chip('normal').selected, isFalse);
+    expect(chip('flat').selected, isFalse);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    expect(chip('flat').selected, isTrue);
+  });
+
+  testWidgets('no preset row while the EQ is off', (tester) async {
+    await pumpScreen(tester);
+    expect(find.byType(ChoiceChip), findsNothing);
+  });
+
   testWidgets('a failed read shows the error text', (tester) async {
     final unit = FakeUnit();
     audio

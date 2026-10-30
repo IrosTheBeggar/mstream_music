@@ -143,6 +143,46 @@
   "@eqNoBands": {
     "description": "Shown when the device reports zero EQ bands."
   },
+  "eqPresetFlat": "Flat",
+  "@eqPresetFlat": {
+    "description": "EQ preset chip: every band at 0 dB (what Reset applies)."
+  },
+  "eqPresetNormal": "Normal",
+  "@eqPresetNormal": {
+    "description": "EQ preset chip: Android's default curve, a touch of bass and treble."
+  },
+  "eqPresetClassical": "Classical",
+  "@eqPresetClassical": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetDance": "Dance",
+  "@eqPresetDance": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetFolk": "Folk",
+  "@eqPresetFolk": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetHeavyMetal": "Heavy Metal",
+  "@eqPresetHeavyMetal": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetHipHop": "Hip Hop",
+  "@eqPresetHipHop": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetJazz": "Jazz",
+  "@eqPresetJazz": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetPop": "Pop",
+  "@eqPresetPop": {
+    "description": "EQ preset chip (genre curve)."
+  },
+  "eqPresetRock": "Rock",
+  "@eqPresetRock": {
+    "description": "EQ preset chip (genre curve)."
+  },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",

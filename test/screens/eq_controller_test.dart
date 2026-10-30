@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/screens/eq/eq_controller.dart';
+import 'package:mstream_music/screens/eq/eq_presets.dart';
 
 import 'eq_fakes.dart';
 
@@ -263,6 +264,50 @@ void main() {
       await c.params!.bands[1].setGain(-4);
       await c.saveGains();
       expect(audio.savedGains, [1, -4, 3, 4, 5]);
+      c.dispose();
+    });
+
+    test('presets: the gains name the active one; applying sets and saves',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams(gains: const [3, 0, 0, 0, 3]));
+      await settle();
+      expect(c.activePreset!.id, 'normal', reason: 'the device default');
+      await c.applyPreset(kEqPresets.firstWhere((p) => p.id == 'rock'));
+      expect(c.gains, [5, 3, -1, 3, 5]);
+      expect(c.activePreset!.id, 'rock');
+      expect(audio.savedGains, [5, 3, -1, 3, 5]);
+      expect(audio.saveCount, 1);
+      await c.resetToFlat();
+      expect(c.activePreset!.id, 'flat');
+      c.dispose();
+    });
+
+    test('a band moving by hand deselects the preset and notifies', () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams(gains: const [3, 0, 0, 0, 3]));
+      await settle();
+      var notified = 0;
+      c.addListener(() => notified++);
+      await c.params!.bands[2].setGain(4);
+      await settle();
+      expect(c.activePreset, isNull);
+      expect(notified, greaterThan(0), reason: 'the chips re-render');
+      // Off: the band subscriptions go with the layout.
+      await c.setEnabled(false);
+      final before = notified;
+      await (unit.params.then((p) => p.bands[2].setGain(5)));
+      await settle();
+      expect(notified, before + 0,
+          reason: 'no listener left on the dropped bands, bar the refresh');
       c.dispose();
     });
 

@@ -330,6 +330,66 @@ abstract class AppLocalizations {
   /// **'No EQ bands reported by this device\'s audio driver.'**
   String get eqNoBands;
 
+  /// EQ preset chip: every band at 0 dB (what Reset applies).
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get eqPresetFlat;
+
+  /// EQ preset chip: Android's default curve, a touch of bass and treble.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get eqPresetNormal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Classical'**
+  String get eqPresetClassical;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Dance'**
+  String get eqPresetDance;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Folk'**
+  String get eqPresetFolk;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy Metal'**
+  String get eqPresetHeavyMetal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Hip Hop'**
+  String get eqPresetHipHop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Jazz'**
+  String get eqPresetJazz;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Pop'**
+  String get eqPresetPop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get eqPresetRock;
+
   /// No description provided for @eqDisabledHint.
   ///
   /// In en, this message translates to:

@@ -132,6 +132,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqNoBands => '此设备的音频驱动未报告任何均衡器频段。';
 
   @override
+  String get eqPresetFlat => '平坦';
+
+  @override
+  String get eqPresetNormal => '普通';
+
+  @override
+  String get eqPresetClassical => '古典';
+
+  @override
+  String get eqPresetDance => '舞曲';
+
+  @override
+  String get eqPresetFolk => '民谣';
+
+  @override
+  String get eqPresetHeavyMetal => '重金属';
+
+  @override
+  String get eqPresetHipHop => '嘻哈';
+
+  @override
+  String get eqPresetJazz => '爵士';
+
+  @override
+  String get eqPresetPop => '流行';
+
+  @override
+  String get eqPresetRock => '摇滚';
+
+  @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
 
   @override

@@ -138,6 +138,36 @@ class AppLocalizationsRu extends AppLocalizations {
       'Аудиодрайвер этого устройства не сообщает о полосах эквалайзера.';
 
   @override
+  String get eqPresetFlat => 'Ровный';
+
+  @override
+  String get eqPresetNormal => 'Обычный';
+
+  @override
+  String get eqPresetClassical => 'Классика';
+
+  @override
+  String get eqPresetDance => 'Танцевальная';
+
+  @override
+  String get eqPresetFolk => 'Фолк';
+
+  @override
+  String get eqPresetHeavyMetal => 'Хеви-метал';
+
+  @override
+  String get eqPresetHipHop => 'Хип-хоп';
+
+  @override
+  String get eqPresetJazz => 'Джаз';
+
+  @override
+  String get eqPresetPop => 'Поп';
+
+  @override
+  String get eqPresetRock => 'Рок';
+
+  @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
 
   @override

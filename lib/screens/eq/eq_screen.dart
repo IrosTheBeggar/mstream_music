@@ -9,6 +9,8 @@
 //   * one vertical slider per band the device reports, filled from 0 dB to
 //     the thumb (not from the bottom), with the live gain above and the
 //     centre frequency below;
+//   * a row of preset chips (eq_presets.dart) above the bands; the chip
+//     whose curve the gains spell is the selected one, so a drag deselects;
 //   * a dB axis on the left and a 0 dB guide across the bands, both placed
 //     from the same rail geometry the sliders use;
 //   * Reset-to-flat in the AppBar.
@@ -23,6 +25,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
 import 'eq_controller.dart';
+import 'eq_presets.dart';
 
 /// How far each rail stops short of its column's ends (the overlay radius):
 /// the slider's track rect and the axis/guide positions are all derived from
@@ -103,7 +106,14 @@ class _EqScreenState extends State<EqScreen> {
         EqStatus.busy || EqStatus.loading => Center(
             child: CircularProgressIndicator(color: VelvetColors.primary),
           ),
-        EqStatus.ready => _BandPanel(params: c.params!, onRelease: c.saveGains),
+        EqStatus.ready => Column(
+            children: [
+              _PresetRow(c),
+              Expanded(
+                child: _BandPanel(params: c.params!, onRelease: c.saveGains),
+              ),
+            ],
+          ),
       };
 }
 
@@ -435,3 +445,59 @@ class _ZeroCenteredTrack extends SliderTrackShape {
     );
   }
 }
+
+/// The preset chips: one row, scrolled sideways, the active curve filled.
+class _PresetRow extends StatelessWidget {
+  const _PresetRow(this.controller);
+  final EqController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final active = controller.activePreset;
+    return SizedBox(
+      height: 56,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.fromLTRB(16, 10, 16, 6),
+        itemCount: kEqPresets.length,
+        separatorBuilder: (_, _) => SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final p = kEqPresets[i];
+          final on = identical(p, active);
+          return ChoiceChip(
+            key: ValueKey('eq-preset-${p.id}'),
+            label: Text(eqPresetName(l, p)),
+            selected: on,
+            showCheckmark: false,
+            onSelected: (_) => controller.applyPreset(p),
+            selectedColor: VelvetColors.primary,
+            backgroundColor: Colors.transparent,
+            side: BorderSide(
+                color: on ? VelvetColors.primary : VelvetColors.border2),
+            labelStyle: TextStyle(
+              fontSize: 13,
+              color: on ? VelvetColors.onPrimary : VelvetColors.textPrimary,
+              fontWeight: on ? FontWeight.w600 : FontWeight.normal,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// A preset's name in the active locale.
+String eqPresetName(AppLocalizations l, EqPreset p) => switch (p.id) {
+      'flat' => l.eqPresetFlat,
+      'normal' => l.eqPresetNormal,
+      'classical' => l.eqPresetClassical,
+      'dance' => l.eqPresetDance,
+      'folk' => l.eqPresetFolk,
+      'heavyMetal' => l.eqPresetHeavyMetal,
+      'hipHop' => l.eqPresetHipHop,
+      'jazz' => l.eqPresetJazz,
+      'pop' => l.eqPresetPop,
+      'rock' => l.eqPresetRock,
+      _ => p.id,
+    };

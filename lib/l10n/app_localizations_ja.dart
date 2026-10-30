@@ -133,6 +133,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqNoBands => 'この端末のオーディオドライバーは EQ バンドを報告していません。';
 
   @override
+  String get eqPresetFlat => 'フラット';
+
+  @override
+  String get eqPresetNormal => 'ノーマル';
+
+  @override
+  String get eqPresetClassical => 'クラシック';
+
+  @override
+  String get eqPresetDance => 'ダンス';
+
+  @override
+  String get eqPresetFolk => 'フォーク';
+
+  @override
+  String get eqPresetHeavyMetal => 'ヘビーメタル';
+
+  @override
+  String get eqPresetHipHop => 'ヒップホップ';
+
+  @override
+  String get eqPresetJazz => 'ジャズ';
+
+  @override
+  String get eqPresetPop => 'ポップ';
+
+  @override
+  String get eqPresetRock => 'ロック';
+
+  @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';
 
   @override
