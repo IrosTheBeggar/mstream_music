@@ -1,5 +1,4 @@
 import 'dart:async' show unawaited;
-import 'dart:io' show Platform;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -8,7 +7,6 @@ import '../l10n/enum_labels.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
-import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
 
 /// First-run setup, shown once after the user's first server is added (see
@@ -35,14 +33,11 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
   final _controller = PageController();
   int _page = 0;
 
-  /// Real-audio capture goes through `android.media.audiofx.Visualizer`, so
-  /// the page is meaningless anywhere else — iOS, macOS, Windows and Linux
-  /// drop straight from the accent page to playback.
-  static final bool _hasVisualizerPage = Platform.isAndroid;
-
+  // No visualizer page: the microphone question waits until someone actually
+  // opens a visualizer (see visualizer_launcher.dart), rather than greeting a
+  // new install with a permission prompt for a feature they may never use.
   late final List<Widget Function(AppLocalizations)> _pages = [
     _accentPage,
-    if (_hasVisualizerPage) _visualizerPage,
     _playbackPage,
     _offlinePage,
   ];
@@ -277,79 +272,6 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
               selected: current == accentArgb(c),
               onTap: () => pick(accentArgb(c)),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _visualizerPage(AppLocalizations l) {
-    final on =
-        SettingsManager().visualizerAudioSource == VisualizerAudioSource.real;
-
-    Future<void> toggle(bool want) async {
-      if (want) {
-        // Explanation dialog + OS prompt; a refusal leaves the switch off.
-        final ok = await confirmRealAudioPermission(context);
-        if (!ok) return;
-      }
-      await SettingsManager().setVisualizerAudioSource(
-          want ? VisualizerAudioSource.real : VisualizerAudioSource.synthesized);
-      if (mounted) setState(() {});
-    }
-
-    return _pageShell(
-      icon: Icons.graphic_eq,
-      title: l.setupVisualizerTitle,
-      body: l.setupVisualizerBody,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: VelvetColors.card,
-              border: Border.all(color: VelvetColors.border),
-              borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-            ),
-            child: SwitchListTile(
-              title: Text(
-                VisualizerAudioSource.real.label(l),
-                style: TextStyle(color: VelvetColors.textPrimary),
-              ),
-              value: on,
-              onChanged: toggle,
-              activeThumbColor: VelvetColors.primary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.mic_none, size: 18, color: VelvetColors.warning),
-              const SizedBox(width: 10),
-              Expanded(
-                // Two spans rather than one string: the closing reassurance is
-                // underlined, and the split has to survive translation — a
-                // substring match for "the last sentence" would break the
-                // moment a locale punctuates differently.
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${l.setupVisualizerWarning} '),
-                      TextSpan(
-                        text: l.setupVisualizerNoMic,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                  style: TextStyle(
-                    color: VelvetColors.textTertiary,
-                    fontSize: 12,
-                    height: 1.45,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

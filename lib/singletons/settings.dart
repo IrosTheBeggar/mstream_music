@@ -67,12 +67,10 @@ enum StartupView {
 /// Which rendering engine the visualizer screen uses. Milkdrop is the
 /// projectM Cream-of-the-Crop pack; Shadertoy is our Shadertoy-style
 /// fragment shader catalog (drop .glsl files in assets/shaders/ to
-/// extend). Persisted so the choice survives app restart.
+/// extend). The drawer has an entry for each.
 enum VisualizerEngine {
   milkdrop,
   shader;
-
-  // Localized labels: VisualizerEngineLabel extension in lib/l10n/enum_labels.dart.
 
   /// Wire kind passed across the MethodChannel to the native bridge.
   /// Must match the enum in visualizer_bridge.cpp.
@@ -251,14 +249,17 @@ class SettingsManager {
   // from [diagnosticsLogging] so users can opt in. See verboseLog().
   bool verboseLogging = false;
   // Visualizer audio source — synthesized is the default so the
-  // visualizer Just Works without prompting for RECORD_AUDIO. Users
-  // can opt into real audio in Settings; the toggle there walks them
-  // through the permission flow.
+  // visualizer Just Works without prompting for RECORD_AUDIO. Opening a
+  // visualizer asks about real audio (see visualizer_launcher.dart), and
+  // the dropdown in Settings walks through the same permission flow.
   VisualizerAudioSource visualizerAudioSource =
       VisualizerAudioSource.synthesized;
-  // Visualizer rendering engine. Milkdrop is the default — it's the
-  // richer engine and the one we shipped first. Shader engine is the
-  // lighter alternative driven by the bundled .glsl catalog.
+  // "Don't ask again" on that real-audio question: opening a visualizer
+  // then goes straight in on whatever [visualizerAudioSource] says.
+  bool realAudioPromptDismissed = false;
+  // The visualizer engine last opened from the drawer, which names each one.
+  // Remembered so casting the visualizer renders the one last watched (see
+  // resolveVisualizerCastConfig). Milkdrop until either is opened.
   VisualizerEngine visualizerEngine = VisualizerEngine.milkdrop;
 
   // Visualizer tuning knobs (Shader engine only). Hidden by default —
@@ -386,6 +387,7 @@ class SettingsManager {
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
+      realAudioPromptDismissed = m['realAudioPromptDismissed'] ?? false;
       visualizerEngine = _readVisualizerEngine(m);
       showVisualizerKnobs = m['showVisualizerKnobs'] ?? false;
       final rawGlobal = m['visualizerGlobalParams'];
@@ -594,6 +596,7 @@ class SettingsManager {
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
+      'realAudioPromptDismissed': realAudioPromptDismissed,
       'visualizerEngine': visualizerEngine.name,
       'showVisualizerKnobs': showVisualizerKnobs,
       'visualizerGlobalParams': visualizerGlobalParams,
@@ -811,6 +814,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setRealAudioPromptDismissed(bool v) async {
+    realAudioPromptDismissed = v;
+    await _save();
+  }
+
   Future<void> setVisualizerEngine(VisualizerEngine v) async {
     visualizerEngine = v;
     await _save();
@@ -878,6 +886,7 @@ class SettingsManager {
     verboseLogging = false;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
+    realAudioPromptDismissed = false;
     visualizerEngine = VisualizerEngine.milkdrop;
     showVisualizerKnobs = false;
     visualizerGlobalParams = const [];

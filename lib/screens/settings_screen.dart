@@ -356,31 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
-            ListTile(
-              title: Text(l.settingsVisualizerEngine),
-              subtitle: Text(
-                _visualizerEngineSubtitle(l, SettingsManager().visualizerEngine),
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              trailing: DropdownButton<VisualizerEngine>(
-                value: SettingsManager().visualizerEngine,
-                underline: SizedBox.shrink(),
-                dropdownColor: VelvetColors.surface,
-                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-                items: VisualizerEngine.values
-                    .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e.label(l)),
-                        ))
-                    .toList(),
-                onChanged: (v) async {
-                  if (v == null) return;
-                  await SettingsManager().setVisualizerEngine(v);
-                  if (mounted) setState(() {});
-                },
-              ),
-            ),
+            // No engine picker: the drawer opens each visualizer by name.
             ListTile(
               title: Text(l.settingsVisualizerSource),
               subtitle: Text(
@@ -747,15 +723,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.playerLayoutLargeDesc;
       case PlayerLayout.xl:
         return l.playerLayoutXlDesc;
-    }
-  }
-
-  String _visualizerEngineSubtitle(AppLocalizations l, VisualizerEngine e) {
-    switch (e) {
-      case VisualizerEngine.milkdrop:
-        return l.visualizerEngineSubtitleMilkdrop;
-      case VisualizerEngine.shader:
-        return l.visualizerEngineSubtitleShaders;
     }
   }
 

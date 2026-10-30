@@ -79,12 +79,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tapAppendAndJump => '添加并播放';
 
   @override
-  String get visualizerEngineMilkdrop => 'Milkdrop';
-
-  @override
-  String get visualizerEngineShaders => '着色器';
-
-  @override
   String get visualizerSourceSynthesized => '合成';
 
   @override
@@ -227,17 +221,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsEqSubtitle => '调节低音、中音和高音。仅限 Android。';
 
   @override
-  String get settingsVisualizerEngine => '可视化引擎';
-
-  @override
-  String get visualizerEngineSubtitleMilkdrop =>
-      '通过 projectM 使用 Milkdrop 预设（默认）。效果更丰富，但更消耗 GPU。';
-
-  @override
-  String get visualizerEngineSubtitleShaders =>
-      'Shadertoy 风格的片段着色器。更轻量、模块化 — 将 .glsl 文件放入 assets/shaders/ 即可扩展着色器列表。';
-
-  @override
   String get settingsVisualizerSource => '可视化音频来源';
 
   @override
@@ -294,7 +277,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get realAudioDialogBody =>
-      '真实音频模式会读取手机正在播放的音乐波形，让可视化效果随之反应。Android 需要 RECORD_AUDIO 权限才能实现此功能 — 应用不会录制或向任何地方发送音频。你可以随时切换回合成模式。';
+      '为了随正在播放的歌曲做出反应，可视化效果会读取 mStream 自身的音频输出，而 Android 只有在获得麦克风权限后才允许这样做。';
 
   @override
   String get realAudioPermPermanentlyDenied => '权限已被永久拒绝。请在系统设置中启用它以使用真实音频。';
@@ -956,9 +939,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get queueEmptyDjChoose => '选择曲目';
 
   @override
-  String get visualizerTitle => '可视化';
-
-  @override
   String get mainClearQueue => '清空队列';
 
   @override
@@ -1128,7 +1108,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsVisualizerKnobsSubtitle =>
-      '在可视化效果上方显示实时滑块，以调整每个着色器的音频反应强度。仅限着色器引擎。';
+      '在可视化效果上方显示实时滑块，以调整每个着色器的音频反应强度。仅限 ShaderToy 可视化。';
 
   @override
   String get visualizerTuningTitle => '调节';
@@ -1595,7 +1575,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersTitle => '导入的着色器';
 
   @override
-  String get importedShadersSettingsSubtitle => '将你自己的 .glsl 文件加入着色器引擎的轮换。';
+  String get importedShadersSettingsSubtitle =>
+      '将你自己的 .glsl 文件加入 ShaderToy 可视化的轮换。';
 
   @override
   String get importedShadersRescan => '重新扫描文件夹';
@@ -1608,7 +1589,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      '可通过 USB 或文件管理器访问（位于 Android/data 下）。着色器引擎处于活动状态时，导入的着色器会加入轮换。';
+      '可通过 USB 或文件管理器访问（位于 Android/data 下）。导入的着色器会加入 ShaderToy 可视化的轮换。';
 
   @override
   String get importedShadersRemove => '移除';
@@ -2181,23 +2162,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupAccentBody => '强调色会用于按钮、滑块和播放器控件。点击任意一个即可试用。';
 
   @override
-  String get setupVisualizerTitle => '为可视化效果使用真实音频';
-
-  @override
-  String get setupVisualizerBody => '在启用此选项之前，可视化效果将使用合成数据。';
-
-  @override
-  String get setupVisualizerWarning =>
-      '开启后会请求麦克风权限 — Android 会向解码设备音频流的应用要求该权限（可视化效果正是如此）。';
-
-  @override
   String get setupPlaybackTitle => '点击歌曲时';
 
   @override
   String get setupOfflineTitle => '离线保留播放队列';
 
   @override
-  String get setupVisualizerNoMic => 'mStream 绝不会使用你的麦克风。';
+  String get realAudioNoMic => 'mStream 绝不会使用你的麦克风。';
 
   @override
   String get playlistEmpty => '播放列表为空';
@@ -5071,4 +5042,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverElsewhereOpensOutside => '在应用外打开';
+
+  @override
+  String get visualizerMilkdropTitle => 'Milkdrop 可视化';
+
+  @override
+  String get visualizerShadertoyTitle => 'ShaderToy 可视化';
+
+  @override
+  String get realAudioSynthesizedNote => '未获得权限时，可视化效果将使用合成数据。';
+
+  @override
+  String get realAudioDontAskAgain => '不再询问';
+
+  @override
+  String get realAudioUseSynthesized => '使用合成数据';
+
+  @override
+  String get realAudioUseReal => '使用真实音频';
+
+  @override
+  String get queueSharePlaylist => '分享播放列表';
 }

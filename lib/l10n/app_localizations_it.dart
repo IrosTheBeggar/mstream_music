@@ -82,12 +82,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get tapAppendAndJump => 'Aggiungi e riproduci';
 
   @override
-  String get visualizerEngineMilkdrop => 'Milkdrop';
-
-  @override
-  String get visualizerEngineShaders => 'Shader';
-
-  @override
   String get visualizerSourceSynthesized => 'Sintetizzato';
 
   @override
@@ -239,17 +233,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Regola bassi, medi e alti. Solo su Android.';
 
   @override
-  String get settingsVisualizerEngine => 'Motore del visualizzatore';
-
-  @override
-  String get visualizerEngineSubtitleMilkdrop =>
-      'Preset di Milkdrop tramite projectM (predefinito). Effetti più ricchi, più impegnativi per la GPU.';
-
-  @override
-  String get visualizerEngineSubtitleShaders =>
-      'Shader di frammento in stile Shadertoy. Più leggeri e modulari — inserisci file .glsl in assets/shaders/ per ampliare il catalogo.';
-
-  @override
   String get settingsVisualizerSource => 'Sorgente audio del visualizzatore';
 
   @override
@@ -311,7 +294,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get realAudioDialogBody =>
-      'La modalità audio reale legge la forma d’onda della musica riprodotta dal telefono affinché il visualizzatore possa reagire. Android richiede il permesso RECORD_AUDIO per questo — l’app non registra né invia alcun audio da nessuna parte. Puoi tornare all’audio sintetizzato in qualsiasi momento.';
+      'Per reagire al brano in riproduzione, il visualizzatore legge l’uscita audio di mStream stesso: Android lo consente solo con il permesso del microfono.';
 
   @override
   String get realAudioPermPermanentlyDenied =>
@@ -1005,9 +988,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get queueEmptyDjChoose => 'Scegli un brano';
 
   @override
-  String get visualizerTitle => 'Visualizzatore';
-
-  @override
   String get mainClearQueue => 'Svuota la coda';
 
   @override
@@ -1183,7 +1163,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsVisualizerKnobsSubtitle =>
-      'Mostra cursori in tempo reale sopra il visualizzatore per regolare la reattività audio di ogni shader. Solo con il motore shader.';
+      'Mostra cursori in tempo reale sopra il visualizzatore per regolare la reattività audio di ogni shader. Solo nel visualizzatore ShaderToy.';
 
   @override
   String get visualizerTuningTitle => 'Regolazione';
@@ -1697,7 +1677,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Aggiungi i tuoi file .glsl alla rotazione del motore Shader.';
+      'Aggiungi i tuoi file .glsl alla rotazione del visualizzatore ShaderToy.';
 
   @override
   String get importedShadersRescan => 'Riscansiona cartella';
@@ -1711,7 +1691,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Raggiungibile via USB o con un file manager (sotto Android/data). Gli shader importati entrano nella rotazione quando il motore Shader è attivo.';
+      'Raggiungibile via USB o con un file manager (sotto Android/data). Gli shader importati entrano nella rotazione del visualizzatore ShaderToy.';
 
   @override
   String get importedShadersRemove => 'Rimuovi';
@@ -2338,24 +2318,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il colore d’accento evidenzia pulsanti, cursori e i comandi del player. Toccane uno per provarlo.';
 
   @override
-  String get setupVisualizerTitle => 'Audio reale per il visualizzatore';
-
-  @override
-  String get setupVisualizerBody =>
-      'Il visualizzatore usa dati sintetizzati finché questa opzione non viene attivata.';
-
-  @override
-  String get setupVisualizerWarning =>
-      'Attivarlo richiede il permesso del microfono: Android lo esige dalle app che decodificano il flusso audio del dispositivo (cosa che fa il visualizzatore).';
-
-  @override
   String get setupPlaybackTitle => 'Quando tocchi un brano';
 
   @override
   String get setupOfflineTitle => 'Tieni la coda disponibile offline';
 
   @override
-  String get setupVisualizerNoMic => 'mStream non usa mai il tuo microfono.';
+  String get realAudioNoMic => 'mStream non usa mai il tuo microfono.';
 
   @override
   String get playlistEmpty => 'La playlist è vuota';
@@ -5410,4 +5379,26 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get discoverElsewhereOpensOutside => 'Si apre fuori dall’app';
+
+  @override
+  String get visualizerMilkdropTitle => 'Visualizzatore Milkdrop';
+
+  @override
+  String get visualizerShadertoyTitle => 'Visualizzatore ShaderToy';
+
+  @override
+  String get realAudioSynthesizedNote =>
+      'Senza il permesso, il visualizzatore usa dati sintetizzati.';
+
+  @override
+  String get realAudioDontAskAgain => 'Non chiedere più';
+
+  @override
+  String get realAudioUseSynthesized => 'Usa dati sintetizzati';
+
+  @override
+  String get realAudioUseReal => 'Usa l’audio reale';
+
+  @override
+  String get queueSharePlaylist => 'Condividi playlist';
 }
