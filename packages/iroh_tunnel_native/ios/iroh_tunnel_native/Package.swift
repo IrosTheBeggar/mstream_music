@@ -32,8 +32,8 @@ let package = Package(
         // arm64 slices); the target name must be the framework's.
         .binaryTarget(
             name: "iroh_tunnel",
-            url: "https://github.com/IrosTheBeggar/mstream-iroh-tunnel/releases/download/v0.2.0/iroh_tunnel-v0.2.0-ios.xcframework.zip",
-            checksum: "9f8e4c869b170359e2a8b8d2b78ababa28da6398f4fd109adb2c639b27fd0e19"
+            url: "https://github.com/IrosTheBeggar/mstream-iroh-tunnel/releases/download/v0.2.1/iroh_tunnel-v0.2.1-ios.xcframework.zip",
+            checksum: "7cc510295b4189ae7329a8cc7bc1481a124bdf0d2c677627d762a315a552d177"
         )
     ]
 )
