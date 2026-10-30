@@ -390,6 +390,60 @@ abstract class AppLocalizations {
   /// **'Rock'**
   String get eqPresetRock;
 
+  /// EQ preset chip shown first when the gains match no preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get eqPresetCustom;
+
+  /// Button under the EQ bands that saves the current curve as a user preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as preset'**
+  String get eqSaveAsPreset;
+
+  /// Title of the sheet that names a new EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save preset'**
+  String get eqSavePresetTitle;
+
+  /// Title of the sheet that renames a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename preset'**
+  String get eqRenamePresetTitle;
+
+  /// Label of the preset name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get eqPresetNameLabel;
+
+  /// Helper text under the preset name field when saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this phone, after the built-in presets. Long-press its chip later to rename or delete it.'**
+  String get eqSavePresetHint;
+
+  /// Save-sheet button when a saved preset of that name exists and will be overwritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get eqReplacePreset;
+
+  /// Helper text when renaming to a name another saved preset has.
+  ///
+  /// In en, this message translates to:
+  /// **'Another saved preset already has this name.'**
+  String get eqPresetNameTaken;
+
+  /// Confirmation when deleting a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String eqDeletePresetConfirm(String name);
+
   /// No description provided for @eqDisabledHint.
   ///
   /// In en, this message translates to:

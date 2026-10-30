@@ -166,6 +166,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String get eqPresetRock => 'Rock';
 
   @override
+  String get eqPresetCustom => 'Personnalisé';
+
+  @override
+  String get eqSaveAsPreset => 'Enregistrer comme préréglage';
+
+  @override
+  String get eqSavePresetTitle => 'Enregistrer le préréglage';
+
+  @override
+  String get eqRenamePresetTitle => 'Renommer le préréglage';
+
+  @override
+  String get eqPresetNameLabel => 'Nom';
+
+  @override
+  String get eqSavePresetHint =>
+      'Enregistré sur ce téléphone, après les préréglages intégrés. Appuyez longuement sur sa puce plus tard pour le renommer ou le supprimer.';
+
+  @override
+  String get eqReplacePreset => 'Remplacer';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Un autre préréglage enregistré porte déjà ce nom.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Supprimer « $name » ?';
+  }
+
+  @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';
 
   @override

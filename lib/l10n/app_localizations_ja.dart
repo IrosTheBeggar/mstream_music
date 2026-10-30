@@ -163,6 +163,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqPresetRock => 'ロック';
 
   @override
+  String get eqPresetCustom => 'カスタム';
+
+  @override
+  String get eqSaveAsPreset => 'プリセットとして保存';
+
+  @override
+  String get eqSavePresetTitle => 'プリセットを保存';
+
+  @override
+  String get eqRenamePresetTitle => 'プリセット名を変更';
+
+  @override
+  String get eqPresetNameLabel => '名前';
+
+  @override
+  String get eqSavePresetHint =>
+      'この端末に保存され、内蔵プリセットの後ろに並びます。あとでチップを長押しすると名前の変更や削除ができます。';
+
+  @override
+  String get eqReplacePreset => '置き換える';
+
+  @override
+  String get eqPresetNameTaken => '同じ名前の保存済みプリセットがすでにあります。';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';
 
   @override

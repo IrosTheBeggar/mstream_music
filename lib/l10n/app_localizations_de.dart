@@ -166,6 +166,37 @@ class AppLocalizationsDe extends AppLocalizations {
   String get eqPresetRock => 'Rock';
 
   @override
+  String get eqPresetCustom => 'Eigene';
+
+  @override
+  String get eqSaveAsPreset => 'Als Preset speichern';
+
+  @override
+  String get eqSavePresetTitle => 'Preset speichern';
+
+  @override
+  String get eqRenamePresetTitle => 'Preset umbenennen';
+
+  @override
+  String get eqPresetNameLabel => 'Name';
+
+  @override
+  String get eqSavePresetHint =>
+      'Wird auf diesem Telefon gespeichert, hinter den eingebauten Presets. Halte den Chip später gedrückt, um ihn umzubenennen oder zu löschen.';
+
+  @override
+  String get eqReplacePreset => 'Ersetzen';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Ein anderes gespeichertes Preset hat diesen Namen bereits.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '„$name“ löschen?';
+  }
+
+  @override
   String get eqDisabledHint =>
       'Schalte den Equalizer ein, um die Bänder anzupassen.';
 

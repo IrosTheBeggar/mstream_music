@@ -168,6 +168,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get eqPresetRock => 'Рок';
 
   @override
+  String get eqPresetCustom => 'Своя';
+
+  @override
+  String get eqSaveAsPreset => 'Сохранить как пресет';
+
+  @override
+  String get eqSavePresetTitle => 'Сохранить пресет';
+
+  @override
+  String get eqRenamePresetTitle => 'Переименовать пресет';
+
+  @override
+  String get eqPresetNameLabel => 'Название';
+
+  @override
+  String get eqSavePresetHint =>
+      'Сохраняется на этом телефоне, после встроенных пресетов. Позже удерживайте его чип, чтобы переименовать или удалить.';
+
+  @override
+  String get eqReplacePreset => 'Заменить';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Другой сохранённый пресет уже носит это название.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
 
   @override

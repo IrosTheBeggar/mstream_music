@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/screens/eq/eq_controller.dart';
 import 'package:mstream_music/screens/eq/eq_curve.dart';
+import 'package:mstream_music/screens/eq/eq_presets.dart';
 import 'package:mstream_music/screens/eq/eq_screen.dart';
 
 import 'eq_fakes.dart';
@@ -266,5 +267,127 @@ void main() {
     expect(find.textContaining('Could not initialize equalizer'), findsOneWidget);
     expect(find.textContaining('no effect'), findsOneWidget);
     expect(find.text('Reset'), findsNothing);
+  });
+
+  testWidgets('a custom curve: Custom leads the chips, Save appears, saving makes a chip',
+      (tester) async {
+    await pumpReady(tester, params: fakeParams(gains: const [3, 0, 0, 0, 3]));
+    final custom = find.byKey(const ValueKey('eq-preset-custom'));
+    final save = find.byKey(const Key('eq-save-preset'));
+    expect(custom, findsNothing);
+    expect(save, findsNothing);
+    await tester.drag(find.byType(Slider).at(2), const Offset(0, -80));
+    await tester.pump();
+    expect(custom, findsOneWidget);
+    expect(tester.widget<ChoiceChip>(custom).selected, isTrue);
+    expect(save, findsOneWidget);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('Save preset'), findsOneWidget);
+    final sheetSave = find.byKey(const Key('eq-preset-sheet-save'));
+    expect(tester.widget<FilledButton>(sheetSave).onPressed, isNull,
+        reason: 'nothing typed yet');
+    await tester.enterText(find.byKey(const Key('eq-preset-name')), ' Car bass ');
+    await tester.pump();
+    expect(find.text('Save'), findsOneWidget);
+    await tester.tap(sheetSave);
+    await tester.pumpAndSettle();
+    expect(audio.userPresets.single.name, 'Car bass');
+    expect(custom, findsNothing);
+    expect(save, findsNothing);
+    final chip = find.byKey(ValueKey('eq-preset-${audio.userPresets.single.id}'));
+    await tester.scrollUntilVisible(chip, 100,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+    expect(find.text('Car bass'), findsOneWidget);
+  });
+
+  testWidgets('long-press a saved chip: rename, then delete after confirming',
+      (tester) async {
+    final p = fakeParams(gains: const [1, 2, 3, 4, 5]);
+    audio.userPresets = [
+      EqPreset.user(id: 'user:9', name: 'Night', params: p, gains: const [1, 2, 3, 4, 5]),
+    ];
+    await pumpReady(tester, params: p);
+    final chip = find.byKey(const ValueKey('eq-preset-user:9'));
+    await tester.scrollUntilVisible(chip, 100,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(chip).selected, isTrue,
+        reason: 'the gains are this curve');
+    expect(find.byKey(const ValueKey('eq-preset-custom')), findsNothing);
+    await tester.longPress(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('eq-preset-menu-rename')));
+    await tester.pumpAndSettle();
+    expect(find.text('Rename preset'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('eq-preset-name')), 'Late');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('eq-preset-sheet-save')));
+    await tester.pumpAndSettle();
+    expect(audio.userPresets.single.name, 'Late');
+    expect(audio.userPresets.single.id, 'user:9');
+    expect(find.text('Late'), findsOneWidget);
+    expect(find.text('Night'), findsNothing);
+    await tester.longPress(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('eq-preset-menu-delete')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete “Late”?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('eq-preset-delete-confirm')));
+    await tester.pumpAndSettle();
+    expect(audio.userPresets, isEmpty);
+    expect(chip, findsNothing);
+    // The row is still scrolled to where the chip was; the Custom chip leads.
+    await tester.drag(find.byType(Scrollable).first, const Offset(2000, 0));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('eq-preset-custom')), findsOneWidget,
+        reason: 'the gains spell nothing once the curve is gone');
+  });
+
+  testWidgets('a name another saved preset has: blocked on rename, Replace on save',
+      (tester) async {
+    final p = fakeParams(gains: const [1, 2, 3, 4, 5]);
+    audio.userPresets = [
+      EqPreset.user(id: 'user:1', name: 'Car', params: p, gains: const [1, 0, 0, 0, 0]),
+      EqPreset.user(id: 'user:2', name: 'Home', params: p, gains: const [1, 2, 3, 4, 5]),
+    ];
+    await pumpReady(tester, params: p);
+    final home = find.byKey(const ValueKey('eq-preset-user:2'));
+    await tester.scrollUntilVisible(home, 100,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(home);
+    await tester.pumpAndSettle();
+    await tester.longPress(home);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('eq-preset-menu-rename')));
+    await tester.pumpAndSettle();
+    final sheetSave = find.byKey(const Key('eq-preset-sheet-save'));
+    expect(tester.widget<FilledButton>(sheetSave).onPressed, isNotNull,
+        reason: 'its own name is fine');
+    await tester.enterText(find.byKey(const Key('eq-preset-name')), 'car');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(sheetSave).onPressed, isNull);
+    expect(find.text('Another saved preset already has this name.'),
+        findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    // Now a custom curve saved under "Car": the sheet offers Replace.
+    await tester.drag(find.byType(Slider).at(2), const Offset(0, -80));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('eq-save-preset')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('eq-preset-name')), 'CAR');
+    await tester.pump();
+    expect(find.text('Replace'), findsOneWidget);
+    await tester.tap(sheetSave);
+    await tester.pumpAndSettle();
+    expect(audio.userPresets.map((u) => u.name), ['CAR', 'Home']);
+    expect(audio.userPresets.first.id, 'user:1', reason: 'replaced in place');
+    expect(audio.userPresets.first.curve[2].$2, p.bands[2].gain,
+        reason: 'the replaced curve is the one just dragged');
   });
 }

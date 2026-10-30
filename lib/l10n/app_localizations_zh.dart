@@ -162,6 +162,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqPresetRock => '摇滚';
 
   @override
+  String get eqPresetCustom => '自定义';
+
+  @override
+  String get eqSaveAsPreset => '保存为预设';
+
+  @override
+  String get eqSavePresetTitle => '保存预设';
+
+  @override
+  String get eqRenamePresetTitle => '重命名预设';
+
+  @override
+  String get eqPresetNameLabel => '名称';
+
+  @override
+  String get eqSavePresetHint => '保存在本机上，排在内置预设之后。之后长按它的标签即可重命名或删除。';
+
+  @override
+  String get eqReplacePreset => '替换';
+
+  @override
+  String get eqPresetNameTaken => '另一个已保存的预设已使用此名称。';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
 
   @override

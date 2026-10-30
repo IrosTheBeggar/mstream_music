@@ -91,6 +91,10 @@ abstract class EqAudio {
   /// setting only on success; never throws.
   Future<void> setEnabled(bool on);
   Future<void> saveGains(List<double> gains);
+
+  /// The user's saved curves, in the order they were saved.
+  List<EqPreset> get userPresets;
+  Future<void> saveUserPresets(List<EqPreset> presets);
 }
 
 enum EqStatus {
@@ -293,10 +297,70 @@ class EqController extends ChangeNotifier {
     return p == null ? const [] : [for (final b in p.bands) b.gain];
   }
 
-  /// The preset the current gains spell, or null for a custom curve.
+  /// The user's saved curves, in save order.
+  List<EqPreset> get userPresets => audio.userPresets;
+
+  /// The preset the current gains spell — a saved curve before a built-in —
+  /// or null for a custom curve.
   EqPreset? get activePreset {
     final p = _params;
-    return p == null ? null : presetFor(p, gains);
+    return p == null ? null : presetFor(p, gains, user: userPresets);
+  }
+
+  /// Sliders up, and the gains spell no preset, built-in or saved.
+  bool get isCustom => _status == EqStatus.ready && activePreset == null;
+
+  /// The saved preset called [name] (case and surrounding spaces aside).
+  EqPreset? userPresetNamed(String name) {
+    for (final p in userPresets) {
+      if (samePresetName(p.name!, name)) return p;
+    }
+    return null;
+  }
+
+  /// Save the current curve as [name]. A saved preset of that name is
+  /// replaced in place; otherwise the new one goes last. The bands are then
+  /// set to the saved (0.1 dB) values, so the new chip is the selected one
+  /// at once. Returns the preset, or null when nothing could be saved.
+  Future<EqPreset?> saveUserPreset(String name) async {
+    final p = _params;
+    final trimmed = name.trim();
+    if (p == null || trimmed.isEmpty) return null;
+    final existing = userPresetNamed(trimmed);
+    final preset = EqPreset.user(
+      id: existing?.id ?? newUserPresetId(),
+      name: trimmed,
+      params: p,
+      gains: gains,
+    );
+    final list = [...userPresets];
+    final i = existing == null ? -1 : list.indexWhere((q) => q.id == existing.id);
+    if (i >= 0) {
+      list[i] = preset;
+    } else {
+      list.add(preset);
+    }
+    await audio.saveUserPresets(list);
+    await applyPreset(preset);
+    notifyListeners();
+    return preset;
+  }
+
+  Future<void> renameUserPreset(EqPreset preset, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    await audio.saveUserPresets([
+      for (final q in userPresets) q.id == preset.id ? q.renamed(trimmed) : q,
+    ]);
+    notifyListeners();
+  }
+
+  Future<void> deleteUserPreset(EqPreset preset) async {
+    await audio.saveUserPresets([
+      for (final q in userPresets)
+        if (q.id != preset.id) q,
+    ]);
+    notifyListeners();
   }
 
   /// Put a preset's curve on every band, as this device's layout reads it,
@@ -406,6 +470,17 @@ class LiveEqAudio implements EqAudio {
       _handler.dynamicsEqualizer != null
           ? SettingsManager().setEqDynamicsGains(gains)
           : SettingsManager().setEqBandGains(gains);
+
+  @override
+  List<EqPreset> get userPresets => [
+        for (final raw in SettingsManager().eqUserPresets)
+          ?EqPreset.fromJson(raw),
+      ];
+
+  @override
+  Future<void> saveUserPresets(List<EqPreset> presets) =>
+      SettingsManager()
+          .setEqUserPresets([for (final p in presets) p.toJson()]);
 }
 
 class _LiveUnit implements EqUnit {

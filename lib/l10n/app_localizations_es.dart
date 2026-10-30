@@ -166,6 +166,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get eqPresetRock => 'Rock';
 
   @override
+  String get eqPresetCustom => 'Personalizado';
+
+  @override
+  String get eqSaveAsPreset => 'Guardar como preajuste';
+
+  @override
+  String get eqSavePresetTitle => 'Guardar preajuste';
+
+  @override
+  String get eqRenamePresetTitle => 'Cambiar nombre del preajuste';
+
+  @override
+  String get eqPresetNameLabel => 'Nombre';
+
+  @override
+  String get eqSavePresetHint =>
+      'Se guarda en este teléfono, después de los preajustes integrados. Mantén pulsado su chip más tarde para cambiarle el nombre o eliminarlo.';
+
+  @override
+  String get eqReplacePreset => 'Reemplazar';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Otro preajuste guardado ya tiene este nombre.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '¿Eliminar «$name»?';
+  }
+
+  @override
   String get eqDisabledHint => 'Activa el ecualizador para ajustar las bandas.';
 
   @override

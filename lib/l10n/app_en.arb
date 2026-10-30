@@ -183,6 +183,43 @@
   "@eqPresetRock": {
     "description": "EQ preset chip (genre curve)."
   },
+  "eqPresetCustom": "Custom",
+  "@eqPresetCustom": {
+    "description": "EQ preset chip shown first when the gains match no preset."
+  },
+  "eqSaveAsPreset": "Save as preset",
+  "@eqSaveAsPreset": {
+    "description": "Button under the EQ bands that saves the current curve as a user preset."
+  },
+  "eqSavePresetTitle": "Save preset",
+  "@eqSavePresetTitle": {
+    "description": "Title of the sheet that names a new EQ preset."
+  },
+  "eqRenamePresetTitle": "Rename preset",
+  "@eqRenamePresetTitle": {
+    "description": "Title of the sheet that renames a saved EQ preset."
+  },
+  "eqPresetNameLabel": "Name",
+  "@eqPresetNameLabel": {
+    "description": "Label of the preset name field."
+  },
+  "eqSavePresetHint": "Saved on this phone, after the built-in presets. Long-press its chip later to rename or delete it.",
+  "@eqSavePresetHint": {
+    "description": "Helper text under the preset name field when saving."
+  },
+  "eqReplacePreset": "Replace",
+  "@eqReplacePreset": {
+    "description": "Save-sheet button when a saved preset of that name exists and will be overwritten."
+  },
+  "eqPresetNameTaken": "Another saved preset already has this name.",
+  "@eqPresetNameTaken": {
+    "description": "Helper text when renaming to a name another saved preset has."
+  },
+  "eqDeletePresetConfirm": "Delete “{name}”?",
+  "@eqDeletePresetConfirm": {
+    "description": "Confirmation when deleting a saved EQ preset.",
+    "placeholders": {"name": {"type": "String"}}
+  },
   "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",

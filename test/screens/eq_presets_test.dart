@@ -1,6 +1,10 @@
 // The preset curves: the AOSP layout gets the system equalizer's exact
 // values, any other layout reads the curve in log-frequency, gains clamp to
-// the device's range, and the live gains name the preset they spell.
+// the device's range, the live gains name the preset they spell, and the
+// user's saved curves record the device's bands, round-trip through JSON and
+// win over a built-in they equal.
+
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/screens/eq/eq_presets.dart';
@@ -65,5 +69,61 @@ void main() {
     // On a narrow device the clamped curve is what matches.
     final narrow = fakeParams(minDb: -6, maxDb: 6);
     expect(presetFor(narrow, [4, 1, 6, 3, 0])!.id, 'heavyMetal');
+  });
+
+  group('user presets', () {
+    test('a saved curve records the device bands to 0.1 dB and maps back exactly',
+        () {
+      final p = fakeParams(gains: const [1.26, -2.44, 0, 15, -20]);
+      final u = EqPreset.user(
+          id: 'user:1',
+          name: 'Mine',
+          params: p,
+          gains: [for (final b in p.bands) b.gain]);
+      expect(u.isUser, isTrue);
+      expect(u.curve.map((c) => c.$1), [60, 230, 910, 3600, 14000]);
+      expect(u.curve.map((c) => c.$2), [1.3, -2.4, 0, 15, -15]);
+      expect(u.gainsFor(p), [1.3, -2.4, 0, 15, -15]);
+      expect(presetFor(p, [1.3, -2.4, 0, 15, -15], user: [u]), same(u));
+      // Short gains read as flat for the missing bands.
+      expect(EqPreset.user(id: 'u', name: 'n', params: p, gains: const [2])
+          .curve.map((c) => c.$2), [2, 0, 0, 0, 0]);
+    });
+
+    test('JSON round trip; a malformed entry reads as nothing', () {
+      final u = EqPreset('user:7', [(60, 1), (14000, -3)], name: 'Car bass');
+      final back = EqPreset.fromJson(json.decode(json.encode(u.toJson())));
+      expect(back!.id, 'user:7');
+      expect(back.name, 'Car bass');
+      expect(back.curve, [(60.0, 1.0), (14000.0, -3.0)]);
+      expect(EqPreset.fromJson(null), isNull);
+      expect(EqPreset.fromJson('x'), isNull);
+      expect(EqPreset.fromJson({'id': 'x'}), isNull);
+      expect(EqPreset.fromJson({'id': 'x', 'name': 'y', 'curve': []}), isNull);
+      expect(EqPreset.fromJson({'id': 'x', 'name': 'y', 'curve': [[60]]}),
+          isNull);
+      expect(EqPreset.fromJson({'id': 'x', 'name': 'y', 'curve': [['a', 1]]}),
+          isNull);
+    });
+
+    test('a saved curve wins over the built-in it equals', () {
+      final p = fakeParams();
+      final mine = EqPreset.user(
+          id: 'user:2', name: 'My rock', params: p, gains: const [5, 3, -1, 3, 5]);
+      expect(presetFor(p, [5, 3, -1, 3, 5])!.id, 'rock');
+      expect(presetFor(p, [5, 3, -1, 3, 5], user: [mine])!.id, 'user:2');
+    });
+
+    test('names compare without case or spaces; a rename keeps the curve',
+        () {
+      expect(samePresetName(' Car Bass ', 'car bass'), isTrue);
+      expect(samePresetName('Car bass', 'Car bass 2'), isFalse);
+      final u = EqPreset('user:3', [(60, 1)], name: 'a');
+      final r = u.renamed('b');
+      expect(r.id, 'user:3');
+      expect(r.name, 'b');
+      expect(r.curve, u.curve);
+      expect(newUserPresetId(), startsWith('user:'));
+    });
   });
 }

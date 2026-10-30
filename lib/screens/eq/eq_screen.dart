@@ -6,8 +6,11 @@
 //   * the enable switch (always shown on Android — it is how the user turns
 //     the EQ on while the pipeline, and so the equalizer object, does not
 //     exist yet), locked while casting or mid-toggle;
-//   * a row of preset chips (eq_presets.dart); the chip whose curve the gains
-//     spell is the selected one, so a drag deselects;
+//   * a row of preset chips (eq_presets.dart): the chip whose curve the gains
+//     spell is the selected one, so a drag deselects; gains that spell nothing
+//     put a "Custom" chip first and a Save button under the panel, and the
+//     user's saved curves follow the built-ins after a divider (long-press one
+//     to rename or delete it);
 //   * the band panel: one vertical slider per band on a hairline rail, and
 //     under the sliders a curve through every thumb with a fill down to 0 dB
 //     (eq_curve.dart), so the shape of the sound reads at a glance. The gain
@@ -122,9 +125,297 @@ class _EqScreenState extends State<EqScreen> {
                   onRelease: c.saveGains,
                 ),
               ),
+              _ActionRow(c),
             ],
           ),
       };
+}
+
+/// Under the panel: Save, once the gains spell no preset. The row keeps its
+/// height either way, so the first drag that leaves a preset does not shrink
+/// the panel under the finger.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow(this.controller);
+  final EqController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return SizedBox(
+      height: 60,
+      child: controller.isCustom
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: FilledButton.icon(
+                key: const Key('eq-save-preset'),
+                onPressed: () => _savePreset(context, controller),
+                style: FilledButton.styleFrom(
+                  backgroundColor: VelvetColors.primary,
+                  foregroundColor: VelvetColors.onPrimary,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                icon: const Icon(Icons.add, size: 20),
+                label: Text(l.eqSaveAsPreset,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+Future<void> _savePreset(BuildContext context, EqController c) async {
+  final l = AppLocalizations.of(context);
+  final name = await _askPresetName(
+    context,
+    title: l.eqSavePresetTitle,
+    initial: '',
+    controller: c,
+  );
+  if (name == null) return;
+  await c.saveUserPreset(name);
+}
+
+/// The long-press menu on a saved chip: rename (through the name sheet) or
+/// delete (after a confirmation).
+Future<void> _showUserPresetMenu(
+    BuildContext context, EqController c, EqPreset preset) async {
+  final l = AppLocalizations.of(context);
+  final name = preset.name ?? preset.id;
+  final action = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: VelvetColors.raised,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 8),
+          const _SheetHandle(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+            child: Text(
+              name,
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+          ),
+          ListTile(
+            key: const Key('eq-preset-menu-rename'),
+            leading: const Icon(Icons.edit_outlined),
+            title: Text(l.rename),
+            onTap: () => Navigator.pop(ctx, 'rename'),
+          ),
+          ListTile(
+            key: const Key('eq-preset-menu-delete'),
+            leading: const Icon(Icons.delete_outline),
+            title: Text(l.delete),
+            onTap: () => Navigator.pop(ctx, 'delete'),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (!context.mounted) return;
+  switch (action) {
+    case 'rename':
+      final renamed = await _askPresetName(
+        context,
+        title: l.eqRenamePresetTitle,
+        initial: name,
+        controller: c,
+        renaming: preset,
+      );
+      if (renamed != null) await c.renameUserPreset(preset, renamed);
+    case 'delete':
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: VelvetColors.raised,
+          title: Text(l.eqDeletePresetConfirm(name),
+              style: TextStyle(fontSize: 18, color: VelvetColors.textPrimary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.cancel,
+                  style: TextStyle(color: VelvetColors.textSecondary)),
+            ),
+            TextButton(
+              key: const Key('eq-preset-delete-confirm'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l.delete,
+                  style: TextStyle(
+                      color: VelvetColors.error, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+      if (ok == true) await c.deleteUserPreset(preset);
+  }
+}
+
+/// The name sheet, for a new preset or a rename. Resolves to the trimmed name,
+/// or null on cancel.
+Future<String?> _askPresetName(
+  BuildContext context, {
+  required String title,
+  required String initial,
+  required EqController controller,
+  EqPreset? renaming,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: VelvetColors.raised,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+      child: _PresetNameSheet(
+        title: title,
+        initial: initial,
+        controller: controller,
+        renaming: renaming,
+      ),
+    ),
+  );
+}
+
+class _PresetNameSheet extends StatefulWidget {
+  const _PresetNameSheet({
+    required this.title,
+    required this.initial,
+    required this.controller,
+    this.renaming,
+  });
+  final String title;
+  final String initial;
+  final EqController controller;
+
+  /// The preset being renamed, or null when saving a new one. A clash with
+  /// another saved name blocks a rename; when saving it means Replace.
+  final EqPreset? renaming;
+
+  @override
+  State<_PresetNameSheet> createState() => _PresetNameSheetState();
+}
+
+class _PresetNameSheetState extends State<_PresetNameSheet> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.initial,
+  )..selection =
+      TextSelection(baseOffset: 0, extentOffset: widget.initial.length);
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final name = _text.text.trim();
+    final clash = widget.controller.userPresetNamed(name);
+    final renaming = widget.renaming;
+    final blocked = renaming != null && clash != null && clash.id != renaming.id;
+    final replaces = renaming == null && clash != null;
+    final canSubmit = name.isNotEmpty && !blocked;
+    void submit() => Navigator.pop(context, name);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SheetHandle(),
+          const SizedBox(height: 14),
+          Text(
+            widget.title,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: VelvetColors.textPrimary),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            key: const Key('eq-preset-name'),
+            controller: _text,
+            autofocus: true,
+            maxLength: 40,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) {
+              if (canSubmit) submit();
+            },
+            style: TextStyle(color: VelvetColors.textPrimary, fontSize: 16),
+            decoration: InputDecoration(
+              labelText: l.eqPresetNameLabel,
+              counterText: '',
+              helperText: blocked
+                  ? l.eqPresetNameTaken
+                  : renaming == null
+                      ? l.eqSavePresetHint
+                      : null,
+              helperMaxLines: 3,
+              helperStyle: TextStyle(
+                  color: blocked
+                      ? VelvetColors.error
+                      : VelvetColors.textSecondary),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l.cancel,
+                    style: TextStyle(
+                        color: VelvetColors.primary,
+                        fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                key: const Key('eq-preset-sheet-save'),
+                onPressed: canSubmit ? submit : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: VelvetColors.primary,
+                  foregroundColor: VelvetColors.onPrimary,
+                ),
+                child: Text(replaces ? l.eqReplacePreset : l.save),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 32,
+        height: 4,
+        decoration: BoxDecoration(
+          color: VelvetColors.border2,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
 }
 
 class _EnableTile extends StatelessWidget {
@@ -545,6 +836,8 @@ class _RailTrack extends SliderTrackShape {
 }
 
 /// The preset chips: one row, scrolled sideways, the active curve filled.
+/// "Custom" leads when the gains spell nothing; the user's saved curves
+/// follow the built-ins after a divider.
 class _PresetRow extends StatelessWidget {
   const _PresetRow(this.controller);
   final EqController controller;
@@ -552,34 +845,81 @@ class _PresetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final active = controller.activePreset;
+    final activeId = controller.activePreset?.id;
+    final user = controller.userPresets;
+    final chips = <Widget>[
+      if (controller.isCustom)
+        _PresetChip(
+          chipKey: const ValueKey('eq-preset-custom'),
+          label: l.eqPresetCustom,
+          selected: true,
+          onSelected: () {},
+        ),
+      for (final p in kEqPresets)
+        _PresetChip(
+          chipKey: ValueKey('eq-preset-${p.id}'),
+          label: eqPresetName(l, p),
+          selected: p.id == activeId,
+          onSelected: () => controller.applyPreset(p),
+        ),
+      if (user.isNotEmpty)
+        Center(
+          child: Container(width: 1, height: 20, color: VelvetColors.border2),
+        ),
+      for (final p in user)
+        GestureDetector(
+          onLongPress: () => _showUserPresetMenu(context, controller, p),
+          child: _PresetChip(
+            chipKey: ValueKey('eq-preset-${p.id}'),
+            label: p.name ?? p.id,
+            selected: p.id == activeId,
+            onSelected: () => controller.applyPreset(p),
+          ),
+        ),
+    ];
     return SizedBox(
       height: 56,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.fromLTRB(16, 10, 16, 6),
-        itemCount: kEqPresets.length,
+        itemCount: chips.length,
         separatorBuilder: (_, _) => SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final p = kEqPresets[i];
-          final on = identical(p, active);
-          return ChoiceChip(
-            key: ValueKey('eq-preset-${p.id}'),
-            label: Text(eqPresetName(l, p)),
-            selected: on,
-            showCheckmark: false,
-            onSelected: (_) => controller.applyPreset(p),
-            selectedColor: VelvetColors.primary,
-            backgroundColor: Colors.transparent,
-            side: BorderSide(
-                color: on ? VelvetColors.primary : VelvetColors.border2),
-            labelStyle: TextStyle(
-              fontSize: 13,
-              color: on ? VelvetColors.onPrimary : VelvetColors.textPrimary,
-              fontWeight: on ? FontWeight.w600 : FontWeight.normal,
-            ),
-          );
-        },
+        itemBuilder: (context, i) => chips[i],
+      ),
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.chipKey,
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  /// Goes on the ChoiceChip itself, which is what tests look up.
+  final Key chipKey;
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      key: chipKey,
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => onSelected(),
+      selectedColor: VelvetColors.primary,
+      backgroundColor: Colors.transparent,
+      side: BorderSide(
+          color: selected ? VelvetColors.primary : VelvetColors.border2),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        color: selected ? VelvetColors.onPrimary : VelvetColors.textPrimary,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
   }

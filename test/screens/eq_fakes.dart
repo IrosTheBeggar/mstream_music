@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:mstream_music/screens/eq/eq_controller.dart';
+import 'package:mstream_music/screens/eq/eq_presets.dart';
 import 'package:rxdart/rxdart.dart';
 
 class FakeBand implements EqBand {
@@ -96,5 +97,17 @@ class FakeEqAudio implements EqAudio {
   Future<void> saveGains(List<double> gains) async {
     savedGains = List<double>.of(gains);
     saveCount++;
+  }
+
+  @override
+  List<EqPreset> userPresets = [];
+
+  /// Every list handed to saveUserPresets, last one current.
+  int userPresetSaves = 0;
+
+  @override
+  Future<void> saveUserPresets(List<EqPreset> presets) async {
+    userPresets = List<EqPreset>.of(presets);
+    userPresetSaves++;
   }
 }

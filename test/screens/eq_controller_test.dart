@@ -311,6 +311,87 @@ void main() {
       c.dispose();
     });
 
+    test('saveUserPreset: a new curve goes last, snaps the bands and is active',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams(gains: const [1.26, 0, 0, 0, 0]));
+      await settle();
+      expect(c.isCustom, isTrue);
+      expect(c.userPresets, isEmpty);
+      final saved = await c.saveUserPreset('  Car bass ');
+      expect(saved!.name, 'Car bass');
+      expect(saved.id, startsWith('user:'));
+      expect(audio.userPresets.map((p) => p.id), [saved.id]);
+      expect(audio.userPresetSaves, 1);
+      expect(c.gains, [1.3, 0, 0, 0, 0],
+          reason: 'snapped to the saved 0.1 dB curve');
+      expect(audio.savedGains, [1.3, 0, 0, 0, 0]);
+      expect(c.activePreset!.id, saved.id);
+      expect(c.isCustom, isFalse);
+      expect(c.userPresetNamed('CAR BASS')!.id, saved.id);
+      // A second one goes after it.
+      await c.params!.bands[1].setGain(2);
+      final second = await c.saveUserPreset('Night');
+      expect(audio.userPresets.map((p) => p.name), ['Car bass', 'Night']);
+      expect(c.activePreset!.id, second!.id);
+      c.dispose();
+    });
+
+    test('saveUserPreset: the same name replaces in place; blank saves nothing',
+        () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final c = EqController(audio);
+      unit.resolve(fakeParams(gains: const [3, 0, 0, 0, 3]));
+      await settle();
+      final first = await c.saveUserPreset('Mine');
+      await c.params!.bands[0].setGain(-5);
+      final again = await c.saveUserPreset('mine ');
+      expect(again!.id, first!.id);
+      expect(audio.userPresets.single.name, 'mine');
+      expect(audio.userPresets.single.curve.first.$2, -5);
+      expect(await c.saveUserPreset('   '), isNull);
+      expect(audio.userPresetSaves, 2);
+      c.dispose();
+    });
+
+    test('rename and delete a saved preset', () async {
+      final unit = FakeUnit();
+      audio
+        ..enabled = true
+        ..unit = unit;
+      final p = fakeParams(gains: const [1, 2, 3, 4, 5]);
+      audio.userPresets = [
+        EqPreset.user(
+            id: 'user:a', name: 'A', params: p, gains: const [1, 2, 3, 4, 5]),
+        EqPreset.user(
+            id: 'user:b', name: 'B', params: p, gains: const [0, 0, 0, 0, 1]),
+      ];
+      final c = EqController(audio);
+      unit.resolve(p);
+      await settle();
+      expect(c.activePreset!.id, 'user:a');
+      var notified = 0;
+      c.addListener(() => notified++);
+      await c.renameUserPreset(c.userPresets.first, ' A2 ');
+      expect(audio.userPresets.map((u) => u.name), ['A2', 'B']);
+      expect(c.activePreset!.name, 'A2');
+      await c.renameUserPreset(c.userPresets.first, '  ');
+      expect(audio.userPresets.first.name, 'A2', reason: 'a blank rename is ignored');
+      await c.deleteUserPreset(c.userPresets.first);
+      expect(audio.userPresets.map((u) => u.id), ['user:b']);
+      expect(c.activePreset, isNull);
+      expect(c.isCustom, isTrue);
+      expect(notified, greaterThanOrEqualTo(2));
+      c.dispose();
+    });
+
     test('a late answer after dispose is ignored', () async {
       final unit = FakeUnit();
       audio

@@ -168,6 +168,36 @@ class AppLocalizationsPl extends AppLocalizations {
   String get eqPresetRock => 'Rock';
 
   @override
+  String get eqPresetCustom => 'Własne';
+
+  @override
+  String get eqSaveAsPreset => 'Zapisz jako preset';
+
+  @override
+  String get eqSavePresetTitle => 'Zapisz preset';
+
+  @override
+  String get eqRenamePresetTitle => 'Zmień nazwę presetu';
+
+  @override
+  String get eqPresetNameLabel => 'Nazwa';
+
+  @override
+  String get eqSavePresetHint =>
+      'Zapisany na tym telefonie, za wbudowanymi presetami. Przytrzymaj później jego chip, aby zmienić nazwę lub go usunąć.';
+
+  @override
+  String get eqReplacePreset => 'Zastąp';
+
+  @override
+  String get eqPresetNameTaken => 'Inny zapisany preset ma już tę nazwę.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Usunąć „$name”?';
+  }
+
+  @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';
 
   @override

@@ -9,21 +9,83 @@
 // interpolation in log-frequency (how an equalizer spaces its bands), clamped
 // to the device's range. Which preset is "selected" is never stored: it is
 // whichever curve the live gains spell, so a drag deselects it by itself.
+//
+// The user's own presets work the same way: a saved curve is the live gains
+// recorded at this device's band frequencies (to 0.1 dB), so it maps back
+// exactly here and by interpolation on any other layout. They persist as
+// JSON in settings and are checked before the built-ins, so a curve the user
+// named wins over a built-in it happens to equal.
 
 import 'dart:math' as math;
 
 import 'eq_controller.dart' show EqParams;
 
 class EqPreset {
-  const EqPreset(this.id, this.curve);
+  const EqPreset(this.id, this.curve, {this.name});
 
-  /// Stable identifier; the screen maps it to a localized name.
+  /// Stable identifier; the screen maps a built-in's to a localized name.
   final String id;
 
   /// (centre frequency in Hz, gain in dB), ascending by frequency.
   final List<(double, double)> curve;
 
+  /// The user's own name for a saved curve; null for a built-in.
+  final String? name;
+
+  bool get isUser => name != null;
+
   static EqPreset get flat => kEqPresets.first;
+
+  /// A saved curve: [gains] (one per band of [params], in band order) at the
+  /// device's own frequencies, clamped to its range and rounded to 0.1 dB.
+  factory EqPreset.user({
+    required String id,
+    required String name,
+    required EqParams params,
+    required List<double> gains,
+  }) =>
+      EqPreset(id, [
+        for (var i = 0; i < params.bands.length; i++)
+          (
+            params.bands[i].centerFrequency,
+            ((i < gains.length ? gains[i] : 0.0)
+                        .clamp(params.minDb, params.maxDb) *
+                    10)
+                .roundToDouble() /
+                10,
+          ),
+      ], name: name);
+
+  /// The same curve under another name.
+  EqPreset renamed(String name) => EqPreset(id, curve, name: name);
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'curve': [
+          for (final (f, g) in curve) [f, g],
+        ],
+      };
+
+  /// A saved preset back from [toJson]'s shape; null for anything malformed,
+  /// so one bad entry in settings drops that entry, not the list.
+  static EqPreset? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    final name = raw['name'];
+    final curve = raw['curve'];
+    if (id is! String || name is! String || curve is! List) return null;
+    final points = <(double, double)>[];
+    for (final e in curve) {
+      if (e is! List || e.length != 2) return null;
+      final f = e[0];
+      final g = e[1];
+      if (f is! num || g is! num) return null;
+      points.add((f.toDouble(), g.toDouble()));
+    }
+    if (points.isEmpty) return null;
+    return EqPreset(id, points, name: name);
+  }
 
   /// The gain this curve puts at [hz]: linear in log-frequency between the
   /// two nearest points, the end value beyond either end.
@@ -61,13 +123,24 @@ class EqPreset {
   }
 }
 
-/// The preset [gains] spell for [params], or null for a custom curve.
-EqPreset? presetFor(EqParams params, List<double> gains) {
-  for (final p in kEqPresets) {
+/// The preset [gains] spell for [params], or null for a custom curve. The
+/// user's saved curves ([user]) are checked before the built-ins.
+EqPreset? presetFor(EqParams params, List<double> gains,
+    {List<EqPreset> user = const []}) {
+  for (final p in user.followedBy(kEqPresets)) {
     if (p.matches(params, gains)) return p;
   }
   return null;
 }
+
+/// Whether two preset names are the same name: case and surrounding spaces
+/// do not make a different preset.
+bool samePresetName(String a, String b) =>
+    a.trim().toLowerCase() == b.trim().toLowerCase();
+
+/// A fresh id for a saved preset.
+String newUserPresetId() =>
+    'user:${DateTime.now().microsecondsSinceEpoch}';
 
 const List<double> _aospHz = [60, 230, 910, 3600, 14000];
 

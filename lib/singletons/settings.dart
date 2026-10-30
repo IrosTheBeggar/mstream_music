@@ -209,6 +209,10 @@ class SettingsManager {
   // apart from eqBandGains because the two layouts' indices mean different
   // frequencies (see DynamicsEqualizer.centerFrequencies). Empty = flat.
   List<double> eqDynamicsGains = const [];
+  // The user's saved EQ curves, as the JSON EqPreset.toJson writes (kept raw
+  // here so settings stay free of the EQ's types). Their own content, so a
+  // settings reset leaves them alone.
+  List<Map<String, dynamic>> eqUserPresets = const [];
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -392,6 +396,13 @@ class SettingsManager {
       final rawDynamics = m['eqDynamicsGains'];
       eqDynamicsGains = rawDynamics is List
           ? rawDynamics.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
+      final rawPresets = m['eqUserPresets'];
+      eqUserPresets = rawPresets is List
+          ? [
+              for (final e in rawPresets)
+                if (e is Map) Map<String, dynamic>.from(e),
+            ]
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
       visualizerEngine = _readVisualizerEngine(m);
@@ -602,6 +613,7 @@ class SettingsManager {
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
       'eqDynamicsGains': eqDynamicsGains,
+      'eqUserPresets': eqUserPresets,
       'visualizerAudioSource': visualizerAudioSource.name,
       'visualizerEngine': visualizerEngine.name,
       'showVisualizerKnobs': showVisualizerKnobs,
@@ -817,6 +829,11 @@ class SettingsManager {
 
   Future<void> setEqDynamicsGains(List<double> v) async {
     eqDynamicsGains = v;
+    await _save();
+  }
+
+  Future<void> setEqUserPresets(List<Map<String, dynamic>> v) async {
+    eqUserPresets = v;
     await _save();
   }
 
