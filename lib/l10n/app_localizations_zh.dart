@@ -5088,6 +5088,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjIncludeUnknown => '包括未知';
 
   @override
+  String get autoDjLengthShortest => '最短';
+
+  @override
+  String get autoDjLengthLongest => '最长';
+
+  @override
+  String get autoDjWheelHours => '小时';
+
+  @override
   String get autoDjTempo => '节拍匹配';
 
   @override

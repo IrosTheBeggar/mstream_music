@@ -136,16 +136,57 @@ void main() {
       expect(saved()['durationFilterEnabled'], isFalse);
     });
 
-    test('outside the rails is clamped onto them; an inverted pair swaps',
+    test('a maximum of 0 is no maximum, as on the wheel', () async {
+      await mgr.setDurationFilter(minSec: 120, maxSec: 0, allowUnknown: false);
+      expect((mgr.minDurationSec, mgr.maxDurationSec), (120, ceil));
+      expect(mgr.activeDurationBounds, (min: 120, max: null));
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 120
+        ..maxDurationSec = 0;
+      expect(mgr.activeDurationBounds, (min: 120, max: null),
+          reason: 'however it got there, 0 is never sent as a maximum');
+    });
+
+    test("to the second, and past the old slider's 20 minutes", () async {
+      await mgr.setDurationFilter(minSec: 97, maxSec: 3930, allowUnknown: false);
+      expect(mgr.activeDurationBounds, (min: 97, max: 3930));
+      expect(saved()['durationCeilSec'], ceil,
+          reason: 'the file says what "no maximum" was when it was written');
+    });
+
+    test('outside the ends is clamped onto them; an inverted pair swaps',
         () async {
-      await mgr.setDurationFilter(minSec: -30, maxSec: 5000, allowUnknown: false);
+      await mgr.setDurationFilter(
+          minSec: -30, maxSec: 90000, allowUnknown: false);
       expect((mgr.minDurationSec, mgr.maxDurationSec), (floor, ceil));
       expect(mgr.durationFilterEnabled, isFalse,
-          reason: 'clamped onto both rails is Any');
+          reason: 'clamped onto both ends is Any');
 
       await mgr.setDurationFilter(minSec: 600, maxSec: 120, allowUnknown: false);
       expect((mgr.minDurationSec, mgr.maxDurationSec), (120, 600));
       expect(mgr.durationFilterEnabled, isTrue);
+    });
+  });
+
+  group('storedMaxDurationSec', () {
+    const ceil = AutoDJManager.durationCeilSec;
+    int read(Map<String, dynamic> m) => AutoDJManager.storedMaxDurationSec(m);
+
+    test("an older file's 20:00 was its slider's end: no maximum", () {
+      expect(read({'maxDurationSec': 1200}), ceil);
+      expect(read({'maxDurationSec': 0}), ceil,
+          reason: 'both thumbs at the left; 0 is no maximum on the wheel');
+      expect(read({'durationCeilSec': ceil, 'maxDurationSec': 0}), ceil);
+      expect(read({'maxDurationSec': 600}), 600);
+      expect(read({}), ceil);
+      expect(read({'maxDurationSec': 'six'}), ceil);
+    });
+
+    test('a file that says what no maximum was keeps a real 20:00', () {
+      expect(read({'durationCeilSec': ceil, 'maxDurationSec': 1200}), 1200);
+      expect(read({'durationCeilSec': ceil, 'maxDurationSec': ceil}), ceil);
+      expect(read({'durationCeilSec': ceil, 'maxDurationSec': 3930}), 3930);
     });
   });
 

@@ -5537,6 +5537,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Uwzględnij nieznane';
 
   @override
+  String get autoDjLengthShortest => 'Minimum';
+
+  @override
+  String get autoDjLengthLongest => 'Maksimum';
+
+  @override
+  String get autoDjWheelHours => 'godz.';
+
+  @override
   String get autoDjTempo => 'Beatmatching';
 
   @override

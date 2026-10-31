@@ -8560,6 +8560,24 @@ abstract class AppLocalizations {
   /// **'Include unknown'**
   String get autoDjIncludeUnknown;
 
+  /// Length sheet: the row whose timer wheel sets the shortest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest'**
+  String get autoDjLengthShortest;
+
+  /// Length sheet: the row whose timer wheel sets the longest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest'**
+  String get autoDjLengthLongest;
+
+  /// Length sheet timer wheel: the short unit beside the hours column (the wheel leaves it ~50 px).
+  ///
+  /// In en, this message translates to:
+  /// **'hr'**
+  String get autoDjWheelHours;
+
   /// No description provided for @autoDjTempo.
   ///
   /// In en, this message translates to:

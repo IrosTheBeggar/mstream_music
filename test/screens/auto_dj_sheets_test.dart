@@ -14,6 +14,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoTimerPicker;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -87,9 +88,14 @@ void main() {
 
   /// A page whose button opens [sheet] in the Auto DJ chrome.
   Future<void> open(WidgetTester tester, WidgetBuilder sheet,
-      {Locale? locale}) async {
+      {Locale? locale, double textScale = 1}) async {
     await tester.pumpWidget(MaterialApp(
       locale: locale,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: appSupportedLocales,
       navigatorObservers: [pops],
@@ -146,13 +152,13 @@ void main() {
   group('labels', () {
     final l = lookupAppLocalizations(const Locale('en'));
 
-    test('autoDjLengthValue: the rails mean no limit', () {
+    test('autoDjLengthValue: the ends mean no limit', () {
       const ceil = AutoDJManager.durationCeilSec;
       expect(autoDjLengthValue(l, 0, ceil), 'Any');
       expect(autoDjLengthValue(l, 120, ceil), '2:00+');
       expect(autoDjLengthValue(l, 0, 360), 'Under 6:00');
       expect(autoDjLengthValue(l, 120, 360), '2:00–6:00');
-      expect(autoDjLengthValue(l, 15, ceil - 15), '0:15–19:45');
+      expect(autoDjLengthValue(l, 15, ceil - 1), '0:15–23:59:59');
     });
 
     test('autoDjServerName: no scheme, no trailing slash; a peer by name',
@@ -415,13 +421,32 @@ void main() {
 
   group('LengthSheet', () {
     final unknown = find.byKey(const ValueKey('auto-dj-length-unknown'));
-    final slider = find.byKey(const ValueKey('auto-dj-length-slider'));
+    final shortest = find.byKey(const ValueKey('auto-dj-length-shortest'));
+    final longest = find.byKey(const ValueKey('auto-dj-length-longest'));
+    final wheel = find.byType(CupertinoTimerPicker);
+    const ceil = AutoDJManager.durationCeilSec;
 
-    testWidgets('at the rails: Any, Include unknown off and resting, Clear '
-        'off', (tester) async {
+    String? rowValue(WidgetTester tester, Finder row) => tester
+        .widgetList<Text>(find.descendant(of: row, matching: find.byType(Text)))
+        .last
+        .data;
+    Duration wheelAt(WidgetTester tester) =>
+        tester.widget<CupertinoTimerPicker>(wheel).initialTimerDuration;
+    // The wheel's own scrolling is Flutter's; what the sheet does with the
+    // length it reports is this sheet's.
+    Future<void> turn(WidgetTester tester, Duration d) async {
+      tester.widget<CupertinoTimerPicker>(wheel).onTimerDurationChanged(d);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('at rest: Any on both rows, no wheel, Include unknown off and '
+        'resting, Clear off', (tester) async {
       await open(tester, (_) => const LengthSheet());
       expect(find.text('Length'), findsOneWidget);
       expect(value(tester), 'Any');
+      expect(rowValue(tester, shortest), 'Any');
+      expect(rowValue(tester, longest), 'Any');
+      expect(wheel, findsNothing);
       expect(switchIn(tester, unknown).value, isFalse);
       expect(switchIn(tester, unknown).onChanged, isNull);
       expect(clearOn(tester), isFalse);
@@ -438,11 +463,12 @@ void main() {
         ..allowUnknownDuration = true;
       await open(tester, (_) => const LengthSheet());
       expect(value(tester), 'Any');
+      expect(rowValue(tester, shortest), 'Any');
       expect(switchIn(tester, unknown).value, isFalse);
     });
 
-    testWidgets('a window: its value, Include unknown live; Clear goes back '
-        'to Any and Done applies the filter off', (tester) async {
+    testWidgets('a window: its value and rows, Include unknown live; Clear '
+        'goes back to Any and Done applies the filter off', (tester) async {
       mgr
         ..durationFilterEnabled = true
         ..minDurationSec = 120
@@ -450,6 +476,8 @@ void main() {
         ..allowUnknownDuration = true;
       await open(tester, (_) => const LengthSheet());
       expect(value(tester), '2:00–6:00');
+      expect(rowValue(tester, shortest), '2:00');
+      expect(rowValue(tester, longest), '6:00');
       expect(switchIn(tester, unknown).value, isTrue);
       expect(switchIn(tester, unknown).onChanged, isNotNull);
       expect(clearOn(tester), isTrue);
@@ -457,6 +485,8 @@ void main() {
       await tester.tap(_clear);
       await tester.pumpAndSettle();
       expect(value(tester), 'Any');
+      expect(rowValue(tester, shortest), 'Any');
+      expect(rowValue(tester, longest), 'Any');
       expect(switchIn(tester, unknown).value, isFalse);
       expect(switchIn(tester, unknown).onChanged, isNull);
       expect(clearOn(tester), isFalse);
@@ -465,34 +495,130 @@ void main() {
       await tapAndSave(tester, _done);
       expect(mgr.durationFilterEnabled, isFalse);
       expect(mgr.minDurationSec, AutoDJManager.durationFloorSec);
-      expect(mgr.maxDurationSec, AutoDJManager.durationCeilSec);
+      expect(mgr.maxDurationSec, ceil);
       expect(mgr.allowUnknownDuration, isFalse);
     });
 
-    testWidgets('dragging the minimum off its rail sets a filter; Include '
+    testWidgets('a row opens its wheel on its own value, one at a time; '
+        'tapping it again closes it', (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 120
+        ..maxDurationSec = 360;
+      await open(tester, (_) => const LengthSheet());
+      await tester.tap(shortest);
+      await tester.pumpAndSettle();
+      expect(wheel, findsOneWidget);
+      expect(wheelAt(tester), const Duration(minutes: 2));
+      await tester.tap(longest);
+      await tester.pumpAndSettle();
+      expect(wheel, findsOneWidget);
+      expect(wheelAt(tester), const Duration(minutes: 6));
+      await tester.tap(longest);
+      await tester.pumpAndSettle();
+      expect(wheel, findsNothing);
+    });
+
+    testWidgets('to the second: the shortest wheel sets a minimum; Include '
         'unknown wakes up and Done applies both', (tester) async {
       await open(tester, (_) => const LengthSheet());
-      final r = tester.getRect(slider);
-      // The start thumb rests at the track's left end, inside the overlay
-      // padding; pull it a quarter of the way along.
-      await tester.dragFrom(
-          Offset(r.left + 24, r.center.dy), Offset(r.width / 4, 0));
+      await tester.tap(shortest);
       await tester.pumpAndSettle();
-      expect(value(tester), matches(RegExp(r'^\d+:\d\d\+$')));
+      await turn(tester, const Duration(minutes: 1, seconds: 37));
+      expect(value(tester), '1:37+');
+      expect(rowValue(tester, shortest), '1:37');
       expect(switchIn(tester, unknown).onChanged, isNotNull);
       expect(clearOn(tester), isTrue);
 
       await tester
           .tap(find.descendant(of: unknown, matching: find.byType(Switch)));
       await tester.pumpAndSettle();
-      expect(switchIn(tester, unknown).value, isTrue);
-
       await tapAndSave(tester, _done);
       expect(mgr.durationFilterEnabled, isTrue);
-      expect(mgr.minDurationSec, greaterThan(0));
-      expect(mgr.minDurationSec % AutoDJManager.durationStepSec, 0);
-      expect(mgr.maxDurationSec, AutoDJManager.durationCeilSec);
+      expect((mgr.minDurationSec, mgr.maxDurationSec), (97, ceil));
       expect(mgr.allowUnknownDuration, isTrue);
+    });
+
+    testWidgets('past an hour: the longest wheel sets a maximum, shown as '
+        'h:mm:ss', (tester) async {
+      await open(tester, (_) => const LengthSheet());
+      await tester.tap(longest);
+      await tester.pumpAndSettle();
+      await turn(tester, const Duration(hours: 1, minutes: 5, seconds: 30));
+      expect(value(tester), 'Under 1:05:30');
+      expect(rowValue(tester, longest), '1:05:30');
+      await tapAndSave(tester, _done);
+      expect(mgr.activeDurationBounds, (min: null, max: 3930));
+    });
+
+    testWidgets('back to 0:00:00 is no limit on that side', (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 120
+        ..maxDurationSec = 360;
+      await open(tester, (_) => const LengthSheet());
+      await tester.tap(longest);
+      await tester.pumpAndSettle();
+      await turn(tester, Duration.zero);
+      expect(rowValue(tester, longest), 'Any');
+      expect(value(tester), '2:00+');
+    });
+
+    testWidgets('a shortest past the longest: the pair is kept in order',
+        (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 120
+        ..maxDurationSec = 300;
+      await open(tester, (_) => const LengthSheet());
+      await tester.tap(shortest);
+      await tester.pumpAndSettle();
+      await turn(tester, const Duration(minutes: 6));
+      expect(value(tester), '5:00–6:00');
+      await tapAndSave(tester, _done);
+      expect((mgr.minDurationSec, mgr.maxDurationSec), (300, 360));
+    });
+
+    testWidgets('Clear sets an open wheel back to zero', (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 120
+        ..maxDurationSec = ceil;
+      await open(tester, (_) => const LengthSheet());
+      await tester.tap(shortest);
+      await tester.pumpAndSettle();
+      expect(wheelAt(tester), const Duration(minutes: 2));
+      final before = tester.state(wheel);
+      await tester.tap(_clear);
+      await tester.pumpAndSettle();
+      // A wheel takes its value only when it is built: a new one, not the
+      // old one handed zero.
+      expect(tester.state(wheel), isNot(same(before)));
+      expect(wheelAt(tester), Duration.zero);
+    });
+
+    testWidgets("a short hour unit: the wheel's room for it fits no "
+        '"Stunden"', (tester) async {
+      await open(tester, (_) => const LengthSheet(),
+          locale: const Locale('de'));
+      await tester.tap(shortest);
+      await tester.pumpAndSettle();
+      expect(find.text('Std.'), findsWidgets);
+      expect(find.text('Stunden'), findsNothing);
+      expect(find.text('Min.'), findsWidgets,
+          reason: "minutes and seconds keep the language's own");
+    });
+
+    testWidgets('an hour-long window at a large text size is cut short, not '
+        'overflowing', (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 3600
+        ..maxDurationSec = 7200;
+      await open(tester, (_) => const LengthSheet(),
+          locale: const Locale('es'), textScale: 3);
+      expect(tester.takeException(), isNull);
+      expect(value(tester), '1:00:00–2:00:00');
     });
 
     testWidgets('closing discards the draft', (tester) async {

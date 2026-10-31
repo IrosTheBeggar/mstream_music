@@ -5881,6 +5881,18 @@
     "placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}
   },
   "autoDjIncludeUnknown": "Include unknown",
+  "autoDjLengthShortest": "Shortest",
+  "@autoDjLengthShortest": {
+    "description": "Length sheet: the row whose timer wheel sets the shortest song Auto DJ plays."
+  },
+  "autoDjLengthLongest": "Longest",
+  "@autoDjLengthLongest": {
+    "description": "Length sheet: the row whose timer wheel sets the longest song Auto DJ plays."
+  },
+  "autoDjWheelHours": "hr",
+  "@autoDjWheelHours": {
+    "description": "Length sheet timer wheel: the short unit beside the hours column (the wheel leaves it ~50 px)."
+  },
   "autoDjTempo": "Beat matching",
   "autoDjSkipWords": "Skip words",
   "autoDjBatch": "Batch",

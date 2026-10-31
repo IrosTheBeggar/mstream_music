@@ -5171,6 +5171,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjIncludeUnknown => '不明も含める';
 
   @override
+  String get autoDjLengthShortest => '最短';
+
+  @override
+  String get autoDjLengthLongest => '最長';
+
+  @override
+  String get autoDjWheelHours => '時間';
+
+  @override
   String get autoDjTempo => 'ビートマッチング';
 
   @override

@@ -119,9 +119,9 @@ class AutoDJManager {
   // base-conditions layer and NEVER relaxes it in the waterfall (unlike the
   // BPM windows), so an over-tight window 400s rather than quietly widening.
   //
-  // The rails are the off positions: [durationFloorSec] means "no minimum"
+  // The ends are the off positions: [durationFloorSec] means "no minimum"
   // and [durationCeilSec] means "no maximum", so a bound at either end is
-  // simply not sent. That keeps one control able to express min-only,
+  // simply not sent. That keeps one setting able to express min-only,
   // max-only, both, or neither — which is exactly the server's contract.
   bool durationFilterEnabled = false;
   int minDurationSec = 120; // the "skip interludes" default
@@ -141,16 +141,16 @@ class AutoDJManager {
   bool moodFilterEnabled = false;
   MoodFilter moodFilter = MoodFilter.empty;
 
-  /// Bottom rail of the length slider — "no minimum".
+  /// "No minimum".
   static const int durationFloorSec = 0;
 
-  /// Top rail — "no maximum". 20 minutes covers ordinary tracks with room to
-  /// spare; anything longer is the case the user wants to keep, not exclude.
-  static const int durationCeilSec = 1200;
+  /// "No maximum": a day, the server's own cap, one second past the longest
+  /// length the Length sheet's timer wheels can set (23:59:59).
+  static const int durationCeilSec = 86400;
 
-  /// Slider granularity. 15s steps give 80 divisions — fine enough to land on
-  /// a real intent ("over 90 seconds") without pretending to per-second aim.
-  static const int durationStepSec = 15;
+  /// What meant "no maximum" in a file written before the Length sheet took
+  /// any length: 20 minutes, the top of the slider it replaced.
+  static const int _legacyDurationCeilSec = 1200;
 
   // Harmonic mixing — prefer keys that mix well with the currently
   // locked Camelot anchor (which AudioPlayerHandler sets from the
@@ -295,11 +295,11 @@ class AutoDJManager {
           EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
               EmptyQueueStart.ask;
       durationFilterEnabled = m['durationFilterEnabled'] ?? false;
-      // Clamped on read: a hand-edited or future-written file must not put the
-      // slider off its own track, and an inverted pair would send a window
+      // Clamped on read: a hand-edited or future-written file must not send a
+      // bound the server refuses, and an inverted pair would send a window
       // nothing can satisfy.
       minDurationSec = _clampDuration(m['minDurationSec'], 120);
-      maxDurationSec = _clampDuration(m['maxDurationSec'], durationCeilSec);
+      maxDurationSec = storedMaxDurationSec(m);
       if (minDurationSec > maxDurationSec) {
         minDurationSec = durationFloorSec;
         maxDurationSec = durationCeilSec;
@@ -323,6 +323,23 @@ class AutoDJManager {
     } catch (_) {
       // Corrupt or missing — defaults stand.
     }
+  }
+
+  /// The maximum length in a saved file [m]. One at the "no maximum" of the
+  /// version that wrote it is still none: an older file's 20:00 is the end of
+  /// the slider it was set on, not a cap.
+  static int storedMaxDurationSec(Map<String, dynamic> m) {
+    final noMax = m['durationCeilSec'] is num
+        ? (m['durationCeilSec'] as num).round()
+        : _legacyDurationCeilSec;
+    final raw = m['maxDurationSec'];
+    // 0 is no maximum too: the sheet's wheel says so, and the old slider
+    // could save it with both thumbs at the left.
+    return raw is num &&
+            raw.round() > durationFloorSec &&
+            raw.round() < noMax
+        ? _clampDuration(raw, durationCeilSec)
+        : durationCeilSec;
   }
 
   static int _clampDuration(dynamic raw, int fallback) {
@@ -378,6 +395,8 @@ class AutoDJManager {
       'durationFilterEnabled': durationFilterEnabled,
       'minDurationSec': minDurationSec,
       'maxDurationSec': maxDurationSec,
+      // What "no maximum" was when this was written, for the next reader.
+      'durationCeilSec': durationCeilSec,
       'allowUnknownDuration': allowUnknownDuration,
       'moodFilterEnabled': moodFilterEnabled,
       'moodFilter': moodFilter.toJson(),
@@ -410,8 +429,8 @@ class AutoDJManager {
     await _save();
   }
 
-  /// Both bounds move together — the slider is one control, and letting them
-  /// cross would produce a window with no possible match.
+  /// Both bounds move together: letting them cross would produce a window
+  /// with no possible match.
   Future<void> setDurationRange(int minSec, int maxSec) async {
     minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
     maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
@@ -437,7 +456,10 @@ class AutoDJManager {
       required int maxSec,
       required bool allowUnknown}) async {
     minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
-    maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
+    // 0 is no maximum, as on the sheet's wheel.
+    maxDurationSec = maxSec <= durationFloorSec
+        ? durationCeilSec
+        : maxSec.clamp(durationFloorSec, durationCeilSec);
     if (minDurationSec > maxDurationSec) {
       final swap = minDurationSec;
       minDurationSec = maxDurationSec;
@@ -458,7 +480,10 @@ class AutoDJManager {
   ({int? min, int? max})? get activeDurationBounds {
     if (!durationFilterEnabled) return null;
     final min = minDurationSec > durationFloorSec ? minDurationSec : null;
-    final max = maxDurationSec < durationCeilSec ? maxDurationSec : null;
+    final max = maxDurationSec > durationFloorSec &&
+            maxDurationSec < durationCeilSec
+        ? maxDurationSec
+        : null;
     if (min == null && max == null) return null;
     return (min: min, max: max);
   }

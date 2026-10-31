@@ -2,11 +2,12 @@
 // bounds, half-star ratings, and whether every server agrees on a setting
 // (the All servers rows say "Varies" when they don't). Pure; unit-tested.
 
-/// m:ss for a track-length bound.
+/// m:ss for a track-length bound, h:mm:ss from an hour up.
 String fmtTrackLength(int seconds) {
-  final m = seconds ~/ 60;
-  final s = seconds % 60;
-  return '$m:${s.toString().padLeft(2, '0')}';
+  final h = seconds ~/ 3600;
+  final m = seconds % 3600 ~/ 60;
+  final s = (seconds % 60).toString().padLeft(2, '0');
+  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$s' : '$m:$s';
 }
 
 /// A minimum rating on the server's half-star 1–10 scale, in stars: 7 is

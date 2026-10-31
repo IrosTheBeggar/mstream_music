@@ -18,16 +18,13 @@ void main() {
       expect(fmtTrackLength(605), '10:05');
     });
 
-    test('the slider rails and its 15 s steps', () {
-      // AutoDJManager.durationCeilSec, the "no maximum" rail.
-      expect(fmtTrackLength(1200), '20:00');
-      expect(fmtTrackLength(1185), '19:45');
-      expect(fmtTrackLength(90), '1:30');
-    });
-
-    test('minutes are not wrapped into hours', () {
-      expect(fmtTrackLength(3600), '60:00');
-      expect(fmtTrackLength(3661), '61:01');
+    test('an hour and up is h:mm:ss', () {
+      expect(fmtTrackLength(3599), '59:59');
+      expect(fmtTrackLength(3600), '1:00:00');
+      expect(fmtTrackLength(3661), '1:01:01');
+      expect(fmtTrackLength(3930), '1:05:30');
+      // The Length sheet's timer wheels top out here.
+      expect(fmtTrackLength(86399), '23:59:59');
     });
   });
 

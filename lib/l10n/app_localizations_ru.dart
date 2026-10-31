@@ -5547,6 +5547,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Включая неизвестные';
 
   @override
+  String get autoDjLengthShortest => 'Не короче';
+
+  @override
+  String get autoDjLengthLongest => 'Не длиннее';
+
+  @override
+  String get autoDjWheelHours => 'ч';
+
+  @override
   String get autoDjTempo => 'Битматчинг';
 
   @override

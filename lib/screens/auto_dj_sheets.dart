@@ -8,6 +8,16 @@
 
 import 'dart:async';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show
+        CupertinoLocalizations,
+        CupertinoTextThemeData,
+        CupertinoTheme,
+        CupertinoThemeData,
+        CupertinoTimerPicker,
+        CupertinoTimerPickerMode,
+        DefaultCupertinoLocalizations;
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -152,29 +162,37 @@ class _TitleRow extends StatelessWidget {
         height: 52,
         child: Row(children: [
           Expanded(
-            child: Row(children: [
-              // The title gives way only once the value (always short: 55%,
-              // ± 8 BPM, 2:00–6:00) has its room.
-              Flexible(
-                child: Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600)),
-              ),
-              if (value != null) ...[
-                const SizedBox(width: 8),
-                Text(value!,
-                    key: const ValueKey('auto-dj-sheet-value'),
-                    maxLines: 1,
-                    style: TextStyle(
-                        color: autoDjToneColor(tone),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
-              ],
-            ]),
+            // The title gives way first; the value (55%, ± 8 BPM, 2:00–6:00)
+            // is cut short only once it alone fills the row — an hour-long
+            // length at a large text size.
+            child: LayoutBuilder(
+              builder: (context, box) => Row(children: [
+                Flexible(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600)),
+                ),
+                if (value != null) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: (box.maxWidth - 8).clamp(0, double.infinity)),
+                    child: Text(value!,
+                        key: const ValueKey('auto-dj-sheet-value'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: autoDjToneColor(tone),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ]),
+            ),
           ),
           if (toggle != null) ...[toggle!, const SizedBox(width: 4)],
           IconButton(
@@ -913,6 +931,63 @@ String autoDjLengthValue(AppLocalizations l, int minSec, int maxSec) {
   return l.autoDjAny;
 }
 
+/// The language's own timer-wheel labels, but for a short hour unit: the
+/// wheel draws that label in a fixed ~50 px, and "Stunden", "godzin" and
+/// "heures" were cut off. Numbers, minutes and seconds come from [_base]; the
+/// wheel reads nothing else from CupertinoLocalizations.
+class _TimerWheelLabels extends DefaultCupertinoLocalizations {
+  const _TimerWheelLabels(this._base, this._hour);
+
+  final CupertinoLocalizations _base;
+  final String _hour;
+
+  static LocalizationsDelegate<CupertinoLocalizations> delegate(
+          CupertinoLocalizations base, String hour) =>
+      _TimerWheelLabelsDelegate(_TimerWheelLabels(base, hour));
+
+  @override
+  String timerPickerHour(int hour) => _base.timerPickerHour(hour);
+  @override
+  String timerPickerMinute(int minute) => _base.timerPickerMinute(minute);
+  @override
+  String timerPickerSecond(int second) => _base.timerPickerSecond(second);
+  @override
+  String timerPickerHourLabel(int hour) => _hour;
+  @override
+  List<String> get timerPickerHourLabels => [_hour];
+  @override
+  String timerPickerMinuteLabel(int minute) =>
+      _base.timerPickerMinuteLabel(minute) ?? '';
+  @override
+  List<String> get timerPickerMinuteLabels => _base.timerPickerMinuteLabels;
+  @override
+  String timerPickerSecondLabel(int second) =>
+      _base.timerPickerSecondLabel(second) ?? '';
+  @override
+  List<String> get timerPickerSecondLabels => _base.timerPickerSecondLabels;
+}
+
+class _TimerWheelLabelsDelegate
+    extends LocalizationsDelegate<CupertinoLocalizations> {
+  const _TimerWheelLabelsDelegate(this._labels);
+
+  final _TimerWheelLabels _labels;
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<CupertinoLocalizations> load(Locale locale) =>
+      SynchronousFuture<CupertinoLocalizations>(_labels);
+
+  @override
+  bool shouldReload(_TimerWheelLabelsDelegate old) =>
+      !identical(old._labels._base, _labels._base) ||
+      old._labels._hour != _labels._hour;
+}
+
+/// Shortest and Longest, each set on a timer wheel (hours, minutes, seconds)
+/// that opens under its row, one at a time. 0:00:00 is no limit on that side.
 class LengthSheet extends StatefulWidget {
   const LengthSheet({super.key});
 
@@ -920,72 +995,125 @@ class LengthSheet extends StatefulWidget {
   State<LengthSheet> createState() => _LengthSheetState();
 }
 
+enum _LengthBound { shortest, longest }
+
 class _LengthSheetState extends State<LengthSheet> {
-  static const _floor = AutoDJManager.durationFloorSec;
   static const _ceil = AutoDJManager.durationCeilSec;
+
+  /// The wheels' top: 23:59:59.
+  static const _wheelMax = _ceil - 1;
+
   final _mgr = AutoDJManager();
-  late RangeValues _range = _mgr.activeDurationBounds == null
-      ? const RangeValues(0, _ceil * 1.0)
-      : RangeValues(
-          _mgr.minDurationSec.toDouble(), _mgr.maxDurationSec.toDouble());
+  // 0 is no limit, on both sides: the bottom of either wheel.
+  late int _min = _mgr.activeDurationBounds?.min ?? 0;
+  late int _max = _mgr.activeDurationBounds?.max ?? 0;
   late bool _unknown =
       _mgr.activeDurationBounds != null && _mgr.allowUnknownDuration;
+  _LengthBound? _open;
+  // Bumped by Clear: a wheel only takes its value when it is built.
+  int _cleared = 0;
 
-  bool get _any => _range.start <= _floor && _range.end >= _ceil;
+  bool get _any => _min == 0 && _max == 0;
 
-  static double _snap(double sec) {
-    const step = AutoDJManager.durationStepSec;
-    return ((sec / step).round() * step).toDouble();
+  /// What Done keeps: the pair in order, a longest of 0 as no maximum.
+  (int, int) get _window {
+    final hi = _max == 0 ? _ceil : _max;
+    return _min <= hi ? (_min, hi) : (hi, _min);
   }
+
+  Widget _row(AppLocalizations l, _LengthBound b, String title, int sec) {
+    final open = _open == b;
+    return _ChoiceRow(
+      key: ValueKey('auto-dj-length-${b.name}'),
+      label: Text(title,
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: VelvetColors.textPrimary)),
+      selected: open,
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
+          child: Text(sec == 0 ? l.autoDjAny : fmtTrackLength(sec),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 15,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  color: open
+                      ? VelvetColors.primary
+                      : sec == 0
+                          ? VelvetColors.textSecondary
+                          : VelvetColors.textPrimary)),
+        ),
+        const SizedBox(width: 4),
+        ExcludeSemantics(
+          child: Icon(open ? Icons.expand_less : Icons.expand_more,
+              size: 18, color: VelvetColors.textTertiary),
+        ),
+      ]),
+      onTap: () => setState(() => _open = open ? null : b),
+    );
+  }
+
+  Widget _wheel(_LengthBound b, int sec) => CupertinoTheme(
+        // The app's own colours, in either palette, not Cupertino's.
+        data: CupertinoThemeData(
+          brightness: Theme.of(context).brightness,
+          primaryColor: VelvetColors.primary,
+          textTheme: CupertinoTextThemeData(
+            pickerTextStyle:
+                TextStyle(fontSize: 21, color: VelvetColors.textPrimary),
+          ),
+        ),
+        child: Localizations.override(
+          context: context,
+          delegates: [
+            _TimerWheelLabels.delegate(CupertinoLocalizations.of(context),
+                AppLocalizations.of(context).autoDjWheelHours),
+          ],
+          child: CupertinoTimerPicker(
+            key: ValueKey('auto-dj-length-wheel-${b.name}-$_cleared'),
+            mode: CupertinoTimerPickerMode.hms,
+            initialTimerDuration: Duration(seconds: sec.clamp(0, _wheelMax)),
+            onTimerDurationChanged: (d) => setState(() {
+              if (b == _LengthBound.shortest) {
+                _min = d.inSeconds;
+              } else {
+                _max = d.inSeconds;
+              }
+            }),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final (lo, hi) = _window;
     return AutoDjSheet(
       title: l.autoDjDurationRange,
-      value: autoDjLengthValue(l, _range.start.round(), _range.end.round()),
+      value: autoDjLengthValue(l, lo, hi),
       tone: _any ? AutoDjTone.neutral : AutoDjTone.active,
       clearable: true,
       onClear: _any
           ? null
           : () => setState(() {
-                _range = const RangeValues(0, _ceil * 1.0);
+                _min = 0;
+                _max = 0;
                 _unknown = false;
+                _cleared++;
               }),
       onDone: () => _applyThenClose(
           context,
           () => _mgr.setDurationFilter(
-              minSec: _range.start.round(),
-              maxSec: _range.end.round(),
-              allowUnknown: !_any && _unknown)),
+              minSec: lo, maxSec: hi, allowUnknown: !_any && _unknown)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: VelvetColors.primary,
-            inactiveTrackColor: VelvetColors.border,
-            thumbColor: VelvetColors.primary,
-            overlayColor: VelvetColors.primaryDim,
-            activeTickMarkColor: Colors.transparent,
-            inactiveTickMarkColor: Colors.transparent,
-          ),
-          // A container, not merged: each thumb stays its own adjustable
-          // node under the label.
-          child: Semantics(
-            container: true,
-            label: l.autoDjDurationRange,
-            child: RangeSlider(
-              key: const ValueKey('auto-dj-length-slider'),
-              values: _range,
-              min: _floor.toDouble(),
-              max: _ceil.toDouble(),
-              divisions: (_ceil - _floor) ~/ AutoDJManager.durationStepSec,
-              // Snapped: a screen reader's step arrives off the grid.
-              onChanged: (v) => setState(() => _range =
-                  RangeValues(_snap(v.start), _snap(v.end))),
-              semanticFormatterCallback: (v) => fmtTrackLength(v.round()),
-            ),
-          ),
-        ),
+        FedCard(children: [
+          _row(l, _LengthBound.shortest, l.autoDjLengthShortest, _min),
+          if (_open == _LengthBound.shortest) _wheel(_LengthBound.shortest, _min),
+          _row(l, _LengthBound.longest, l.autoDjLengthLongest, _max),
+          if (_open == _LengthBound.longest) _wheel(_LengthBound.longest, _max),
+        ]),
         const SizedBox(height: 8),
         // Always drawn, so nothing jumps; it means nothing without a limit.
         FedCard(children: [
