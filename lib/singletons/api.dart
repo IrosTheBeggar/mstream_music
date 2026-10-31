@@ -907,6 +907,34 @@ class ApiManager {
     }
   }
 
+  /// Whether [filepath] is still in [server]'s library: true or false from
+  /// POST /api/v1/db/metadata, which 200s with `metadata: null` both for a
+  /// path that is gone and for one outside the caller's libraries (which
+  /// /media would refuse too). Null when it can't tell — an error, a timeout,
+  /// a non-2xx answer, an older server without the route. For a song from the
+  /// phone's own history, which may have moved or gone since it played.
+  Future<bool?> trackExists(Server server, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    try {
+      final response = await _direct
+          .post(
+            server.apiUri('/api/v1/db/metadata'),
+            body: jsonEncode({'filepath': fp}),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.authToken ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map || !decoded.containsKey('metadata')) return null;
+      return decoded['metadata'] is Map;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// POST /api/v1/db/metadata — the full metadata block for a single track by its
   /// (library-prefixed) [filepath]. Used to enrich queue items built from the
   /// lightweight search endpoint, which returns only name/filepath/art. Returns

@@ -217,47 +217,50 @@ class FedSwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: VelvetColors.textPrimary)),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(subtitle!,
-                        style: TextStyle(
-                            fontSize: 13,
-                            height: 1.3,
-                            color: VelvetColors.textSecondary)),
-                  ),
-              ],
+    // One node for screen readers: the title, then on or off.
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary)),
+                  if (subtitle != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(subtitle!,
+                          style: TextStyle(
+                              fontSize: 13,
+                              height: 1.3,
+                              color: VelvetColors.textSecondary)),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          if (busy)
-            const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-            )
-          else
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeThumbColor: VelvetColors.primary,
-            ),
-        ],
+            const SizedBox(width: 10),
+            if (busy)
+              const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else
+              Switch(
+                value: value,
+                onChanged: onChanged,
+                activeThumbColor: VelvetColors.primary,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -277,42 +280,52 @@ class FedCheckRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onChanged == null ? null : () => onChanged!(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: value ? VelvetColors.primary : Colors.transparent,
-                border: value
-                    ? null
-                    : Border.all(color: VelvetColors.textDim, width: 2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: value
-                  ? Icon(Icons.check, size: 16, color: VelvetColors.onPrimary)
-                  : null,
+    // A drawn box, so screen readers are told it is a checkbox and whether it
+    // is ticked.
+    return MergeSemantics(
+      child: Semantics(
+        checked: value,
+        enabled: onChanged != null,
+        child: InkWell(
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: value ? VelvetColors.primary : Colors.transparent,
+                    border: value
+                        ? null
+                        : Border.all(color: VelvetColors.textDim, width: 2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: value
+                      ? Icon(Icons.check,
+                          size: 16, color: VelvetColors.onPrimary)
+                      : null,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          style: TextStyle(
+                              fontSize: 15, color: VelvetColors.textPrimary)),
+                      if (subtitle != null)
+                        Text(subtitle!,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: VelvetColors.textTertiary)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 15, color: VelvetColors.textPrimary)),
-                  if (subtitle != null)
-                    Text(subtitle!,
-                        style: TextStyle(
-                            fontSize: 12, color: VelvetColors.textTertiary)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

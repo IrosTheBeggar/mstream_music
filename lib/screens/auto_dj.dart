@@ -1,37 +1,47 @@
-// Auto DJ configuration screen.
+// Auto DJ configuration screen: every setting is one row showing its value,
+// and each row opens one sheet (auto_dj_sheets.dart).
 //
-// Layout mirrors the webapp's panel:
-//   * Status / enable button at top
-//   * Server picker (if multi-server)
-//   * Sources — per-server vpath toggles
-//   * Filters — min rating + genre (per-server), track length +
-//     keyword filter (app-level)
+//   Start / Stop — the button is the status
+//   Play from · First song — how the session runs
+//   Must match — the limits that can empty the pool: Sonic similarity, Mood,
+//     Genres, Rating, Length
+//   Prefer — what the DJ leans towards and gives up when it must: Tempo,
+//     Harmonic mixing, Skip words
+//   Batch
 //
-// Per-server fields (minRating, autoDJPaths, the genre filter) live on
-// Server objects, because each is the library's own vocabulary — a rating
-// scale, a set of vpath names, a set of genre tags. App-level filters
-// (track length, keyword) live in AutoDJManager and persist to auto_dj.json;
-// seconds mean the same thing on every server. Genre and length are
-// server-side request fields; the keyword filter is client-side, applied in
-// audio_stuff.dart's autoDJ() retry loop.
+// Rows never move between off and on, or between one server and All servers.
+// A setting the server can't do stays in place, greyed, with a reason of a few
+// words where its value would be. Values in amber are shaping the picks.
+//
+// Per-server fields (folders, minimum rating, the genre filter) live on Server
+// objects, because each is the library's own vocabulary — a set of vpath
+// names, a rating scale, a set of genre tags. App-level filters (sonic
+// similarity, mood, track length, tempo, harmonic mixing, skip words) live in
+// AutoDJManager and persist to auto_dj.json; they mean the same thing on every
+// server. With All servers, the Rating and Genres sheets gain server chips.
 
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
-import '../l10n/enum_labels.dart';
+import '../media/audio_stuff.dart' show SonicDrop;
+import '../objects/mood_filter.dart';
 import '../objects/server.dart';
-import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../theme/velvet_theme.dart';
+import '../util/auto_dj_play_from.dart';
+import '../util/auto_dj_values.dart';
 import '../util/fan_out_readout.dart';
 import '../util/server_tree.dart';
 import '../util/server_version.dart';
-import '../theme/velvet_theme.dart';
+import '../widgets/federation_widgets.dart';
 import '../widgets/mood_filter_sheet.dart' show moodLabels, showMoodFilterSheet;
 import '../widgets/queue_list.dart' show toggleAutoDJ;
+import 'add_server.dart';
+import 'auto_dj_sheets.dart';
 
 class AutoDJScreen extends StatefulWidget {
   const AutoDJScreen({super.key});
@@ -45,50 +55,24 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   StreamSubscription<int>? _autoDjMgrSub;
   StreamSubscription? _tunnelSub;
 
-  Server? _autoDJServer;
-
-  /// Which server's own settings the bottom section is editing, in
-  /// multi-server mode. Unlike the single-server picker this does NOT move
-  /// the DJ — every eligible server is playing; this only chooses whose
-  /// rating, genre and library toggles are on screen.
-  Server? _editServer;
-
-  // Genre autocomplete cache. Fetched once when the screen mounts
-  // (background) so the picker sheet shows results without waiting.
-  // Re-fetched if the AutoDJ server changes.
-  List<String>? _availableGenres;
-  bool _loadingGenres = false;
-  String? _genreLoadError;
-  Server? _genresLoadedFor;
-
-  final TextEditingController _keywordCtrl = TextEditingController();
-
-  // In-flight slider drag values. The sliders update these (cheap, local)
-  // per drag tick and commit to AutoDJManager only in onChangeEnd — the
-  // manager setter does a _notify() plus a full auto_dj.json rewrite, which
-  // used to run on EVERY tick of a drag (up to ~50 writes per gesture).
-  double? _sonicDrag;
-  int? _bpmDrag;
-  int? _limitDrag;
+  /// The server the DJ is running on, or null while it is off.
+  Server? _dj;
 
   @override
   void initState() {
     super.initState();
     // BehaviorSubject emits seeded value on subscribe, so this fires
-    // immediately with the current state.
+    // immediately with the current state. It also fires when a session drops
+    // sonic similarity, which the Sonic similarity row shows.
     _customStateSub =
         MediaManager().audioHandler.customState.listen((event) {
-      final newServer = event?.autoDJState as Server?;
-      if (mounted) {
-        setState(() => _autoDJServer = newServer);
-        _ensureGenresLoaded();
-      }
+      if (mounted) setState(() => _dj = event?.autoDJState as Server?);
     });
     _autoDjMgrSub = AutoDJManager().changeStream.listen((_) {
       if (mounted) setState(() {});
     });
-    // The participants readout says which candidates are still connecting;
-    // a tunnel coming up or dropping is what changes that.
+    // The Play from row says which servers are still connecting; a tunnel
+    // coming up or dropping is what changes that.
     _tunnelSub = ServerManager().tunnelTransitions.listen((_) {
       if (mounted) setState(() {});
     });
@@ -99,1596 +83,604 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _customStateSub?.cancel();
     _autoDjMgrSub?.cancel();
     _tunnelSub?.cancel();
-    _keywordCtrl.dispose();
     super.dispose();
   }
 
-  void _setAutoDJ(Server? server) {
-    MediaManager()
-        .audioHandler
-        .customAction('setAutoDJ', {'autoDJServer': server});
-  }
+  // ── what the rows are about ──────────────────────────────────────
 
-  Future<void> _ensureGenresLoaded() async {
-    // _panelServer, so the genre picker works before AutoDJ is enabled.
-    final server = _panelServer;
-    if (server == null) return;
-    if (_loadingGenres) return;
-    if (_availableGenres != null && _genresLoadedFor == server) return;
-
-    setState(() {
-      _loadingGenres = true;
-      _genreLoadError = null;
-    });
-    try {
-      final genres = await ApiManager().getGenres(useThisServer: server);
-      if (!mounted) return;
-      setState(() {
-        _availableGenres = genres
-            .map((g) => (g['name'] ?? '').toString())
-            .where((s) => s.isNotEmpty)
-            .toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-        _loadingGenres = false;
-        _genresLoadedFor = server;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loadingGenres = false;
-        _genreLoadError = AppLocalizations.of(context).autoDjGenreLoadError;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    if (ServerManager().serverList.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l.autoDjTitle)),
-        body: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            l.autoDjAddServerFirst,
-            style: TextStyle(color: VelvetColors.textSecondary),
-          ),
-        ),
-      );
-    }
-
-    final enabled = _autoDJServer != null;
-
-    return Scaffold(
-      appBar: AppBar(title: Text(l.autoDjTitle)),
-      // SafeArea(bottom: true) ensures the last filter section
-      // doesn't get tucked under the system gesture/nav bar on
-      // edge-to-edge devices. AppBar handles the top inset.
-      body: SafeArea(
-        top: false,
-        child: ListView(
-        padding: EdgeInsets.only(bottom: 24),
-        children: [
-          _statusSection(enabled, _autoDJServer),
-          Divider(color: VelvetColors.border, height: 1),
-          // First, because turning it on rearranges everything below it —
-          // a control that reorganises a form belongs above the form.
-          if (_servers.length > 1) ...[
-            _multiServerSwitch(l),
-            Divider(color: VelvetColors.border, height: 1),
-          ],
-          if (_multiServerMode)
-            ..._multiServerBody(l)
-          else
-            ..._singleServerBody(l, enabled),
-        ],
-      ),
-      ),
-    );
-  }
-
-  /// True when the panel should show the multi-server layout: the mode is on
-  /// AND there is more than one server for it to mean anything with.
-  bool get _multiServerMode =>
-      AutoDJManager().multiServerEnabled && _servers.length > 1;
-
-  /// The servers this mode is about: everything the picker may offer. A
-  /// federated peer counts — it takes part like any other server — but not
-  /// one the user hid or its parent stopped listing.
+  /// Every server Play from may offer: a federated peer counts — it takes
+  /// part like any other server — but not one the user hid or its parent
+  /// stopped listing.
   List<Server> get _servers => serversGrouped(ServerManager().serverList)
       .where((s) => s.isSelectable)
       .toList();
 
-  /// A dropdown label: a peer is drawn as a branch off its parent, which
-  /// [serversGrouped] places right above it.
-  String _serverLabel(Server s) =>
-      s.isFederated ? '$kPeerBranch ${s.displayName}' : s.displayName;
+  /// The server the rows are about: the DJ's while it runs (named even when
+  /// it has left the picker's list), else Play from's. With All servers it
+  /// is the session's home, whose version gates the rows.
+  Server? get _home => _dj ?? autoDjPlayFrom();
 
-  /// The server whose own settings the bottom section edits. Falls back to
-  /// the panel's server so the section is never empty, and re-resolves if the
-  /// chosen one has since been deleted.
-  Server? get _editTarget {
-    final servers = _servers;
-    if (_editServer != null && servers.contains(_editServer)) return _editServer;
-    return _panelServer;
-  }
+  /// All servers is stored — kept even with one server left, so the row
+  /// stays and the choice can be undone.
+  bool get _all => AutoDJManager().multiServerEnabled;
 
-  /// One server plays; its settings and the shared ones sit in one list,
-  /// because with a single source there is nothing to tell apart.
-  List<Widget> _singleServerBody(AppLocalizations l, bool enabled) => [
-        if (ServerManager().serverList.length > 1 && enabled) ...[
-          _sectionHeader(l.autoDjSectionServer),
-          _serverPickerTile(_autoDJServer!),
-          Divider(color: VelvetColors.border, height: 1),
-        ],
-        if (enabled && _autoDJServer!.autoDJPaths.length > 1) ...[
-          _sectionHeader(l.autoDjSectionSources),
-          ..._vpathTiles(_autoDJServer!),
-          Divider(color: VelvetColors.border, height: 1),
-        ],
-        if (!_batchHidden) ...[
-          _sectionHeader(l.autoDjSectionQueue),
-          _songsPerFetchSection(),
-          Divider(color: VelvetColors.border, height: 1),
-        ],
-        // BPM continuity, harmonic mixing and the genre filter all arrived
-        // in 6.7.1. On a server known to predate them the controls are
-        // HIDDEN rather than shown-and-ignored: the app strips those
-        // parameters before sending, so a switch left visible would sit
-        // there saying "on" while the picks were plain random.
-        //
-        // Sonic similarity is separate — it landed in 6.15.2 — so a
-        // 6.7.1..6.14 server keeps this whole block and only that one
-        // switch is disabled.
-        if (_filtersHidden) ...[
-          _sectionHeader(l.autoDjSectionContinuity),
-          _olderServerNote(l),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.autoDjSectionFilters),
-          // No rating tile for a peer: a key has no stars (see the
-          // multi-server body for the same rule).
-          if (_panelServer != null && !_panelServer!.isFederated)
-            _minRatingTile(_panelServer!),
-          if (!_durationHidden) _durationFilterSection(),
-          // Keyword filter survives: it is applied client-side, so it works
-          // against any server however old.
-          _keywordFilterSection(),
-        ] else ...[
-          _sectionHeader(l.autoDjSectionContinuity),
-          _sonicSimilaritySection(),
-          _bpmContinuitySection(),
-          _harmonicMixingSection(),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.autoDjSectionFilters),
-          if (_panelServer != null && !_panelServer!.isFederated)
-            _minRatingTile(_panelServer!),
-          if (!_durationHidden) _durationFilterSection(),
-          if (_panelServer != null) _genreFilterSection(_panelServer!),
-          if (!_moodHidden) _moodFilterSection(),
-          _keywordFilterSection(),
-        ],
-      ];
+  ServerVersion? get _version => ServerVersion.tryParse(_home?.serverVersion);
 
-  /// Every eligible server plays, so the form splits by what a setting
-  /// actually governs: the session's own behaviour on top, and each library's
-  /// own rules underneath, one server at a time.
-  List<Widget> _multiServerBody(AppLocalizations l) {
-    final target = _editTarget;
-    return [
-      _sectionHeader(l.autoDjSectionShared),
-      // One batch size for the whole session: every server is asked for it
-      // and the best matches across them fill it.
-      _songsPerFetchSection(),
-      if (_filtersHidden)
-        _olderServerNote(l)
-      else ...[
-        _sonicSimilaritySection(),
-        _bpmContinuitySection(),
-        _harmonicMixingSection(),
-      ],
-      // Length, mood and keywords are app-level: seconds, moods and words mean
-      // the same thing on every server, so they belong with the session, not a
-      // library.
-      if (!_durationHidden) _durationFilterSection(),
-      if (!_moodHidden) _moodFilterSection(),
-      _keywordFilterSection(),
-      Divider(color: VelvetColors.border, height: 1),
-      _sectionHeader(l.autoDjSectionPerServer),
-      _participantsLine(l),
-      if (target != null) ...[
-        _editServerPickerTile(target),
-        if (target.autoDJPaths.length > 1) ..._vpathTiles(target),
-        // Ratings are per-user and a peer is reached with a key (or a guest
-        // token) that has none: the server skips minRating for that caller,
-        // so a rating control here would sit there doing nothing — hidden,
-        // the way the track sheet hides rating on a peer.
-        if (!target.isFederated) _minRatingTile(target),
-        if (!_filtersHidden) _genreFilterSection(target),
-      ],
-    ];
-  }
+  /// The servers a per-server setting (rating, genres) is edited for.
+  List<Server> get _editServers => _all ? _servers : [?_home];
 
-  // ── Queue: songs per fetch ──────────────────────────────────────
+  String _needs(AppLocalizations l, ServerParam p) =>
+      l.autoDjNeedsServer(paramFloorLabel(p));
 
-  /// How many songs one Auto DJ turn queues (random-songs' `limit`, mStream
-  /// #966). Same shape as the BPM tolerance control: a readout and a slider,
-  /// local during the drag and persisted once on release.
-  Widget _songsPerFetchSection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    final shown = _limitDrag ?? mgr.songsPerFetch;
-    final max = AutoDJManager.maxSongsPerFetch;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjSongsPerFetchTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjSongsPerFetchSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12),
-              Text(
-                l.autoDjSongsPerFetchValue(shown),
-                style: TextStyle(
-                  color: VelvetColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: VelvetColors.primary,
-              thumbColor: VelvetColors.primary,
-              overlayColor: VelvetColors.primaryDim,
-            ),
-            child: Slider(
-              value: shown.toDouble().clamp(1.0, max.toDouble()),
-              min: 1,
-              max: max.toDouble(),
-              divisions: max - 1,
-              // Local during the drag, persisted once on release — see
-              // _sonicDrag.
-              onChanged: (v) => setState(() => _limitDrag = v.round()),
-              onChangeEnd: (v) async {
-                await mgr.setSongsPerFetch(v.round());
-                if (mounted) setState(() => _limitDrag = null);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<void> _open(WidgetBuilder builder) => showAutoDjSheet<void>(context, builder);
 
-  // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
-
-  Widget _multiServerSwitch(AppLocalizations l) {
-    final mgr = AutoDJManager();
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.autoDjMultiServerTitle,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary, fontSize: 15)),
-                SizedBox(height: 2),
-                Text(l.autoDjMultiServerSubtitle,
-                    style: TextStyle(
-                        color: VelvetColors.textSecondary, fontSize: 12)),
-                // The seed only travels as a vector, so the mode runs on
-                // sonic picks alone: switched on with sonic similarity off
-                // it would silently do nothing. Say so instead.
-                if (mgr.multiServerEnabled && !mgr.sonicSimilarityEnabled)
-                  Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(l.autoDjMultiServerNeedsSonic,
-                        style: TextStyle(
-                            color: VelvetColors.warning, fontSize: 12)),
-                  ),
-              ],
-            ),
-          ),
-          Switch(
-            value: mgr.multiServerEnabled,
-            onChanged: (v) => mgr.setMultiServerEnabled(v),
-            activeThumbColor: VelvetColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// How many servers can actually take part, and — when some can't — why.
-  /// Silently dropping a server would look like the feature not working.
-  Widget _participantsLine(AppLocalizations l) {
-    final total = _servers.length;
-    final candidates = MediaManager().audioHandler.multiServerCandidates();
-    final eligible = candidates.length;
-    final short = eligible < total;
-    // A tunnel server counts as taking part from the moment the session is
-    // armed, but it can only answer once its tunnel is up — say how many
-    // are still on their way rather than let the first pick look short.
-    final connecting =
-        fanOutConnecting(candidates, ServerManager().tunnelServes).length;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            short
-                ? l.autoDjMultiServerSomeExcluded(eligible, total)
-                : l.autoDjMultiServerAllIn(eligible),
-            style: TextStyle(
-                color:
-                    short ? VelvetColors.warning : VelvetColors.textSecondary,
-                fontSize: 12),
-          ),
-          if (connecting > 0)
-            Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Text(l.autoDjMultiServerConnecting(connecting),
-                  style: TextStyle(
-                      color: VelvetColors.warning, fontSize: 12)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// Chooses whose settings are on screen — NOT where the music comes from.
-  /// In this mode every eligible server is already playing.
-  Widget _editServerPickerTile(Server target) {
-    final l = AppLocalizations.of(context);
-    final servers = _servers;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l.autoDjEditingServer,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12)),
-          DropdownButton<Server>(
-            isExpanded: true,
-            underline: SizedBox.shrink(),
-            value: servers.contains(target) ? target : null,
-            dropdownColor: VelvetColors.surface,
-            style: TextStyle(color: VelvetColors.textPrimary),
-            items: servers
-                .map((s) => DropdownMenuItem(
-                      value: s,
-                      // A peer has no URL of its own; its name is what the
-                      // rest of the app shows for it.
-                      child: Text(_serverLabel(s),
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(color: VelvetColors.textPrimary)),
-                    ))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _editServer = v);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The server this panel is talking about: the DJ's when it is armed, the
-  /// current one when it isn't.
-  ///
-  /// Both the per-server controls and the version gates key off this. It
-  /// matters most for minRating, which lives on the Server rather than in
-  /// AutoDJManager — a rating is only meaningful against the library it was
-  /// set in — so unlike the genre, keyword and length filters that tile needs
-  /// a server to point at, and would otherwise vanish whenever the DJ was off.
-  /// Null only when nothing is configured at all.
-  Server? get _panelServer => _autoDJServer ?? ServerManager().currentServer;
-
-  ServerVersion? get _panelServerVersion =>
-      ServerVersion.tryParse(_panelServer?.serverVersion);
-
-  /// True when the DJ server is KNOWN to predate 6.7.1. Unknown versions and
-  /// forks read false — they can't be compared, so the controls stay and the
-  /// capability learner handles any rejection.
-  bool get _filtersHidden =>
-      autoDjFiltersKnownUnsupported(_panelServerVersion);
-
-  /// True when the DJ server is KNOWN to predate the track-length window.
-  /// Gated separately from [_filtersHidden]: the duration params landed long
-  /// after the 6.7.1 block, so a server can have every other filter and still
-  /// not this one.
-  bool get _durationHidden =>
-      autoDjDurationKnownUnsupported(_panelServerVersion);
-
-  /// True when the DJ server is KNOWN to predate batch picks (6.26.0), which
-  /// hides the songs-per-fetch control: the app strips `limit` before sending
-  /// to such a server, so a slider would sit there promising a batch every
-  /// turn while one song arrived. Only the single-server body needs the
-  /// gate — a multi-server participant already needs the same release for
-  /// its vector seed.
-  bool get _batchHidden => autoDjBatchKnownUnsupported(_panelServerVersion);
-
-  /// True unless the DJ server says it can filter by mood (its `moodFilters`
-  /// flag; off for a peer). Hidden rather than shown-and-ignored, as above:
-  /// the mood is only sent where the server can apply it.
-  bool get _moodHidden => _panelServer?.moodFiltersAvailable != true;
-
-  Widget _olderServerNote(AppLocalizations l) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, size: 16, color: VelvetColors.textTertiary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(l.autoDjNeedsNewerServer,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sonicSimilaritySection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    // Capability of the server that would serve the picks (the DJ server
-    // when one is running, otherwise the current server as a preview).
-    // Without discovery data the toggle is inert, so show it disabled with
-    // an explanation instead of letting it silently do nothing.
-    final target = _autoDJServer ?? ServerManager().currentServer;
-    // Two independent reasons it can be unavailable, and the subtitle says
-    // which: the server predates 6.15.2, or discovery is switched off there.
-    final tooOld =
-        sonicKnownUnsupported(ServerVersion.tryParse(target?.serverVersion));
-    // Three reasons, and the subtitle says which: the server predates 6.15.2,
-    // discovery is switched off there, or it is on but the scan has not
-    // produced vectors yet (mStream #879) — the case that used to look
-    // fully capable and then 400 every pick.
-    final notReady =
-        target?.discoveryOn == true && target?.discoveryReady == false;
-    final supported = target?.sonicUsable == true && !tooOld;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjSonicTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      supported
-                          ? l.autoDjSonicSubtitle
-                          : (tooOld
-                              ? l.autoDjSonicNeedsNewerServer
-                              : notReady
-                                  ? l.autoDjSonicNotReady
-                                  : l.autoDjSonicUnavailable),
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: mgr.sonicSimilarityEnabled && supported,
-                onChanged: supported
-                    ? (v) async {
-                        await mgr.setSonicSimilarityEnabled(v);
-                        // Webapp parity (clearSonicAnchors): toggling the
-                        // feature off drops the session anchors — rolling
-                        // history + locked pin. The explicit seed survives.
-                        if (!v) {
-                          MediaManager()
-                              .audioHandler
-                              .customAction('clearSonicSession');
-                        }
-                      }
-                    : null,
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (supported && mgr.sonicSimilarityEnabled) ...[
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  l.autoDjSonicStrictness,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 13),
-                ),
-                Spacer(),
-                Text(
-                  l.autoDjSonicStrictnessValue(
-                      ((_sonicDrag ?? mgr.sonicMinSimilarity) * 100).round()),
-                  style: TextStyle(
-                    color: VelvetColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: VelvetColors.primary,
-                thumbColor: VelvetColors.primary,
-                overlayColor: VelvetColors.primaryDim,
-              ),
-              // Raw cosine threshold; the useful band in practice —
-              // webapp's slider covers the same perceptual range.
-              child: Slider(
-                value: (_sonicDrag ?? mgr.sonicMinSimilarity).clamp(0.30, 0.80),
-                min: 0.30,
-                max: 0.80,
-                divisions: 50,
-                // Track the drag locally; persist once on release (the EQ
-                // screen's pattern) instead of a notify+file-write per tick.
-                onChanged: (v) => setState(() => _sonicDrag = v),
-                onChangeEnd: (v) async {
-                  await mgr.setSonicMinSimilarity(v);
-                  if (mounted) setState(() => _sonicDrag = null);
-                },
-              ),
-            ),
-            // What the DJ does from a standing start. The old row here was a
-            // persistent "seed song" the user had to set, remember, and clear
-            // — a standing anchor for a decision that only ever matters at the
-            // moment of switching on with nothing queued. This is that same
-            // decision, stated as the question it actually is.
-            SizedBox(height: 4),
-            Text(
-              l.autoDjOnEmptyQueue,
-              style:
-                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
-            SizedBox(height: 2),
-            Text(
-              l.autoDjOnEmptyQueueSub,
-              style: TextStyle(
-                  color: VelvetColors.textTertiary, fontSize: 12),
-            ),
-            SizedBox(height: 8),
-            SegmentedButton<EmptyQueueStart>(
-              segments: [
-                ButtonSegment(
-                    value: EmptyQueueStart.ask,
-                    label: Text(l.autoDjStartAskShort)),
-                ButtonSegment(
-                    value: EmptyQueueStart.random,
-                    label: Text(l.autoDjStartRandom)),
-                ButtonSegment(
-                    value: EmptyQueueStart.pick,
-                    label: Text(l.autoDjStartPick)),
-              ],
-              selected: {mgr.emptyQueueStart},
-              onSelectionChanged: (set) {
-                if (set.isNotEmpty) mgr.setEmptyQueueStart(set.first);
-              },
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12)),
-              ),
-            ),
-            SizedBox(height: 8),
-            // Anchor policy: follow the session's own picks (rolling) or
-            // stay pinned to the seed for the whole session (locked).
-            SizedBox(height: 8),
-            Text(
-              l.autoDjSonicAnchorLabel,
-              style:
-                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
-            SizedBox(height: 6),
-            SegmentedButton<SonicAnchorMode>(
-              segments: [
-                for (final mode in SonicAnchorMode.values)
-                  ButtonSegment(value: mode, label: Text(mode.label(l))),
-              ],
-              selected: {mgr.sonicAnchorMode},
-              onSelectionChanged: (set) {
-                if (set.isNotEmpty) mgr.setSonicAnchorMode(set.first);
-              },
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              mgr.sonicAnchorMode.hint(l),
-              style:
-                  TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-
-  Widget _bpmContinuitySection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjBpmTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjBpmSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: mgr.bpmContinuityEnabled,
-                onChanged: (v) => mgr.setBpmContinuityEnabled(v),
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (mgr.bpmContinuityEnabled) ...[
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  l.autoDjTolerance,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 13),
-                ),
-                Spacer(),
-                Text(
-                  l.autoDjBpmTolerance(_bpmDrag ?? mgr.bpmTolerance),
-                  style: TextStyle(
-                    color: VelvetColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: VelvetColors.primary,
-                thumbColor: VelvetColors.primary,
-                overlayColor: VelvetColors.primaryDim,
-              ),
-              child: Slider(
-                value: (_bpmDrag ?? mgr.bpmTolerance).toDouble().clamp(1.0, 20.0),
-                min: 1,
-                max: 20,
-                divisions: 19,
-                // Local during the drag, persisted once on release — see
-                // _sonicDrag.
-                onChanged: (v) => setState(() => _bpmDrag = v.round()),
-                onChangeEnd: (v) async {
-                  await mgr.setBpmTolerance(v.round());
-                  if (mounted) setState(() => _bpmDrag = null);
-                },
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// mm:ss for a bound on the slider. Seconds are the server's unit, but
-  /// nobody thinks about track length in raw seconds.
-  static String _fmtDuration(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
-
-  /// Reads back the window in words, because the rails mean "unbounded" and a
-  /// bare "0:00 – 20:00" would look like a constraint when it is the opposite.
-  String _durationSummary(AppLocalizations l, int minSec, int maxSec) {
-    final hasMin = minSec > AutoDJManager.durationFloorSec;
-    final hasMax = maxSec < AutoDJManager.durationCeilSec;
-    if (hasMin && hasMax) {
-      return l.autoDjDurationBetween(_fmtDuration(minSec), _fmtDuration(maxSec));
-    }
-    if (hasMin) return l.autoDjDurationOver(_fmtDuration(minSec));
-    if (hasMax) return l.autoDjDurationUnder(_fmtDuration(maxSec));
-    return l.autoDjDurationAny;
-  }
-
-  Widget _durationFilterSection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    const floor = AutoDJManager.durationFloorSec;
-    const ceil = AutoDJManager.durationCeilSec;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjDurationTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjDurationSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: mgr.durationFilterEnabled,
-                onChanged: (v) => mgr.setDurationFilterEnabled(v),
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (mgr.durationFilterEnabled) ...[
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  l.autoDjDurationRange,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 13),
-                ),
-                Spacer(),
-                Text(
-                  _durationSummary(l, mgr.minDurationSec, mgr.maxDurationSec),
-                  style: TextStyle(
-                    color: VelvetColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: VelvetColors.primary,
-                thumbColor: VelvetColors.primary,
-                overlayColor: VelvetColors.primaryDim,
-              ),
-              child: RangeSlider(
-                values: RangeValues(
-                  mgr.minDurationSec.toDouble().clamp(
-                      floor.toDouble(), ceil.toDouble()),
-                  mgr.maxDurationSec.toDouble().clamp(
-                      floor.toDouble(), ceil.toDouble()),
-                ),
-                min: floor.toDouble(),
-                max: ceil.toDouble(),
-                divisions: (ceil - floor) ~/ AutoDJManager.durationStepSec,
-                onChanged: (v) =>
-                    mgr.setDurationRange(v.start.round(), v.end.round()),
-              ),
-            ),
-            // Only meaningful once a bound is actually set — with the window
-            // wide open the server ignores it, so saying otherwise would lie.
-            if (mgr.activeDurationBounds != null)
-              Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(l.autoDjDurationAllowUnknown,
-                              style: TextStyle(
-                                  color: VelvetColors.textPrimary,
-                                  fontSize: 14)),
-                          SizedBox(height: 2),
-                          Text(
-                            l.autoDjDurationAllowUnknownSub,
-                            style: TextStyle(
-                                color: VelvetColors.textSecondary,
-                                fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: mgr.allowUnknownDuration,
-                      onChanged: (v) => mgr.setAllowUnknownDuration(v),
-                      activeThumbColor: VelvetColors.primary,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// The browse lists' mood filter, kept to for every pick (mStream #1096).
-  /// A switch like the track-length window's; while it is on, the choices
-  /// below it open the browse lists' mood sheet. Nothing is sent until
-  /// something is chosen.
-  Widget _moodFilterSection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    final chosen = moodLabels(l, mgr.moodFilter);
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjMoodTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjMoodSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                key: const ValueKey('auto-dj-mood-switch'),
-                value: mgr.moodFilterEnabled,
-                onChanged: (v) => mgr.setMoodFilterEnabled(v),
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (mgr.moodFilterEnabled)
-            InkWell(
-              key: const ValueKey('auto-dj-mood-choices'),
-              onTap: () async {
-                final f = await showMoodFilterSheet(context, mgr.moodFilter);
-                if (f != null) await mgr.setMoodFilter(f);
-              },
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        chosen.isEmpty ? l.autoDjMoodChoose : chosen.join(' · '),
-                        style: TextStyle(
-                          color: chosen.isEmpty
-                              ? VelvetColors.textSecondary
-                              : VelvetColors.primary,
-                          fontSize: 13,
-                          fontWeight: chosen.isEmpty
-                              ? FontWeight.normal
-                              : FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.chevron_right,
-                        size: 18, color: VelvetColors.textTertiary),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _harmonicMixingSection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.autoDjHarmonicTitle,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary, fontSize: 15)),
-                SizedBox(height: 2),
-                Text(
-                  l.autoDjHarmonicSubtitle,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: mgr.harmonicMixingEnabled,
-            onChanged: (v) => mgr.setHarmonicMixingEnabled(v),
-            activeThumbColor: VelvetColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Status / enable button ───────────────────────────────────────
-
-  Widget _statusSection(bool enabled, Server? autoDJServer) {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            enabled ? l.autoDjStatusOn : l.autoDjStatusOff,
-            style: TextStyle(
-              color: VelvetColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            enabled
-                ? l.autoDjStatusOnDetail(autoDJServer!.url)
-                : l.autoDjStatusOffDetail,
-            style: TextStyle(
-                color: VelvetColors.textSecondary, fontSize: 12),
-          ),
-          SizedBox(height: 14),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  enabled ? VelvetColors.error : VelvetColors.primary,
-              // Ink follows whichever fill is showing.
-              foregroundColor: onAccent(
-                  enabled ? VelvetColors.error : VelvetColors.primary),
-              padding: EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(VelvetColors.radiusSmall),
-              ),
-              textStyle:
-                  TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-            // Through the shared toggle, not _setAutoDJ: starting the DJ on an
-            // EMPTY queue has to ask for an opening track first, and going
-            // straight to setAutoDJ skipped that — the handler fell back to
-            // the stored sonic seed, so this button silently replayed the
-            // last song while the identical button in the player bar asked.
-            // _setAutoDJ stays for the source dropdown below, which only
-            // exists while the DJ is already running.
-            onPressed: () => toggleAutoDJ(context),
-            child: Text(enabled ? l.autoDjStop : l.autoDjStart),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Server picker (multi-server only, when enabled) ─────────────
-
-  Widget _serverPickerTile(Server autoDJServer) {
-    // A federated peer hosts the DJ like any other server (random-songs is
-    // on the federation allowlist since mStream #946); only one the user
-    // hid, or its parent stopped listing, stays out.
-    final servers = serversGrouped(ServerManager().serverList)
-        .where((s) => s.isSelectable)
-        .toList();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: DropdownButton<Server>(
-        isExpanded: true,
-        underline: SizedBox.shrink(),
-        // The DJ's own server is the value, so the closed dropdown reads as a
-        // statement of what is playing rather than an instruction. That means
-        // it has to be among the items — DropdownButton asserts otherwise —
-        // so the list is every server, not just the alternatives.
-        value: servers.contains(autoDJServer) ? autoDJServer : null,
-        dropdownColor: VelvetColors.surface,
-        style: TextStyle(color: VelvetColors.textPrimary),
-        items: servers
-            .map((s) => DropdownMenuItem(
-                  value: s,
-                  child: Text(_serverLabel(s),
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: VelvetColors.textPrimary)),
-                ))
-            .toList(),
-        onChanged: (newValue) {
-          // Re-selecting the current server would restart the session for no
-          // reason (fresh ignore list, dropped sonic history).
-          if (newValue != null && newValue != autoDJServer) {
-            _setAutoDJ(newValue);
-          }
-        },
-      ),
-    );
-  }
-
-  // ── Sources (vpath switches) ─────────────────────────────────────
-
-  List<Widget> _vpathTiles(Server autoDJServer) {
-    final l = AppLocalizations.of(context);
-    return autoDJServer.autoDJPaths.entries.map((entry) {
-      return SwitchListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 20),
-        title: Text(entry.key,
-            style: TextStyle(color: VelvetColors.textPrimary)),
-        value: entry.value,
-        onChanged: (value) {
-          // Refuse to disable the last enabled vpath — server would
-          // have nothing to draw from.
-          final anyOtherOn = autoDJServer.autoDJPaths.entries
-              .any((e) => e.key != entry.key && e.value);
-          if (!value && !anyOtherOn) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l.autoDjOneSourceRequired)),
-            );
-            return;
-          }
-          setState(() => autoDJServer.autoDJPaths[entry.key] = value);
-          MediaManager()
-              .audioHandler
-              .customAction('forceAutoDJRefresh');
-          ServerManager().callAfterEditServer();
-        },
-        activeThumbColor: VelvetColors.primary,
-      );
-    }).toList();
-  }
-
-  // ── Min Rating ──────────────────────────────────────────────────
-
-  Widget _minRatingTile(Server autoDJServer) {
-    final l = AppLocalizations.of(context);
-    const items = [
-      MapEntry<int?, String>(null, 'Any'),
-      MapEntry<int?, String>(1, '0.5 ★'),
-      MapEntry<int?, String>(2, '1.0 ★'),
-      MapEntry<int?, String>(3, '1.5 ★'),
-      MapEntry<int?, String>(4, '2.0 ★'),
-      MapEntry<int?, String>(5, '2.5 ★'),
-      MapEntry<int?, String>(6, '3.0 ★'),
-      MapEntry<int?, String>(7, '3.5 ★'),
-      MapEntry<int?, String>(8, '4.0 ★'),
-      MapEntry<int?, String>(9, '4.5 ★'),
-      MapEntry<int?, String>(10, '5.0 ★'),
-    ];
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 20),
-      title: Text(l.autoDjMinRating,
-          style: TextStyle(color: VelvetColors.textPrimary)),
-      subtitle: Text(l.autoDjMinRatingSubtitle,
-          style:
-              TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
-      trailing: DropdownButton<int?>(
-        underline: SizedBox.shrink(),
-        dropdownColor: VelvetColors.surface,
-        value: autoDJServer.autoDJminRating,
-        items: items
-            .map((e) => DropdownMenuItem<int?>(
-                  value: e.key,
-                  // 'Any' (null key) is the only word; star labels are
-                  // universal and stay literal.
-                  child: Text(e.key == null ? l.autoDjRatingAny : e.value,
-                      style: TextStyle(color: VelvetColors.textPrimary)),
-                ))
-            .toList(),
-        onChanged: (newValue) {
-          setState(() => autoDJServer.autoDJminRating = newValue);
-          MediaManager().audioHandler.customAction('forceAutoDJRefresh');
-          ServerManager().callAfterEditServer();
-        },
-      ),
-    );
-  }
-
-  // ── Genre Filter ─────────────────────────────────────────────────
-
-  /// Persist a genre-filter edit and let a running DJ session see it. Mirrors
-  /// what the min-rating dropdown does — both write straight to the Server.
-  void _commitServerEdit() {
-    setState(() {});
-    MediaManager().audioHandler.customAction('forceAutoDJRefresh');
-    ServerManager().callAfterEditServer();
-  }
-
-  Widget _genreFilterSection(Server server) {
-    final l = AppLocalizations.of(context);
-    final selected = server.autoDJGenres;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjGenreTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjGenreSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: server.autoDJGenreEnabled,
-                onChanged: (v) {
-                  server.autoDJGenreEnabled = v;
-                  _commitServerEdit();
-                },
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (server.autoDJGenreEnabled) ...[
-            SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(value: 'whitelist', label: Text(l.autoDjWhitelist)),
-                ButtonSegment(value: 'blacklist', label: Text(l.autoDjBlacklist)),
-              ],
-              selected: {server.autoDJGenreMode},
-              onSelectionChanged: (set) {
-                if (set.isNotEmpty) {
-                  server.autoDJGenreMode = set.first;
-                  _commitServerEdit();
-                }
-              },
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-            SizedBox(height: 12),
-            if (selected.isEmpty)
-              Text(
-                l.autoDjNoGenres,
-                style:
-                    TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: selected
-                    .map((g) => Chip(
-                          // Cap label width so a long genre like
-                          // "Soundtracks — Film & TV" can't push the
-                          // chip wider than the screen and force an
-                          // overflow within the Wrap row.
-                          label: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 180),
-                            child: Text(
-                              g,
-                              style: TextStyle(
-                                  color: VelvetColors.textPrimary,
-                                  fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          backgroundColor: VelvetColors.raised,
-                          side: BorderSide(color: VelvetColors.border),
-                          deleteIconColor: VelvetColors.textSecondary,
-                          onDeleted: () {
-                            server.autoDJGenres.remove(g);
-                            _commitServerEdit();
-                          },
-                          visualDensity: VisualDensity.compact,
-                        ))
-                    .toList(),
-              ),
-            SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _openGenrePicker(server),
-                icon: Icon(Icons.add, size: 18),
-                label: Text(l.autoDjPickGenres),
-                style: TextButton.styleFrom(
-                  foregroundColor: VelvetColors.primary,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _openGenrePicker(Server server) async {
-    await _ensureGenresLoaded();
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: VelvetColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => _GenrePickerSheet(
-        server: server,
-        available: _availableGenres ?? const [],
-        loading: _loadingGenres,
-        error: _genreLoadError,
-      ),
-    );
-    // The sheet writes onto the Server directly, so the chip list here is
-    // stale until we rebuild.
-    if (mounted) _commitServerEdit();
-  }
-
-  // ── Keyword Filter ───────────────────────────────────────────────
-
-  Widget _keywordFilterSection() {
-    final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    final words = mgr.keywordFilterWords;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.autoDjKeywordTitle,
-                        style: TextStyle(
-                            color: VelvetColors.textPrimary, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text(
-                      l.autoDjKeywordSubtitle,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: mgr.keywordFilterEnabled,
-                onChanged: (v) => mgr.setKeywordFilterEnabled(v),
-                activeThumbColor: VelvetColors.primary,
-              ),
-            ],
-          ),
-          if (mgr.keywordFilterEnabled) ...[
-            SizedBox(height: 8),
-            if (words.isEmpty)
-              Text(
-                l.autoDjNoKeywords,
-                style:
-                    TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: words
-                    .map((w) => Chip(
-                          label: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 180),
-                            child: Text(
-                              w,
-                              style: TextStyle(
-                                  color: VelvetColors.textPrimary,
-                                  fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          backgroundColor: VelvetColors.raised,
-                          side: BorderSide(color: VelvetColors.border),
-                          deleteIconColor: VelvetColors.textSecondary,
-                          onDeleted: () => mgr.removeKeyword(w),
-                          visualDensity: VisualDensity.compact,
-                        ))
-                    .toList(),
-              ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _keywordCtrl,
-                    decoration: InputDecoration(
-                      hintText: l.autoDjKeywordHint,
-                      isDense: true,
-                    ),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _addKeyword(),
-                  ),
-                ),
-                SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: _addKeyword,
-                  icon: Icon(Icons.add, size: 18),
-                  label: Text(l.add),
-                  style: TextButton.styleFrom(
-                    foregroundColor: VelvetColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _addKeyword() async {
-    final w = _keywordCtrl.text.trim();
-    if (w.isEmpty) return;
-    await AutoDJManager().addKeyword(w);
-    _keywordCtrl.clear();
-  }
-
-  // ── Section header (mirrors settings_screen.dart) ───────────────
-
-  Widget _sectionHeader(String label) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: VelvetColors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.6,
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// Genre picker bottom sheet.
-//
-// Search-filtered, checkable list. Tapping toggles immediately
-// through AutoDJManager (no separate "Done" button — the chips on
-// the main screen reflect the live selection state).
-// ─────────────────────────────────────────────────────────────────────
-
-class _GenrePickerSheet extends StatefulWidget {
-  /// The server whose genre list this edits — the same one the section
-  /// behind it is showing.
-  final Server server;
-  final List<String> available;
-  final bool loading;
-  final String? error;
-  const _GenrePickerSheet({
-    required this.server,
-    required this.available,
-    required this.loading,
-    this.error,
-  });
-
-  @override
-  State<_GenrePickerSheet> createState() => _GenrePickerSheetState();
-}
-
-class _GenrePickerSheetState extends State<_GenrePickerSheet> {
-  String _query = '';
-  StreamSubscription<int>? _mgrSub;
-
-  @override
-  void initState() {
-    super.initState();
-    // Rebuild when AutoDJManager state changes so checkboxes reflect
-    // toggle taps live.
-    _mgrSub =
-        AutoDJManager().changeStream.listen((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _mgrSub?.cancel();
-    super.dispose();
-  }
+  // ── build ────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final selected = widget.server.autoDJGenres.toSet();
-    final q = _query.trim().toLowerCase();
-    final filtered = q.isEmpty
-        ? widget.available
-        : widget.available
-            .where((g) => g.toLowerCase().contains(q))
-            .toList();
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
+    if (ServerManager().serverList.isEmpty) return _noServers(l);
+    final home = _home;
+    final showPlayFrom = _servers.length > 1 ||
+        _all ||
+        (home?.autoDJPaths.length ?? 0) > 1;
+    return Scaffold(
+      appBar: AppBar(title: Text(l.autoDjTitle)),
+      // SafeArea(bottom: true) keeps the last card clear of the system
+      // gesture/nav bar on edge-to-edge devices. AppBar handles the top.
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
-            // Drag handle
-            Container(
-              margin: EdgeInsets.only(top: 8),
-              height: 4,
-              width: 40,
-              decoration: BoxDecoration(
-                color: VelvetColors.border2,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l.autoDjPickGenres,
-                      style: TextStyle(
-                        color: VelvetColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    l.autoDjSelectedCount(selected.length),
-                    style: TextStyle(
-                        color: VelvetColors.textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                autofocus: false,
-                decoration: InputDecoration(
-                  hintText: l.autoDjSearchGenres,
-                  prefixIcon: Icon(Icons.search),
-                  isDense: true,
-                ),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
-            SizedBox(height: 8),
-            Expanded(child: _buildBody(filtered, selected, scrollController)),
+            _startButton(l),
+            const SizedBox(height: 16),
+            FedCard(children: [
+              if (showPlayFrom) _playFromRow(l),
+              _firstSongRow(l),
+            ]),
+            _header(l.autoDjMustMatch),
+            FedCard(children: [
+              _sonicRow(l),
+              _moodRow(l),
+              _genresRow(l),
+              _ratingRow(l),
+              _lengthRow(l),
+            ]),
+            _header(l.autoDjPrefer),
+            FedCard(children: [
+              _tempoRow(l),
+              _harmonicRow(l),
+              _skipWordsRow(l),
+            ]),
+            const SizedBox(height: 16),
+            FedCard(children: [_batchRow(l)]),
           ],
-        );
+        ),
+      ),
+    );
+  }
+
+  Widget _noServers(AppLocalizations l) => Scaffold(
+        appBar: AppBar(title: Text(l.autoDjTitle)),
+        body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const FedTile(Icons.all_inclusive),
+            const SizedBox(height: 20),
+            IntrinsicWidth(
+              child: FedButton(
+                l.addServerTitle,
+                key: const ValueKey('auto-dj-add-server'),
+                icon: Icons.add,
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => AddServerScreen())),
+              ),
+            ),
+          ]),
+        ),
+      );
+
+  /// Sentence case, over a card of two or more rows.
+  Widget _header(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 20, 14, 8),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: VelvetColors.textSecondary)),
+      );
+
+  /// Start, or the lit Stop — the Auto DJ button's on look, never red. The
+  /// label is the status: nothing else on the screen says whether it is on.
+  Widget _startButton(AppLocalizations l) {
+    final on = _dj != null;
+    final fg = on ? VelvetColors.primary : VelvetColors.onPrimary;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      side: on
+          ? BorderSide(color: VelvetColors.primary, width: 1.5)
+          : BorderSide.none,
+    );
+    return Material(
+      color: on ? VelvetColors.primaryDim : VelvetColors.primary,
+      shape: shape,
+      child: InkWell(
+        key: const ValueKey('auto-dj-start'),
+        customBorder: shape,
+        // Through the shared toggle: on an empty queue it asks for a first
+        // song, it starts on Play from's server, and Stop always stops.
+        onTap: () => toggleAutoDJ(context, announce: false),
+        child: SizedBox(
+          height: 52,
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(on ? Icons.stop : Icons.play_arrow, size: 20, color: fg),
+            const SizedBox(width: 6),
+            Text(on ? l.autoDjStopShort : l.start,
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, color: fg)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // ── session ──────────────────────────────────────────────────────
+
+  Widget _playFromRow(AppLocalizations l) {
+    void open() =>
+        _open((_) => PlayFromSheet(servers: _servers, home: _home));
+    if (!_all) {
+      return _ValueRow(
+        key: const ValueKey('auto-dj-row-play-from'),
+        title: l.autoDjPlayFrom,
+        value: _home == null ? '' : autoDjServerName(_home!),
+        onTap: open,
+      );
+    }
+    final servers = _servers;
+    final handler = MediaManager().audioHandler;
+    // A home that can't run sonic itself never asks anyone else: say why
+    // rather than count servers that will not be asked.
+    final blocked = _home == null ? null : allServersBlocked(_home!);
+    if (blocked != null) {
+      return _ValueRow(
+        key: const ValueKey('auto-dj-row-play-from'),
+        title: l.autoDjPlayFrom,
+        value: l.autoDjAllServers,
+        onTap: open,
+        extra: _warningExtra(sitOutLabel(l, blocked)),
+      );
+    }
+    final taking =
+        servers.where((s) => handler.multiServerSitOut(s) == null).toList();
+    // A tunnel server counts as taking part from the moment the session is
+    // armed, but it can only answer once its tunnel is up.
+    final connecting = _dj == null
+        ? 0
+        : fanOutConnecting(taking, ServerManager().tunnelServes).length;
+    final short = taking.length < servers.length;
+    return _ValueRow(
+      key: const ValueKey('auto-dj-row-play-from'),
+      title: l.autoDjPlayFrom,
+      value: l.autoDjAllServers,
+      onTap: open,
+      extra: (connecting > 0 || short)
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              if (connecting > 0)
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: VelvetColors.primary),
+                ),
+              if (short) ...[
+                const SizedBox(width: 6),
+                Flexible(
+                  child: _warningExtra(
+                      l.autoDjServersTakingPart(taking.length, servers.length)),
+                ),
+              ],
+            ])
+          : null,
+    );
+  }
+
+  /// A warning after a value: the icon and a few words.
+  Widget _warningExtra(String text) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.warning_amber_rounded, size: 16, color: VelvetColors.warning),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, color: VelvetColors.warning)),
+        ),
+      ]);
+
+  Widget _firstSongRow(AppLocalizations l) => _ValueRow(
+        key: const ValueKey('auto-dj-row-first-song'),
+        title: l.autoDjFirstSong,
+        value: switch (AutoDJManager().emptyQueueStart) {
+          EmptyQueueStart.ask => l.autoDjStartAskShort,
+          EmptyQueueStart.random => l.autoDjFirstSongRandom,
+          EmptyQueueStart.pick => l.autoDjFirstSongChoose,
+          EmptyQueueStart.recent => l.autoDjFirstSongRecent,
+        },
+        onTap: () => _open((_) => const FirstSongSheet()),
+      );
+
+  // ── must match ───────────────────────────────────────────────────
+
+  Widget _sonicRow(AppLocalizations l) {
+    final mgr = AutoDJManager();
+    final home = _home;
+    const key = ValueKey('auto-dj-row-sonic');
+    // Three reasons it can't run, and the row says which: the server
+    // predates 6.15.2, its scan has not produced vectors yet (mStream #879),
+    // or discovery is off there.
+    final String? reason = sonicKnownUnsupported(_version)
+        ? _needs(l, ServerParam.similarTo)
+        : home?.discoveryOn == true && home?.discoveryReady == false
+            ? l.autoDjStillScanning
+            : home?.sonicUsable != true
+                ? l.autoDjDiscoveryOff
+                : null;
+    if (reason != null) {
+      return _ValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
+    }
+    void open() => _open((_) => const SonicSheet());
+    // A running session that had to drop it says why, where the user goes to
+    // loosen it.
+    final drop =
+        _dj != null && mgr.sonicSimilarityEnabled ? MediaManager().audioHandler.sonicDrop : null;
+    if (drop != null) {
+      return _ValueRow(
+        key: key,
+        title: l.autoDjSonicTitle,
+        value: switch (drop) {
+          SonicDrop.tooStrict => l.autoDjTooStrict,
+          SonicDrop.scanning => l.autoDjStillScanning,
+          SonicDrop.discoveryOff => l.autoDjDiscoveryOff,
+        },
+        tone: AutoDjTone.warning,
+        onTap: open,
+      );
+    }
+    final on = mgr.sonicSimilarityEnabled;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjSonicTitle,
+      value: on
+          ? l.autoDjPercent((mgr.sonicMinSimilarity * 100).round())
+          : l.commonOff,
+      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
+      onTap: open,
+    );
+  }
+
+  Widget _moodRow(AppLocalizations l) {
+    final mgr = AutoDJManager();
+    final home = _home;
+    const key = ValueKey('auto-dj-row-mood');
+    // A peer's flags can't be read, so its mood flag is pinned off; with All
+    // servers the mood holds where a server taking part can filter by it.
+    final String? reason = !_all && home?.isFederated == true
+        ? l.autoDjNotOnPeers
+        : (_all
+                ? _servers.any((s) => s.moodFiltersAvailable == true)
+                : home?.moodFiltersAvailable == true)
+            ? null
+            : l.autoDjNoMoodData;
+    if (reason != null) {
+      return _ValueRow(key: key, title: l.autoDjMoodTitle, value: reason);
+    }
+    final mood = mgr.activeMoodFilter;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjMoodTitle,
+      value: mood == null ? l.autoDjAny : moodLabels(l, mood).join(' · '),
+      tone: mood == null ? AutoDjTone.neutral : AutoDjTone.active,
+      onTap: () async {
+        final f = await showMoodFilterSheet(
+            context, mgr.activeMoodFilter ?? MoodFilter.empty,
+            title: l.autoDjMoodTitle);
+        if (f != null) await mgr.setMood(f);
       },
     );
   }
 
-  Widget _buildBody(List<String> filtered, Set<String> selected,
-      ScrollController controller) {
-    final l = AppLocalizations.of(context);
-    if (widget.loading) {
-      return Center(
-          child: CircularProgressIndicator(color: VelvetColors.primary));
+  /// A server's genre filter in words, or null while it sets nothing. Sorted,
+  /// so two servers with the same genres agree whatever order they were
+  /// ticked in.
+  String? _genreValue(AppLocalizations l, Server s) {
+    if (!s.autoDJGenreEnabled || s.autoDJGenres.isEmpty) return null;
+    final list = ([...s.autoDJGenres]
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())))
+        .join(' · ');
+    return s.autoDJGenreMode == 'blacklist'
+        ? l.autoDjGenresSkipValue(list)
+        : list;
+  }
+
+  Widget _genresRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-genres');
+    final home = _home;
+    if (home == null || autoDjFiltersKnownUnsupported(_version)) {
+      return _ValueRow(
+          key: key,
+          title: l.autoDjGenres,
+          value: home == null ? '' : _needs(l, ServerParam.genres));
     }
-    if (widget.error != null) {
-      return Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(widget.error!,
-            style: TextStyle(color: VelvetColors.error)),
-      );
+    final servers = _editServers;
+    final values = servers.map((s) => _genreValue(l, s)).toList();
+    final value = allSame(values) ? values.firstOrNull : l.autoDjVaries;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjGenres,
+      value: value ?? l.autoDjAny,
+      tone: value == null ? AutoDjTone.neutral : AutoDjTone.active,
+      onTap: () => _open((_) => GenresSheet(
+          servers: servers,
+          initial: servers.contains(home) ? home : servers.first)),
+    );
+  }
+
+  Widget _ratingRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-rating');
+    // Ratings are per user, and a peer is reached with a key (or a guest
+    // token) that has none: the server skips minRating for that caller.
+    final servers = [
+      for (final s in _editServers)
+        if (!s.isFederated) s,
+    ];
+    if (servers.isEmpty) {
+      return _ValueRow(
+          key: key, title: l.autoDjRating, value: l.autoDjNotOnPeers);
     }
-    if (widget.available.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          l.autoDjNoGenresOnServer,
-          style: TextStyle(color: VelvetColors.textSecondary),
+    final values = servers.map((s) => s.autoDJminRating).toList();
+    final String? value;
+    if (!allSame(values)) {
+      value = l.autoDjVaries;
+    } else if (values.first case final r?) {
+      value = l.autoDjRatingValue(fmtStars(r));
+    } else {
+      value = null;
+    }
+    final home = _home;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjRating,
+      value: value ?? l.autoDjAny,
+      tone: value == null ? AutoDjTone.neutral : AutoDjTone.active,
+      onTap: () => _open((_) => RatingSheet(
+          servers: servers,
+          initial: servers.contains(home) ? home! : servers.first)),
+    );
+  }
+
+  Widget _lengthRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-length');
+    // The track-length window landed long after the 6.7.1 filters, so it is
+    // gated on its own.
+    if (autoDjDurationKnownUnsupported(_version)) {
+      return _ValueRow(
+          key: key,
+          title: l.autoDjDurationRange,
+          value: _needs(l, ServerParam.minDuration));
+    }
+    final b = AutoDJManager().activeDurationBounds;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjDurationRange,
+      value: b == null
+          ? l.autoDjAny
+          : autoDjLengthValue(l, b.min ?? AutoDJManager.durationFloorSec,
+              b.max ?? AutoDJManager.durationCeilSec),
+      tone: b == null ? AutoDjTone.neutral : AutoDjTone.active,
+      onTap: () => _open((_) => const LengthSheet()),
+    );
+  }
+
+  // ── prefer ───────────────────────────────────────────────────────
+
+  Widget _tempoRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-tempo');
+    // BPM continuity, harmonic mixing and the genre filter all arrived in
+    // 6.7.1. On a server known to predate them the rows say so instead of
+    // switching on something the app would strip before sending.
+    if (autoDjFiltersKnownUnsupported(_version)) {
+      return _ValueRow(
+          key: key, title: l.autoDjTempo, value: _needs(l, ServerParam.bpmRanges));
+    }
+    final mgr = AutoDJManager();
+    final on = mgr.bpmContinuityEnabled;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjTempo,
+      value: on ? l.autoDjBpmTolerance(mgr.bpmTolerance) : l.commonOff,
+      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
+      onTap: () => _open((_) => const TempoSheet()),
+    );
+  }
+
+  Widget _harmonicRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-harmonic');
+    if (autoDjFiltersKnownUnsupported(_version)) {
+      return _ValueRow(
+          key: key,
+          title: l.autoDjHarmonicTitle,
+          value: _needs(l, ServerParam.musicalKeys));
+    }
+    final mgr = AutoDJManager();
+    // The one switch on the screen: a plain yes or no with nothing to tune.
+    // One node for screen readers: the title, then on or off.
+    return MergeSemantics(
+      key: key,
+      child: Semantics(
+        toggled: mgr.harmonicMixingEnabled,
+        child: InkWell(
+          onTap: () =>
+              mgr.setHarmonicMixingEnabled(!mgr.harmonicMixingEnabled),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 8, 0),
+              child: Row(children: [
+                Expanded(
+                  child: Text(l.autoDjHarmonicTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary)),
+                ),
+                ExcludeSemantics(
+                  child: Switch(
+                    key: const ValueKey('auto-dj-harmonic-switch'),
+                    value: mgr.harmonicMixingEnabled,
+                    onChanged: (v) => mgr.setHarmonicMixingEnabled(v),
+                    activeThumbColor: VelvetColors.primary,
+                    inactiveThumbColor: VelvetColors.textSecondary,
+                  ),
+                ),
+              ]),
+            ),
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _skipWordsRow(AppLocalizations l) {
+    // Applied on the phone, after the server answers, so it works against
+    // any server however old.
+    final mgr = AutoDJManager();
+    final on = mgr.keywordFilterEnabled && mgr.keywordFilterWords.isNotEmpty;
+    return _ValueRow(
+      key: const ValueKey('auto-dj-row-skip-words'),
+      title: l.autoDjSkipWords,
+      value: on ? mgr.keywordFilterWords.join(' · ') : l.commonOff,
+      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
+      onTap: () => _open((_) => const SkipWordsSheet()),
+    );
+  }
+
+  // ── batch ────────────────────────────────────────────────────────
+
+  Widget _batchRow(AppLocalizations l) {
+    const key = ValueKey('auto-dj-row-batch');
+    // The app strips `limit` before sending to a server known to predate
+    // batch picks (6.26.0), so a row promising a batch would be a lie there.
+    if (autoDjBatchKnownUnsupported(_version)) {
+      return _ValueRow(
+          key: key, title: l.autoDjBatch, value: _needs(l, ServerParam.limit));
     }
-    if (filtered.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          l.autoDjNoGenresMatch(_query.trim()),
-          style: TextStyle(color: VelvetColors.textSecondary),
+    return _ValueRow(
+      key: key,
+      title: l.autoDjBatch,
+      value: l.autoDjSongsPerFetchValue(AutoDJManager().songsPerFetch),
+      onTap: () => _open((_) => const BatchSheet()),
+    );
+  }
+}
+
+/// One setting: its name at the left, its value at the right, a chevron.
+/// The whole row opens the setting's sheet. Without [onTap] it is a setting
+/// the server can't do: greyed, no chevron, and the value is the reason.
+class _ValueRow extends StatelessWidget {
+  const _ValueRow({
+    super.key,
+    required this.title,
+    required this.value,
+    this.tone = AutoDjTone.neutral,
+    this.onTap,
+    this.extra,
+  });
+
+  final String title;
+  final String value;
+  final AutoDjTone tone;
+  final VoidCallback? onTap;
+
+  /// Drawn after the value: Play from's spinner and "2 of 3".
+  final Widget? extra;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final valueColor =
+        enabled ? autoDjToneColor(tone) : VelvetColors.textSecondary;
+    Widget valueText(int lines) => Text(value,
+        maxLines: lines,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.right,
+        style: TextStyle(fontSize: 15, color: valueColor));
+    return Semantics(
+      button: enabled,
+      enabled: enabled,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 10, 0),
+            child: LayoutBuilder(
+              builder: (context, box) => Row(children: [
+                // The name keeps its line; a long value gives way.
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: enabled
+                              ? VelvetColors.textPrimary
+                              : VelvetColors.textTertiary)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (enabled && tone == AutoDjTone.warning) ...[
+                        Icon(Icons.warning_amber_rounded,
+                            size: 16, color: VelvetColors.warning),
+                        const SizedBox(width: 4),
+                      ],
+                      // A reason, or a value beside a status, may take two
+                      // lines rather than lose its words; a value keeps to
+                      // one. Beside a status the value takes its own width up
+                      // to a cap, and the status — the part saying what is
+                      // wrong — gets the rest.
+                      if (extra == null)
+                        Flexible(child: valueText(enabled ? 1 : 2))
+                      else ...[
+                        ConstrainedBox(
+                          constraints:
+                              BoxConstraints(maxWidth: box.maxWidth * 0.3),
+                          child: valueText(2),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(child: extra!),
+                      ],
+                    ],
+                  ),
+                ),
+                // Disabled rows keep the chevron's room, so every value ends
+                // on the same line.
+                const SizedBox(width: 6),
+                enabled
+                    ? Icon(Icons.chevron_right,
+                        size: 18, color: VelvetColors.textTertiary)
+                    : const SizedBox(width: 18),
+              ]),
+            ),
+          ),
         ),
-      );
-    }
-    return ListView.separated(
-      controller: controller,
-      itemCount: filtered.length,
-      separatorBuilder: (_, _) =>
-          Divider(color: VelvetColors.border, height: 1),
-      itemBuilder: (context, i) {
-        final g = filtered[i];
-        final on = selected.contains(g);
-        return CheckboxListTile(
-          dense: true,
-          value: on,
-          title: Text(g, style: TextStyle(color: VelvetColors.textPrimary)),
-          activeColor: VelvetColors.primary,
-          checkColor: Colors.white,
-          controlAffinity: ListTileControlAffinity.leading,
-          onChanged: (v) {
-            final genres = widget.server.autoDJGenres;
-            if (v == true) {
-              // Same cap the server Joi-validates at, so an over-long list
-              // can't 400 the whole random-songs request.
-              if (!genres.contains(g) &&
-                  genres.length < AutoDJManager.maxGenres) {
-                genres.add(g);
-              }
-            } else {
-              genres.remove(g);
-            }
-            // Persisted when the sheet closes (the caller commits), but shown
-            // now — this checkbox is its own source of truth while open.
-            setState(() {});
-          },
-        );
-      },
+      ),
     );
   }
 }

@@ -19,6 +19,7 @@ import 'package:rxdart/rxdart.dart';
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../util/write_chain.dart';
+import 'log_manager.dart';
 
 /// Which paths feed random-songs' `similarTo` when sonic mode is on — a
 /// pure client-side policy (the server statelessly averages whatever
@@ -45,6 +46,11 @@ enum EmptyQueueStart {
 
   /// Drop into the library so the user picks the opening track.
   pick,
+
+  /// Offer the songs this phone played last on the DJ's server, in a
+  /// dropdown, and open on the one picked. What is remembered is the way to
+  /// start, not a song: each start asks which.
+  recent,
 }
 
 class AutoDJManager {
@@ -210,6 +216,13 @@ class AutoDJManager {
   /// and only makes sense with more than one server configured.
   bool multiServerEnabled = false;
 
+  /// [Server.localname] the Auto DJ screen's Play from names: where Start,
+  /// the queue's Auto DJ button and CarPlay arm the DJ, whichever server is
+  /// being browsed. Null until one is chosen (the current server stands in).
+  /// With [multiServerEnabled] it is the session's home — the last single
+  /// server, and where Play from returns when All servers is let go.
+  String? playFromServer;
+
   /// [Server.localname] Auto DJ was last switched on for, or null when it was
   /// off. Written by the audio handler on every setAutoDJ, and read once at
   /// launch to bring the DJ back up where it was left — armed only, never
@@ -297,7 +310,15 @@ class AutoDJManager {
       moodFilterEnabled = m['moodFilterEnabled'] == true;
       moodFilter = MoodFilter.fromJson(m['moodFilter']);
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
+      // A file from before Play from existed starts it where the DJ last ran,
+      // so Start after an upgrade goes back there, not to the browsed server.
+      playFromServer = m['playFromServer'] is String
+          ? m['playFromServer']
+          : enabledServer;
       multiServerEnabled = m['multiServerEnabled'] ?? false;
+      // All servers runs on sonic picks, so it can't stay on without them —
+      // the Sonic similarity sheet enforces that; an older file may not.
+      if (!sonicSimilarityEnabled) multiServerEnabled = false;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -321,7 +342,15 @@ class AutoDJManager {
   // auto_dj.json (load() silently resets every setting on a corrupt file).
   final WriteChain _writeChain = WriteChain();
 
-  Future<void> _save() => _writeChain.run(() async {
+  /// Write auto_dj.json. A failure is logged, not thrown: every setter has
+  /// already applied its value (and notified) by then, so a caller doing
+  /// several steps — a sheet's Done — must not have the rest cut short by a
+  /// full disk.
+  Future<void> _save() => _write().catchError((Object e) {
+        appLog('[dj] saving auto_dj.json failed: $e');
+      });
+
+  Future<void> _write() => _writeChain.run(() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
       // Held only until the migration runs; see the field declarations.
@@ -344,6 +373,7 @@ class AutoDJManager {
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
+      'playFromServer': playFromServer,
       'multiServerEnabled': multiServerEnabled,
       'durationFilterEnabled': durationFilterEnabled,
       'minDurationSec': minDurationSec,
@@ -362,6 +392,13 @@ class AutoDJManager {
   Future<void> setEnabledServer(String? localname) async {
     if (enabledServer == localname) return;
     enabledServer = localname;
+    await _save();
+  }
+
+  Future<void> setPlayFromServer(String? localname) async {
+    if (playFromServer == localname) return;
+    playFromServer = localname;
+    _notify();
     await _save();
   }
 
@@ -393,6 +430,26 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ screen's Length sheet, applied at once: a window at both
+  /// rails is "Any", which is the filter switched off.
+  Future<void> setDurationFilter(
+      {required int minSec,
+      required int maxSec,
+      required bool allowUnknown}) async {
+    minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
+    maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
+    if (minDurationSec > maxDurationSec) {
+      final swap = minDurationSec;
+      minDurationSec = maxDurationSec;
+      maxDurationSec = swap;
+    }
+    durationFilterEnabled =
+        minDurationSec > durationFloorSec || maxDurationSec < durationCeilSec;
+    allowUnknownDuration = allowUnknown;
+    _notify();
+    await _save();
+  }
+
   /// The bounds actually worth sending. A rail means "unbounded", so it is
   /// omitted; the server treats a missing bound as no constraint on that side.
   /// Null when the window is wide open, which is the cue to send nothing at
@@ -416,6 +473,14 @@ class AutoDJManager {
 
   Future<void> setMoodFilter(MoodFilter f) async {
     moodFilter = f;
+    _notify();
+    await _save();
+  }
+
+  /// The Auto DJ screen's Mood sheet: nothing chosen is the filter off.
+  Future<void> setMood(MoodFilter f) async {
+    moodFilter = f;
+    moodFilterEnabled = !f.isEmpty;
     _notify();
     await _save();
   }
@@ -445,6 +510,20 @@ class AutoDJManager {
 
   Future<void> removeKeyword(String word) async {
     keywordFilterWords.remove(word);
+    _notify();
+    await _save();
+  }
+
+  /// The Auto DJ screen's Skip words sheet: the whole list at once, case-
+  /// insensitively unique and capped like [addKeyword]; an empty list is the
+  /// filter off.
+  Future<void> setKeywords(List<String> words) async {
+    final seen = <String>{};
+    keywordFilterWords = [
+      for (final w in words.map((w) => w.trim()))
+        if (w.isNotEmpty && seen.add(w.toLowerCase())) w,
+    ].take(maxKeywords).toList();
+    keywordFilterEnabled = keywordFilterWords.isNotEmpty;
     _notify();
     await _save();
   }
@@ -548,6 +627,14 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ screen's Tempo sheet, applied at once.
+  Future<void> setTempo({required bool enabled, required int tolerance}) async {
+    bpmContinuityEnabled = enabled;
+    bpmTolerance = tolerance.clamp(1, 20);
+    _notify();
+    await _save();
+  }
+
   Future<void> setBpmTolerance(int v) async {
     bpmTolerance = v.clamp(1, 20);
     _notify();
@@ -577,6 +664,18 @@ class AutoDJManager {
 
   Future<void> setSonicSimilarityEnabled(bool v) async {
     sonicSimilarityEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  /// The Auto DJ screen's Sonic similarity sheet, applied at once.
+  Future<void> setSonic(
+      {required bool enabled,
+      required double minSimilarity,
+      required SonicAnchorMode anchor}) async {
+    sonicSimilarityEnabled = enabled;
+    sonicMinSimilarity = minSimilarity.clamp(0.0, 1.0);
+    sonicAnchorMode = anchor;
     _notify();
     await _save();
   }

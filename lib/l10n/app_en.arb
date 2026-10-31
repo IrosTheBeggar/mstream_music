@@ -709,79 +709,8 @@
     "description": "Generic Add button label."
   },
   "autoDjTitle": "Auto DJ",
-  "autoDjAddServerFirst": "Add a server first.",
-  "autoDjSectionServer": "Server",
-  "autoDjSectionSources": "Sources",
-  "autoDjSectionContinuity": "Continuity",
-  "autoDjSectionFilters": "Filters",
   "@autoDjTitle": {
     "description": "Auto DJ screen title + section headers."
-  },
-  "autoDjMultiServerTitle": "Play from every server",
-  "@autoDjMultiServerTitle": {
-    "description": "Switch enabling cross-server Auto DJ."
-  },
-  "autoDjMultiServerSubtitle": "Auto DJ picks from every server at once, matching the sound of what is playing",
-  "@autoDjMultiServerSubtitle": {
-    "description": "Subtitle for that switch."
-  },
-  "autoDjMultiServerNeedsSonic": "Needs Sonic similarity switched on, below",
-  "@autoDjMultiServerNeedsSonic": {
-    "description": "Warning under the multi-server switch when sonic similarity is off (the mode only runs on sonic picks)."
-  },
-  "autoDjSectionShared": "The session",
-  "@autoDjSectionShared": {
-    "description": "Header for settings that apply to every server."
-  },
-  "autoDjSectionPerServer": "Each library",
-  "@autoDjSectionPerServer": {
-    "description": "Header for settings that differ per server."
-  },
-  "autoDjEditingServer": "Settings for",
-  "@autoDjEditingServer": {
-    "description": "Label above the dropdown choosing whose settings are shown."
-  },
-  "autoDjMultiServerAllIn": "{count} servers are taking part",
-  "@autoDjMultiServerAllIn": {
-    "description": "Readout when every server can take part.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "autoDjMultiServerConnecting": "{count} still connecting",
-  "@autoDjMultiServerConnecting": {
-    "description": "Second line of the participants readout: how many tunnel servers are still dialing.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "autoDjMultiServerSomeExcluded": "{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version",
-  "@autoDjMultiServerSomeExcluded": {
-    "description": "Readout when some servers cannot take part, and why.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "autoDjSectionQueue": "Queue",
-  "@autoDjSectionQueue": {
-    "description": "Header for how Auto DJ fills the queue."
-  },
-  "autoDjSongsPerFetchTitle": "Songs per fetch",
-  "@autoDjSongsPerFetchTitle": {
-    "description": "Songs-per-fetch row: how many songs one Auto DJ turn queues."
-  },
-  "autoDjSongsPerFetchSubtitle": "How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.",
-  "@autoDjSongsPerFetchSubtitle": {
-    "description": "Songs-per-fetch row subtitle."
   },
   "autoDjSongsPerFetchValue": "{count, plural, =1{1 song} other{{count} songs}}",
   "@autoDjSongsPerFetchValue": {
@@ -791,12 +720,6 @@
         "type": "int"
       }
     }
-  },
-  "autoDjBpmTitle": "BPM continuity",
-  "autoDjBpmSubtitle": "Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.",
-  "autoDjTolerance": "Tolerance",
-  "@autoDjBpmTitle": {
-    "description": "BPM continuity row."
   },
   "autoDjBpmTolerance": "± {bpm} BPM",
   "@autoDjBpmTolerance": {
@@ -808,140 +731,18 @@
     }
   },
   "autoDjHarmonicTitle": "Harmonic mixing",
-  "autoDjHarmonicSubtitle": "Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).",
   "@autoDjHarmonicTitle": {
     "description": "Harmonic mixing row."
-  },
-  "autoDjDurationTitle": "Track length",
-  "@autoDjDurationTitle": {
-    "description": "Auto DJ track-length filter switch title."
-  },
-  "autoDjDurationSubtitle": "Skip interludes and long mixes by only picking tracks in a length range",
-  "@autoDjDurationSubtitle": {
-    "description": "Subtitle for that switch."
   },
   "autoDjDurationRange": "Length",
   "@autoDjDurationRange": {
     "description": "Label beside the length range slider."
   },
-  "autoDjDurationAny": "Any length",
-  "@autoDjDurationAny": {
-    "description": "Range readout when neither bound is set."
-  },
-  "autoDjDurationOver": "Over {min}",
-  "@autoDjDurationOver": {
-    "description": "Range readout with only a minimum, e.g. Over 2:00.",
-    "placeholders": {
-      "min": {
-        "type": "String"
-      }
-    }
-  },
-  "autoDjDurationUnder": "Under {max}",
-  "@autoDjDurationUnder": {
-    "description": "Range readout with only a maximum, e.g. Under 6:00.",
-    "placeholders": {
-      "max": {
-        "type": "String"
-      }
-    }
-  },
-  "autoDjDurationBetween": "{min} to {max}",
-  "@autoDjDurationBetween": {
-    "description": "Range readout with both bounds, e.g. 2:00 to 6:00.",
-    "placeholders": {
-      "min": {
-        "type": "String"
-      },
-      "max": {
-        "type": "String"
-      }
-    }
-  },
-  "autoDjDurationAllowUnknown": "Include tracks of unknown length",
-  "@autoDjDurationAllowUnknown": {
-    "description": "Sub-switch letting unknown-length tracks through."
-  },
-  "autoDjDurationAllowUnknownSub": "Tracks your server has not read a length for are skipped otherwise",
-  "@autoDjDurationAllowUnknownSub": {
-    "description": "Subtitle for that sub-switch."
-  },
   "autoDjMoodTitle": "Mood",
   "@autoDjMoodTitle": {
     "description": "Auto DJ mood filter switch title."
   },
-  "autoDjMoodSubtitle": "Only pick songs that fit a mood",
-  "@autoDjMoodSubtitle": {
-    "description": "Subtitle for that switch."
-  },
-  "autoDjMoodChoose": "Choose a mood",
-  "@autoDjMoodChoose": {
-    "description": "Shown under the mood switch while it is on and nothing is chosen yet; tapping opens the mood sheet."
-  },
-  "autoDjStatusOn": "Auto DJ is on",
-  "autoDjStatusOff": "Auto DJ is off",
-  "autoDjStatusOffDetail": "Tap below to start. The current server's library will be used.",
-  "autoDjStart": "Start Auto DJ",
-  "autoDjStop": "Stop Auto DJ",
-  "@autoDjStatusOn": {
-    "description": "Auto DJ status block + enable button."
-  },
-  "autoDjStatusOnDetail": "Songs are picked from {url} when the queue runs low.",
-  "@autoDjStatusOnDetail": {
-    "description": "Auto DJ on-state detail line.",
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
-  "autoDjOneSourceRequired": "At least one source is required.",
-  "autoDjMinRating": "Minimum rating",
-  "autoDjMinRatingSubtitle": "Only pick songs at or above this rating.",
-  "autoDjRatingAny": "Any",
-  "@autoDjMinRating": {
-    "description": "Minimum-rating filter row ('Any' = no minimum)."
-  },
-  "autoDjGenreTitle": "Genre filter",
-  "autoDjGenreSubtitle": "Whitelist plays only matching tracks; blacklist skips them.",
-  "autoDjWhitelist": "Whitelist",
-  "autoDjBlacklist": "Blacklist",
-  "autoDjNoGenres": "No genres selected. Tap \"Pick genres\" to choose.",
-  "autoDjPickGenres": "Pick genres",
   "autoDjGenreLoadError": "Could not load genres",
-  "@autoDjGenreTitle": {
-    "description": "Genre filter section."
-  },
-  "autoDjKeywordTitle": "Keyword filter",
-  "autoDjKeywordSubtitle": "Skip picks whose title, artist, album, or filepath contains any of these words.",
-  "autoDjNoKeywords": "No keywords. Add words below to start filtering.",
-  "autoDjKeywordHint": "e.g. \"live\" or \"remix\"",
-  "@autoDjKeywordTitle": {
-    "description": "Keyword filter section."
-  },
-  "autoDjSearchGenres": "Search genres…",
-  "autoDjNoGenresOnServer": "No genres found on this server.",
-  "@autoDjSearchGenres": {
-    "description": "Genre picker sheet."
-  },
-  "autoDjSelectedCount": "{count} selected",
-  "@autoDjSelectedCount": {
-    "description": "Count of selected genres in the picker header.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "autoDjNoGenresMatch": "No genres match \"{query}\".",
-  "@autoDjNoGenresMatch": {
-    "description": "Empty-search state in the genre picker.",
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
   "download": "Download",
   "addAll": "Add All",
   "browserMoreActions": "More actions",
@@ -2007,31 +1808,6 @@
   "@autoDjSonicTitle": {
     "description": "Auto DJ continuity toggle: pick the next track by audio similarity to the playing one."
   },
-  "autoDjSonicSubtitle": "Only pick songs that sound like the session, using the server's audio analysis.",
-  "@autoDjSonicSubtitle": {
-    "description": "Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback."
-  },
-  "autoDjSonicUnavailable": "This server doesn't have discovery data — picks stay random.",
-  "@autoDjSonicUnavailable": {
-    "description": "Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability."
-  },
-  "autoDjSonicNotReady": "Discovery is on but the scan hasn't produced data yet — picks stay random until it does.",
-  "@autoDjSonicNotReady": {
-    "description": "Sonic similarity subtitle when discovery is on but the scan has produced no vectors yet (server features.discoveryReady false)."
-  },
-  "autoDjSonicStrictness": "Match strictness",
-  "@autoDjSonicStrictness": {
-    "description": "Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity)."
-  },
-  "autoDjSonicStrictnessValue": "{pct}% or closer",
-  "@autoDjSonicStrictnessValue": {
-    "description": "Value readout next to the strictness slider: picks must match at least this percentage.",
-    "placeholders": {
-      "pct": {
-        "type": "int"
-      }
-    }
-  },
   "autoDjSonicSeedLabel": "Seed song",
   "@autoDjSonicSeedLabel": {
     "description": "Label for the sonic seed row and the seed-picker sheet title: the song the session starts from."
@@ -2056,11 +1832,11 @@
   "@autoDjSonicSeedRemove": {
     "description": "Tooltip on the clear button next to a set seed."
   },
-  "autoDjSonicSeedFailed": "Couldn't fetch a song from the server.",
+  "autoDjSonicSeedFailed": "Couldn't get a song",
   "@autoDjSonicSeedFailed": {
     "description": "Error when the random-seed request fails."
   },
-  "autoDjSeedNoMatch": "No songs match your Auto DJ filters — try loosening them",
+  "autoDjSeedNoMatch": "No songs match your filters",
   "@autoDjSeedNoMatch": {
     "description": "Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked."
   },
@@ -2083,10 +1859,6 @@
   "discoverSessionStarted": "Sonic session started — Auto DJ is on.",
   "@discoverSessionStarted": {
     "description": "Toast after the session card starts playback (sonic Auto DJ was enabled and seeded)."
-  },
-  "autoDjSonicAnchorLabel": "Anchor",
-  "@autoDjSonicAnchorLabel": {
-    "description": "Label above the sonic anchor-mode selector (rolling vs locked)."
   },
   "autoDjSonicAnchorRolling": "Follow the vibe",
   "@autoDjSonicAnchorRolling": {
@@ -2262,48 +2034,8 @@
       }
     }
   },
-  "autoDjStartTitle": "Start Auto DJ with what?",
-  "@autoDjStartTitle": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartSubtitle": "Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.",
-  "@autoDjStartSubtitle": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartRandom": "Surprise me",
-  "@autoDjStartRandom": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartRandomSub": "Pick a random song from the library and build outward from it.",
-  "@autoDjStartRandomSub": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartPick": "Let me choose",
-  "@autoDjStartPick": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartPickSub": "Open the library and pick the opening track yourself.",
-  "@autoDjStartPickSub": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartRemember": "Remember this",
-  "@autoDjStartRemember": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjStartRememberSub": "Skip this question next time and always start this way.",
-  "@autoDjStartRememberSub": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
   "autoDjStartPickBanner": "Pick the opening song — tap a track anywhere in the library",
   "@autoDjStartPickBanner": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjOnEmptyQueue": "On an empty queue",
-  "@autoDjOnEmptyQueue": {
-    "description": "Auto DJ empty-queue start chooser"
-  },
-  "autoDjOnEmptyQueueSub": "What Auto DJ does when you switch it on with nothing queued.",
-  "@autoDjOnEmptyQueueSub": {
     "description": "Auto DJ empty-queue start chooser"
   },
   "autoDjStartAskShort": "Ask",
@@ -2339,14 +2071,6 @@
         "type": "String"
       }
     }
-  },
-  "autoDjNeedsNewerServer": "BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.",
-  "@autoDjNeedsNewerServer": {
-    "description": "Auto DJ server-version gating notes"
-  },
-  "autoDjSonicNeedsNewerServer": "Needs server 6.15.2 or newer",
-  "@autoDjSonicNeedsNewerServer": {
-    "description": "Auto DJ server-version gating notes"
   },
   "torrentScreenTitle": "Add torrent",
   "@torrentScreenTitle": {
@@ -6104,5 +5828,76 @@
   "queueSharePlaylist": "Share playlist",
   "@queueSharePlaylist": {
     "description": "Now-playing queue ⋮ menu: opens the Share Playlist dialog for the queue. Sentence case like the menu's other rows."
+  },
+  "autoDjStopShort": "Stop",
+  "autoDjPlayFrom": "Play from",
+  "autoDjAllServers": "All servers",
+  "autoDjServersTakingPart": "{count} of {total}",
+  "@autoDjServersTakingPart": {
+    "placeholders": {"count": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "autoDjFirstSong": "First song",
+  "autoDjFirstSongRandom": "Random",
+  "autoDjFirstSongChoose": "Choose",
+  "autoDjMustMatch": "Must match",
+  "autoDjPrefer": "Prefer",
+  "autoDjPercent": "{pct}%",
+  "@autoDjPercent": {
+    "placeholders": {"pct": {"type": "int"}}
+  },
+  "autoDjDrift": "Drift",
+  "autoDjStayClose": "Stay close",
+  "autoDjGenres": "Genres",
+  "autoDjGenresOnly": "Only",
+  "autoDjGenresSkip": "Skip",
+  "autoDjGenresSkipValue": "Skip {genres}",
+  "@autoDjGenresSkipValue": {
+    "placeholders": {"genres": {"type": "String"}}
+  },
+  "autoDjRating": "Rating",
+  "autoDjRatingValue": "{stars}★+",
+  "@autoDjRatingValue": {
+    "placeholders": {"stars": {"type": "String"}}
+  },
+  "autoDjAny": "Any",
+  "autoDjLengthOver": "{min}+",
+  "@autoDjLengthOver": {
+    "placeholders": {"min": {"type": "String"}}
+  },
+  "autoDjLengthUnder": "Under {max}",
+  "@autoDjLengthUnder": {
+    "placeholders": {"max": {"type": "String"}}
+  },
+  "autoDjLengthBetween": "{min}–{max}",
+  "@autoDjLengthBetween": {
+    "placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}
+  },
+  "autoDjIncludeUnknown": "Include unknown",
+  "autoDjTempo": "Tempo",
+  "autoDjSkipWords": "Skip words",
+  "autoDjBatch": "Batch",
+  "autoDjVaries": "Varies",
+  "autoDjMax": "{count} max",
+  "@autoDjMax": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "autoDjNeedsServer": "Needs server {version}+",
+  "@autoDjNeedsServer": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "autoDjDiscoveryOff": "Discovery off",
+  "autoDjStillScanning": "Still scanning",
+  "autoDjTooStrict": "Too strict",
+  "autoDjNotOnPeers": "Not on peers",
+  "autoDjNoMoodData": "No mood data",
+  "autoDjOtherModel": "Different audio model",
+  "autoDjUnreachable": "Unreachable",
+  "autoDjRemember": "Remember",
+  "autoDjGenresNone": "No genres",
+  "autoDjNoMatches": "No matches",
+  "autoDjRecentlyPlayed": "Recently played",
+  "autoDjFirstSongRecent": "Recently played",
+  "@autoDjFirstSongRecent": {
+    "description": "The Auto DJ screen's First song row value when First song is Recently played: a short form of autoDjRecentlyPlayed, since the row's value slot is narrow."
   }
 }
