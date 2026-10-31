@@ -127,6 +127,24 @@ class Server {
   //                                  federated peer (a copy lands on the
   //                                  PARENT, whose flag governs).
   bool? noUpload;
+  //   noMkdir                      — this ACCOUNT may not make folders
+  //                                  (caller-scoped: `user.noMkdir` on
+  //                                  /api, `noMkdir` on ping — the server
+  //                                  switch or the user's allow_mkdir).
+  //                                  Add from YouTube never posts into a
+  //                                  folder it could not make or check.
+  //                                  Null from a server too old to say,
+  //                                  and pinned null on a federated peer
+  //                                  (the feature is hidden there).
+  bool? noMkdir;
+  //   supportedAudioFormats        — the formats the server converts to:
+  //                                  the keys of `supportedAudioFiles`
+  //                                  (under `features` on /api, flat on
+  //                                  ping) whose value is true, sorted —
+  //                                  the only `outputCodec`s POST /ytdl
+  //                                  takes. Null when the server sent no
+  //                                  map, and pinned null on a peer.
+  List<String>? supportedAudioFormats;
   //   statsVersion                 — the Stats API generation the server
   //                                  advertises (`features.stats`; 2 = Stats
   //                                  API v2: plays post, history reads). Null
@@ -325,6 +343,17 @@ class Server {
   GenreSource autoDJGenreSource = GenreSource.both;
   List<String> playlists = [];
 
+  // Add from YouTube, remembered per server. The destination the screen
+  // last saved to — a library (vpath) and a layout under it ('' = the
+  // library's top folder) — and the format; null = never chosen (first
+  // use). The hub's jobs ride along as raw json (objects/ytdl_job.dart is
+  // the typed copy the hub keeps), so a row survives the app closing while
+  // the server works.
+  String? ytdlLibrary;
+  String? ytdlLayout;
+  String? ytdlFormat;
+  List<Map<String, dynamic>> ytdlJobs = [];
+
   Server(this.url, this.username, this.password, this.jwt, this.localname);
 
   bool get isIroh => connectionType == 'iroh';
@@ -459,6 +488,26 @@ class Server {
             ? json['moodFiltersAvailable']
             : null,
         noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
+        noMkdir = json['noMkdir'] is bool ? json['noMkdir'] : null,
+        supportedAudioFormats = json['supportedAudioFormats'] is List
+            ? [
+                for (final f in json['supportedAudioFormats'])
+                  if (f is String) f
+              ]
+            : null,
+        ytdlLibrary = json['ytdlLibrary'] is String ? json['ytdlLibrary'] : null,
+        ytdlLayout = json['ytdlLayout'] is String ? json['ytdlLayout'] : null,
+        ytdlFormat = json['ytdlFormat'] is String ? json['ytdlFormat'] : null,
+        ytdlJobs = json['ytdlJobs'] is List
+            ? [
+                for (final j in json['ytdlJobs'])
+                  if (j is Map)
+                    {
+                      for (final e in j.entries)
+                        if (e.key is String) e.key as String: e.value
+                    }
+              ]
+            : [],
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
         discoveryEnabled =
@@ -510,6 +559,12 @@ class Server {
         'discoveryPluginsAvailable': discoveryPluginsAvailable,
         'moodFiltersAvailable': moodFiltersAvailable,
         'noUpload': noUpload,
+        'noMkdir': noMkdir,
+        'supportedAudioFormats': supportedAudioFormats,
+        'ytdlLibrary': ytdlLibrary,
+        'ytdlLayout': ytdlLayout,
+        'ytdlFormat': ytdlFormat,
+        'ytdlJobs': ytdlJobs,
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
