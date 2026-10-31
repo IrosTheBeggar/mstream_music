@@ -149,6 +149,22 @@ void main() {
       expect(caps.rejectedFor(s), isEmpty);
     });
 
+    test('a retry goes again only without a key the body carried', () {
+      final s = _server('retry', '6.22.0');
+      final caps = ServerCapabilities();
+      addTearDown(() => caps.forget(s));
+      final sent = {
+        'genres': ['Ambient'],
+        'moods': {'energy': 'relaxed', 'threshold': 0.7},
+      };
+      expect(caps.retryWithout(s, '"genres" is not allowed', sent), 'genres');
+      expect(caps.retryWithout(s, '"threshold" is not allowed', sent), isNull,
+          reason: 'inside `moods`: the next body would be the same');
+      expect(caps.rejectedFor(s), containsAll(['genres', 'threshold']));
+      expect(caps.retryWithout(s, '{"error":"Authentication Error"}', sent),
+          isNull);
+    });
+
     test('verdicts do not leak between servers', () {
       final a = _server('old', '6.22.0');
       final b = _server('new', '6.22.0');

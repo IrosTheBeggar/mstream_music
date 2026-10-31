@@ -527,12 +527,13 @@ class DiscoveryPageController extends ChangeNotifier {
   /// The Filters sheet's Done, or the strip's Clear: [filter] becomes the
   /// page's, shown at once, and every source is asked again under it (a new
   /// random batch of seeds, the history songs that match first — the
-  /// server's choice).
+  /// server's choice). A level picked with no mood set asks nothing: the
+  /// calls would be the same.
   Future<void> setMoods(MoodFilter filter) async {
     if (_disposed || !moodsAvailable || filter == moods) return;
-    MoodFilters().set(MoodPage.discover, filter);
+    final ask = MoodFilters().set(MoodPage.discover, filter);
     notifyListeners();
-    await load();
+    if (ask) await load();
   }
 
   /// The seeds sheet's "Use these N": [drop] are seed hashes switched off

@@ -692,13 +692,16 @@ class ApiManager {
   }
 
   /// The Filters sheet's Done (or the strip's Clear) on an Albums, Artists,
-  /// Rated or Recent list: remember [filter] for the page and re-list the
-  /// open list in place. The badge and the strip show the new choice at once; the
-  /// rows follow when the answer lands (an older answer landing later is
-  /// dropped).
-  Future<void> setMoodFilter(MoodListFrame frame, MoodFilter filter) async {
-    MoodFilters().set(frame.page, filter);
+  /// Rated or Recent list: remember [filter] (and a song list's [sort]) for
+  /// the page and re-list the open list in place. The badge and the strip
+  /// show the new choice at once; the rows follow when the answer lands (an
+  /// older answer landing later is dropped). Nothing is asked again when
+  /// the list would come back the same (a level picked with no mood set).
+  Future<void> setMoodFilter(MoodListFrame frame, MoodFilter filter,
+      {MoodSort? sort}) async {
+    final ask = MoodFilters().set(frame.page, filter, sort: sort);
     BrowserManager().updateStream();
+    if (!ask) return;
     if (frame.page == MoodPage.albums) {
       await getAlbums(useThisServer: frame.server, replace: true);
     } else if (frame.page == MoodPage.artists) {
@@ -762,15 +765,20 @@ class ApiManager {
   /// arrays with no echo, so the filters go by the server's flag
   /// (Server.moodFiltersAvailable — off for a connected server, whose routes
   /// may refuse the key). `moods` is the page's filter in its wire form, null
-  /// when the server cannot filter or nothing is set; `generation` lets a
-  /// re-list tell it was overtaken.
-  ({MoodListFrame? frame, Map<String, dynamic>? moods, int generation})
-      _songListMoods(MoodPage page, Server? useThisServer) {
+  /// when the server cannot filter or nothing is set; `sort` is the order to
+  /// show the answer in; `generation` lets a re-list tell it was overtaken.
+  ({
+    MoodListFrame? frame,
+    Map<String, dynamic>? moods,
+    MoodSort sort,
+    int generation
+  }) _songListMoods(MoodPage page, Server? useThisServer) {
     final server = useThisServer ?? ServerManager().currentServer;
     final can = server?.moodFiltersAvailable == true;
     return (
       frame: can ? MoodListFrame(useThisServer, page) : null,
       moods: can ? MoodFilters().of(page).toJson() : null,
+      sort: can ? MoodFilters().orderOf(page) : MoodSort.list,
       generation: MoodFilters().generation(page),
     );
   }
@@ -805,9 +813,11 @@ class ApiManager {
             null);
 
         newItem.metadata = m;
+        newItem.moodMatch = moodMatchOf(e);
 
         newList.add(newItem);
       });
+      if (asked.sort == MoodSort.match) newList = byMoodMatch(newList);
       if (replace) {
         BrowserManager().replaceMoodList(MoodPage.recent, newList, asked.frame);
       } else {
@@ -848,9 +858,11 @@ class ApiManager {
             m.artist);
 
         newItem.metadata = m;
+        newItem.moodMatch = moodMatchOf(e);
 
         newList.add(newItem);
       });
+      if (asked.sort == MoodSort.match) newList = byMoodMatch(newList);
       if (replace) {
         BrowserManager().replaceMoodList(MoodPage.rated, newList, asked.frame);
       } else {
@@ -1342,12 +1354,13 @@ class ApiManager {
       // A key the version table could not rule out — a fork, a version not
       // read yet — is learned from the rejection and the pick sent again
       // without it, as the DJ's own picks do; otherwise "not allowed" would
-      // read as "nothing matched". Each pass drops a key, so the cap is only
-      // a backstop.
+      // read as "nothing matched". Each pass drops a key the body carried
+      // (ServerCapabilities.retryWithout), so the cap is only a backstop.
       for (var tries = 0;
           response.statusCode > 299 && tries < wanted.length;
           tries++) {
-        if (ServerCapabilities().noteRejection(server, response.body) ==
+        if (ServerCapabilities()
+                .retryWithout(server, response.body, filtered.body) ==
             null) {
           break;
         }

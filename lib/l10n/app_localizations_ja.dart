@@ -1025,6 +1025,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get moodDanceable => '踊れる';
 
   @override
+  String get moodStrict => '厳密';
+
+  @override
+  String get moodStandard => '標準';
+
+  @override
+  String get moodLoose => '緩め';
+
+  @override
+  String get moodStrictnessGroup => '厳密・標準・緩め';
+
+  @override
+  String get moodSort => '並べ替え';
+
+  @override
+  String get moodSortRating => '評価';
+
+  @override
+  String get moodSortNewest => '新しい順';
+
+  @override
+  String get moodSortMatch => '一致度';
+
+  @override
   String get browserRecent => '最近';
 
   @override

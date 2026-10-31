@@ -1059,6 +1059,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get moodDanceable => 'Tanzbar';
 
   @override
+  String get moodStrict => 'Streng';
+
+  @override
+  String get moodStandard => 'Standard';
+
+  @override
+  String get moodLoose => 'Locker';
+
+  @override
+  String get moodStrictnessGroup => 'Streng, Standard oder locker';
+
+  @override
+  String get moodSort => 'Sortieren';
+
+  @override
+  String get moodSortRating => 'Bewertung';
+
+  @override
+  String get moodSortNewest => 'Neueste';
+
+  @override
+  String get moodSortMatch => 'Treffer';
+
+  @override
   String get browserRecent => 'Neueste';
 
   @override

@@ -380,10 +380,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       value: mood == null ? l.autoDjAny : moodLabels(l, mood).join(' · '),
       tone: mood == null ? AutoDjTone.neutral : AutoDjTone.active,
       onTap: () async {
-        final f = await showMoodFilterSheet(
-            context, mgr.activeMoodFilter ?? MoodFilter.empty,
+        // Off, the sheet still starts at the level last picked.
+        final f = await showMoodFilterSheet(context,
+            mgr.activeMoodFilter ?? MoodFilter(level: mgr.moodFilter.level),
             title: l.autoDjMoodTitle);
-        if (f != null) await mgr.setMood(f);
+        if (f != null) await mgr.setMood(f.filter);
       },
     );
   }
