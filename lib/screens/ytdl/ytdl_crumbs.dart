@@ -14,6 +14,11 @@ import 'ytdl_card_parts.dart' show ytdlInk;
 
 const String kYtdlCrumbSep = ' › ';
 
+/// How long a path preview waits after the last change before it is read
+/// out (spec §9: a polite live region, after 800 ms without typing) — the
+/// Where sheet's and the folder sheet's "Sort into subfolders".
+const Duration kYtdlSpeakAfter = Duration(milliseconds: 800);
+
 /// [s] wrapped in first-strong isolate … pop directional isolate.
 String ytdlIsolate(String s) => '\u2068$s\u2069';
 

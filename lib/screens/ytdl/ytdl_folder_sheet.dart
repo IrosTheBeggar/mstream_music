@@ -331,6 +331,15 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
   String? _checkFor;
   Timer? _checkTimer;
 
+  /// The preview as read out: it follows the screen [kYtdlSpeakAfter]
+  /// after the last change, so a screen reader hears where the song lands
+  /// once, not on every keystroke (spec §9). [_spokenBad]: the words are
+  /// the refusal's — one state's words never carry over to the other.
+  String? _spoken;
+  String? _spokenNext;
+  bool? _spokenBad;
+  Timer? _speakTimer;
+
   YtdlDraft get _d => widget.draft;
 
   @override
@@ -350,9 +359,16 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _speak();
+  }
+
+  @override
   void dispose() {
     _d.removeListener(_moved);
     _checkTimer?.cancel();
+    _speakTimer?.cancel();
     _custom.dispose();
     _customFocus.dispose();
     super.dispose();
@@ -364,6 +380,31 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
     if (!mounted) return;
     setState(() {});
     _recheck();
+    _speak();
+  }
+
+  /// The preview's words are read [kYtdlSpeakAfter] after they settle.
+  void _speak() {
+    if (!mounted) return;
+    final m = _model(AppLocalizations.of(context), _target);
+    if (_spoken == null) {
+      _spoken = _spokenNext = m.words;
+      _spokenBad = m.bad;
+      return;
+    }
+    if (m.bad != _spokenBad) {
+      // From a path to the refusal or back: what was read no longer says
+      // what the preview shows. Nothing is read until the new words settle.
+      _spoken = '';
+      _spokenBad = m.bad;
+    }
+    if (m.words != _spokenNext) {
+      _spokenNext = m.words;
+      _speakTimer?.cancel();
+      _speakTimer = YtdlHub().timer(kYtdlSpeakAfter, () {
+        if (mounted) setState(() => _spoken = _spokenNext);
+      });
+    }
   }
 
   /// The previewed target under the choice on this page; null while the
@@ -401,6 +442,7 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
       final c = await _d.checkTarget(t!);
       if (!mounted || _checkFor != dir) return;
       setState(() => _check = c);
+      _speak();
     });
   }
 
@@ -536,6 +578,7 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
             setState(() => _sub = s);
             if (s == _Sub.custom) _customFocus.requestFocus();
             _recheck();
+            _speak();
           },
         );
     return [
@@ -669,28 +712,12 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
     };
   }
 
-  /// Where the song lands under the choice on this page: "“One More Time”
-  /// lands at", the path with its new folders, and what the check found.
-  Widget _preview(AppLocalizations l, YtdlTarget? t) {
+  /// What the preview shows and says for [t]: the refusal ([bad]), or
+  /// "“One More Time” lands at", the path with its new folders, and the
+  /// notes under it.
+  _SubPreview _model(AppLocalizations l, YtdlTarget? t) {
     if (t == null || !t.valid) {
-      return Container(
-        key: const ValueKey('ytdl-sub-preview'),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: VelvetColors.warning.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: VelvetColors.warning.withValues(alpha: 0.45),
-          ),
-        ),
-        child: YtdlStatusLine(
-          icon: Icons.warning_amber_rounded,
-          color: keepTone(VelvetColors.warning),
-          textColor: VelvetColors.textPrimary,
-          fontSize: 14,
-          text: l.discoverDestFixLayout,
-        ),
-      );
+      return _SubPreview.bad(l.discoverDestFixLayout);
     }
     final check = _check;
     final fresh = check == null
@@ -698,27 +725,87 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
         : (check.newSegments.toList()..sort());
     final title = _d.displayTitle;
     final trap = t.trap;
+    final newAt = {for (final i in fresh) i + 1};
+    final trapAt = {
+      if (trap != null && t.segments.contains(trap.folder))
+        t.segments.indexOf(trap.folder) + 1,
+    };
+    final file = _d.predictedName.isEmpty ? null : _d.predictedName;
+    final label =
+        title.isEmpty ? l.ytdlWhereLandsAtSample : l.ytdlWhereLandsAt(title);
+    final notes = <(String, Key?)>[
+      if (fresh.isNotEmpty)
+        (
+          l.ytdlSubfoldersNew(
+            fresh.length,
+            [for (final i in fresh) t.segments[i]].join(', '),
+          ),
+          const ValueKey('ytdl-sub-new'),
+        ),
+      if (t.missingVars.isNotEmpty)
+        (
+          l.discoverDestMissing(
+            t.missingVars.map((v) => '{{$v}}').join(', '),
+          ),
+          null,
+        ),
+    ];
+    final trapWords = trap == null
+        ? null
+        : switch (trap.kind) {
+            YtdlTrapKind.emptyFolder => l.ytdlTrapEmpty(trap.folder),
+            YtdlTrapKind.missingYear => l.ytdlTrapNoYear(trap.folder),
+            YtdlTrapKind.other => l.ytdlTrapOther(trap.folder),
+          };
+    final path = ytdlSpokenPath(l, t.crumbs,
+        newAt: newAt, trapAt: trapAt, file: file);
+    return _SubPreview(
+      label: label,
+      crumbs: t.crumbs,
+      newAt: newAt,
+      trapAt: trapAt,
+      file: file,
+      notes: notes,
+      trap: trap,
+      trapWords: trapWords,
+      words: [
+        '$label $path.',
+        for (final n in notes) n.$1,
+        ?trapWords,
+      ].join(' '),
+    );
+  }
+
+  /// Where the song lands under the choice on this page, or why it can't
+  /// say. One live region either way, at the same place in the tree (a
+  /// live region that appears is read at once: swapping one for another
+  /// as a token is half typed would read the refusal mid-word). Its words
+  /// are [_spoken], read [kYtdlSpeakAfter] after the preview settles; the
+  /// bracket warning's link stays a button of its own beside it.
+  Widget _preview(AppLocalizations l, YtdlTarget? t) {
+    final m = _model(l, t);
     final note = TextStyle(
       color: VelvetColors.textSecondary,
       fontSize: 12,
       height: 16 / 12,
     );
-    return DestPreviewShell(
-      key: const ValueKey('ytdl-sub-preview'),
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      icon: Icon(
-        Icons.folder_outlined,
-        size: 18,
-        color: VelvetColors.textSecondary,
-      ),
-      content: Column(
+    final trap = m.trap;
+    final Widget shown;
+    if (m.bad) {
+      shown = YtdlStatusLine(
+        icon: Icons.warning_amber_rounded,
+        color: keepTone(VelvetColors.warning),
+        textColor: VelvetColors.textPrimary,
+        fontSize: 14,
+        live: false,
+        text: m.words,
+      );
+    } else {
+      shown = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title.isEmpty
-                ? l.ytdlWhereLandsAtSample
-                : l.ytdlWhereLandsAt(title),
+            m.label,
             style: TextStyle(
               color: VelvetColors.textSecondary,
               fontSize: 13,
@@ -727,76 +814,95 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
           ),
           const SizedBox(height: 2),
           YtdlCrumbs(
-            crumbs: t.crumbs,
-            newAt: {for (final i in fresh) i + 1},
-            trapAt: {
-              if (trap != null && t.segments.contains(trap.folder))
-                t.segments.indexOf(trap.folder) + 1,
-            },
-            file: _d.predictedName.isEmpty ? null : _d.predictedName,
+            crumbs: m.crumbs,
+            newAt: m.newAt,
+            trapAt: m.trapAt,
+            file: m.file,
             style: const TextStyle(fontSize: 14, height: 20 / 14),
           ),
-          if (fresh.isNotEmpty) ...[
+          for (final (words, key) in m.notes) ...[
             const SizedBox(height: 6),
-            Text(
-              l.ytdlSubfoldersNew(
-                fresh.length,
-                [for (final i in fresh) t.segments[i]].join(', '),
-              ),
-              key: const ValueKey('ytdl-sub-new'),
-              style: note,
+            Text(words, key: key, style: note),
+          ],
+          if (trap != null) ...[
+            const SizedBox(height: 6),
+            YtdlStatusLine(
+              icon: Icons.warning_amber_rounded,
+              color: keepTone(VelvetColors.warning),
+              textColor: VelvetColors.textPrimary,
+              fontSize: 12,
+              live: false,
+              text: m.trapWords!,
             ),
           ],
-          if (t.missingVars.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              l.discoverDestMissing(
-                t.missingVars.map((v) => '{{$v}}').join(', '),
-              ),
-              style: note,
-            ),
-          ],
-          if (trap != null) ...[const SizedBox(height: 6), _trap(l, trap)],
         ],
+      );
+    }
+    return YtdlGround(
+      color: VelvetColors.raised,
+      child: Container(
+        key: const ValueKey('ytdl-sub-preview'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: m.bad
+              ? VelvetColors.warning.withValues(alpha: 0.08)
+              : VelvetColors.raised,
+          borderRadius: BorderRadius.circular(10),
+          border: m.bad
+              ? Border.all(color: VelvetColors.warning.withValues(alpha: 0.45))
+              : null,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!m.bad) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  Icons.folder_outlined,
+                  size: 18,
+                  color: VelvetColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              key: const ValueKey('ytdl-sub-preview-body'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drawn at once; read once it has settled.
+                  Semantics(
+                    key: const ValueKey('ytdl-sub-preview-spoken'),
+                    container: true,
+                    liveRegion: true,
+                    label: _spoken ?? m.words,
+                    excludeSemantics: true,
+                    child: shown,
+                  ),
+                  if (!m.bad && trap != null) _trapLink(l, trap),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _trap(AppLocalizations l, YtdlTrap trap) {
-    final (text, link, field) = switch (trap.kind) {
-      YtdlTrapKind.emptyFolder => (
-        l.ytdlTrapEmpty(trap.folder),
-        l.ytdlEditTags,
-        YtdlField.album,
-      ),
-      YtdlTrapKind.missingYear => (
-        l.ytdlTrapNoYear(trap.folder),
-        l.ytdlTrapAddYear,
-        YtdlField.year,
-      ),
-      YtdlTrapKind.other => (
-        l.ytdlTrapOther(trap.folder),
-        l.ytdlEditTags,
-        YtdlField.album,
-      ),
+  /// The bracket warning's link: apply the layout, back to the first page
+  /// with the field that fills the folder focused.
+  Widget _trapLink(AppLocalizations l, YtdlTrap trap) {
+    final (link, field) = switch (trap.kind) {
+      YtdlTrapKind.missingYear => (l.ytdlTrapAddYear, YtdlField.year),
+      YtdlTrapKind.emptyFolder ||
+      YtdlTrapKind.other => (l.ytdlEditTags, YtdlField.album),
     };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        YtdlStatusLine(
-          icon: Icons.warning_amber_rounded,
-          color: keepTone(VelvetColors.warning),
-          textColor: VelvetColors.textPrimary,
-          fontSize: 12,
-          text: text,
-        ),
-        YtdlTextLink(
-          link,
-          key: const ValueKey('ytdl-sub-trap-link'),
-          padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
-          onTap: () => widget.onEditTags(_layout, field),
-        ),
-      ],
+    return YtdlTextLink(
+      link,
+      key: const ValueKey('ytdl-sub-trap-link'),
+      padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
+      onTap: () => widget.onEditTags(_layout, field),
     );
   }
 
@@ -834,4 +940,43 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
       ),
     );
   }
+}
+
+/// The "Sort into subfolders" preview for one state of the page: the path
+/// and its notes, or the refusal ([bad], [words] its line) — and [words],
+/// what the live region reads.
+class _SubPreview {
+  final bool bad;
+  final String label;
+  final List<String> crumbs;
+  final Set<int> newAt;
+  final Set<int> trapAt;
+  final String? file;
+  final List<(String, Key?)> notes;
+  final YtdlTrap? trap;
+  final String? trapWords;
+  final String words;
+
+  const _SubPreview({
+    required this.label,
+    required this.crumbs,
+    required this.newAt,
+    required this.trapAt,
+    required this.file,
+    required this.notes,
+    required this.trap,
+    required this.trapWords,
+    required this.words,
+  }) : bad = false;
+
+  const _SubPreview.bad(this.words)
+      : bad = true,
+        label = '',
+        crumbs = const [],
+        newAt = const {},
+        trapAt = const {},
+        file = null,
+        notes = const [],
+        trap = null,
+        trapWords = null;
 }

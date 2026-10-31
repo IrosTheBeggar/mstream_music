@@ -58,10 +58,6 @@ List<String> _folders(String layout) => layout
     .where((s) => s.isNotEmpty)
     .toList();
 
-/// How long the preview waits after the last change before it is read out
-/// (spec §9: a polite live region, after 800 ms without typing).
-const Duration _kSpeakAfter = Duration(milliseconds: 800);
-
 /// The least of the form a pinned preview leaves while typing: Custom's
 /// field and a line of what is around it.
 const double _kFormRoom = 64;
@@ -102,7 +98,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   Set<int> _newAt = const {};
   Timer? _checkTimer;
 
-  /// The preview as read out: it follows the screen [_kSpeakAfter] after
+  /// The preview as read out: it follows the screen [kYtdlSpeakAfter] after
   /// the last change, so a screen reader hears where the song lands once,
   /// not on every keystroke.
   String? _spoken;
@@ -384,7 +380,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   /// Something moved: the preview's folders are checked again
   /// [YtdlDraft.kCheckAfter] after they settle (a path the card has
   /// checked already is taken from it), and the preview is read again
-  /// [_kSpeakAfter] after it settles.
+  /// [kYtdlSpeakAfter] after it settles.
   void _afterChange() {
     if (!mounted) return;
     final t = _target;
@@ -429,7 +425,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
     if (words != _spokenNext) {
       _spokenNext = words;
       _speakTimer?.cancel();
-      _speakTimer = st.hub.timer(_kSpeakAfter, () {
+      _speakTimer = st.hub.timer(kYtdlSpeakAfter, () {
         if (mounted) setState(() => _spoken = _spokenNext);
       });
     }

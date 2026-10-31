@@ -456,6 +456,40 @@ void main() {
       expect(byKey('ytdl-sub-custom-error'), findsNothing);
     });
 
+    testWidgets('the preview is read 800 ms after the last change, not on '
+        'every keystroke (spec §9)', (t) async {
+      final semantics = t.ensureSemantics();
+      await page(t);
+      await t.tap(byKey('ytdl-sub-custom'));
+      await t.pump();
+      await ui.settle(t, kYtdlSpeakAfter);
+      String spoken() => t
+          .getSemantics(byKey('ytdl-sub-preview-spoken'))
+          .getSemanticsData()
+          .label;
+      final before = spoken();
+      for (final typed in ['{{ARTIST}}/S', '{{ARTIST}}/Si', '{{ARTIST}}/Sin']) {
+        await t.enterText(byKey('ytdl-sub-custom-field'), typed);
+        await t.pump();
+        await ui.settle(t, const Duration(milliseconds: 300));
+        expect(spoken(), before, reason: 'still typing: "$typed"');
+      }
+      // The folder check answers (a change of its own), then the quiet.
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(spoken(), before);
+      await ui.settle(t, kYtdlSpeakAfter);
+      expect(spoken(), contains('Sin'));
+      expect(spoken(), startsWith(h().l.ytdlWhereLandsAt('One More Time')));
+      expect(
+          t
+              .getSemantics(byKey('ytdl-sub-preview-spoken'))
+              .getSemanticsData()
+              .flagsCollection
+              .isLiveRegion,
+          isTrue);
+      semantics.dispose();
+    });
+
     testWidgets('a variable chip inserts at the caret and ticks', (t) async {
       await page(t);
       await t.tap(byKey('ytdl-sub-custom'));
