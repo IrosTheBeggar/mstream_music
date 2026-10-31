@@ -21,7 +21,8 @@ import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
-import '../media/audio_stuff.dart' show AudioPlayerHandler, FanOutSitOut;
+import '../media/audio_stuff.dart'
+    show AudioPlayerHandler, FanOutSitOut, SonicDrop;
 import '../objects/genre_source.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
@@ -88,6 +89,40 @@ String sitOutLabel(AppLocalizations l, FanOutSitOut why) => switch (why) {
       FanOutSitOut.otherModel => l.autoDjOtherModel,
       FanOutSitOut.unreachable => l.autoDjUnreachable,
     };
+
+/// Why sonic similarity can't run from [home], or null when it can: the
+/// server predates it, its scan has not produced vectors yet (mStream #879),
+/// or discovery is off there. The Auto DJ screen's row and quick config.
+String? autoDjSonicBlocked(AppLocalizations l, Server? home) {
+  if (sonicKnownUnsupported(ServerVersion.tryParse(home?.serverVersion))) {
+    return l.autoDjNeedsServer(paramFloorLabel(ServerParam.similarTo));
+  }
+  if (home?.discoveryOn == true && home?.discoveryReady == false) {
+    return l.autoDjStillScanning;
+  }
+  return home?.sonicUsable == true ? null : l.autoDjDiscoveryOff;
+}
+
+/// Why a running session had to drop sonic similarity.
+String sonicDropLabel(AppLocalizations l, SonicDrop drop) => switch (drop) {
+      SonicDrop.tooStrict => l.autoDjTooStrict,
+      SonicDrop.scanning => l.autoDjStillScanning,
+      SonicDrop.discoveryOff => l.autoDjDiscoveryOff,
+    };
+
+/// Why a mood can't narrow the picks of a session on [set] run from [home],
+/// or null when it can. A peer's flags can't be read, so its mood flag is
+/// pinned off; with several servers the mood holds where one taking part
+/// can filter by it.
+String? autoDjMoodBlocked(AppLocalizations l,
+    {required Server? home, required List<Server> set}) {
+  final several = set.length > 1;
+  if (!several && home?.isFederated == true) return l.autoDjNotOnPeers;
+  final can = several
+      ? set.any((s) => s.moodFiltersAvailable == true)
+      : home?.moodFiltersAvailable == true;
+  return can ? null : l.autoDjNoMoodData;
+}
 
 /// A server's name without the scheme: "music.home.arpa", "laptop.local:3000".
 /// A peer's is already a name.
@@ -482,22 +517,45 @@ Widget _spinner(double size) => SizedBox(
           strokeWidth: 2, color: VelvetColors.primary),
     );
 
-Widget _warning(String reason) => Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.warning_amber_rounded, size: 16, color: VelvetColors.warning),
+Widget _warning(String reason, {double fontSize = 15}) =>
+    Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.warning_amber_rounded,
+          size: fontSize + 1, color: VelvetColors.warning),
       const SizedBox(width: 6),
       Flexible(
         child: Text(reason,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 15, color: VelvetColors.warning)),
+            style: TextStyle(fontSize: fontSize, color: VelvetColors.warning)),
       ),
     ]);
 
 /// A disabled choice's reason, at the right of its row.
-Widget _reason(String reason) => Text(reason,
+Widget _reason(String reason, {double fontSize = 15}) => Text(reason,
     maxLines: 2,
     overflow: TextOverflow.ellipsis,
-    style: TextStyle(fontSize: 15, color: VelvetColors.textSecondary));
+    style: TextStyle(fontSize: fontSize, color: VelvetColors.textSecondary));
+
+/// A server's part in a session across [count] servers, at the right of its
+/// Play from row: nothing while it takes part, a spinner while it is on its
+/// way, else [why] it sits out — amber when it is [ticked], plain when it
+/// would sit out if it were. A server ticked alone says nothing: on its own
+/// it needs none of this.
+Widget? playFromStatus(AppLocalizations l,
+    {required bool ticked,
+    required int count,
+    required FanOutSitOut? why,
+    required bool connecting,
+    double fontSize = 15}) {
+  if (ticked && count < 2) return null;
+  if (why != null) {
+    return ticked
+        ? _warning(sitOutLabel(l, why), fontSize: fontSize)
+        : _reason(sitOutLabel(l, why), fontSize: fontSize);
+  }
+  if (ticked && connecting) return _spinner(16);
+  return null;
+}
 
 /// A 52 px choice in a sheet's list: a name and, at the right, the check,
 /// a status or a reason.
@@ -546,15 +604,18 @@ class _ChoiceRow extends StatelessWidget {
   }
 }
 
-/// A 52 px row in a sheet's checklist: the box, a name and, at the right, a
-/// status or a reason.
-class _CheckRow extends StatelessWidget {
-  const _CheckRow(
+/// A row in a checklist: the box, a name and, at the right, a status or a
+/// reason — 52 px in a sheet, [minHeight] where space is tighter (quick
+/// config).
+class AutoDjCheckRow extends StatelessWidget {
+  const AutoDjCheckRow(
       {super.key,
       required this.label,
       required this.checked,
       this.trailing,
-      this.onTap});
+      this.onTap,
+      this.minHeight = 52,
+      this.padding = const EdgeInsets.fromLTRB(14, 0, 12, 0)});
 
   final Widget label;
   final bool checked;
@@ -562,6 +623,9 @@ class _CheckRow extends StatelessWidget {
 
   /// Null holds the box as it is, drawn faint.
   final VoidCallback? onTap;
+
+  final double minHeight;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -572,9 +636,9 @@ class _CheckRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 52),
+            constraints: BoxConstraints(minHeight: minHeight),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 12, 0),
+              padding: padding,
               // The name keeps at least 40% of the row; a long reason gives
               // way.
               child: LayoutBuilder(
@@ -620,6 +684,49 @@ class _CheckRow extends StatelessWidget {
 }
 
 // ── Play from ──────────────────────────────────────────────────────────
+
+/// Play from becomes [set] — servers out of [listed], the ones on offer, in
+/// their order — run from [home] while that can lead: the Play from sheet's
+/// Done, and each tick in quick config.
+Future<void> applyPlayFrom(
+    {required List<Server> set,
+    required List<Server> listed,
+    required Server? home}) async {
+  if (set.isEmpty) return;
+  final mgr = AutoDJManager();
+  final handler = MediaManager().audioHandler;
+  // The session runs on one of them: the server it is on now while that can
+  // lead the others, else one that can.
+  final next =
+      resolvePlayFromHome(set, home, (s) => fanOutHomeBlocked(s) == null)!;
+  final names = {for (final s in listed) s.localname};
+  await mgr.setPlayFrom(
+      // Ticking every server is All servers, which takes in the ones added
+      // later. With one server there is no list, and nothing to change.
+      all: listed.length > 1 ? listed.every(set.contains) : mgr.playFromAll,
+      servers: [
+        ...set.map((s) => s.localname),
+        // One the list can't show — a peer hidden, or missing from its
+        // parent's list for now — keeps its place, to take part once back.
+        for (final n in mgr.playFromServers)
+          if (!names.contains(n)) n,
+      ],
+      home: next.localname);
+  if (set.length > 1) {
+    // The session's seed travels as a sound, so several servers run on
+    // sonic picks — and a session that had dropped them gets another go.
+    if (!mgr.sonicSimilarityEnabled) await mgr.setSonicSimilarityEnabled(true);
+    if (handler.sonicDrop != null) {
+      unawaited(handler.customAction('retrySonic'));
+    }
+  }
+  // A session running somewhere else starts afresh on the home. One that is
+  // already there carries on, asking whichever servers are ticked now.
+  final dj = handler.autoDJServer;
+  if (dj != null && dj != next) {
+    unawaited(handler.customAction('setAutoDJ', {'autoDJServer': next}));
+  }
+}
 
 /// Where the music comes from: any set of servers — one is a plain session
 /// on it, several fan every pick out across them — and, under the list, the
@@ -720,22 +827,11 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
         }
       });
 
-  /// A server's part in a session across [count] servers: nothing while it
-  /// takes part, a spinner while it is on its way, else why it sits out —
-  /// amber when it is ticked, plain when it would sit out if it were. A
-  /// server ticked alone says nothing: on its own it needs none of this.
-  Widget? _status(AppLocalizations l, Server s, int count) {
-    final ticked = _isTicked(s);
-    if (ticked && count < 2) return null;
-    final why = widget.sitOut(s);
-    if (why != null) {
-      return ticked
-          ? _warning(sitOutLabel(l, why))
-          : _reason(sitOutLabel(l, why));
-    }
-    if (ticked && widget.connecting(s)) return _spinner(16);
-    return null;
-  }
+  Widget? _status(AppLocalizations l, Server s, int count) => playFromStatus(l,
+      ticked: _isTicked(s),
+      count: count,
+      why: widget.sitOut(s),
+      connecting: widget.connecting(s));
 
   List<Server> get _folderServers => [
         for (final s in _set)
@@ -764,7 +860,6 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
   }
 
   Future<void> _done() => _applyThenClose(context, () async {
-    final mgr = AutoDJManager();
     var pathsChanged = false;
     for (final s in {...widget.servers, ...widget.chosen, ?widget.home}) {
       final draft = _paths[s.localname]!;
@@ -779,39 +874,7 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
       ServerManager().callAfterEditServer();
       unawaited(_handler.customAction('forceAutoDJRefresh'));
     }
-    final set = _set;
-    if (set.isEmpty) return;
-    // The session runs on one of them: the server it is on now while that
-    // can lead the others, else one that can.
-    final home = resolvePlayFromHome(
-        set, widget.home, (s) => fanOutHomeBlocked(s) == null)!;
-    final listed = {for (final s in widget.servers) s.localname};
-    await mgr.setPlayFrom(
-        // Ticking every server is All servers, which takes in the ones added
-        // later. With one server there is no list, and nothing to change.
-        all: widget.servers.length > 1 ? _allTicked : mgr.playFromAll,
-        servers: [
-          ...set.map((s) => s.localname),
-          // One the list can't show — a peer hidden, or missing from its
-          // parent's list for now — keeps its place, to take part once back.
-          for (final n in mgr.playFromServers)
-            if (!listed.contains(n)) n,
-        ],
-        home: home.localname);
-    if (set.length > 1) {
-      // The session's seed travels as a sound, so several servers run on
-      // sonic picks — and a session that had dropped them gets another go.
-      if (!mgr.sonicSimilarityEnabled) await mgr.setSonicSimilarityEnabled(true);
-      if (_handler.sonicDrop != null) {
-        unawaited(_handler.customAction('retrySonic'));
-      }
-    }
-    // A session running somewhere else starts afresh on the home. One that
-    // is already there carries on, asking whichever servers are ticked now.
-    final dj = _handler.autoDJServer;
-    if (dj != null && dj != home) {
-      unawaited(_handler.customAction('setAutoDJ', {'autoDJServer': home}));
-    }
+    await applyPlayFrom(set: _set, listed: widget.servers, home: widget.home);
   });
 
   @override
@@ -825,7 +888,7 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (servers.length > 1)
           FedCard(children: [
-            _CheckRow(
+            AutoDjCheckRow(
               key: const ValueKey('auto-dj-play-from-all'),
               label: Text(l.autoDjAllServers,
                   style: TextStyle(
@@ -836,7 +899,7 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
               onTap: _toggleAll,
             ),
             for (final s in servers)
-              _CheckRow(
+              AutoDjCheckRow(
                 key: ValueKey('auto-dj-play-from-${s.localname}'),
                 label: serverLabel(s),
                 checked: _isTicked(s),
@@ -888,6 +951,35 @@ class FirstSongSheet extends StatelessWidget {
 
 // ── Sonic similarity ───────────────────────────────────────────────────
 
+/// Sonic similarity's settings: the sheet's Done, and quick config's switch
+/// and Drift | Stay close.
+Future<void> applySonic(
+    {required bool on,
+    required double match,
+    required SonicAnchorMode anchor}) async {
+  final mgr = AutoDJManager();
+  final wasOn = mgr.sonicSimilarityEnabled;
+  final changed = on != wasOn ||
+      match != mgr.sonicMinSimilarity ||
+      anchor != mgr.sonicAnchorMode;
+  await mgr.setSonic(enabled: on, minSimilarity: match, anchor: anchor);
+  final handler = MediaManager().audioHandler;
+  if (wasOn && !on) {
+    // Webapp parity (clearSonicAnchors): switching it off drops the session
+    // anchors — rolling history and the locked pin.
+    unawaited(handler.customAction('clearSonicSession'));
+    // Several servers run on sonic picks: without them Play from is back to
+    // the one the session runs on.
+    final home = handler.autoDJServer ?? autoDjPlayFrom();
+    if (mgr.multiServerEnabled && home != null) {
+      await mgr.setPlayFrom(
+          all: false, servers: [home.localname], home: home.localname);
+    }
+  }
+  // A session that dropped sonic tries again with the new settings.
+  if (changed) unawaited(handler.customAction('retrySonic'));
+}
+
 class SonicSheet extends StatefulWidget {
   const SonicSheet({super.key});
 
@@ -901,28 +993,8 @@ class _SonicSheetState extends State<SonicSheet> {
   late double _match = _mgr.sonicMinSimilarity.clamp(0.30, 0.80);
   late SonicAnchorMode _anchor = _mgr.sonicAnchorMode;
 
-  Future<void> _done() => _applyThenClose(context, () async {
-    final wasOn = _mgr.sonicSimilarityEnabled;
-    final changed = _on != wasOn ||
-        _match != _mgr.sonicMinSimilarity ||
-        _anchor != _mgr.sonicAnchorMode;
-    await _mgr.setSonic(enabled: _on, minSimilarity: _match, anchor: _anchor);
-    final handler = MediaManager().audioHandler;
-    if (wasOn && !_on) {
-      // Webapp parity (clearSonicAnchors): switching it off drops the
-      // session anchors — rolling history and the locked pin.
-      unawaited(handler.customAction('clearSonicSession'));
-      // Several servers run on sonic picks: without them Play from is back
-      // to the one the session runs on.
-      final home = handler.autoDJServer ?? autoDjPlayFrom();
-      if (_mgr.multiServerEnabled && home != null) {
-        await _mgr.setPlayFrom(
-            all: false, servers: [home.localname], home: home.localname);
-      }
-    }
-    // A session that dropped sonic tries again with the new settings.
-    if (changed) unawaited(handler.customAction('retrySonic'));
-  });
+  Future<void> _done() => _applyThenClose(
+      context, () => applySonic(on: _on, match: _match, anchor: _anchor));
 
   @override
   Widget build(BuildContext context) {

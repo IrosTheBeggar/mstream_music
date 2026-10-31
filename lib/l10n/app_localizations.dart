@@ -8314,6 +8314,24 @@ abstract class AppLocalizations {
   /// **'{count} of {total}'**
   String autoDjServersTakingPart(int count, int total);
 
+  /// Tooltip and screen-reader name of the chevron beside the Auto DJ button (mini player, queue header), and of the popover it opens.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto DJ quick settings'**
+  String get autoDjQuickSettings;
+
+  /// Link at the bottom of Auto DJ quick settings that opens the whole Auto DJ screen.
+  ///
+  /// In en, this message translates to:
+  /// **'All Auto DJ settings'**
+  String get autoDjAllSettings;
+
+  /// How many servers are ticked in Play from, in Auto DJ quick settings.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 server} other{{count} servers}}'**
+  String autoDjServerCount(int count);
+
   /// No description provided for @autoDjFirstSong.
   ///
   /// In en, this message translates to:

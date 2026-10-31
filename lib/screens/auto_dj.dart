@@ -27,7 +27,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:rxdart/rxdart.dart' show MergeStream;
 
 import '../l10n/app_localizations.dart';
-import '../media/audio_stuff.dart' show SonicDrop;
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -344,16 +343,8 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final mgr = AutoDJManager();
     final home = _home;
     const key = ValueKey('auto-dj-row-sonic');
-    // Three reasons it can't run, and the row says which: the server
-    // predates 6.15.2, its scan has not produced vectors yet (mStream #879),
-    // or discovery is off there.
-    final String? reason = sonicKnownUnsupported(_version)
-        ? _needs(l, ServerParam.similarTo)
-        : home?.discoveryOn == true && home?.discoveryReady == false
-            ? l.autoDjStillScanning
-            : home?.sonicUsable != true
-                ? l.autoDjDiscoveryOff
-                : null;
+    // Three reasons it can't run, and the row says which.
+    final reason = autoDjSonicBlocked(l, home);
     if (reason != null) {
       return _ValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
     }
@@ -366,11 +357,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       return _ValueRow(
         key: key,
         title: l.autoDjSonicTitle,
-        value: switch (drop) {
-          SonicDrop.tooStrict => l.autoDjTooStrict,
-          SonicDrop.scanning => l.autoDjStillScanning,
-          SonicDrop.discoveryOff => l.autoDjDiscoveryOff,
-        },
+        value: sonicDropLabel(l, drop),
         tone: AutoDjTone.warning,
         onTap: open,
       );
@@ -391,15 +378,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final mgr = AutoDJManager();
     final home = _home;
     const key = ValueKey('auto-dj-row-mood');
-    // A peer's flags can't be read, so its mood flag is pinned off; with
-    // several servers the mood holds where one taking part can filter by it.
-    final String? reason = !_several && home?.isFederated == true
-        ? l.autoDjNotOnPeers
-        : (_several
-                ? _set.any((s) => s.moodFiltersAvailable == true)
-                : home?.moodFiltersAvailable == true)
-            ? null
-            : l.autoDjNoMoodData;
+    final reason = autoDjMoodBlocked(l, home: home, set: _set);
     if (reason != null) {
       return _ValueRow(key: key, title: l.autoDjMoodTitle, value: reason);
     }

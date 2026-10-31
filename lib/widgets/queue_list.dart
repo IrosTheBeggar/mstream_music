@@ -23,6 +23,7 @@ import '../util/auto_dj_play_from.dart';
 import '../util/auto_dj_recent.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
+import 'auto_dj_quick_config.dart';
 import 'auto_dj_recent_menu.dart';
 import 'auto_dj_start_sheet.dart';
 
@@ -451,75 +452,79 @@ class QueueHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            StreamBuilder<List<MediaItem>>(
-              stream: MediaManager().audioHandler.queue,
-              builder: (context, snap) {
-                final n = snap.data?.length ?? 0;
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      l.tabQueue.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 2.0,
-                        fontWeight: FontWeight.w600,
-                        color: VelvetColors.textSecondary,
+    // Quick config opens below the header and leaves it undimmed.
+    return AutoDjAnchorBar(
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              StreamBuilder<List<MediaItem>>(
+                stream: MediaManager().audioHandler.queue,
+                builder: (context, snap) {
+                  final n = snap.data?.length ?? 0;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        l.tabQueue.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 2.0,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textSecondary,
+                        ),
                       ),
+                      const SizedBox(width: 9),
+                      Text(
+                        l.mainQueueCount(n),
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: VelvetColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Auto DJ at a glance + one-tap toggle (the queue-header
+                  // autoplay-control pattern) — lit while the DJ runs — and
+                  // quick config behind its chevron.
+                  const AutoDjSplitButton(),
+                  const SizedBox(width: 4),
+                  if (showOptions)
+                    IconButton(
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      color: VelvetColors.textSecondary,
+                      tooltip: l.mainMore,
+                      onPressed: onOptions,
+                    )
+                  else ...[
+                    IconButton(
+                      icon: const Icon(Icons.download_for_offline, size: 20),
+                      color: VelvetColors.textSecondary,
+                      tooltip: l.queueDownloadAll,
+                      onPressed: () => downloadQueue(context),
                     ),
-                    const SizedBox(width: 9),
-                    Text(
-                      l.mainQueueCount(n),
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: VelvetColors.textTertiary,
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep, size: 20),
+                      color: VelvetColors.textSecondary,
+                      tooltip: l.mainClearQueue,
+                      onPressed: () => MediaManager()
+                          .audioHandler
+                          .customAction('clearPlaylist'),
                     ),
                   ],
-                );
-              },
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Auto DJ at a glance + one-tap toggle (the queue-header
-                // autoplay-control pattern) — lit while the DJ runs.
-                const AutoDjButton(),
-                const SizedBox(width: 4),
-                if (showOptions)
-                  IconButton(
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    color: VelvetColors.textSecondary,
-                    tooltip: l.mainMore,
-                    onPressed: onOptions,
-                  )
-                else ...[
-                  IconButton(
-                    icon: const Icon(Icons.download_for_offline, size: 20),
-                    color: VelvetColors.textSecondary,
-                    tooltip: l.queueDownloadAll,
-                    onPressed: () => downloadQueue(context),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_sweep, size: 20),
-                    color: VelvetColors.textSecondary,
-                    tooltip: l.mainClearQueue,
-                    onPressed: () => MediaManager()
-                        .audioHandler
-                        .customAction('clearPlaylist'),
-                  ),
                 ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -885,40 +890,3 @@ class _HeldDragStartListener extends ReorderableDragStartListener {
           delay: _holdBeforeDrag, debugOwner: this);
 }
 
-/// The labelled Auto DJ toggle, lit while the DJ runs.
-///
-/// One widget for both places it appears — the mini player and the queue
-/// header — because they are the same control and a word reads faster than a
-/// glyph nobody has learned. The header used to carry an icon that changed
-/// between a disc and a compass depending on whether sonic mode was on, which
-/// asked the reader to know two symbols to learn one fact.
-class AutoDjButton extends StatelessWidget {
-  const AutoDjButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return StreamBuilder<dynamic>(
-      stream: MediaManager().audioHandler.customState,
-      builder: (context, snap) {
-        final on = snap.data?.autoDJState != null;
-        return OutlinedButton(
-          onPressed: () => toggleAutoDJ(context),
-          style: OutlinedButton.styleFrom(
-            foregroundColor:
-                on ? VelvetColors.primary : VelvetColors.appBarText,
-            backgroundColor: on ? VelvetColors.primaryDim : null,
-            side: BorderSide(
-                color: on ? VelvetColors.primary : VelvetColors.border2),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            minimumSize: const Size(0, 34),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-          child: Text(l.autoDjTitle),
-        );
-      },
-    );
-  }
-}

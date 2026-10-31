@@ -123,9 +123,45 @@ class MoodFilterSheet extends StatefulWidget {
   State<MoodFilterSheet> createState() => _MoodFilterSheetState();
 }
 
-class _MoodFilterSheetState extends State<MoodFilterSheet> {
-  late MoodFilter _draft = widget.initial;
-  late MoodSort _sort = widget.sort;
+ButtonStyle _segmentStyle() => SegmentedButton.styleFrom(
+      selectedBackgroundColor: VelvetColors.primary,
+      selectedForegroundColor: VelvetColors.onPrimary,
+      foregroundColor: VelvetColors.textPrimary,
+      disabledForegroundColor: VelvetColors.textTertiary,
+      side: BorderSide(color: VelvetColors.border2),
+      textStyle: const TextStyle(fontSize: 13),
+    );
+
+/// The choices themselves — the three scales as segments, the tags, and
+/// Strict | Standard | Loose — on [value], each change handed to
+/// [onChanged]: the sheet's body, and quick config's Smart filters page.
+class MoodChoices extends StatefulWidget {
+  const MoodChoices({super.key, required this.value, required this.onChanged});
+
+  final MoodFilter value;
+  final ValueChanged<MoodFilter> onChanged;
+
+  @override
+  State<MoodChoices> createState() => _MoodChoicesState();
+}
+
+class _MoodChoicesState extends State<MoodChoices> {
+  // Taps can land faster than the rebuild that brings [value] back: each one
+  // builds on the last, not on what was drawn.
+  late MoodFilter _value = widget.value;
+
+  @override
+  void didUpdateWidget(MoodChoices old) {
+    super.didUpdateWidget(old);
+    if (widget.value != old.value) _value = widget.value;
+  }
+
+  MoodFilter get value => _value;
+
+  void onChanged(MoodFilter f) {
+    setState(() => _value = f);
+    widget.onChanged(f);
+  }
 
   String _groupLabel(AppLocalizations l, MoodScale scale) => switch (scale) {
         MoodScale.valence => l.moodValenceGroup,
@@ -134,7 +170,7 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
       };
 
   Widget _scale(AppLocalizations l, MoodScale scale) {
-    final on = _draft.valueOf(scale);
+    final on = value.valueOf(scale);
     return Semantics(
       label: _groupLabel(l, scale),
       child: SizedBox(
@@ -153,22 +189,13 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
           // One value or none: pressing the chosen one again lets it go.
           emptySelectionAllowed: true,
           showSelectedIcon: false,
-          onSelectionChanged: (set) => setState(() => _draft =
-              _draft.withScale(scale, set.isEmpty ? null : set.first)),
-          style: _segmentStyle,
+          onSelectionChanged: (set) => onChanged(
+              value.withScale(scale, set.isEmpty ? null : set.first)),
+          style: _segmentStyle(),
         ),
       ),
     );
   }
-
-  ButtonStyle get _segmentStyle => SegmentedButton.styleFrom(
-        selectedBackgroundColor: VelvetColors.primary,
-        selectedForegroundColor: VelvetColors.onPrimary,
-        foregroundColor: VelvetColors.textPrimary,
-        disabledForegroundColor: VelvetColors.textTertiary,
-        side: BorderSide(color: VelvetColors.border2),
-        textStyle: const TextStyle(fontSize: 13),
-      );
 
   // Strict | Standard | Loose: one is always pressed, so pressing it again
   // does nothing.
@@ -186,14 +213,60 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
             ],
-            selected: {_draft.level},
+            selected: {value.level},
             showSelectedIcon: false,
-            onSelectionChanged: (set) =>
-                setState(() => _draft = _draft.withLevel(set.first)),
-            style: _segmentStyle,
+            onSelectionChanged: (set) => onChanged(value.withLevel(set.first)),
+            style: _segmentStyle(),
           ),
         ),
       );
+
+  Widget _tag(AppLocalizations l, String tag) {
+    final on = value.tags.contains(tag);
+    return FilterChip(
+      key: ValueKey('mood-tag-$tag'),
+      label: Text(moodLabel(l, tag)),
+      selected: on,
+      showCheckmark: false,
+      onSelected: (_) => onChanged(value.toggleTag(tag)),
+      selectedColor: VelvetColors.primary,
+      backgroundColor: Colors.transparent,
+      side: BorderSide(color: on ? VelvetColors.primary : VelvetColors.border2),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        color: on ? VelvetColors.onPrimary : VelvetColors.textPrimary,
+        fontWeight: on ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final scale in MoodScale.values) ...[
+          _scale(l, scale),
+          const SizedBox(height: 10),
+        ],
+        Semantics(
+          label: l.moodTagsGroup,
+          child: Wrap(spacing: 8, runSpacing: 4, children: [
+            for (final t in kMoodTags) _tag(l, t),
+          ]),
+        ),
+        const SizedBox(height: 10),
+        _level(l),
+      ],
+    );
+  }
+}
+
+class _MoodFilterSheetState extends State<MoodFilterSheet> {
+  late MoodFilter _draft = widget.initial;
+  late MoodSort _sort = widget.sort;
 
   // A song list's Sort: its own order (named for it) or best match first,
   // one always pressed. Match needs a mood to rank by: with none set it
@@ -226,29 +299,10 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
           selected: {filtered ? _sort : MoodSort.list},
           showSelectedIcon: false,
           onSelectionChanged: (set) => setState(() => _sort = set.first),
-          style: _segmentStyle,
+          style: _segmentStyle(),
         ),
       ),
     ]);
-  }
-
-  Widget _tag(AppLocalizations l, String tag) {
-    final on = _draft.tags.contains(tag);
-    return FilterChip(
-      key: ValueKey('mood-tag-$tag'),
-      label: Text(moodLabel(l, tag)),
-      selected: on,
-      showCheckmark: false,
-      onSelected: (_) => setState(() => _draft = _draft.toggleTag(tag)),
-      selectedColor: VelvetColors.primary,
-      backgroundColor: Colors.transparent,
-      side: BorderSide(color: on ? VelvetColors.primary : VelvetColors.border2),
-      labelStyle: TextStyle(
-        fontSize: 13,
-        color: on ? VelvetColors.onPrimary : VelvetColors.textPrimary,
-        fontWeight: on ? FontWeight.w600 : FontWeight.normal,
-      ),
-    );
   }
 
   @override
@@ -303,18 +357,9 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final scale in MoodScale.values) ...[
-                      _scale(l, scale),
-                      const SizedBox(height: 10),
-                    ],
-                    Semantics(
-                      label: l.moodTagsGroup,
-                      child: Wrap(spacing: 8, runSpacing: 4, children: [
-                        for (final t in kMoodTags) _tag(l, t),
-                      ]),
-                    ),
-                    const SizedBox(height: 10),
-                    _level(l),
+                    MoodChoices(
+                        value: _draft,
+                        onChanged: (f) => setState(() => _draft = f)),
                     if (widget.sortFor case final list?) ...[
                       const SizedBox(height: 10),
                       _sortRow(l, list),
