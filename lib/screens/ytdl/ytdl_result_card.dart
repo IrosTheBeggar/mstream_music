@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../singletons/ytdl_hub.dart';
 import '../../theme/velvet_theme.dart';
+import '../../util/ytdl_errors.dart';
 import '../../util/ytdl_guess.dart';
 import '../../util/ytdl_link.dart';
 import '../discovery/keep_copy_ui.dart';
@@ -78,15 +79,18 @@ class YtdlResultCard extends StatelessWidget {
       case YtdlLookupState.ytdlpMissing:
         return _missing(l);
       case YtdlLookupState.offline:
-        return YtdlNote(
-          key: const ValueKey('ytdl-offline'),
-          icon: Icons.cloud_off,
-          text: l.ytdlOffline,
+        return _withNotes(
+          l,
+          YtdlNote(
+            key: const ValueKey('ytdl-offline'),
+            icon: Icons.cloud_off,
+            text: l.ytdlOffline,
+          ),
         );
       case YtdlLookupState.idle:
       case YtdlLookupState.loading:
       case YtdlLookupState.slow:
-        if (!manual) return _skeleton(context, l);
+        if (!manual) return _withNotes(l, _skeleton(context, l));
       case YtdlLookupState.failed:
       case YtdlLookupState.timedOut:
         if (!manual) return _failed(l);
@@ -97,6 +101,19 @@ class YtdlResultCard extends StatelessWidget {
   }
 
   // ── states before a reading ─────────────────────────────────────────────
+
+  /// [w] with the link's own notes under it: what the link says is known
+  /// before any lookup answers (the LinkStates board's live panel sits
+  /// under the field, no card).
+  Widget _withNotes(AppLocalizations l, Widget w) {
+    final notes = _notes(l);
+    if (notes.isEmpty) return w;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [w, ...notes],
+    );
+  }
 
   Widget _shell({Key? key, required List<Widget> children}) => Container(
     key: key,
@@ -207,10 +224,31 @@ class YtdlResultCard extends StatelessWidget {
     );
   }
 
-  /// The lookup failed (500) or ran out of time: say so, offer "Enter
-  /// details" and "Try again"; Add stays on, into the library's top folder.
+  /// Why the lookup failed, in the words spec §8 gives each answer: yt-dlp
+  /// couldn't read the video (the bare 500), the time ran out, no route,
+  /// a 400 about the link, or the server's own words.
+  String _failedText(AppLocalizations l) {
+    if (_d.lookup == YtdlLookupState.timedOut) return l.ytdlLookupTimedOut;
+    final f = _d.lookupFailure;
+    switch (f?.problem) {
+      case YtdlProblem.noRoute:
+        return l.ytdlErrNoRoute;
+      case YtdlProblem.badRequest:
+        return l.ytdlErrBadRequest;
+      case YtdlProblem.other:
+        final words = ytdlServerWords(f!);
+        return words == null ? l.ytdlErrServer : l.ytdlErrOther(words);
+      default:
+        return l.ytdlLookupFailed;
+    }
+  }
+
+  /// The lookup failed or ran out of time: say why, offer "Enter details"
+  /// (not when the server has no YouTube route — an add 404s the same
+  /// way) and "Try again"; Add stays on, into the library's top folder,
+  /// unless a check panel below says otherwise.
   Widget _failed(AppLocalizations l) {
-    final timedOut = _d.lookup == YtdlLookupState.timedOut;
+    final noRoute = _d.lookupFailure?.problem == YtdlProblem.noRoute;
     return _shell(
       key: const ValueKey('ytdl-lookup-failed'),
       children: [
@@ -224,7 +262,7 @@ class YtdlResultCard extends StatelessWidget {
                 icon: Icons.error_outline,
                 color: keepTone(VelvetColors.error),
                 textColor: VelvetColors.textPrimary,
-                text: timedOut ? l.ytdlLookupTimedOut : l.ytdlLookupFailed,
+                text: _failedText(l),
               ),
             ),
           ],
@@ -234,11 +272,12 @@ class YtdlResultCard extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 8,
           children: [
-            YtdlOutlinedPill(
-              l.ytdlLookupEnterDetails,
-              key: const ValueKey('ytdl-enter-details'),
-              onTap: _d.enterManually,
-            ),
+            if (!noRoute)
+              YtdlOutlinedPill(
+                l.ytdlLookupEnterDetails,
+                key: const ValueKey('ytdl-enter-details'),
+                onTap: _d.enterManually,
+              ),
             YtdlTextLink(
               l.discoverPageRetry,
               key: const ValueKey('ytdl-retry-lookup'),
@@ -251,6 +290,9 @@ class YtdlResultCard extends StatelessWidget {
         const SizedBox(height: 6),
         _divider(),
         _saves(),
+        // The noMkdir choices (a remembered layout's literal folder, an
+        // unchecked one) and the sheet's way to subfolders.
+        ..._panels(l),
       ],
     );
   }
@@ -304,7 +346,11 @@ class YtdlResultCard extends StatelessWidget {
   // ── the card ────────────────────────────────────────────────────────────
 
   Widget _card(BuildContext context, AppLocalizations l) {
-    final found = _d.lookup == YtdlLookupState.found && _d.meta != null;
+    // A late answer not used yet is no reading of this card: what shows is
+    // what was typed, with no source line and no summary (the LookingUp
+    // board, frame c).
+    final found =
+        _d.lookup == YtdlLookupState.found && _d.meta != null && !_d.lateAnswer;
     final source = found ? _source(l) : null;
     final title = _d.displayTitle;
     final failedLookup =
@@ -472,11 +518,25 @@ class YtdlResultCard extends StatelessWidget {
     ),
   );
 
+  /// The artist and album the file will get: the fields, else — left
+  /// blank — YouTube's own tags, which the server keeps when a field isn't
+  /// sent (the helpers under the fields say the same). Only once the
+  /// reading is the card's ([found]): before a late answer is used, the
+  /// card is what was typed.
+  (String, String) _shownTags(bool found) {
+    final t = _d.tags;
+    final m = found ? _d.meta : null;
+    return (
+      t.artist.isNotEmpty ? t.artist : (m?.artist ?? '').trim(),
+      t.album.isNotEmpty ? t.album : (m?.album ?? '').trim(),
+    );
+  }
+
   /// The cover, then title, artist and "Discovery · 2001" / "No album" —
-  /// from the fields as they stand (what will be written).
+  /// what will be written: the fields as they stand, YouTube's for a
+  /// blank one.
   Widget _header(AppLocalizations l, String title, bool found) {
-    final artist = _d.tags.artist;
-    final album = _d.tags.album;
+    final (artist, album) = _shownTags(found);
     final year = _d.tags.year;
     // The album isolated, so a right-to-left name keeps "album · year".
     final third = found || album.isNotEmpty || year.isNotEmpty
@@ -608,6 +668,7 @@ class YtdlResultCard extends StatelessWidget {
     alignment: WrapAlignment.spaceBetween,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
+      // A disclosure: it opens and closes the fields, focusing none.
       Semantics(
         expanded: _d.tagsOpen,
         child: YtdlTextLink(
@@ -615,7 +676,7 @@ class YtdlResultCard extends StatelessWidget {
           key: const ValueKey('ytdl-edit-tags'),
           icon: Icons.edit_outlined,
           padding: const EdgeInsetsDirectional.only(end: 8),
-          onTap: () => _d.openTags(focus: _d.tagsOpen ? YtdlField.title : null),
+          onTap: () => _d.tagsOpen ? _d.closeTags() : _d.openTags(),
         ),
       ),
       if (_d.tagsOpen && _d.canSwap)
@@ -627,13 +688,14 @@ class YtdlResultCard extends StatelessWidget {
     ],
   );
 
-  /// The card read as one sentence (spec §9).
+  /// The card read as one sentence (spec §9); only for a found card.
   String _summary(AppLocalizations l, String source) {
     final t = _d.tags;
+    final (artist, album) = _shownTags(true);
     final title = _d.displayTitle;
     final details = [
-      t.artist.isEmpty ? title : l.ytdlSummaryBy(title, t.artist),
-      t.album.isEmpty ? l.ytdlSummaryNoAlbum : l.ytdlSummaryAlbum(t.album),
+      artist.isEmpty ? title : l.ytdlSummaryBy(title, artist),
+      album.isEmpty ? l.ytdlSummaryNoAlbum : l.ytdlSummaryAlbum(album),
       if (t.year.isNotEmpty) t.year,
     ].join(', ');
     final target = _d.target;

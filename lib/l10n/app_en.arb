@@ -6949,5 +6949,9 @@
   "ytdlErrAddOffline": "You're offline — try again when you're back.",
   "@ytdlErrAddOffline": {
     "description": "Line above the add button of Add from YouTube when the add could not reach the server because the phone has no connection (nothing was sent, so nothing started)."
+  },
+  "ytdlHelpVideoRelease": "From the video's release date",
+  "@ytdlHelpVideoRelease": {
+    "description": "Helper line under the Year field of Add from YouTube when the year came from the video's own release date (a premiere or scheduled upload), not from YouTube Music."
   }
 }

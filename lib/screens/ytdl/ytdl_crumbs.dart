@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
+import '../discovery/keep_copy_ui.dart' show keepInk;
 
 /// How Add from YouTube draws a folder path ("Music › Daft Punk ›
 /// Discovery"), on the card, in rows, toasts and the explorer strip.
@@ -138,7 +139,9 @@ class YtdlCrumbs extends StatelessWidget {
   }
 }
 
-/// The small outlined "new" tag after a folder that will be made.
+/// The small outlined "new" tag after a folder that will be made: the one
+/// amber mark on a path (every board: an 18 px pill, 1 px edge and 11/600
+/// words in the primary's ink).
 class YtdlNewTag extends StatelessWidget {
   final String? label;
   const YtdlNewTag({super.key, this.label});
@@ -146,19 +149,20 @@ class YtdlNewTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final ink = keepInk();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        border: Border.all(color: VelvetColors.border2),
-        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: ink),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: Text(
         label ?? l.ytdlNewTag,
         style: TextStyle(
-          fontSize: 10.5,
-          height: 1.2,
+          fontSize: 11,
+          height: 16 / 11,
           fontWeight: FontWeight.w600,
-          color: VelvetColors.textSecondary,
+          color: ink,
         ),
       ),
     );

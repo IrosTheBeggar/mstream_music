@@ -28,33 +28,64 @@ import 'ytdl_result_card.dart';
 /// until the POST answers, closes on 200, and shows a refusal inside.
 /// Dragged down while starting, the hub carries on and the outcome reaches
 /// the folder strip. Each folder keeps its own draft for the session.
+///
+/// "Choose a folder…" (an account that can't make folders after all, a
+/// folder that couldn't be made) never opens a sheet on top of this one
+/// (spec §1): this sheet goes, the folder picker comes, and this sheet
+/// comes back with the pick applied — or as it was, when cancelled.
 Future<void> showYtdlFolderSheet(
   BuildContext context,
   Server server,
   String currentPath,
-) => showModalBottomSheet<void>(
-  context: context,
-  useRootNavigator: true,
-  backgroundColor: VelvetColors.surface,
-  isScrollControlled: true,
-  constraints: BoxConstraints(
-    maxHeight: MediaQuery.sizeOf(context).height * 0.89,
-  ),
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
-  builder: (_) => YtdlFolderSheet(server: server, currentPath: currentPath),
-);
+) async {
+  for (;;) {
+    if (!context.mounted) return;
+    final gone = Completer<void>();
+    final exit = await showModalBottomSheet<YtdlFolderSheetExit>(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: VelvetColors.surface,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.89,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) =>
+          YtdlFolderSheet(server: server, currentPath: currentPath, gone: gone),
+    );
+    if (exit != YtdlFolderSheetExit.chooseFolder) return;
+    // Once it has slid away and let go of its draft: the picker never
+    // shows over it, and the sheet coming back attaches after it.
+    await gone.future;
+    if (!context.mounted) return;
+    final st = YtdlHub().stateFor(server);
+    await ytdlChooseFolder(context, st.folderDraft(currentPath));
+    // The feature went away while the picker was up: nothing to come back to.
+    if (!st.entryAllowed) return;
+  }
+}
+
+/// Why the folder sheet closed, when it isn't simply done.
+enum YtdlFolderSheetExit {
+  /// "Choose a folder…": the picker takes its place, then it comes back.
+  chooseFolder,
+}
 
 /// The sheet's body ([showYtdlFolderSheet]).
 class YtdlFolderSheet extends StatefulWidget {
   final Server server;
   final String currentPath;
 
+  /// Completes once the sheet has left the tree.
+  final Completer<void>? gone;
+
   const YtdlFolderSheet({
     super.key,
     required this.server,
     required this.currentPath,
+    this.gone,
   });
 
   @override
@@ -82,6 +113,8 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
   void dispose() {
     _st.removeListener(_stateMoved);
     _d.detach();
+    final gone = widget.gone;
+    if (gone != null && !gone.isCompleted) gone.complete();
     super.dispose();
   }
 
@@ -97,11 +130,18 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
     );
   }
 
-  void _close({String? why}) {
-    if (_closing) return;
+  /// Closes this sheet's own route — and whatever is open over it (the
+  /// format menu, opened while "Starting…" ran): popping the top route
+  /// would close only that.
+  void _close({String? why, YtdlFolderSheetExit? exit}) {
+    if (_closing || !mounted) return;
+    final route = ModalRoute.of(context);
+    final nav = route?.navigator;
+    if (route == null || nav == null || !route.isActive) return;
     _closing = true;
     if (why != null) YtdlHub().showToast(why);
-    Navigator.of(context).pop();
+    nav.popUntil((r) => r == route);
+    nav.pop(exit);
   }
 
   Future<void> _add() async {
@@ -109,7 +149,8 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
     if (ok && mounted) _close();
   }
 
-  void _chooseFolder() => ytdlChooseFolder(context, _d);
+  /// The picker in this sheet's place ([showYtdlFolderSheet]).
+  void _chooseFolder() => _close(exit: YtdlFolderSheetExit.chooseFolder);
 
   @override
   Widget build(BuildContext context) {
@@ -128,11 +169,15 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
               ? YtdlSubfoldersPage(
                   draft: _d,
                   onBack: () => setState(() => _subfolders = false),
+                  // The page previews folders under the one on screen: a
+                  // folder chosen for this song gives way to them.
                   onDone: (layout) {
+                    _d.undoJustThisSong();
                     _d.setSubLayout(layout);
                     setState(() => _subfolders = false);
                   },
                   onEditTags: (layout, field) {
+                    _d.undoJustThisSong();
                     _d.setSubLayout(layout);
                     setState(() => _subfolders = false);
                     _d.openTags(focus: field);
@@ -295,16 +340,35 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
       _ => _Sub.custom,
     };
     _custom = TextEditingController(text: _sub == _Sub.custom ? now : '');
-    _custom.addListener(() => setState(() {}));
+    _custom.addListener(_moved);
+    _d.addListener(_moved);
+    _recheck();
   }
 
   @override
   void dispose() {
+    _d.removeListener(_moved);
     _checkTimer?.cancel();
     _custom.dispose();
     _customFocus.dispose();
     super.dispose();
   }
+
+  /// The choice, the custom layout or the draft (a lookup landing, a tag
+  /// typed) moved: the preview follows, and a path it moved to is checked.
+  void _moved() {
+    if (!mounted) return;
+    setState(() {});
+    _recheck();
+  }
+
+  /// The previewed target under the choice on this page; null while the
+  /// custom layout is refused.
+  YtdlTarget? get _target => _refusal == null
+      ? _d.targetFor(YtdlChoice.folder(_d.folder!, layout: _layout))
+      : null;
+
+  void _recheck() => _scheduleCheck(_target);
 
   String get _layout => switch (_sub) {
     _Sub.here => kYtdlLayoutTop,
@@ -322,15 +386,15 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
 
   /// Check [t]'s folders [YtdlDraft.kCheckAfter] after it settles; an
   /// answer for a path since left is dropped.
-  void _scheduleCheck(YtdlTarget t) {
-    final dir = t.valid ? t.directory : null;
+  void _scheduleCheck(YtdlTarget? t) {
+    final dir = t != null && t.valid ? t.directory : null;
     if (dir == _checkFor) return;
     _checkFor = dir;
     _check = null;
     _checkTimer?.cancel();
     if (dir == null) return;
     _checkTimer = YtdlHub().timer(YtdlDraft.kCheckAfter, () async {
-      final c = await _d.checkTarget(t);
+      final c = await _d.checkTarget(t!);
       if (!mounted || _checkFor != dir) return;
       setState(() => _check = c);
     });
@@ -340,83 +404,72 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final refusal = _refusal;
-    final target = refusal == null
-        ? _d.targetFor(YtdlChoice.folder(_d.folder!, layout: _layout))
-        : null;
-    if (target != null) _scheduleCheck(target);
-    return ListenableBuilder(
-      listenable: _d,
-      builder: (context, _) => Column(
-        key: const ValueKey('ytdl-subfolders'),
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const DestGrabHandle(),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 16, 0),
-            child: Row(
-              children: [
-                IconButton(
-                  key: const ValueKey('ytdl-sub-back'),
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: widget.onBack,
-                  icon: Icon(Icons.arrow_back, color: VelvetColors.textPrimary),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    l.ytdlSubfoldersTitle,
-                    style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                      height: 22 / 18,
-                    ),
+    final target = _target;
+    return Column(
+      key: const ValueKey('ytdl-subfolders'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DestGrabHandle(),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 16, 0),
+          child: Row(
+            children: [
+              IconButton(
+                key: const ValueKey('ytdl-sub-back'),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: widget.onBack,
+                icon: Icon(Icons.arrow_back, color: VelvetColors.textPrimary),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  l.ytdlSubfoldersTitle,
+                  style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    height: 22 / 18,
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 4, bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                  child: _here(l),
+                ),
+                ..._choices(l),
+                if (_sub == _Sub.custom)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(50, 0, 16, 4),
+                    child: _editor(l, refusal),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: _preview(l, target),
                 ),
               ],
             ),
           ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 4, bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                    child: _here(l),
-                  ),
-                  ..._choices(l),
-                  if (_sub == _Sub.custom)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        50,
-                        0,
-                        16,
-                        4,
-                      ),
-                      child: _editor(l, refusal),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                    child: _preview(l, target),
-                  ),
-                ],
-              ),
-            ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: VelvetColors.border)),
           ),
-          Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: VelvetColors.border)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            alignment: AlignmentDirectional.centerEnd,
-            child: _done(l, enabled: refusal == null),
-          ),
-        ],
-      ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          alignment: AlignmentDirectional.centerEnd,
+          child: _done(l, enabled: refusal == null),
+        ),
+      ],
     );
   }
 
@@ -475,10 +528,11 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
           mono: mono,
           hint: mono ? null : sub,
           selected: _sub == s,
-          onTap: () => setState(() {
-            _sub = s;
+          onTap: () {
+            setState(() => _sub = s);
             if (s == _Sub.custom) _customFocus.requestFocus();
-          }),
+            _recheck();
+          },
         );
     return [
       option(

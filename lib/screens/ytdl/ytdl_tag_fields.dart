@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart' show RenderEditable;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -8,6 +9,7 @@ import '../../theme/velvet_theme.dart';
 import '../../util/ytdl_guess.dart';
 import '../discovery/keep_copy_ui.dart';
 import 'ytdl_card_parts.dart';
+import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart';
 
 /// The four tag fields inside the result card (spec §3 "Edit tags"):
@@ -15,8 +17,9 @@ import 'ytdl_draft.dart';
 /// value came from, "Edited" once typed in, or what a blank field does —
 /// and the restore chips that put back what the guess removed.
 ///
-/// A field taking focus keeps itself and the SAVES TO crumbs ([savesKey])
-/// in view above the keyboard: its scroll padding reaches down to them, so
+/// A field taking focus keeps itself and the SAVES TO crumbs (under
+/// [savesKey]) in view above the keyboard: its scroll padding reaches down
+/// to them, so
 /// the field's own reveal (on focus, and again as the keyboard rises)
 /// brings both. A focus asked from elsewhere (Enter details, the Where
 /// sheet's "Edit tags" / "Add a year") is taken on the next build.
@@ -71,9 +74,51 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
     if (f != null) _d.focusFor(f).requestFocus();
   }
 
+  /// What must stay in view under the field: the SAVES TO crumbs (spec
+  /// §3) — not the whole block, whose file and left-out lines below them
+  /// can make the reveal too tall for what the keyboard leaves. The block
+  /// itself when it draws no crumbs (a layout to fix).
+  RenderBox? _savesTarget() {
+    final root = widget.savesKey.currentContext;
+    if (root is! Element) return null;
+    RenderBox? crumbs;
+    void visit(Element e) {
+      if (crumbs != null) return;
+      if (e.widget is YtdlCrumbs) {
+        final r = e.findRenderObject();
+        if (r is RenderBox && r.hasSize) crumbs = r;
+        return;
+      }
+      e.visitChildren(visit);
+    }
+
+    root.visitChildren(visit);
+    if (crumbs != null) return crumbs;
+    final block = root.findRenderObject();
+    return block is RenderBox && block.hasSize ? block : null;
+  }
+
+  /// [f]'s text line (its RenderEditable), else the field's box.
+  RenderBox? _textBox(YtdlField f) {
+    final root = _boxes[f]!.currentContext?.findRenderObject();
+    if (root is! RenderBox || !root.hasSize) return null;
+    RenderBox? text;
+    void visit(RenderObject r) {
+      if (text != null) return;
+      if (r is RenderEditable) {
+        if (r.hasSize) text = r;
+        return;
+      }
+      r.visitChildren(visit);
+    }
+
+    visit(root);
+    return text ?? root;
+  }
+
   void _measure() {
-    final saves = widget.savesKey.currentContext?.findRenderObject();
-    if (saves is! RenderBox || !saves.hasSize) return;
+    final saves = _savesTarget();
+    if (saves == null) return;
     final savesBottom = saves.localToGlobal(Offset(0, saves.size.height)).dy;
     // About 400 px of list remain on an 844 px phone with the keyboard up
     // (spec §3): a reveal taller than what is left would push the field
@@ -91,11 +136,14 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
     final keyboard = up ? 0 : height * 0.36;
     var changed = false;
     for (final f in YtdlField.values) {
-      final box = _boxes[f]!.currentContext?.findRenderObject();
-      if (box is! RenderBox || !box.hasSize) continue;
+      // The reveal pads the caret's line, not the field's box: measure
+      // from the text's own bottom, 12 px and a border above the box's.
+      final box = _textBox(f);
+      if (box == null) continue;
       final bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
-      final cap = math.max(0.0, viewport - keyboard - box.size.height - 56);
-      final below = math.min(math.max(0.0, savesBottom - bottom) + 16, cap);
+      // Room for the line itself and its 40 px top padding.
+      final cap = math.max(0.0, viewport - keyboard - box.size.height - 48);
+      final below = math.min(math.max(0.0, savesBottom - bottom) + 12, cap);
       if (((_below[f] ?? -100) - below).abs() > 1) {
         _below[f] = below;
         changed = true;
@@ -160,9 +208,12 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
   }
 
   /// "↶ (Official Video)", "↶ [HD]", then "↶ Split at -": the pieces still
-  /// out of the title, in the order the board draws them.
+  /// out of the title, in the order the board draws them. None while the
+  /// artist and title are swapped (the FoundCleaned board): a piece put
+  /// back would go into what is now the artist.
   List<Widget> _restoreChips(AppLocalizations l, YtdlGuess g) {
     final out = <Widget>[];
+    if (_d.swapped) return out;
     final restored = _d.restored;
     for (final kind in [YtdlCut.noise, YtdlCut.split]) {
       for (var i = 0; i < g.fragments.length; i++) {
@@ -330,6 +381,9 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
         }
         if (source == YtdlFieldSource.music) return l.ytdlHelpMusic;
         if (source == YtdlFieldSource.videoTitle) return l.ytdlHelpVideoTitle;
+        if (source == YtdlFieldSource.videoTitleCleaned) {
+          return l.ytdlHelpVideoTitleCleaned;
+        }
         final strip = g.artistStrip;
         if (strip != null && !_d.artistStripRestored) {
           return l.ytdlHelpYoutubeArtistStripped(strip);
@@ -345,9 +399,11 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
         }
         return l.ytdlHelpMusic;
       case YtdlField.year:
-        return source == YtdlFieldSource.blank
-            ? l.ytdlBlankYear
-            : l.ytdlHelpMusic;
+        return switch (source) {
+          YtdlFieldSource.blank => l.ytdlBlankYear,
+          YtdlFieldSource.videoRelease => l.ytdlHelpVideoRelease,
+          _ => l.ytdlHelpMusic,
+        };
     }
   }
 }

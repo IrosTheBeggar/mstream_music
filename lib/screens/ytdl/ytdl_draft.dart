@@ -85,6 +85,10 @@ enum YtdlFieldSource {
   videoTitle,
   videoTitleCleaned,
   youtubeArtist,
+
+  /// The lookup's release date outside the music tier (a premiere's, a
+  /// scheduled upload's): the year of an ordinary video.
+  videoRelease,
   edited,
   blank,
 }
@@ -506,6 +510,14 @@ class YtdlDraft extends ChangeNotifier {
     _notify();
   }
 
+  /// "Edit tags" tapped again: the fields close; what they hold stays.
+  void closeTags() {
+    if (!_tagsOpen) return;
+    _tagsOpen = false;
+    _focusRequest = null;
+    _notify();
+  }
+
   /// The field [openTags] asked to focus, once (the UI calls this after
   /// building the fields and focuses it).
   YtdlField? takeFocusRequest() {
@@ -529,16 +541,18 @@ class YtdlDraft extends ChangeNotifier {
     switch (f) {
       case YtdlField.title:
         if (_swapped) return YtdlFieldSource.videoTitle;
-        final noiseOut = [
-          for (var i = 0; i < g.fragments.length; i++)
-            if (g.fragments[i].kind == YtdlCut.noise && !_restored.contains(i)) i,
-        ].isNotEmpty;
-        if (noiseOut) return YtdlFieldSource.videoTitleCleaned;
+        if (_noiseOut) return YtdlFieldSource.videoTitleCleaned;
         return g.tier == YtdlTier.music
             ? YtdlFieldSource.music
             : YtdlFieldSource.videoTitle;
       case YtdlField.artist:
-        if (_swapped) return YtdlFieldSource.videoTitle;
+        // Swapped, the artist holds the title's half — cleaned, if noise
+        // came out of it.
+        if (_swapped) {
+          return _noiseOut
+              ? YtdlFieldSource.videoTitleCleaned
+              : YtdlFieldSource.videoTitle;
+        }
         return switch (g.tier) {
           YtdlTier.music => YtdlFieldSource.music,
           YtdlTier.split => _splitOut
@@ -547,9 +561,24 @@ class YtdlDraft extends ChangeNotifier {
           _ => YtdlFieldSource.youtubeArtist,
         };
       case YtdlField.album:
-      case YtdlField.year:
+        // An album only ever comes with the music tier.
         return YtdlFieldSource.music;
+      case YtdlField.year:
+        return g.tier == YtdlTier.music
+            ? YtdlFieldSource.music
+            : YtdlFieldSource.videoRelease;
     }
+  }
+
+  /// A noise fragment (not the split) is still out of the title.
+  bool get _noiseOut {
+    final g = _guess;
+    for (var i = 0; i < g.fragments.length; i++) {
+      if (g.fragments[i].kind == YtdlCut.noise && !_restored.contains(i)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Fragment indexes put back (restore chips, the split, Undo all).
@@ -605,6 +634,10 @@ class YtdlDraft extends ChangeNotifier {
 
   /// "Swap artist and title" (split tier, for "Title - Artist").
   bool get canSwap => _splitOut;
+
+  /// The title and artist are swapped: the restore chips hide (spec §3,
+  /// the FoundCleaned board) — a piece put back would land in the artist.
+  bool get swapped => _swapped;
 
   void swap() {
     if (!canSwap) return;

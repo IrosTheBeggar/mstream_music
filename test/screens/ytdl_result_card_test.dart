@@ -13,6 +13,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_saves_block.dart';
@@ -66,6 +67,10 @@ void main() {
       expect(crumbs.newAt, {2});
       expect(shows(t, 'about One_More_Time.mp3'), isTrue);
       expect(find.text(l.ytdlSavesTo.toUpperCase()), findsOneWidget);
+      // "new" is the one amber mark on the path.
+      final tag = t.widget<Text>(find.descendant(
+          of: find.byType(YtdlNewTag), matching: find.byType(Text)));
+      expect(tag.style!.color, keepInk());
     });
 
     testWidgets('Edit tags: each field from YouTube Music; Edited; blank lines',
@@ -88,6 +93,54 @@ void main() {
       await t.pump();
       expect(helper(t, YtdlField.artist), l.ytdlBlankArtistMusic);
       expect(d.metadataToSend.containsKey('album'), isFalse);
+    });
+
+    testWidgets('blank artist and album: the card shows what the file keeps',
+        (t) async {
+      final handle = t.ensureSemantics();
+      h().fake.folder('/Music/');
+      await card(t, kOneMoreTime);
+      final l = h().l;
+      await openTags(t);
+      await t.enterText(byKey('ytdl-field-artist'), '');
+      await t.enterText(byKey('ytdl-field-album'), '');
+      await t.pump();
+      expect(helper(t, YtdlField.artist), l.ytdlBlankArtistMusic);
+      expect(helper(t, YtdlField.album), l.ytdlBlankAlbumKeeps);
+      expect(find.text('Daft Punk'), findsOneWidget);
+      expect(shows(t, 'Discovery · 2001'), isTrue);
+      expect(find.text(l.ytdlCardNoAlbum), findsNothing);
+      expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(
+              '${l.ytdlSummaryBy('One More Time', 'Daft Punk')}, '
+              '${l.ytdlSummaryAlbum('Discovery')}, 2001'))),
+          findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('Edit tags opens and closes the fields, focusing none',
+        (t) async {
+      final d = await card(t, kOneMoreTime);
+      bool? expanded() => t
+          .widget<Semantics>(find
+              .ancestor(of: byKey('ytdl-edit-tags'), matching: find.byType(Semantics))
+              .first)
+          .properties
+          .expanded;
+      expect(expanded(), isFalse);
+      await openTags(t);
+      expect(d.tagsOpen, isTrue);
+      expect(byKey('ytdl-field-title'), findsOneWidget);
+      expect(d.focusFor(YtdlField.title).hasFocus, isFalse);
+      expect(expanded(), isTrue);
+      await tapIn(t, byKey('ytdl-edit-tags'));
+      await t.pump();
+      expect(d.tagsOpen, isFalse);
+      expect(byKey('ytdl-field-title'), findsNothing);
+      expect(d.focusFor(YtdlField.title).hasFocus, isFalse);
+      expect(expanded(), isFalse);
+      // What the fields held stays.
+      expect(d.controllerFor(YtdlField.title).text, 'One More Time');
     });
 
     testWidgets('no year from the lookup: the upload-year line', (t) async {
@@ -149,12 +202,23 @@ void main() {
       expect(d.controllerFor(YtdlField.title).text,
           'Feel Good Inc. (Official Video)');
       expect(find.text('(Official Video)'), findsNothing);
-      // Swap.
+      // Swap: the chips go (a piece put back would land in the artist);
+      // the artist is the title's half, cleaned of [HD].
       await tapIn(t, byKey('ytdl-swap'));
       await t.pump();
       expect(d.controllerFor(YtdlField.artist).text,
           'Feel Good Inc. (Official Video)');
       expect(d.controllerFor(YtdlField.title).text, 'Gorillaz');
+      expect(find.text('[HD]'), findsNothing);
+      expect(find.text(l.ytdlRestoreSplit('-')), findsNothing);
+      expect(helper(t, YtdlField.title), l.ytdlHelpVideoTitle);
+      expect(helper(t, YtdlField.artist), l.ytdlHelpVideoTitleCleaned);
+      // Swapped back, they return.
+      await tapIn(t, byKey('ytdl-swap'));
+      await t.pump();
+      expect(find.text('[HD]'), findsOneWidget);
+      await tapIn(t, byKey('ytdl-swap'));
+      await t.pump();
       // Undo all: the raw title, no chips, no line.
       await tapIn(t, byKey('ytdl-undo-all'));
       await t.pump();
@@ -202,6 +266,15 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('a year off an ordinary video: from its release date',
+        (t) async {
+      h().fake.videos[kFeelGood] = {...kFeelGoodVideo, 'year': 2005};
+      final d = await card(t, kFeelGood);
+      await openTags(t);
+      expect(d.controllerFor(YtdlField.year).text, '2005');
+      expect(helper(t, YtdlField.year), h().l.ytdlHelpVideoRelease);
+    });
+
     testWidgets('an emptied title says the file gets the video\'s own',
         (t) async {
       await card(t, kFeelGood);
@@ -210,6 +283,26 @@ void main() {
       await t.pump();
       expect(helper(t, YtdlField.title), h().l.ytdlBlankTitle);
     });
+  });
+
+  testWidgets('summarized: Undo all, Just this song and its Undo stay reachable',
+      (t) async {
+    final handle = t.ensureSemantics();
+    h().fake.folder('/Music/Gorillaz/');
+    final d = await card(t, kFeelGood);
+    final l = h().l;
+    expect(find.bySemanticsLabel(RegExp(RegExp.escape(l.ytdlSourceSplitAgrees))),
+        findsOneWidget);
+    expect(find.bySemanticsLabel(l.ytdlUndoAll), findsOneWidget);
+    d.useForThisSong(YtdlChoice.folder('/Music/Gorillaz/'));
+    await ui.settle(t, YtdlDraft.kCheckAfter);
+    expect(byKey('ytdl-just-undo'), findsOneWidget);
+    expect(find.bySemanticsLabel(l.ytdlJustThisSong), findsOneWidget);
+    expect(find.bySemanticsLabel(l.ytdlUndo), findsOneWidget);
+    await tapIn(t, byKey('ytdl-just-undo'));
+    await ui.settle(t, YtdlDraft.kCheckAfter);
+    expect(d.justThisSong, isNull);
+    handle.dispose();
   });
 
   group('YouTube\'s artist (ChannelGuess)', () {
@@ -380,6 +473,25 @@ void main() {
       expect(d.target.directory, '/Music/');
     });
 
+    testWidgets('a failed lookup still says why Add is off, with the choices',
+        (t) async {
+      s
+        ..ytdlLibrary = 'Music'
+        ..ytdlLayout = 'Singles/{{ARTIST}}'
+        ..ytdlLayoutKind = 'custom';
+      h().fake.folder('/Music/');
+      h().fake.lookupRefusal = (500, 'Server Error');
+      final d = await card(t, kOneMoreTime);
+      expect(byKey('ytdl-lookup-failed'), findsOneWidget);
+      expect(d.block, YtdlBlock.mkdirBlocked);
+      expect(find.text(h().l.ytdlNoMkdirNew('Singles')), findsOneWidget);
+      expect(byKey('ytdl-use-top'), findsOneWidget);
+      expect(byKey('ytdl-choose-folder'), findsOneWidget);
+      await tapIn(t, byKey('ytdl-use-top'));
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(d.block, YtdlBlock.none);
+    });
+
     testWidgets('Choose a folder… applies the picked folder', (t) async {
       h().fake.folder('/Music/Daft Punk/');
       final d = await card(t, kOneMoreTime);
@@ -399,10 +511,26 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('the noMkdir panel and a clash', (t) async {
+    testWidgets('the noMkdir panel', (t) async {
       s = ytdlServer(noMkdir: true);
       h().fake.folder('/Music/Daft Punk/');
       await card(t, kOneMoreTime, size: const Size(360, 800), textScale: 2);
+      expect(byKey('ytdl-nomkdir'), findsOneWidget);
+      expect(byKey('ytdl-save-deepest'), findsOneWidget);
+      await t.drag(byKey('ytdl-list'), const Offset(0, -3000));
+      await t.pump();
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('a clash on an older server', (t) async {
+      h().fake.hasRecords = false;
+      h().fake.folder('/Music/Daft Punk/Discovery/',
+          files: ['One_More_Time.mp3']);
+      final d =
+          await card(t, kOneMoreTime, size: const Size(360, 800), textScale: 2);
+      expect(d.clashBlocks, isTrue);
+      expect(byKey('ytdl-clash'), findsOneWidget);
+      expect(byKey('ytdl-clash-change'), findsOneWidget);
       await t.drag(byKey('ytdl-list'), const Offset(0, -3000));
       await t.pump();
       expect(t.takeException(), isNull);

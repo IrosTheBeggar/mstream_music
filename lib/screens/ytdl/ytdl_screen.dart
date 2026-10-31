@@ -37,6 +37,18 @@ class YtdlScreen extends StatefulWidget {
     this.openNeedsLook = false,
   });
 
+  /// ADDING, NEEDS A LOOK and ADDED under the card, with the anchor the
+  /// screen scrolls to — a seam so a test can stand in for the lists.
+  @visibleForTesting
+  static Widget Function(YtdlServerState state, GlobalKey needsLookAnchor)
+  listsBuilder = _lists;
+
+  static Widget _lists(YtdlServerState state, GlobalKey anchor) =>
+      YtdlLists(state: state, needsLookAnchor: anchor);
+
+  @visibleForTesting
+  static void resetListsBuilder() => listsBuilder = _lists;
+
   @override
   State<YtdlScreen> createState() => _YtdlScreenState();
 }
@@ -70,9 +82,14 @@ class _YtdlScreenState extends State<YtdlScreen> {
   }
 
   /// A re-ping turned the feature off for this server (conversion off,
-  /// uploads off): the screen goes, saying why (spec §8).
+  /// uploads off): the screen goes, saying why (spec §8) — its own route,
+  /// with whatever is open over it (the format menu, a destination sheet);
+  /// popping the top route would close only that.
   void _stateMoved() {
     if (_closing || !mounted || _st.entryAllowed) return;
+    final route = ModalRoute.of(context);
+    final nav = route?.navigator;
+    if (route == null || nav == null || !route.isActive) return;
     _closing = true;
     final l = AppLocalizations.of(context);
     final s = _st.server;
@@ -82,15 +99,19 @@ class _YtdlScreenState extends State<YtdlScreen> {
         ? l.ytdlErrFfmpeg
         : null;
     if (why != null) YtdlHub().showToast(why);
-    Navigator.of(context).maybePop();
+    nav.popUntil((r) => r == route);
+    nav.pop();
   }
 
-  /// "Details" from the strip: NEEDS A LOOK once its header is built.
+  /// "Details" from the strip: NEEDS A LOOK, once, after the first build.
+  /// The list builds every child (a column, not a lazy list), so the
+  /// header is there however tall the card is; with no header (nothing
+  /// needs a look) nothing scrolls, and nothing waits to scroll later.
   void _afterBuild(Duration _) {
     if (!_revealNeedsLook || !mounted) return;
+    _revealNeedsLook = false;
     final ctx = _needsLook.currentContext;
     if (ctx == null) return;
-    _revealNeedsLook = false;
     Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300));
   }
 
@@ -153,29 +174,35 @@ class _YtdlScreenState extends State<YtdlScreen> {
           return Column(
             children: [
               Expanded(
-                child: ListView(
+                // Every child built, not lazily: the NEEDS A LOOK anchor
+                // under a tall card, and a focused tag field scrolled far
+                // off, both stay in the tree.
+                child: SingleChildScrollView(
                   key: const ValueKey('ytdl-list'),
                   controller: _scroll,
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottom),
-                  children: [
-                    YtdlPasteCard(draft: _d, onChange: _where),
-                    if (_st.tier == YtdlServerTier.full) ...[
-                      const SizedBox(height: 12),
-                      YtdlLimitsLine(state: _st),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      YtdlPasteCard(draft: _d, onChange: _where),
+                      if (_st.tier == YtdlServerTier.full) ...[
+                        const SizedBox(height: 12),
+                        YtdlLimitsLine(state: _st),
+                      ],
+                      if (card) ...[
+                        const SizedBox(height: 12),
+                        YtdlResultCard(
+                          draft: _d,
+                          savesKey: _savesKey,
+                          onChange: _where,
+                          onChooseFolder: _chooseFolder,
+                          onChangeFormat: _changeFormat,
+                        ),
+                      ] else if (_noRows)
+                        _empty(l),
+                      YtdlScreen.listsBuilder(_st, _needsLook),
                     ],
-                    if (card) ...[
-                      const SizedBox(height: 12),
-                      YtdlResultCard(
-                        draft: _d,
-                        savesKey: _savesKey,
-                        onChange: _where,
-                        onChooseFolder: _chooseFolder,
-                        onChangeFormat: _changeFormat,
-                      ),
-                    ] else if (_noRows)
-                      _empty(l),
-                    YtdlLists(state: _st, needsLookAnchor: _needsLook),
-                  ],
+                  ),
                 ),
               ),
               if (bar)

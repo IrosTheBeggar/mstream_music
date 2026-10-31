@@ -17,6 +17,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/ytdl/ytdl_card_parts.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_folder_sheet.dart';
@@ -109,6 +110,92 @@ void main() {
     expect(find.byType(YtdlFolderSheet), findsNothing);
   });
 
+  testWidgets('a 200 closes the sheet under the format menu opened meanwhile',
+      (t) async {
+    final d = await filled(t);
+    h().fake.addGate = Completer<void>();
+    await t.tap(byKey('ytdl-add'));
+    await ui.settle(t);
+    expect(d.addPhase, YtdlAddPhase.starting);
+    await t.tap(byKey('ytdl-format'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 300));
+    expect(byKey('ytdl-format-menu'), findsOneWidget);
+    h().fake.addGate!.complete();
+    await ui.settle(t);
+    await ui.settle(t);
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsNothing);
+    expect(find.byType(YtdlFolderSheet), findsNothing);
+    expect(h().fake.count('POST', '/api/v1/ytdl/'), 1);
+  });
+
+  testWidgets('a failed lookup: the way to subfolders is still there',
+      (t) async {
+    h().fake.lookupRefusal = (500, 'Server Error');
+    await filled(t);
+    expect(byKey('ytdl-lookup-failed'), findsOneWidget);
+    expect(byKey('ytdl-sort-subfolders'), findsOneWidget);
+  });
+
+  group('Choose a folder… (spec §1: never a sheet over a sheet)', () {
+    /// Subfolders chosen, and the folder they need couldn't be made.
+    Future<YtdlDraft> mkdirFailed(WidgetTester t) async {
+      final d = await filled(t);
+      h().fake.folder('/Music/Singles/');
+      d.setSubLayout(kYtdlLayoutAlbum);
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      h().fake.mkdirRefusal = (500, 'EACCES');
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      expect(byKey('ytdl-mkdir-choose'), findsOneWidget);
+      return d;
+    }
+
+    /// The picker, noting whether the folder sheet was still there under
+    /// it (its route, or its body sliding away).
+    List<bool> picker(WidgetTester t, String? answer) {
+      final route = ModalRoute.of(t.element(find.byType(YtdlFolderSheet)))!;
+      final sheetUp = <bool>[];
+      YtdlSheets.chooseFolder = (context, draft) async {
+        sheetUp.add(route.isActive ||
+            find.byType(YtdlFolderSheet).evaluate().isNotEmpty);
+        return answer;
+      };
+      return sheetUp;
+    }
+
+    testWidgets('the sheet steps aside for the picker, then comes back with it',
+        (t) async {
+      final d = await mkdirFailed(t);
+      final sheetUp = picker(t, '/Music/Singles/');
+      await t.tap(byKey('ytdl-mkdir-choose'));
+      await t.pumpAndSettle();
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      await t.pumpAndSettle();
+      expect(sheetUp, [false]);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      expect(d.attached, isTrue);
+      expect(d.justThisSong, YtdlChoice.folder('/Music/Singles/'));
+      expect(crumbsIn(t, find.byType(YtdlSavesBlock)).crumbs,
+          ['Music', 'Singles']);
+      expect(find.text(h().l.ytdlJustThisSong), findsOneWidget);
+      expect(byKey('ytdl-add-error'), findsNothing);
+    });
+
+    testWidgets('cancelled: the sheet comes back as it was', (t) async {
+      final d = await mkdirFailed(t);
+      final sheetUp = picker(t, null);
+      await t.tap(byKey('ytdl-mkdir-choose'));
+      await t.pumpAndSettle();
+      expect(sheetUp, [false]);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      expect(d.justThisSong, isNull);
+      expect(d.subLayout, kYtdlLayoutAlbum);
+    });
+  });
+
   testWidgets('a refusal shows inside; a lost library without "Pick another"',
       (t) async {
     await filled(t);
@@ -171,6 +258,56 @@ void main() {
       expect(find.text(h().l.ytdlSavesTo.toUpperCase()), findsOneWidget);
       expect(addLabel(t), h().l.ytdlAddToLibrary);
       expect(crumbsIn(t, find.byType(YtdlSavesBlock)).newAt, {2});
+    });
+
+    testWidgets('the preview follows the draft: a late lookup fills Album',
+        (t) async {
+      h().fake.holdLookups = true;
+      h().fake.folder(here);
+      final d = await ui.pumpSheet(t, s, here);
+      d.link.text = kOneMoreTime;
+      await ui.settle(t, YtdlDraft.kLookupDebounce);
+      await ui.settle(t, YtdlDraft.kSlowAfter);
+      await t.tap(byKey('ytdl-enter-yourself'));
+      await t.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await t.pump();
+      await tapIn(t, byKey('ytdl-sort-subfolders'));
+      await t.pumpAndSettle();
+      await t.tap(byKey('ytdl-sub-album'));
+      await t.pump();
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(crumbsIn(t, byKey('ytdl-sub-preview')).crumbs,
+          ['Music', 'Daft Punk']);
+      for (final c in h().fake.heldLookups) {
+        c.complete();
+      }
+      await ui.settle(t);
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(d.controllerFor(YtdlField.album).text, 'Discovery');
+      final preview = crumbsIn(t, byKey('ytdl-sub-preview'));
+      expect(preview.crumbs, ['Music', 'Daft Punk', 'Discovery']);
+      expect(preview.newAt, {2});
+      expect(find.text(h().l.ytdlSubfoldersNew(1, 'Discovery')),
+          findsOneWidget);
+    });
+
+    testWidgets('Done gives way over a folder chosen for this song', (t) async {
+      final d = await filled(t);
+      h().fake.folder('/Music/Singles/');
+      d.useFolder('/Music/Singles/');
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(d.target.directory, '/Music/Singles/');
+      await tapIn(t, byKey('ytdl-sort-subfolders'));
+      await t.pumpAndSettle();
+      await t.tap(byKey('ytdl-sub-album'));
+      await t.pump();
+      await t.tap(byKey('ytdl-sub-done'));
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(d.justThisSong, isNull);
+      expect(d.target.directory, '/Music/Daft Punk/Discovery/');
+      expect(crumbsIn(t, find.byType(YtdlSavesBlock)).crumbs,
+          ['Music', 'Daft Punk', 'Discovery']);
     });
 
     testWidgets('back cancels: the first page keeps its choice', (t) async {

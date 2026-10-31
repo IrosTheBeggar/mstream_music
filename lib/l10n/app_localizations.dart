@@ -9687,6 +9687,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re offline — try again when you\'re back.'**
   String get ytdlErrAddOffline;
+
+  /// Helper line under the Year field of Add from YouTube when the year came from the video's own release date (a premiere or scheduled upload), not from YouTube Music.
+  ///
+  /// In en, this message translates to:
+  /// **'From the video\'s release date'**
+  String get ytdlHelpVideoRelease;
 }
 
 class _AppLocalizationsDelegate

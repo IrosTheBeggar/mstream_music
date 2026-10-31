@@ -51,7 +51,6 @@ class YtdlSavesBlock extends StatelessWidget {
     final here =
         sheet && _d.subLayout == kYtdlLayoutTop && _d.justThisSong == null;
     final blank = _d.lookupBlank;
-    Widget hide(Widget w) => summarized ? ExcludeSemantics(child: w) : w;
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -71,7 +70,7 @@ class YtdlSavesBlock extends StatelessWidget {
             text: l.discoverDestFixLayout,
           )
         else
-          hide(_crumbs(l, t, blank)),
+          _crumbs(l, t, blank),
         if (_d.checkUnknown && t.valid) ...[
           const SizedBox(height: 2),
           YtdlHelper(l.ytdlCheckFailed, color: VelvetColors.textSecondary),
@@ -130,9 +129,12 @@ class YtdlSavesBlock extends StatelessWidget {
     );
   }
 
+  /// The path, then "Just this song · Undo" when a choice for this song is
+  /// in force. In a summarized card only the path is quiet (the summary
+  /// reads it); the tag and its Undo are read and reached on their own.
   Widget _crumbs(AppLocalizations l, YtdlTarget t, bool blank) {
     final style = TextStyle(fontSize: 14, height: 20 / 14);
-    final crumbs = blank
+    final Widget path = blank
         ? YtdlCrumbs(
             crumbs: [t.library, l.ytdlSampleFile],
             sampleAt: const {1},
@@ -147,6 +149,7 @@ class YtdlSavesBlock extends StatelessWidget {
             },
             style: style,
           );
+    final crumbs = summarized ? ExcludeSemantics(child: path) : path;
     if (_d.justThisSong == null) return crumbs;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,

@@ -23,6 +23,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
+import 'package:mstream_music/screens/ytdl/ytdl_saves_block.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_screen.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/ytdl_hub.dart';
@@ -260,12 +261,72 @@ void main() {
       await ui.settle(t, YtdlDraft.kCheckAfter);
       expect(byKey('ytdl-late'), findsOneWidget);
       expect(find.text(h().l.ytdlLateEditsStay), findsOneWidget);
+      // Not used yet: what shows is what was typed — no source line (it
+      // would call the typed artist a guess), no "No album" line.
+      expect(byKey('ytdl-source'), findsNothing);
+      expect(find.text(h().l.ytdlSourceMusic), findsNothing);
+      expect(find.text(h().l.ytdlCardNoAlbum), findsNothing);
+      expect(find.text('Discovery'), findsNothing);
       await tapIn(t, byKey('ytdl-use-late'));
       await ui.settle(t, YtdlDraft.kCheckAfter);
       expect(byKey('ytdl-late'), findsNothing);
+      expect(byKey('ytdl-source'), findsOneWidget);
       expect(d.controllerFor(YtdlField.title).text, 'One more time');
       expect(d.controllerFor(YtdlField.album).text, 'Discovery');
       expect(d.controllerFor(YtdlField.year).text, '2001');
+    });
+
+    group('a lookup refused (spec §8 Errors)', () {
+      Future<void> refused(WidgetTester t, YtdlRefusal r) async {
+        h().fake.lookupRefusal = r;
+        final d = await ui.pumpScreen(t, s);
+        await ui.paste(t, d, kOneMoreTime);
+        expect(byKey('ytdl-lookup-failed'), findsOneWidget);
+        expect(byKey('ytdl-retry-lookup'), findsOneWidget);
+        expect(find.text(h().l.ytdlLookupFailed), findsNothing);
+      }
+
+      testWidgets('a 404 with no JSON body: no route, no Enter details',
+          (t) async {
+        await refused(t, (404, null));
+        expect(find.text(h().l.ytdlErrNoRoute), findsOneWidget);
+        expect(byKey('ytdl-enter-details'), findsNothing);
+      });
+
+      testWidgets('a 400: about the link, never the raw text', (t) async {
+        await refused(t, (400, '"url" must be a valid uri'));
+        expect(find.text(h().l.ytdlErrBadRequest), findsOneWidget);
+        expect(shows(t, 'valid uri'), isFalse);
+        expect(byKey('ytdl-enter-details'), findsOneWidget);
+      });
+
+      testWidgets('anything else: the server\'s own words', (t) async {
+        await refused(t, (500, 'Not A Directory'));
+        expect(find.text(h().l.ytdlErrOther('Not A Directory')),
+            findsOneWidget);
+        expect(byKey('ytdl-enter-details'), findsOneWidget);
+      });
+    });
+
+    testWidgets('a live link: its warning while reading and while offline',
+        (t) async {
+      const live = 'https://www.youtube.com/live/jfKfPfyJRdk';
+      h().fake.holdLookups = true;
+      final d = await ui.pumpScreen(t, s);
+      d.link.text = live;
+      await ui.settle(t, YtdlDraft.kLookupDebounce);
+      expect(byKey('ytdl-skeleton'), findsOneWidget);
+      expect(byKey('ytdl-live'), findsOneWidget);
+      h().fake.holdLookups = false;
+      h().fake.lookupThrows = const SocketException('Failed host lookup');
+      d.retryLookup();
+      await ui.settle(t);
+      expect(byKey('ytdl-offline'), findsOneWidget);
+      expect(byKey('ytdl-live'), findsOneWidget);
+      for (final c in h().fake.heldLookups) {
+        c.complete();
+      }
+      await ui.settle(t);
     });
 
     testWidgets('offline: the banner, Add off', (t) async {
@@ -338,11 +399,86 @@ void main() {
     expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
   });
 
-  testWidgets('opened at NEEDS A LOOK: builds with the anchor handed down',
+  testWidgets('the re-ping closes the screen under the open format menu too',
       (t) async {
-    await ui.pumpScreen(t, s, openNeedsLook: true);
-    expect(find.byType(YtdlScreen), findsOneWidget);
-    expect(t.takeException(), isNull);
+    h().fake.folder('/Music/Daft Punk/Discovery/');
+    final d = await ui.pumpScreen(t, s);
+    await ui.paste(t, d, kOneMoreTime);
+    await t.tap(byKey('ytdl-format'));
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsOneWidget);
+    s.noUpload = true;
+    await st().rememberFormat('mp3');
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsNothing);
+    expect(find.byType(YtdlScreen), findsNothing);
+    expect(byKey('test-open'), findsOneWidget);
+    expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+  });
+
+  group('opened at NEEDS A LOOK (the strip\'s Details)', () {
+    /// Stand-in lists: 300 px of ADDING, then the NEEDS A LOOK header on
+    /// the anchor, then 900 px of rows.
+    void fakeLists() {
+      YtdlScreen.listsBuilder = (state, anchor) => Column(
+            children: [
+              const SizedBox(height: 300),
+              SizedBox(
+                key: anchor,
+                height: 40,
+                child: const Text('NEEDS A LOOK'),
+              ),
+              const SizedBox(height: 900),
+            ],
+          );
+    }
+
+    bool inView(WidgetTester t, Finder f) {
+      final list = t.getRect(byKey('ytdl-list'));
+      final r = t.getRect(f);
+      return r.top >= list.top && r.bottom <= list.bottom;
+    }
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('under a tall kept card at ${scale}x: the header in view',
+          (t) async {
+        fakeLists();
+        h().fake.folder('/Music/');
+        // The card kept from before: the YouTube-artist tier opens its tags.
+        final d = st().screenDraft;
+        d.link.text = kSweater;
+        await ui.settle(t, YtdlDraft.kLookupDebounce);
+        await ui.settle(t, YtdlDraft.kCheckAfter);
+        expect(d.tagsOpen, isTrue);
+        await ui.pumpScreen(t, s, openNeedsLook: true, textScale: scale);
+        await t.pumpAndSettle();
+        expect(inView(t, find.text('NEEDS A LOOK')), isTrue);
+        // Once only: scrolled back up, the next change doesn't pull it down.
+        final scroll = t.widget<SingleChildScrollView>(
+            byKey('ytdl-list')).controller!;
+        scroll.jumpTo(0);
+        await t.pump();
+        d.controllerFor(YtdlField.album).text = 'Wiped Out!';
+        await t.pumpAndSettle();
+        expect(scroll.offset, 0);
+      });
+    }
+
+    testWidgets('nothing needs a look: nothing scrolls, nothing waits',
+        (t) async {
+      YtdlScreen.listsBuilder = (state, anchor) =>
+          const SizedBox(height: 1200);
+      h().fake.folder('/Music/Daft Punk/Discovery/');
+      final d = await ui.pumpScreen(t, s, openNeedsLook: true);
+      final scroll =
+          t.widget<SingleChildScrollView>(byKey('ytdl-list')).controller!;
+      expect(scroll.offset, 0);
+      // The header turning up later (a poll) doesn't yank the list.
+      fakeLists();
+      await ui.paste(t, d, kOneMoreTime);
+      await t.pumpAndSettle();
+      expect(scroll.offset, 0);
+    });
   });
 
   group('keyboard (the KeyboardTags board)', () {
@@ -357,11 +493,13 @@ void main() {
       await t.pumpAndSettle();
       final list = t.getRect(byKey('ytdl-list'));
       final field = t.getRect(byKey('ytdl-field-artist'));
-      final saves = t.getRect(byKey('ytdl-saves-change'));
+      final saves = t.getRect(find.descendant(
+          of: find.byType(YtdlSavesBlock), matching: find.byType(YtdlCrumbs)));
       expect(d.focusFor(YtdlField.artist).hasFocus, isTrue);
       expect(list.top <= field.top && field.bottom <= list.bottom, isTrue,
           reason: 'field $field in $list');
-      expect(saves.bottom <= list.bottom, isTrue, reason: 'saves $saves in $list');
+      expect(list.top <= saves.top && saves.bottom <= list.bottom, isTrue,
+          reason: 'SAVES TO crumbs $saves in $list');
     });
 
     testWidgets('the Where sheet asks for Album: the tags open on it',
@@ -392,6 +530,7 @@ void main() {
     await t.pump();
     expect(d.focusFor(YtdlField.year).hasFocus, isTrue);
     expect(byKey('ytdl-ios-done'), findsOneWidget);
+    expect(t.getSize(byKey('ytdl-ios-done')).height, greaterThanOrEqualTo(48));
     await t.tap(byKey('ytdl-ios-done'));
     await t.pump();
     expect(d.focusFor(YtdlField.year).hasFocus, isFalse);

@@ -50,6 +50,7 @@ class YtdlUi {
   void tearDown() {
     h.unwire();
     sheets.unwire();
+    YtdlScreen.resetListsBuilder();
     ServerManager().serverList.clear();
     debugDefaultTargetPlatformOverride = null;
   }

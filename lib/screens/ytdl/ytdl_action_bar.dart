@@ -708,8 +708,11 @@ class YtdlDoneBar extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);
+        // 48 px for the button, not the board's 44: it is a touch target
+        // (spec §9), and the bar is all the height it can have. Plus the
+        // 1 px rule on top.
         return Container(
-          height: 44,
+          height: kYtdlHit + 1,
           decoration: BoxDecoration(
             color: VelvetColors.card,
             border: Border(top: BorderSide(color: VelvetColors.border)),

@@ -6173,4 +6173,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get ytdlErrAddOffline =>
       'You\'re offline — try again when you\'re back.';
+
+  @override
+  String get ytdlHelpVideoRelease => 'From the video\'s release date';
 }
