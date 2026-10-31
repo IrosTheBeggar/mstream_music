@@ -9,6 +9,8 @@ import 'ytdl_choose_folder_sheet.dart';
 import 'ytdl_draft.dart';
 import 'ytdl_where_sheet.dart';
 
+export '../../util/ytdl_formats.dart' show ytdlFormatName;
+
 /// The small parts the Add from YouTube screen and the explorer's folder
 /// sheet share (the boards' phone kit): an inline text link and an outlined
 /// pill on 48 px hit bands, a note panel, a status line (always an icon and
@@ -40,18 +42,6 @@ Future<void> ytdlChooseFolder(BuildContext context, YtdlDraft draft) async {
 /// drawn chips and links get the rest as padding.
 const double kYtdlHit = 48;
 
-/// A format's name as the menu and the chip show it. Not localized: the
-/// transcode screen hard-codes its codec names the same way.
-String ytdlFormatName(String codec) => switch (codec) {
-  'mp3' => 'MP3',
-  'm4a' => 'M4A',
-  'opus' => 'Opus',
-  'ogg' => 'OGG Vorbis',
-  'flac' => 'FLAC',
-  'wav' => 'WAV',
-  'aac' => 'AAC',
-  _ => codec.toUpperCase(),
-};
 
 /// A string's words around its one placeholder: [build] is the generated
 /// getter, given a marker no translation contains. A translator may move

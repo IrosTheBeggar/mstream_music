@@ -76,7 +76,7 @@ void main() {
       await t.pumpAndSettle();
       final l = h().l;
       expect(find.text(l.ytdlFormatMenuTitle), findsOneWidget);
-      expect(find.text(l.ytdlFormatRemembered('http://music.example')),
+      expect(find.text(l.ytdlFormatRemembered('music.example')),
           findsOneWidget);
       final names = [
         for (final codec in ['mp3', 'm4a', 'opus', 'flac'])

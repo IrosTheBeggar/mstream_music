@@ -11,6 +11,7 @@ import '../../util/discover_jobs.dart'
 import '../../util/ytdl_filename.dart';
 import '../../util/ytdl_layout.dart';
 import '../../util/ytdl_link.dart';
+import '../auto_dj_sheets.dart' show autoDjServerName;
 import '../discovery/destination_pieces.dart';
 import '../discovery/keep_copy_ui.dart';
 import 'ytdl_crumbs.dart';
@@ -879,7 +880,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  l.ytdlWhereSub(st.server.displayName),
+                  l.ytdlWhereSub(autoDjServerName(st.server)),
                   style: TextStyle(
                     color: VelvetColors.textSecondary,
                     fontSize: 13,
@@ -1306,7 +1307,7 @@ class _PreviewPath extends StatelessWidget {
                 children: [
                   Flexible(child: Text(text, style: style)),
                   const SizedBox(width: 5),
-                  const _NewTag(),
+                  const YtdlNewTag(),
                 ],
               ),
             ),
@@ -1375,32 +1376,5 @@ class _PreviewPath extends StatelessWidget {
       }
     }
     return ytdlMiddleEllipsis(name, lo);
-  }
-}
-
-/// The boards' "new" tag: outlined in the primary's ink, round ends.
-class _NewTag extends StatelessWidget {
-  const _NewTag();
-
-  @override
-  Widget build(BuildContext context) {
-    final ink = keepInk();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: ink),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Text(
-        AppLocalizations.of(context).ytdlNewTag,
-        style: TextStyle(
-          color: ink,
-          fontSize: 11,
-          height: 16 / 11,
-          fontWeight: FontWeight.w600,
-          fontStyle: FontStyle.normal,
-        ),
-      ),
-    );
   }
 }

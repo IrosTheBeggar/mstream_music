@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/ytdl_errors.dart';
 import '../../util/ytdl_layout.dart';
+import '../auto_dj_sheets.dart' show autoDjServerName;
 import '../discovery/keep_copy_ui.dart';
 import 'ytdl_card_parts.dart';
 import 'ytdl_draft.dart';
@@ -351,7 +352,7 @@ class YtdlFormatChipState extends State<YtdlFormatChip> {
       anchor: origin & face,
       formats: d.formats,
       chosen: d.format,
-      server: d.owner.server.displayName,
+      server: autoDjServerName(d.owner.server),
       anchorFace: chipFace(ytdlFormatName(d.format), open: true),
     );
     if (!mounted) return;

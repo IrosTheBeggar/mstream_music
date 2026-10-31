@@ -892,6 +892,15 @@ class YtdlServerState extends ChangeNotifier {
   /// been seen.
   bool get _screenShowing => _screenDraft?.attached == true;
 
+  /// [job] is the screen card's own add, still waiting on its POST: the
+  /// card shows "Starting…" and collapses into its ADDING row only on 200
+  /// (spec §6), so the screen's lists leave the row out until then.
+  bool onCard(YtdlJob job) =>
+      job.state == YtdlJobState.starting &&
+      _origins[job.id] == 'screen' &&
+      _screenShowing &&
+      _screenDraft!.addPhase == YtdlAddPhase.starting;
+
   // ── the version tier ────────────────────────────────────────────────────
 
   /// Once per session: `GET /discovery/downloads?limit=20` — 200 = full

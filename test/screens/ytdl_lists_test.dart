@@ -385,8 +385,10 @@ void main() {
       s = ytdlServer(libraries: const ['Music', 'Podcasts'], formats: const ['mp3', 'm4a']);
       h.fake.folder('/Podcasts/Shows/');
       YtdlDraft? asked;
-      YtdlListActions.chooseFolder = (_, draft) async {
+      String? askedStart;
+      YtdlListActions.chooseFolder = (_, draft, {String? startAt}) async {
         asked = draft;
+        askedStart = startAt;
         return '/Podcasts/Shows/';
       };
       final st = await seed(t, [
@@ -406,6 +408,7 @@ void main() {
       await drain(t);
       expect(identical(asked!.owner, st), isTrue);
       expect(asked!.choice.library, 'Podcasts', reason: "the row's library, not the remembered one");
+      expect(askedStart, '/Podcasts/Shows/', reason: 'above the folder that could not be made');
       expect(h.fake.count('POST', '/api/v1/file-explorer/mkdir'), 0);
       final sent = h.fake.bodies('POST', '/api/v1/ytdl/').single;
       expect(sent['directory'], '/Podcasts/Shows/');
@@ -416,7 +419,7 @@ void main() {
     });
 
     testWidgets('Choose a folder… closed without a folder: the row stays', (t) async {
-      YtdlListActions.chooseFolder = (_, _) async => null;
+      YtdlListActions.chooseFolder = (_, _, {startAt}) async => null;
       final st = await seed(t, [
         job('x1', 'startFailed', problem: 'mkdirFailed', detail: 'Discovery', mkdir: dir),
       ]);
@@ -429,7 +432,7 @@ void main() {
 
     testWidgets('an account that can\'t make folders: Top of the library adds into '
         'the library\'s top; Choose a folder…; no Try again', (t) async {
-      YtdlListActions.chooseFolder = (_, _) async => '/Music/Daft Punk/';
+      YtdlListActions.chooseFolder = (_, _, {startAt}) async => '/Music/Daft Punk/';
       final st = await seed(t, [
         job('x1', 'startFailed', problem: 'mkdirOff', mkdir: dir),
         job('x2', 'startFailed', problem: 'mkdirOff', mkdir: dir, url: kFeelGood, title: 'Feel Good Inc.'),

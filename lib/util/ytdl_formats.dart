@@ -35,3 +35,16 @@ String ytdlEffectiveFormat(String? remembered, List<String>? enabled) =>
     remembered != null && ytdlFormatOptions(enabled).contains(remembered)
         ? remembered
         : ytdlDefaultFormat(enabled);
+
+/// A format's name as the card, menus and rows show it — not localized,
+/// like the transcode screen's codec names.
+String ytdlFormatName(String codec) => switch (codec.toLowerCase()) {
+      'mp3' => 'MP3',
+      'm4a' => 'M4A',
+      'opus' => 'Opus',
+      'ogg' => 'OGG Vorbis',
+      'flac' => 'FLAC',
+      'wav' => 'WAV',
+      'aac' => 'AAC',
+      final other => other.toUpperCase(),
+    };

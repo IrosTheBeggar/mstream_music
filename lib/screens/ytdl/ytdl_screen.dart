@@ -7,7 +7,7 @@ import '../../objects/server.dart';
 import '../../singletons/server_list.dart';
 import '../../singletons/ytdl_hub.dart';
 import '../../theme/velvet_theme.dart';
-import '../discovery/keep_copy_ui.dart';
+import '../auto_dj_sheets.dart' show autoDjServerName;
 import 'ytdl_action_bar.dart';
 import 'ytdl_card_parts.dart';
 import 'ytdl_draft.dart';
@@ -40,11 +40,19 @@ class YtdlScreen extends StatefulWidget {
   /// ADDING, NEEDS A LOOK and ADDED under the card, with the anchor the
   /// screen scrolls to — a seam so a test can stand in for the lists.
   @visibleForTesting
-  static Widget Function(YtdlServerState state, GlobalKey needsLookAnchor)
+  static Widget Function(
+    YtdlServerState state,
+    GlobalKey needsLookAnchor, {
+    required bool showEmpty,
+  })
   listsBuilder = _lists;
 
-  static Widget _lists(YtdlServerState state, GlobalKey anchor) =>
-      YtdlLists(state: state, needsLookAnchor: anchor);
+  static Widget _lists(
+    YtdlServerState state,
+    GlobalKey anchor, {
+    required bool showEmpty,
+  }) =>
+      YtdlLists(state: state, needsLookAnchor: anchor, showEmpty: showEmpty);
 
   @visibleForTesting
   static void resetListsBuilder() => listsBuilder = _lists;
@@ -70,7 +78,12 @@ class _YtdlScreenState extends State<YtdlScreen> {
     super.initState();
     _d.attach();
     _st.addListener(_stateMoved);
-    unawaited(_st.onScreenOpened());
+    // After the first frame: opening marks outcomes seen, which notifies
+    // the home card and the explorer strip — still mounted under this
+    // route, and in the middle of a build right now.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_st.onScreenOpened());
+    });
   }
 
   @override
@@ -140,7 +153,7 @@ class _YtdlScreenState extends State<YtdlScreen> {
         Text(l.ytdlTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
         if (own.length > 1)
           Text(
-            _st.server.displayName,
+            autoDjServerName(_st.server),
             key: const ValueKey('ytdl-server-name'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -198,9 +211,14 @@ class _YtdlScreenState extends State<YtdlScreen> {
                           onChooseFolder: _chooseFolder,
                           onChangeFormat: _changeFormat,
                         ),
-                      ] else if (_noRows)
-                        _empty(l),
-                      YtdlScreen.listsBuilder(_st, _needsLook),
+                      ],
+                      // The lists own the empty state (the Empty board),
+                      // shown only while no card is up.
+                      YtdlScreen.listsBuilder(
+                        _st,
+                        _needsLook,
+                        showEmpty: !card,
+                      ),
                     ],
                   ),
                 ),
@@ -227,65 +245,4 @@ class _YtdlScreenState extends State<YtdlScreen> {
       ),
     );
   }
-
-  /// Nothing added yet on this server, nothing in the lists.
-  bool get _noRows =>
-      _st.adding.isEmpty &&
-      _st.needsLook.isEmpty &&
-      _st.added.isEmpty &&
-      !_st.addedLoading;
-
-  /// The empty state (the Empty board): the screen's tile, what to do, and
-  /// on 6.30+ that the web app's adds show here too.
-  Widget _empty(AppLocalizations l) => Padding(
-    key: const ValueKey('ytdl-empty'),
-    padding: const EdgeInsets.fromLTRB(24, 112, 24, 24),
-    child: Column(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: VelvetColors.primaryDim,
-            borderRadius: BorderRadius.circular(7),
-          ),
-          child: Icon(
-            Icons.smart_display_outlined,
-            size: 22,
-            color: keepInkOnPage(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: Column(
-            children: [
-              Text(
-                l.ytdlEmptyTitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: VelvetColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 20 / 15,
-                ),
-              ),
-              if (_st.tier == YtdlServerTier.full) ...[
-                const SizedBox(height: 6),
-                Text(
-                  l.ytdlEmptyWebApp,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: VelvetColors.textSecondary,
-                    fontSize: 13,
-                    height: 18 / 13,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
 }

@@ -111,16 +111,27 @@ class YtdlCrumbs extends StatelessWidget {
                   color: VelvetColors.textSecondary,
                 )
               : base;
-      spans.add(TextSpan(text: ytdlIsolate(_hold(c)), style: s));
       if (newAt.contains(i)) {
-        spans.add(const TextSpan(text: '\u00A0'));
-        // The paragraph scales a widget span by the text scale itself: the
-        // tag's own words are laid out unscaled, or they would be scaled
-        // twice.
+        // The folder and its tag as one piece, so a line never breaks
+        // between them. The paragraph scales a widget span by the text
+        // scale itself: the words inside are laid out unscaled, or they
+        // would be scaled twice.
         spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: MediaQuery.withNoTextScaling(child: YtdlNewTag()),
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: MediaQuery.withNoTextScaling(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(ytdlIsolate(_hold(c)), style: s)),
+                const SizedBox(width: 5),
+                const YtdlNewTag(),
+              ],
+            ),
+          ),
         ));
+      } else {
+        spans.add(TextSpan(text: ytdlIsolate(_hold(c)), style: s));
       }
     }
     if (file != null) {
@@ -165,6 +176,7 @@ class YtdlNewTag extends StatelessWidget {
           fontSize: 11,
           height: 16 / 11,
           fontWeight: FontWeight.w600,
+          fontStyle: FontStyle.normal,
           color: ink,
         ),
       ),
@@ -226,7 +238,12 @@ class YtdlCrumbLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final s = TextStyle(fontSize: 12, color: VelvetColors.textSecondary)
+    // Measured with the full style the Text will draw in: [fit]'s painter
+    // doesn't inherit DefaultTextStyle, and the engine's default face is
+    // not the theme's, so the path would be cut too early.
+    final s = DefaultTextStyle.of(context)
+        .style
+        .merge(TextStyle(fontSize: 12, color: VelvetColors.textSecondary))
         .merge(style);
     return LayoutBuilder(builder: (context, box) {
       final text = fit(

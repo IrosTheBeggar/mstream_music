@@ -17,6 +17,7 @@ import '../../util/queue_actions.dart';
 import '../../util/server_version.dart';
 import '../../util/stream_url.dart';
 import '../../util/ytdl_errors.dart';
+import '../../util/ytdl_formats.dart' show ytdlFormatName;
 import '../discovery/keep_copy_ui.dart';
 import 'ytdl_choose_folder_sheet.dart';
 import 'ytdl_crumbs.dart';
@@ -33,8 +34,8 @@ class YtdlListActions {
   static Future<void> Function(DisplayItem song) queue = addToQueueEnd;
   static void Function(BuildContext context, Server server, String directory)
       showFolder = ytdlShowFolder;
-  static Future<String?> Function(BuildContext context, YtdlDraft draft)
-      chooseFolder = showYtdlChooseFolderSheet;
+  static Future<String?> Function(BuildContext context, YtdlDraft draft,
+      {String? startAt}) chooseFolder = showYtdlChooseFolderSheet;
   static Future<Map<String, String>> Function(
       YtdlServerState state, List<String> filepaths) albumArt = ytdlAlbumArt;
 
@@ -98,6 +99,19 @@ Future<Map<String, String>> ytdlAlbumArt(
   } catch (_) {
     return const {};
   }
+}
+
+/// Where Choose a folder… opens for a row whose folder couldn't be made:
+/// the folder above the one named in the failure ([YtdlJob.problemDetail]),
+/// the deepest the server is known to have; else the library's top.
+String ytdlRowPickStart(YtdlJob job) {
+  final crumbs = pathCrumbs(job.directory);
+  if (crumbs.isEmpty) return '/';
+  final at = job.problemDetail == null
+      ? -1
+      : crumbs.indexOf(job.problemDetail!, 1);
+  final keep = at > 0 ? crumbs.sublist(0, at) : crumbs.sublist(0, 1);
+  return '/${keep.join('/')}/';
 }
 
 /// "Top of the library" / "Choose a folder…" on a start failure's row (a
@@ -217,7 +231,10 @@ class _YtdlListsState extends State<YtdlLists> {
     return ListenableBuilder(
       listenable: st,
       builder: (context, _) {
-        final adding = st.adding;
+        final adding = [
+          for (final j in st.adding)
+            if (!st.onCard(j)) j,
+        ];
         final look = st.needsLook;
         final added = st.added;
         final earlier = st.canShowEarlier;
@@ -704,7 +721,7 @@ class _AddingRow extends StatelessWidget {
       final text = switch (job.state) {
         YtdlJobState.starting => l.discoverJobStarting,
         YtdlJobState.startUnsure => l.ytdlRowStartUnsure,
-        _ => l.ytdlRowAdding(minutes < 1 ? 1 : minutes, _formatName(job.codec)),
+        _ => l.ytdlRowAdding(minutes < 1 ? 1 : minutes, ytdlFormatName(job.codec)),
       };
       status = Text(
         text,
@@ -802,7 +819,8 @@ class _LookRow extends StatelessWidget {
             // The sheet browses the draft's library; the session's draft
             // for that library's top folder is the one that names it.
             final dir = await YtdlListActions.chooseFolder(
-                context, state.folderDraft('/$library/'));
+                context, state.folderDraft('/$library/'),
+                startAt: ytdlRowPickStart(job));
             if (dir == null || dir.isEmpty) return;
             await ytdlAddInto(state, job, dir);
           },
@@ -985,7 +1003,7 @@ class _FormatRetry extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _formatName(f),
+                  ytdlFormatName(f),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -1089,7 +1107,7 @@ class _AddedRow extends StatelessWidget {
     }
     final song = _song;
     final meta = [
-      if (row.ext != null) _formatName(row.ext!),
+      if (row.ext != null) ytdlFormatName(row.ext!),
       ?_size(row.bytes),
       if (row.when != null) _ago(context, l, row.when!, now),
     ].join(' · ');
@@ -1182,7 +1200,7 @@ class _YtdlEmpty extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Padding(
       key: const ValueKey('ytdl-lists-empty'),
-      padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 112, 24, 24),
       child: Column(
         children: [
           Container(
@@ -1193,7 +1211,7 @@ class _YtdlEmpty extends StatelessWidget {
               borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
             ),
             child: Icon(Icons.smart_display_outlined,
-                size: 22, color: VelvetColors.primary),
+                size: 22, color: keepInkOnPage()),
           ),
           const SizedBox(height: 12),
           ConstrainedBox(
@@ -1235,18 +1253,6 @@ class _YtdlEmpty extends StatelessWidget {
 
 String _titleOf(YtdlJob job) => job.title.isEmpty ? job.url : job.title;
 
-/// A format's name as the rows and menus show it — not localized, like the
-/// transcode screen's codec names.
-String _formatName(String codec) => switch (codec.toLowerCase()) {
-      'mp3' => 'MP3',
-      'm4a' => 'M4A',
-      'opus' => 'Opus',
-      'ogg' => 'OGG Vorbis',
-      'flac' => 'FLAC',
-      'wav' => 'WAV',
-      'aac' => 'AAC',
-      final other => other.toUpperCase(),
-    };
 
 /// The format menu's helper under a format (OGG Vorbis and AAC have none).
 String? _formatHelp(AppLocalizations l, String codec) => switch (codec) {
@@ -1278,7 +1284,7 @@ String _startFailedText(
     YtdlProblem.libraryGone => l.ytdlErrLibraryGoneSheet(ytdlGoneLibrary(
         YtdlFailure(YtdlProblem.libraryGone, detail), job.directory)),
     YtdlProblem.noRoute => l.ytdlErrNoRoute,
-    YtdlProblem.badFormat => l.ytdlErrFormatOff(_formatName(job.codec)),
+    YtdlProblem.badFormat => l.ytdlErrFormatOff(ytdlFormatName(job.codec)),
     YtdlProblem.badRequest => l.ytdlErrBadRequest,
     YtdlProblem.offline => l.ytdlRowNoConnection,
     YtdlProblem.other => switch (

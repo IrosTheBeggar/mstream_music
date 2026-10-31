@@ -59,7 +59,7 @@ void main() {
       expect(lands.prefix, 'Lands in ');
       expect(lands.suffix, ' · MP3 ·');
       expect(byKey('ytdl-limits'), findsOneWidget);
-      expect(byKey('ytdl-empty'), findsOneWidget);
+      expect(byKey('ytdl-lists-empty'), findsOneWidget);
       expect(find.text(l.ytdlEmptyTitle), findsOneWidget);
       expect(find.text(l.ytdlEmptyWebApp), findsOneWidget);
       expect(byKey('ytdl-add'), findsNothing);
@@ -96,7 +96,7 @@ void main() {
       expect(byKey('ytdl-card'), findsOneWidget);
       expect(byKey('ytdl-add'), findsOneWidget);
       expect(byKey('ytdl-paste'), findsNothing);
-      expect(byKey('ytdl-empty'), findsNothing);
+      expect(byKey('ytdl-lists-empty'), findsNothing);
     });
 
     testWidgets('Change on the lands-in line opens Where new songs land',
@@ -365,7 +365,9 @@ void main() {
       h().fake.addGate = Completer<void>();
       await t.tap(byKey('ytdl-add'));
       await ui.settle(t);
+      // The card's own add shows on its button only: no ADDING row yet.
       expect(find.text(h().l.discoverJobStarting), findsOneWidget);
+      expect(byKey('ytdl-section-adding'), findsNothing);
       h().fake.addGate!.complete();
       await ui.settle(t);
       await ui.settle(t);
@@ -373,6 +375,8 @@ void main() {
           '/Music/Daft Punk/Discovery/');
       expect(d.link.text, '');
       expect(byKey('ytdl-card'), findsNothing);
+      // On 200 the card collapses into the top ADDING row (spec §6).
+      expect(byKey('ytdl-section-adding'), findsOneWidget);
       expect(FocusManager.instance.primaryFocus?.context?.widget,
           isNot(isA<EditableText>()));
     });
@@ -420,7 +424,7 @@ void main() {
     /// Stand-in lists: 300 px of ADDING, then the NEEDS A LOOK header on
     /// the anchor, then 900 px of rows.
     void fakeLists() {
-      YtdlScreen.listsBuilder = (state, anchor) => Column(
+      YtdlScreen.listsBuilder = (state, anchor, {required showEmpty}) => Column(
             children: [
               const SizedBox(height: 300),
               SizedBox(
@@ -466,7 +470,7 @@ void main() {
 
     testWidgets('nothing needs a look: nothing scrolls, nothing waits',
         (t) async {
-      YtdlScreen.listsBuilder = (state, anchor) =>
+      YtdlScreen.listsBuilder = (state, anchor, {required showEmpty}) =>
           const SizedBox(height: 1200);
       h().fake.folder('/Music/Daft Punk/Discovery/');
       final d = await ui.pumpScreen(t, s, openNeedsLook: true);

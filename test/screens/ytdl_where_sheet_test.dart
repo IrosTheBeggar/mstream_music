@@ -159,7 +159,7 @@ void main() {
       final d = await ready(tester);
       await open(tester, d);
       expect(find.text(h.l.ytdlWhereTitle), findsOneWidget);
-      expect(find.text(h.l.ytdlWhereSub(s.displayName)), findsOneWidget);
+      expect(find.text(h.l.ytdlWhereSub('music.example')), findsOneWidget);
       expect(find.text('LIBRARY'), findsOneWidget);
       expect(key('ytdl-where-library-Music'), findsOneWidget);
       expect(key('ytdl-where-library-Mixes'), findsOneWidget);
@@ -589,7 +589,7 @@ void main() {
             of: key('ytdl-where-form'), matching: key('ytdl-where-preview')),
         findsNothing,
       );
-      expect(find.text(h.l.ytdlWhereSub(s.displayName)), findsNothing);
+      expect(find.text(h.l.ytdlWhereSub('music.example')), findsNothing);
       expect(
         tester.getRect(key('ytdl-where-preview')).bottom,
         lessThanOrEqualTo(tester.getRect(key('ytdl-where-form')).top),
@@ -759,7 +759,7 @@ void main() {
             of: key('ytdl-where-form'), matching: key('ytdl-where-preview')),
         findsOneWidget,
       );
-      expect(find.text(h.l.ytdlWhereSub(s.displayName)), findsNothing);
+      expect(find.text(h.l.ytdlWhereSub('music.example')), findsNothing);
       final form = tester.getRect(key('ytdl-where-form'));
       expect(form.height, greaterThanOrEqualTo(48));
       expect(form.overlaps(tester.getRect(key('ytdl-where-custom'))), isTrue);
