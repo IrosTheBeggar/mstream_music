@@ -240,6 +240,9 @@ class YtdlRecordPage {
   /// Every plug-in's rows on the page (with an id).
   final int count;
 
+  /// The `limit` the page was asked for.
+  final int limit;
+
   /// The smallest and largest id on the page, any plug-in: the next
   /// page's `before`, and the newest record the server holds (a first
   /// page). Null on an empty page.
@@ -252,13 +255,15 @@ class YtdlRecordPage {
   const YtdlRecordPage({
     this.rows = const [],
     this.count = 0,
+    this.limit = 0,
     this.oldestId,
     this.newestId,
     this.oldestAt,
   });
 
-  /// The page held no row at all: nothing older is left.
-  bool get end => count == 0;
+  /// Nothing older is left: the page held no row at all, or fewer than it
+  /// asked for. Its own rows still count — a short last page has some.
+  bool get end => count == 0 || count < limit;
 }
 
 /// The record's plug-in name for a POST /ytdl add.
@@ -386,11 +391,13 @@ class YtdlApi {
       (await recordsPage(limit: limit, before: before))?.rows;
 
   /// [records] with what the whole page held ([YtdlRecordPage]): page with
-  /// `before` = its [YtdlRecordPage.oldestId], and only an empty page is the
-  /// end. Null on a server before 6.30, as [records].
+  /// `before` = its [YtdlRecordPage.oldestId]; an empty page, or one
+  /// shorter than [limit], is the end. Null on a server before 6.30, as
+  /// [records].
   Future<YtdlRecordPage?> recordsPage({int limit = 20, int? before}) async {
+    final asked = limit.clamp(1, 500);
     final q = {
-      'limit': '${limit.clamp(1, 500)}',
+      'limit': '$asked',
       if (before != null) 'before': '$before',
     };
     final dynamic body;
@@ -426,6 +433,7 @@ class YtdlApi {
     return YtdlRecordPage(
       rows: rows,
       count: count,
+      limit: asked,
       oldestId: oldestId,
       newestId: newestId,
       oldestAt: oldestAt,

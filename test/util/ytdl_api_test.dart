@@ -418,7 +418,8 @@ void main() {
       expect(rows.last.bytes, isNull);
     });
 
-    test('a page tells what it held of every plug-in: page on its ids, end on empty',
+    test('a page tells what it held of every plug-in: page on its ids, end on '
+        'a page shorter than asked for',
         () async {
       handler = (_) async => json({
             'downloads': [
@@ -440,10 +441,16 @@ void main() {
       handler = (_) async => json({
             'downloads': [row(5, 'youtube'), row(4, 'youtube')]
           });
-      final others = (await api().recordsPage())!;
+      final others = (await api().recordsPage(limit: 2))!;
       expect(others.rows, isEmpty);
       expect(others.end, isFalse, reason: 'other plug-ins\' rows: older pages may hold ytdl rows');
       expect(others.oldestId, 4);
+
+      // Fewer rows than asked for: the record has nothing older.
+      final short = (await api().recordsPage())!;
+      expect(short.count, 2);
+      expect(short.end, isTrue, reason: 'two rows of the 20 asked for');
+      expect(short.oldestId, 4);
 
       handler = (_) async => json({'downloads': []});
       final empty = (await api().recordsPage())!;

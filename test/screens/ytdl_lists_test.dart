@@ -661,11 +661,19 @@ void main() {
       await drain(t);
       expect(h.fake.count('GET', '/api/v1/discovery/downloads'), greaterThan(asked));
       expect(st.added, hasLength(25));
-      await t.ensureVisible(key('ytdl-show-earlier'));
-      await t.pump();
-      await t.tap(key('ytdl-show-earlier'));
-      await drain(t);
+      expect(find.text('Song 0'), findsOneWidget);
       expect(st.canShowEarlier, isFalse);
+      expect(key('ytdl-show-earlier'), findsNothing);
+    });
+
+    testWidgets('the whole record on its first page: no Show earlier', (t) async {
+      for (var i = 0; i < 3; i++) {
+        h.fake.addRecord(relativePath: 'Daft Punk/Song_$i.mp3', title: 'Song $i');
+      }
+      final st = await seed(t);
+      await pump(t, st);
+      expect(find.text('Song 0'), findsOneWidget);
+      expect(find.text('Song 2'), findsOneWidget);
       expect(key('ytdl-show-earlier'), findsNothing);
     });
 

@@ -1066,7 +1066,8 @@ void main() {
       expect(rows.last.recordId, isNotNull);
     });
 
-    test('Show earlier pages before the smallest id; an empty page ends it', () async {
+    test('Show earlier pages before the smallest id; a short page ends it, '
+        'its rows kept', () async {
       for (var i = 0; i < 25; i++) {
         h.fake.addRecord(relativePath: 'A/$i.mp3');
       }
@@ -1075,11 +1076,38 @@ void main() {
       expect(state().canShowEarlier, isTrue);
       await state().showEarlier();
       expect(state().added.length, 25);
-      expect(state().canShowEarlier, isTrue);
-      await state().showEarlier();
       expect(state().canShowEarlier, isFalse);
       final asked = h.fake.calls('GET', '/discovery/downloads').map((r) => r.url.queryParameters['before']);
-      expect(asked, [null, '105', '100']);
+      expect(asked, [null, '105']);
+    });
+
+    test('Show earlier on a page exactly as long as asked: the next, empty '
+        'page ends it', () async {
+      for (var i = 0; i < 40; i++) {
+        h.fake.addRecord(relativePath: 'A/$i.mp3');
+      }
+      await state().probeTier();
+      await state().showEarlier();
+      expect(state().added.length, 40);
+      expect(state().canShowEarlier, isTrue);
+      await state().showEarlier();
+      expect(state().added.length, 40);
+      expect(state().canShowEarlier, isFalse);
+    });
+
+    test('the whole record on the first page: its rows, and no Show earlier',
+        () async {
+      for (var i = 0; i < 3; i++) {
+        h.fake.addRecord(relativePath: 'A/$i.mp3');
+      }
+      await state().probeTier();
+      expect(state().tier, YtdlServerTier.full);
+      expect(state().added, hasLength(3));
+      expect(state().canShowEarlier, isFalse);
+      expect(h.fake.count('GET', '/discovery/downloads'), 1);
+      await state().refreshAdded();
+      expect(state().added, hasLength(3));
+      expect(state().canShowEarlier, isFalse);
     });
 
     test('refreshAdded reads the first page again; older servers ask nothing', () async {
@@ -1300,13 +1328,14 @@ void main() {
       }
     }
 
-    test('ADDED reads past a page of Discover downloads', () async {
+    test('ADDED reads past a page of Discover downloads; the short page '
+        'after it ends the record', () async {
       h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3', title: 'One More Time');
       discoverRows(20);
       await state().probeTier();
       expect(state().tier, YtdlServerTier.full);
       expect(state().added.single.title, 'One More Time');
-      expect(state().canShowEarlier, isTrue);
+      expect(state().canShowEarlier, isFalse);
     });
 
     test('Show earlier pages past them too, on every plug-in\'s ids', () async {
@@ -1321,11 +1350,9 @@ void main() {
       expect(state().added, hasLength(20));
       await state().showEarlier();
       expect(state().added, hasLength(25));
-      expect(state().canShowEarlier, isTrue);
-      await state().showEarlier();
       expect(state().canShowEarlier, isFalse);
       final asked = h.fake.calls('GET', '/discovery/downloads').map((r) => r.url.queryParameters['before']);
-      expect(asked, [null, '125', '105', '100']);
+      expect(asked, [null, '125', '105']);
     });
 
     test('a vanished job finds its record under a page of Discover downloads', () async {

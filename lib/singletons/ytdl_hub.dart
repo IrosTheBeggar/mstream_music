@@ -652,7 +652,8 @@ class YtdlServerState extends ChangeNotifier {
   bool get addedLoading => _addedLoading;
 
   /// "Show earlier" has more to ask for: a page counts every plug-in's
-  /// rows, so only an empty one is the end.
+  /// rows, so only an empty page, or one shorter than asked for, is the
+  /// end.
   bool get canShowEarlier => _tier == YtdlServerTier.full && _canShowEarlier;
 
   static YtdlAddedRow _rowOfRecord(YtdlRecord r) {
@@ -986,8 +987,9 @@ class YtdlServerState extends ChangeNotifier {
   /// pages until one holds a ytdl row or the record ends, at most
   /// [kRecordPages] — a page counts every plug-in's rows, so a page of
   /// Discover downloads holds none and is not the end. [cursor] is the
-  /// smallest id read (the next `before`); [end]: an empty page came back.
-  /// Null on a server before 6.30; throws when the record can't be read.
+  /// smallest id read (the next `before`); [end]: the last page came back
+  /// empty or shorter than asked for (its rows are in [rows]). Null on a
+  /// server before 6.30; throws when the record can't be read.
   Future<({List<YtdlRecord> rows, int? cursor, bool end})?> _readAdded(
       {int? before}) async {
     final rows = <YtdlRecord>[];
@@ -996,9 +998,9 @@ class YtdlServerState extends ChangeNotifier {
       final page = await api.recordsPage(limit: kRecordPage, before: cursor);
       if (page == null) return null;
       if (cursor == null) _noteNewest(page.newestId ?? 0);
-      if (page.end) return (rows: rows, cursor: cursor, end: true);
       rows.addAll(page.rows);
-      cursor = page.oldestId;
+      cursor = page.oldestId ?? cursor;
+      if (page.end) return (rows: rows, cursor: cursor, end: true);
       if (rows.isNotEmpty) break;
     }
     return (rows: rows, cursor: cursor, end: false);
@@ -1071,7 +1073,8 @@ class YtdlServerState extends ChangeNotifier {
   }
 
   /// "Show earlier": the rows before the oldest one read (paging past
-  /// pages that hold only other plug-ins' rows); an empty page ends it.
+  /// pages that hold only other plug-ins' rows); an empty or short page
+  /// ends it.
   Future<void> showEarlier() async {
     final before = _addedCursor;
     if (!canShowEarlier || _addedLoading || before == null) return;
@@ -1742,8 +1745,9 @@ class YtdlServerState extends ChangeNotifier {
   /// [job]'s download record: the newest row [_answers] says is its (its
   /// link, its folder, not older than the job) that no other job holds.
   /// Paged on every plug-in's ids (a page of other plug-ins' rows is not
-  /// the end) until an empty page, a page that reaches back past the job's
-  /// start or floor, or [kRecordPages] pages. Null when there is none, or
+  /// the end) until the last page (empty, or shorter than asked for; its
+  /// rows are read first), a page that reaches back past the job's start
+  /// or floor, or [kRecordPages] pages. Null when there is none, or
   /// the route is missing (the tier turns older). Throws when the record
   /// cannot be read.
   Future<YtdlRecord?> _findRecord(YtdlJob job) async {
