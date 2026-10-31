@@ -37,6 +37,14 @@ class BrowserManager {
   static bool Function(Server server) homeCopiesRow = noCopiesRow;
   static bool noCopiesRow(Server server) => false;
 
+  /// Whether the home's SERVER section shows "Add from YouTube" for
+  /// [server] (the build shows it, an own server whose account may upload,
+  /// audio conversion not off, a library). The YouTube hub answers once it
+  /// is installed (singletons/ytdl_hub.dart, YtdlHub.entryAllowed); until
+  /// then, never.
+  static bool Function(Server server) homeYtdlRow = noYtdlRow;
+  static bool noYtdlRow(Server server) => false;
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip
