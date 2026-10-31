@@ -399,7 +399,7 @@ class AutoDJManager {
       'durationCeilSec': durationCeilSec,
       'allowUnknownDuration': allowUnknownDuration,
       'moodFilterEnabled': moodFilterEnabled,
-      'moodFilter': moodFilter.toJson(),
+      'moodFilter': moodFilter.toSavedJson(),
     }));
   });
 

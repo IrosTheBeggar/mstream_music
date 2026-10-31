@@ -4699,13 +4699,14 @@ class AudioPlayerHandler extends BaseAudioHandler
           appLog('[dj] dropped for this server: '
               '${filtered.dropped.join(", ")}');
         }
+        var sent = filtered.body;
         var res = await http.post(
           autoDJServer!.apiUri('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
             'x-access-token': autoDJServer?.authToken ?? '',
           },
-          body: jsonEncode(filtered.body),
+          body: jsonEncode(sent),
         ).timeout(const Duration(seconds: 15));
         // The lane changed while the request was out (a queue clear, the DJ
         // off or on another server): nothing in its answer belongs to the
@@ -4714,8 +4715,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         if (epoch != _djSessionEpoch) return;
         // A rejection names the offending key, so learn it and go again
         // without it. Bounded by the payload size and terminating by
-        // construction: every pass removes one key permanently for this
-        // session, so it cannot loop. Only "is not allowed" retries — an auth
+        // construction: every pass removes one key the last body carried,
+        // permanently for this session, so it cannot loop — a key inside a
+        // value (a `moods` filter's `threshold` on a server from before it)
+        // cannot be removed, so it does not retry at all
+        // (ServerCapabilities.retryWithout). Only "is not allowed" retries — an auth
         // failure or a bad value returns null and falls through to the normal
         // error handling below, because resending a smaller body there would
         // fail again with less information.
@@ -4729,8 +4733,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         // the older servers it exists for. Verified against a live 6.11.0 and
         // a live 6.22.0.
         while (res.statusCode > 299) {
-          final learned =
-              ServerCapabilities().noteRejection(autoDJServer!, res.body);
+          final learned = ServerCapabilities()
+              .retryWithout(autoDJServer!, res.body, sent);
           if (learned == null) break;
           // Logged because the learner is otherwise invisible: a parameter
           // silently dropped for the rest of the session looks exactly like a
@@ -4738,14 +4742,14 @@ class AudioPlayerHandler extends BaseAudioHandler
           // whose cause has already scrolled past.
           appLog('[dj] server rejected "$learned" (HTTP ${res.statusCode}) '
               '— retrying without it');
-          final retry = ServerCapabilities().filter(autoDJServer!, payload);
+          sent = ServerCapabilities().filter(autoDJServer!, payload).body;
           res = await http.post(
             autoDJServer!.apiUri('/api/v1/db/random-songs'),
             headers: {
               'Content-Type': 'application/json',
               'x-access-token': autoDJServer?.authToken ?? '',
             },
-            body: jsonEncode(retry.body),
+            body: jsonEncode(sent),
           ).timeout(const Duration(seconds: 15));
           if (epoch != _djSessionEpoch) return; // as above
         }

@@ -366,16 +366,25 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   Future<void> _openMoodSheet(
       MoodFilter current, Future<void> Function(MoodFilter) apply) async {
     final next = await showMoodFilterSheet(context, current);
-    if (next != null && next != current) await apply(next);
+    if (next != null && next.filter != current) await apply(next.filter);
   }
 
   // A list's Filters (Albums, Artists, Rated, Recent): the sheet on the
-  // page's filter, applied by re-listing the open list in place.
+  // page's filter — and a song list's Sort — applied by re-listing the open
+  // list in place.
   Widget _moodButton(MoodListFrame frame) => MoodFilterButton(
         count: MoodFilters().of(frame.page).count,
-        onPressed: () => unawaited(_openMoodSheet(MoodFilters().of(frame.page),
-            (f) => ApiManager().setMoodFilter(frame, f))),
+        onPressed: () => unawaited(_openListMoodSheet(frame)),
       );
+
+  Future<void> _openListMoodSheet(MoodListFrame frame) async {
+    final page = frame.page;
+    final next = await showMoodFilterSheet(context, MoodFilters().of(page),
+        sortFor: page.sorts ? page : null, sort: MoodFilters().sortOf(page));
+    if (next == null) return;
+    await ApiManager().setMoodFilter(frame, next.filter,
+        sort: page.sorts ? next.sort : null);
+  }
 
   // Discover's Filters: opens the mood sheet, its badge counting the
   // choices set. Only where the server filters Discover by mood; it follows
