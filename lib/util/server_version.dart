@@ -176,6 +176,11 @@ enum ServerParam {
   /// random-songs: which way `genres` applies.
   genreMode,
 
+  /// random-songs: which genre links `genres` matches — the files' tags or
+  /// the discovery model's (mStream's V79 `track_genres.source`).
+  /// Stripped, the list matches both, as before.
+  genreSource,
+
   /// random-songs: BPM-continuity windows and their relaxation step.
   bpmRanges,
   bpmRangesWide,
@@ -224,6 +229,13 @@ enum ServerParam {
 /// server names back at us in a rejection.
 String paramWireName(ServerParam p) => p.name;
 
+/// The release that brought [p], in words: "6.25" for 6.25.0, "6.7.1" as is —
+/// what the Auto DJ screen says a server needs.
+String paramFloorLabel(ServerParam p) {
+  final v = _paramFloor[p]!;
+  return v.patch == 0 ? '${v.major}.${v.minor}' : '${v.major}.${v.minor}.${v.patch}';
+}
+
 /// Lowest upstream version known to accept each parameter. See the doc on
 /// [ServerParam] for how these were derived and why they are lower bounds.
 const Map<ServerParam, ServerVersion> _paramFloor = {
@@ -258,6 +270,11 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   // vector seed — and move with the two lines above if it is numbered
   // differently.
   ServerParam.limit: ServerVersion(6, 26, 0, '6.26.0'),
+  // random-songs' `genreSource` merged after the 6.32.1 tag (2026-10-31), so
+  // the floor is the next minor, an expected release like the 6.26.0 lines
+  // above; change it if that release is numbered differently. Erring high
+  // only sends the genre list against both kinds of link.
+  ServerParam.genreSource: ServerVersion(6, 33, 0, '6.33.0'),
   // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),

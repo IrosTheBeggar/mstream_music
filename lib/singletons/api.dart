@@ -32,6 +32,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
 
+/// Thrown by [ApiManager.makeServerCall] when the user backed out of the
+/// browse (Back cancels the in-flight fetch) — not a failure to report.
+class BrowseCancelled implements Exception {
+  const BrowseCancelled();
+  @override
+  String toString() => 'BrowseCancelled';
+}
+
 class ApiManager {
   ApiManager._privateConstructor();
   static final ApiManager _instance = ApiManager._privateConstructor();
@@ -60,19 +68,46 @@ class ApiManager {
   /// replaces it.
   http.Client get directClient => _direct;
 
+  /// A browse fetch failed for a reason other than the user backing out:
+  /// log it and say so on screen. Every browse getter used to swallow its
+  /// failure with the log line alone, so a request that timed out — a
+  /// tunnel mid-reconnect, a server that stopped answering — looked exactly
+  /// like a tap that did nothing (mStream#1101: "click on albums, no
+  /// response"). The status strip explains a Quick Connect state; this is
+  /// the one line for the request itself, rate-limited so a burst of
+  /// failures (a resume refresh plus a tap) reads as one.
+  void _browseFailed(String what, Object err) {
+    appLog('[api] $what failed: $err');
+    if (err is BrowseCancelled) return;
+    final now = DateTime.now();
+    final last = _lastBrowseFailureSnack;
+    if (last != null && now.difference(last) < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastBrowseFailureSnack = now;
+    showGlobalSnack(appL10n().browseLoadFailed);
+  }
+
+  DateTime? _lastBrowseFailureSnack;
+
   /// POST /api/v1/db/genres — returns the server's distinct genre
-  /// list with track counts. Used by the AutoDJ screen to populate
-  /// the genre-picker autocomplete.
+  /// list with track counts, of one [source] kind or both. Used by the
+  /// Auto DJ Genres sheet.
   ///
-  /// Each entry is `{ name: String, track_count: int }`.
-  Future<List<Map<String, dynamic>>> getGenres({
+  /// Each entry is `{ name: String, track_count: int }`; `sources` is how
+  /// many genres each kind has, null from a server that can't tell.
+  Future<({List<Map<String, dynamic>> genres, GenreSources? sources})>
+      getGenres({
     Server? useThisServer,
     List<String>? ignoreVPaths,
+    GenreSource source = GenreSource.both,
   }) async {
     final server = useThisServer ?? ServerManager().currentServer;
     if (server == null) throw Exception('No server selected');
 
-    final body = <String, dynamic>{};
+    // A server that predates the source filter ignores `source` and sends
+    // no `sources` (genre_source.dart).
+    final body = <String, dynamic>{...source.listBody};
     if (ignoreVPaths != null && ignoreVPaths.isNotEmpty) {
       body['ignoreVPaths'] = ignoreVPaths;
     }
@@ -91,7 +126,10 @@ class ApiManager {
       throw Exception('Failed to fetch genres (HTTP ${response.statusCode})');
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return List<Map<String, dynamic>>.from(decoded['genres'] ?? []);
+    return (
+      genres: List<Map<String, dynamic>>.from(decoded['genres'] ?? []),
+      sources: GenreSources.fromJson(decoded['sources']),
+    );
   }
 
   /// POST /api/v1/share — creates a share link for [filepaths] on
@@ -199,10 +237,13 @@ class ApiManager {
         response = await send()
             .timeout(Duration(seconds: isIroh ? 20 : 30));
       } catch (e) {
+        // The user backed out: closing the client is what made this throw.
+        if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
+          throw const BrowseCancelled();
+        }
         // An iroh connection error usually means the tunnel is mid-drop; give the
-        // self-healing tunnel a moment to recover, then retry once. (Skip on a
-        // user cancel — closing the client throws too.)
-        if (isIroh && !BrowserManager().isLoadCancelled(loadToken)) {
+        // self-healing tunnel a moment to recover, then retry once.
+        if (isIroh) {
           // Wait for THIS call's server (the tunnel may be serving a background
           // playback server instead of the browsed one).
           final ready = await ServerManager()
@@ -235,7 +276,7 @@ class ApiManager {
       // folder can't pop onto the stack after the user cancelled / navigated.
       // Skipped for non-cancelable mutations — those must run to completion.
       if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
-        throw Exception('Navigation cancelled');
+        throw const BrowseCancelled();
       }
 
       // Whole-library payloads (artists / albums / playlist loads / recursive
@@ -328,7 +369,7 @@ class ApiManager {
       // the idle stub's landing row.
       if (wasEmpty) await handler.play();
     } catch (err) {
-      appLog('[api] getRecursiveFiles failed: $err');
+      _browseFailed('getRecursiveFiles', err);
     }
   }
 
@@ -353,8 +394,7 @@ class ApiManager {
       BrowserManager().setBrowserLabel('Playlists');
       BrowserManager().addListToStack(_playlistItems(res, useThisServer));
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getPlaylists failed: $err');
+      _browseFailed('getPlaylists', err);
     }
   }
 
@@ -581,7 +621,7 @@ class ApiManager {
       // …" subheader (and it reverts on back-nav, like the file-explorer path).
       BrowserManager().addListToStack(newList, searchTerm: search);
     } catch (err) {
-      appLog('[api] searchServer failed: $err');
+      _browseFailed('searchServer', err);
     }
   }
 
@@ -635,8 +675,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getAlbums failed: $err');
+      _browseFailed('getAlbums', err);
     }
   }
 
@@ -712,8 +751,7 @@ class ApiManager {
       newList = await fetchAlbumSongs(album,
           useThisServer: useThisServer, year: year, albumArtist: albumArtist);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getAlbumSongs failed: $err');
+      _browseFailed('getAlbumSongs', err);
       return;
     }
 
@@ -779,8 +817,7 @@ class ApiManager {
         BrowserManager().addListToStack(newList, moodFrame: asked.frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getRecentlyAdded failed: $err');
+      _browseFailed('getRecentlyAdded', err);
     }
   }
 
@@ -825,8 +862,7 @@ class ApiManager {
         BrowserManager().addListToStack(newList, moodFrame: asked.frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getRated failed: $err');
+      _browseFailed('getRated', err);
     }
   }
 
@@ -908,6 +944,34 @@ class ApiManager {
       return out;
     } catch (_) {
       return const {};
+    }
+  }
+
+  /// Whether [filepath] is still in [server]'s library: true or false from
+  /// POST /api/v1/db/metadata, which 200s with `metadata: null` both for a
+  /// path that is gone and for one outside the caller's libraries (which
+  /// /media would refuse too). Null when it can't tell — an error, a timeout,
+  /// a non-2xx answer, an older server without the route. For a song from the
+  /// phone's own history, which may have moved or gone since it played.
+  Future<bool?> trackExists(Server server, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    try {
+      final response = await _direct
+          .post(
+            server.apiUri('/api/v1/db/metadata'),
+            body: jsonEncode({'filepath': fp}),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.authToken ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map || !decoded.containsKey('metadata')) return null;
+      return decoded['metadata'] is Map;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -1266,19 +1330,35 @@ class ApiManager {
     // The same drop-what-this-server-cannot-take pass the DJ makes: one
     // unrecognised key 400s the whole request on a Joi-validated server, so
     // an older server would fail here for the wrong reason entirely.
-    final filtered = ServerCapabilities().filter(server, wanted);
-    final constrained = filtered.body.isNotEmpty;
+    var filtered = ServerCapabilities().filter(server, wanted);
+    Future<http.Response> post() => http
+        .post(
+          server.apiUri('/api/v1/db/random-songs'),
+          body: jsonEncode(filtered.body),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.authToken ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
     try {
-      final response = await http
-          .post(
-            server.apiUri('/api/v1/db/random-songs'),
-            body: jsonEncode(filtered.body),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-access-token': server.authToken ?? '',
-            },
-          )
-          .timeout(const Duration(seconds: 15));
+      var response = await post();
+      // A key the version table could not rule out — a fork, a version not
+      // read yet — is learned from the rejection and the pick sent again
+      // without it, as the DJ's own picks do; otherwise "not allowed" would
+      // read as "nothing matched". Each pass drops a key, so the cap is only
+      // a backstop.
+      for (var tries = 0;
+          response.statusCode > 299 && tries < wanted.length;
+          tries++) {
+        if (ServerCapabilities().noteRejection(server, response.body) ==
+            null) {
+          break;
+        }
+        filtered = ServerCapabilities().filter(server, wanted);
+        response = await post();
+      }
+      final constrained = filtered.body.isNotEmpty;
       if (response.statusCode > 299) {
         verboseLog('[api] auto-dj seed HTTP ${response.statusCode}');
         // Only a 400 means "nothing matched" — anything else (401, 5xx) is a
@@ -1390,8 +1470,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getArtists failed: $err');
+      _browseFailed('getArtists', err);
     }
   }
 
@@ -1421,8 +1500,7 @@ class ApiManager {
 
       BrowserManager().addListToStack(newList);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getArtistAlbums failed: $err');
+      _browseFailed('getArtistAlbums', err);
     }
   }
 
@@ -1466,8 +1544,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, genreFrame: frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getGenreList failed: $err');
+      _browseFailed('getGenreList', err);
     }
   }
 
@@ -1500,8 +1577,7 @@ class ApiManager {
       });
       BrowserManager().addListToStack(newList);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getGenreSongs failed: $err');
+      _browseFailed('getGenreSongs', err);
     }
   }
 
@@ -1532,8 +1608,7 @@ class ApiManager {
       // empty" rather than a blank list.
       BrowserManager().addListToStack(newList, playlist: playlistName);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getPlaylistContents failed: $err');
+      _browseFailed('getPlaylistContents', err);
     }
   }
 
@@ -1595,8 +1670,7 @@ class ApiManager {
       BrowserManager()
           .addListToStack(newList, alphabetical: true, path: res['path']);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getFileList failed: $err');
+      _browseFailed('getFileList', err);
     }
   }
 
@@ -1620,7 +1694,7 @@ class ApiManager {
       res = await makeServerCall(useThisServer, '/api/v1/file-explorer/m3u',
           {'path': filepath}, 'POST');
     } catch (err) {
-      appLog('[api] getM3uContents failed: $err');
+      _browseFailed('getM3uContents', err);
       return;
     }
 

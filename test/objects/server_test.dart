@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/genre_source.dart';
 import 'package:mstream_music/objects/server.dart';
 
 void main() {
@@ -131,6 +132,17 @@ void main() {
       expect(reparsed.playlists, original.playlists);
       expect(reparsed.storageMode, original.storageMode);
       expect(reparsed.storageBasePath, original.storageBasePath);
+    });
+
+    test("the Auto DJ genre kind round-trips; an older or junk file reads "
+        "Mixed", () {
+      final s = Server('u', null, null, null, 'l')
+        ..autoDJGenreSource = GenreSource.model;
+      expect(Server.fromJson(s.toJson()).autoDJGenreSource, GenreSource.model);
+      expect(Server.fromJson(s.toJson()..remove('autoDJGenreSource'))
+          .autoDJGenreSource, GenreSource.both);
+      expect(Server.fromJson(s.toJson()..['autoDJGenreSource'] = 'guess')
+          .autoDJGenreSource, GenreSource.both);
     });
 
     test('does not emit the obsolete saveToSdCard key', () {

@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/genre_source.dart';
+import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/auto_dj_manager.dart';
 
@@ -14,6 +16,7 @@ void main() {
     bool genreEnabled = false,
     String genreMode = 'whitelist',
     List<String> genres = const [],
+    bool? moods,
   }) {
     final s = Server('http://x', 'u', 'p', '', 'local');
     s.autoDJPaths = paths ?? {'music': true};
@@ -21,6 +24,7 @@ void main() {
     s.autoDJGenreEnabled = genreEnabled;
     s.autoDJGenreMode = genreMode;
     s.autoDJGenres = List<String>.from(genres);
+    s.moodFiltersAvailable = moods;
     return s;
   }
 
@@ -33,6 +37,52 @@ void main() {
     mgr.maxDurationSec = AutoDJManager.durationCeilSec;
     mgr.allowUnknownDuration = false;
     mgr.songsPerFetch = AutoDJManager.defaultSongsPerFetch;
+    mgr.moodFilterEnabled = false;
+    mgr.moodFilter = MoodFilter.empty;
+  });
+
+  group('mood (mStream #1096)', () {
+    const relaxed = MoodFilter(energy: 'relaxed', voice: 'instrumental');
+
+    test('sent while on with a choice, to a server that can filter', () {
+      mgr.moodFilterEnabled = true;
+      mgr.moodFilter = relaxed;
+      expect(mgr.libraryFilters(serverWith(moods: true)), {
+        'moods': {'energy': 'relaxed', 'voice': 'instrumental'},
+      });
+    });
+
+    test('off, or on with nothing chosen, sends nothing', () {
+      mgr.moodFilter = relaxed;
+      expect(mgr.libraryFilters(serverWith(moods: true)), isEmpty,
+          reason: 'switched off keeps the choice but does not send it');
+      mgr.moodFilterEnabled = true;
+      mgr.moodFilter = MoodFilter.empty;
+      expect(mgr.libraryFilters(serverWith(moods: true)), isEmpty);
+      expect(mgr.activeMoodFilter, isNull);
+    });
+
+    test('never to a server that cannot filter by mood, or has not said', () {
+      mgr.moodFilterEnabled = true;
+      mgr.moodFilter = relaxed;
+      // An older server refuses the key (its schema is strict) and one without
+      // scores cannot apply it; a peer's flag is pinned off.
+      expect(mgr.libraryFilters(serverWith(moods: false)), isEmpty);
+      expect(mgr.libraryFilters(serverWith(moods: null)), isEmpty);
+    });
+
+    test('the setters change the session and notify', () async {
+      var ticks = 0;
+      final sub = mgr.changeStream.skip(1).listen((_) => ticks++);
+      // The trailing save needs path_provider, which a VM test lacks; the
+      // in-memory change and the tick come first.
+      await mgr.setMoodFilterEnabled(true).catchError((_) {});
+      await mgr.setMoodFilter(relaxed).catchError((_) {});
+      await Future<void>.delayed(Duration.zero);
+      expect(mgr.activeMoodFilter, relaxed);
+      expect(ticks, 2);
+      await sub.cancel();
+    });
   });
 
   test('a wide-open config sends nothing', () {
@@ -92,6 +142,19 @@ void main() {
         genreEnabled: true, genreMode: 'blacklist', genres: const ['jazz']));
     expect(on['genres'], ['jazz']);
     expect(on['genreMode'], 'blacklist');
+    expect(on, isNot(contains('genreSource')),
+        reason: 'Mixed matches both kinds: the pre-source wire shape');
+  });
+
+  test("a single kind of genre rides along with the genre list, never "
+      "without it", () {
+    final generated = serverWith(genreEnabled: true, genres: const ['jazz'])
+      ..autoDJGenreSource = GenreSource.model;
+    expect(mgr.libraryFilters(generated)['genreSource'], 'model');
+    generated.autoDJGenreSource = GenreSource.tag;
+    expect(mgr.libraryFilters(generated)['genreSource'], 'tag');
+    generated.autoDJGenreEnabled = false;
+    expect(mgr.libraryFilters(generated), isNot(contains('genreSource')));
   });
 
   group('track length', () {
@@ -146,11 +209,14 @@ void main() {
     mgr.durationFilterEnabled = true;
     mgr.minDurationSec = 120;
     mgr.maxDurationSec = 600;
+    mgr.moodFilterEnabled = true;
+    mgr.moodFilter = const MoodFilter(valence: 'happy');
     final f = mgr.libraryFilters(serverWith(
       paths: {'music': true, 'podcasts': false},
       minRating: 8,
       genreEnabled: true,
       genres: const ['jazz', 'funk'],
+      moods: true,
     ));
     expect(f.keys, containsAll(<String>[
       'ignoreVPaths',
@@ -159,6 +225,7 @@ void main() {
       'genreMode',
       'minDuration',
       'maxDuration',
+      'moods',
     ]));
   });
 }

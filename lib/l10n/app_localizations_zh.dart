@@ -39,9 +39,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageSystemDefault => '跟随系统';
 
   @override
-  String get settingsLanguageSubtitle => '应用的显示语言。“跟随系统”将跟随你的设备设置。';
-
-  @override
   String couldNotOpen(String url) {
     return '无法打开 $url';
   }
@@ -114,8 +111,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqOnlyAndroid => '均衡器仅在 Android 上可用。';
 
   @override
-  String get eqNeedsPlayback =>
-      '请先播放一首歌曲以配置均衡器。\n\nAndroid 的原生均衡器会随音频会话一起初始化，因此需要正在播放时才能读取频段布局。';
+  String get eqNeedsPlayback => '本机的均衡器只有在播放音频时才会报告频段。频段出现后，会立即应用你保存的预设。';
 
   @override
   String eqInitFailed(String error) {
@@ -124,6 +120,175 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eqNoBands => '此设备的音频驱动未报告任何均衡器频段。';
+
+  @override
+  String get eqPresetFlat => '平坦';
+
+  @override
+  String get eqPresetNormal => '普通';
+
+  @override
+  String get eqPresetClassical => '古典';
+
+  @override
+  String get eqPresetDance => '舞曲';
+
+  @override
+  String get eqPresetFolk => '民谣';
+
+  @override
+  String get eqPresetHeavyMetal => '重金属';
+
+  @override
+  String get eqPresetHipHop => '嘻哈';
+
+  @override
+  String get eqPresetJazz => '爵士';
+
+  @override
+  String get eqPresetPop => '流行';
+
+  @override
+  String get eqPresetRock => '摇滚';
+
+  @override
+  String get eqPresetCustom => '自定义';
+
+  @override
+  String get eqSaveAsPreset => '保存为预设';
+
+  @override
+  String get eqSavePresetTitle => '保存预设';
+
+  @override
+  String get eqRenamePresetTitle => '重命名预设';
+
+  @override
+  String get eqPresetNameLabel => '名称';
+
+  @override
+  String get eqSavePresetHint => '保存在本机上，排在内置预设之后。之后长按它的标签即可重命名或删除。';
+
+  @override
+  String get eqReplacePreset => '替换';
+
+  @override
+  String get eqPresetNameTaken => '另一个已保存的预设已使用此名称。';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
+  String get eqHoldToCompare => '按住对比';
+
+  @override
+  String get eqHoldToCompareHint => '按住即可聆听不经均衡器处理的声音。';
+
+  @override
+  String get eqOptionsTitle => '均衡器选项';
+
+  @override
+  String get eqPreventClipping => '防止削波';
+
+  @override
+  String get eqPreventClippingHint => '在频段被提升时限制峰值。';
+
+  @override
+  String get eqShowValues => '始终显示频段数值';
+
+  @override
+  String get eqShowValuesHint => '在每个频段上方显示数值，而不只是拖动时。';
+
+  @override
+  String get eqOutputsTitle => '输出设备';
+
+  @override
+  String get eqOutputsRowOff => '已关闭 — 所有输出设备共用一条曲线';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '当前：$name';
+  }
+
+  @override
+  String get eqOutputsSwitch => '自动切换';
+
+  @override
+  String get eqOutputsSwitchHint => '输出设备变化时，会应用它的曲线。在均衡器页面拖动，编辑的是正在播放的输出设备。';
+
+  @override
+  String get eqOutputsRemembered => '已记住的输出设备';
+
+  @override
+  String get eqOutputSpeaker => '手机扬声器';
+
+  @override
+  String get eqOutputWired => '有线耳机';
+
+  @override
+  String get eqOutputUsb => 'USB 音频';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => '蓝牙';
+
+  @override
+  String get eqOutputOther => '其他输出设备';
+
+  @override
+  String get eqOutputPlayingNow => '正在播放';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return '上次使用 $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => '用某个输出设备听过后，它会出现在这里。';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '忘记“$name”？下次连接时它会作为新设备再次出现。';
+  }
+
+  @override
+  String get eqOutputForget => '忘记';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return '$name 的预设';
+  }
+
+  @override
+  String get eqOutputsHint => '点按输出设备可选择其预设。向左滑动可忘记它。';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return '已开启 — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => '当前';
+
+  @override
+  String get eqNeedsPlaybackTitle => '播放一首歌曲即可设置频段';
+
+  @override
+  String get eqPlayQueue => '播放队列';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '从上次停下的地方继续 · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => '开启均衡器以调整频段。';
@@ -153,22 +318,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionPlayback => '播放';
 
   @override
-  String get settingsSectionBrowse => '浏览';
-
-  @override
-  String get settingsSectionAbout => '关于';
+  String get settingsSectionBrowse => '曲库';
 
   @override
   String get settingsTheme => '主题';
-
-  @override
-  String get themeSubtitleVelvet => '海军蓝与紫色 — 标志性的深色主题。';
-
-  @override
-  String get themeSubtitleDark => '中性深色，琥珀色点缀。';
-
-  @override
-  String get themeSubtitleLight => '浅色背景，深色应用栏与琥珀色点缀 — 与早期版本的主题一致。';
 
   @override
   String get settingsTranscode => '音频转码';
@@ -206,56 +359,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStartupPage => '启动页面';
 
   @override
-  String get settingsStartupPageSubtitle => '启动应用时打开此浏览视图；按返回键回到浏览页面。';
+  String get tapSubtitleAddToQueue => '添加到队列末尾';
 
   @override
-  String get tapSubtitleAddToQueue => '点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。';
+  String get tapSubtitlePlayFromHere => '替换队列并从这首歌开始播放';
 
   @override
-  String get tapSubtitlePlayFromHere => '点击歌曲会用当前视图中的歌曲替换队列，并从所点击的歌曲开始播放。';
+  String get tapSubtitleAppendAndJump => '添加到队列末尾并立即播放';
 
   @override
-  String get tapSubtitleAppendAndJump => '点击歌曲会将其添加到队列并跳转播放，打断当前正在播放的内容。';
+  String get settingsVisualizerSource => '音频来源';
 
   @override
-  String get settingsEqSubtitle => '调节低音、中音和高音。仅限 Android。';
+  String get visualizerSourceSubtitleSynthesized => '无需权限';
 
   @override
-  String get settingsVisualizerSource => '可视化音频来源';
+  String get visualizerSourceSubtitleReal => '需要麦克风权限，但绝不会使用麦克风';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      '默认。可视化效果仅根据播放时间作出反应 — 无需麦克风权限。';
+  String get settingsAlbumGrid => '专辑网格';
 
   @override
-  String get visualizerSourceSubtitleReal =>
-      '可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。';
+  String get settingsFileMetadata => '文件浏览器中的歌曲信息';
 
   @override
-  String get settingsAlbumGrid => '专辑网格视图';
+  String get settingsLetterStrip => '字母滚动条';
 
   @override
-  String get settingsAlbumGridSubtitle => '以带封面的卡片网格显示专辑，而非普通列表。';
-
-  @override
-  String get settingsFileMetadata => '在文件浏览器中读取歌曲元数据';
-
-  @override
-  String get settingsFileMetadataSubtitle =>
-      '浏览服务器文件时获取每首歌曲的标题、艺术家和专辑封面。关闭时显示原始文件名（在超大文件夹中更快）。';
-
-  @override
-  String get settingsLetterStrip => '字母滚动条阈值';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      '当列表项达到此数量或更多时显示 A-Z 快速滚动条。低于此数量时隐藏滚动条，且较长的文件夹/文件名会换行显示而非截断。设为 0 可始终显示滚动条。';
-
-  @override
-  String get settingsLetterStripSide => '字母滚动条位置';
-
-  @override
-  String get settingsLetterStripSideSubtitle => 'A–Z 字母滚动条显示在哪一侧。';
+  String get settingsLetterStripSide => '位置';
 
   @override
   String get settingsLetterStripLeft => '左侧';
@@ -264,13 +395,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLetterStripRight => '右侧';
 
   @override
-  String get settingsReset => '恢复默认设置';
+  String get settingsReset => '重置设置';
 
   @override
-  String get settingsResetSubtitle => '将此屏幕上的所有设置恢复为默认值。服务器和下载不受影响。';
-
-  @override
-  String get settingsResetDone => '设置已恢复为默认值';
+  String get settingsResetDone => '设置已重置';
 
   @override
   String get realAudioDialogTitle => '使用真实音频？';
@@ -643,64 +771,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjTitle => 'Auto DJ';
 
   @override
-  String get autoDjAddServerFirst => '请先添加服务器。';
-
-  @override
-  String get autoDjSectionServer => '服务器';
-
-  @override
-  String get autoDjSectionSources => '来源';
-
-  @override
-  String get autoDjSectionContinuity => '连贯性';
-
-  @override
-  String get autoDjSectionFilters => '筛选';
-
-  @override
-  String get autoDjMultiServerTitle => '从所有服务器播放';
-
-  @override
-  String get autoDjMultiServerSubtitle => 'Auto DJ 同时从所有服务器挑选，匹配当前播放的声音';
-
-  @override
-  String get autoDjMultiServerNeedsSonic => '需要在下方开启“声音相似度”';
-
-  @override
-  String get autoDjSectionShared => '本次会话';
-
-  @override
-  String get autoDjSectionPerServer => '各个曲库';
-
-  @override
-  String get autoDjEditingServer => '设置对象';
-
-  @override
-  String autoDjMultiServerAllIn(int count) {
-    return '$count 台服务器正在参与';
-  }
-
-  @override
-  String autoDjMultiServerConnecting(int count) {
-    return '$count 台仍在连接';
-  }
-
-  @override
-  String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中有 $count 台参与 — 其余缺少发现功能、匹配的嵌入模型或足够新的服务器版本';
-  }
-
-  @override
-  String get autoDjSectionQueue => '队列';
-
-  @override
-  String get autoDjSongsPerFetchTitle => '每次获取的歌曲数';
-
-  @override
-  String get autoDjSongsPerFetchSubtitle =>
-      'Auto DJ 每次运行时加入队列的歌曲数量。连贯性筛选会以获取时正在播放的歌曲为基准评判整批歌曲。';
-
-  @override
   String autoDjSongsPerFetchValue(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -712,15 +782,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get autoDjBpmTitle => 'BPM 连贯性';
-
-  @override
-  String get autoDjBpmSubtitle => '优先选择与当前歌曲速度相近的曲目。兼顾半速/倍速等价关系。';
-
-  @override
-  String get autoDjTolerance => '容差';
-
-  @override
   String autoDjBpmTolerance(int bpm) {
     return '± $bpm BPM';
   }
@@ -729,121 +790,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjHarmonicTitle => '和声混音';
 
   @override
-  String get autoDjHarmonicSubtitle => '优先选择与锁定歌曲调性相配的曲目（Camelot 轮盘相邻调）。';
-
-  @override
-  String get autoDjDurationTitle => '曲目时长';
-
-  @override
-  String get autoDjDurationSubtitle => '仅选择时长在指定范围内的曲目，跳过间奏和长混音';
+  String get autoDjHarmonicHint => '下一首选调性相合的歌曲';
 
   @override
   String get autoDjDurationRange => '时长';
 
   @override
-  String get autoDjDurationAny => '不限时长';
-
-  @override
-  String autoDjDurationOver(String min) {
-    return '超过 $min';
-  }
-
-  @override
-  String autoDjDurationUnder(String max) {
-    return '少于 $max';
-  }
-
-  @override
-  String autoDjDurationBetween(String min, String max) {
-    return '$min 至 $max';
-  }
-
-  @override
-  String get autoDjDurationAllowUnknown => '包含时长未知的曲目';
-
-  @override
-  String get autoDjDurationAllowUnknownSub => '否则将跳过服务器未读取到时长的曲目';
-
-  @override
-  String get autoDjStatusOn => 'Auto DJ 已开启';
-
-  @override
-  String get autoDjStatusOff => 'Auto DJ 已关闭';
-
-  @override
-  String get autoDjStatusOffDetail => '点击下方开始。将使用当前服务器的曲库。';
-
-  @override
-  String get autoDjStart => '启动 Auto DJ';
-
-  @override
-  String get autoDjStop => '停止 Auto DJ';
-
-  @override
-  String autoDjStatusOnDetail(String url) {
-    return '当队列即将播完时，将从 $url 挑选歌曲。';
-  }
-
-  @override
-  String get autoDjOneSourceRequired => '至少需要一个来源。';
-
-  @override
-  String get autoDjMinRating => '最低评分';
-
-  @override
-  String get autoDjMinRatingSubtitle => '仅挑选评分达到或高于此值的歌曲。';
-
-  @override
-  String get autoDjRatingAny => '不限';
-
-  @override
-  String get autoDjGenreTitle => '流派筛选';
-
-  @override
-  String get autoDjGenreSubtitle => '白名单仅播放匹配的曲目；黑名单则跳过它们。';
-
-  @override
-  String get autoDjWhitelist => '白名单';
-
-  @override
-  String get autoDjBlacklist => '黑名单';
-
-  @override
-  String get autoDjNoGenres => '未选择任何流派。点击“选择流派”进行选择。';
-
-  @override
-  String get autoDjPickGenres => '选择流派';
+  String get autoDjMoodTitle => '智能筛选';
 
   @override
   String get autoDjGenreLoadError => '无法加载流派';
-
-  @override
-  String get autoDjKeywordTitle => '关键词筛选';
-
-  @override
-  String get autoDjKeywordSubtitle => '跳过标题、艺术家、专辑或文件路径中包含以下任一词语的曲目。';
-
-  @override
-  String get autoDjNoKeywords => '暂无关键词。在下方添加词语即可开始筛选。';
-
-  @override
-  String get autoDjKeywordHint => '例如“live”或“remix”';
-
-  @override
-  String get autoDjSearchGenres => '搜索流派…';
-
-  @override
-  String get autoDjNoGenresOnServer => '在此服务器上未找到任何流派。';
-
-  @override
-  String autoDjSelectedCount(int count) {
-    return '已选择 $count 个';
-  }
-
-  @override
-  String autoDjNoGenresMatch(String query) {
-    return '没有与“$query”匹配的流派。';
-  }
 
   @override
   String get download => '下载';
@@ -1010,6 +966,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get genreSourceBoth => '全部';
 
   @override
+  String get genreSourceMixed => '混合';
+
+  @override
   String get genreSourceLabel => '流派来源';
 
   @override
@@ -1110,11 +1069,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserWelcomeSubtitle => '点击这里添加服务器';
 
   @override
-  String get settingsVisualizerKnobs => '可视化调节旋钮';
+  String get settingsVisualizerKnobs => '调节滑块';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      '在可视化效果上方显示实时滑块，以调整每个着色器的音频反应强度。仅限 ShaderToy 可视化。';
+  String get settingsVisualizerKnobsSubtitle => '仅限 ShaderToy';
 
   @override
   String get visualizerTuningTitle => '调节';
@@ -1169,18 +1127,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonOff => '关闭';
 
   @override
-  String get settingsCastQuality => '投放可视化质量';
-
-  @override
-  String get settingsCastQualitySubtitle720 => '可视化效果投放到电视的分辨率。720p — 对手机负担最轻。';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      '可视化效果投放到电视的分辨率。1080p — 在任何 Chromecast 上都清晰（默认）。';
-
-  @override
-  String get settingsCastQualitySubtitle4k =>
-      '可视化效果投放到电视的分辨率。4K — 需要 4K Chromecast；对手机负担大得多。';
+  String get settingsCastQualitySubtitle4k => '需要 4K Chromecast；对手机负担最重';
 
   @override
   String get eqCasting => '均衡器调节的是本设备上的音频，因此投放期间不可用。请断开连接以使用它。';
@@ -1401,13 +1348,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get castVisualizer => '投放可视化';
 
   @override
-  String get castVisualizerSubtitle => '将可视化效果投放到电视 · 仅限 Chromecast';
+  String get castVisualizerSubtitle => '仅限 Chromecast';
 
   @override
   String get castThisDevice => '此设备';
 
   @override
-  String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
+  String get visualizerNoKnobs => '此着色器没有滑块。';
 
   @override
   String get nowPlaying => '正在播放';
@@ -1428,18 +1375,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => '细条 — 最大化队列';
-
-  @override
-  String get playerLayoutMediumDesc => '横幅 — 平衡（默认）';
-
-  @override
-  String get playerLayoutLargeDesc => '紧凑 — 居中封面';
-
-  @override
-  String get playerLayoutXlDesc => '大图 — 完整封面';
-
-  @override
   String get queueNothingToDownloadEmpty => '队列为空 — 没有可下载的内容';
 
   @override
@@ -1447,9 +1382,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAccentColor => '强调色';
-
-  @override
-  String get settingsAccentColorSubtitle => '整个应用中使用的高亮颜色。';
 
   @override
   String get accentThemeDefault => '主题默认';
@@ -1486,39 +1418,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResumeQueue => '启动时恢复播放队列';
 
   @override
-  String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
+  String get settingsOfflineQueue => '下载播放队列';
 
   @override
-  String get settingsOfflineQueue => '保持队列离线可用';
+  String get settingsOfflineQueueSubtitle => '断开连接时也能继续播放。';
 
   @override
-  String get settingsOfflineQueueSubtitle => '自动将队列中的曲目下载到此设备，即使断开连接也能继续播放。';
+  String get settingsOfflineQueueWifiOnly => '仅限 Wi-Fi';
 
   @override
-  String get settingsOfflineQueueWifiOnly => '仅在 Wi-Fi 下下载';
-
-  @override
-  String get settingsOfflineQueueWifiOnlySubtitle => '等待连接 Wi-Fi 后再下载队列中的曲目。';
-
-  @override
-  String get settingsAutoDownloadCap => '自动下载上限';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      '从正在播放的歌曲起，提前缓存此数量的歌曲；播放过的会随之删除。';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited => '缓存整个播放队列（无限制）。';
+  String get settingsAutoDownloadCap => '下载上限';
 
   @override
   String get settingsAutoDownloadCapUnlimited => '不限';
 
   @override
-  String get settingsAutoDownloadCapField => '歌曲数量';
+  String get settingsAutoDownloadCapField => '歌曲数';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      '从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 则缓存整个队列。';
+      '从正在播放的歌曲算起，保留多少首已下载的歌曲。有新歌曲下载时，超出范围的旧歌曲会被删除。';
 
   @override
   String get downloadWaitingWifi => '等待 Wi-Fi';
@@ -1527,7 +1446,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRatingHalf => '半星评分';
 
   @override
-  String get settingsRatingHalfSubtitle => '以半星为单位评分（长按星标）。';
+  String get settingsRatingHalfSubtitle => '长按星标';
 
   @override
   String get ratingTitle => '评分';
@@ -1581,10 +1500,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersTitle => '导入的着色器';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      '将你自己的 .glsl 文件加入 ShaderToy 可视化的轮换。';
-
-  @override
   String get importedShadersRescan => '重新扫描文件夹';
 
   @override
@@ -1594,28 +1509,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersCopyPath => '复制路径';
 
   @override
-  String get importedShadersReachableHint =>
-      '可通过 USB 或文件管理器访问（位于 Android/data 下）。导入的着色器会加入 ShaderToy 可视化的轮换。';
+  String get importedShadersReachableHint => '可通过 USB 访问。卸载 mStream 会删除此文件夹。';
 
   @override
-  String get importedShadersRemove => '移除';
+  String get importedShadersRemove => '删除';
 
   @override
-  String get importedShadersEmptyTitle => '文件夹中还没有着色器';
+  String get importedShadersEmptyTitle => '还没有着色器';
 
   @override
   String get importedShadersEmptyBody =>
       '将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。';
 
   @override
-  String get importedShadersInvalid => '可能不是有效的着色器 — 没有 mainImage/main 入口点。';
+  String get importedShadersInvalid => '可能无法运行：没有 mainImage 或 main';
 
   @override
   String get importedShadersImportDownloads => '从“下载”导入 .glsl';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return '已从“下载”导入 $count 个着色器';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已导入 $count 个着色器',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1694,6 +1613,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get irohPathSuffixRelay => ' · 经中继';
+
+  @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
 
   @override
   String get irohTunnelTimeout => '隧道已打开，但服务器未及时响应。';
@@ -2002,23 +1925,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicTitle => '声音相似度';
 
   @override
-  String get autoDjSonicSubtitle => '利用服务器的音频分析，只挑选与本次会话声音相似的歌曲。';
-
-  @override
-  String get autoDjSonicUnavailable => '此服务器没有发现数据 — 选曲保持随机。';
-
-  @override
-  String get autoDjSonicNotReady => '发现功能已开启，但扫描尚未产生数据 — 在此之前选曲保持随机。';
-
-  @override
-  String get autoDjSonicStrictness => '相似度门槛';
-
-  @override
-  String autoDjSonicStrictnessValue(int pct) {
-    return '$pct% 或更相似';
-  }
-
-  @override
   String get autoDjSonicSeedLabel => '种子歌曲';
 
   @override
@@ -2037,10 +1943,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicSeedRemove => '移除种子歌曲';
 
   @override
-  String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
+  String get autoDjSonicSeedFailed => '无法获取歌曲';
 
   @override
-  String get autoDjSeedNoMatch => '没有歌曲符合你的 Auto DJ 筛选条件，请放宽条件';
+  String get autoDjSeedNoMatch => '没有符合筛选条件的歌曲';
 
   @override
   String get discoverFindSimilar => '查找相似歌曲';
@@ -2056,9 +1962,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverSessionStarted => '声音会话已开始 — Auto DJ 已开启。';
-
-  @override
-  String get autoDjSonicAnchorLabel => '锚点';
 
   @override
   String get autoDjSonicAnchorRolling => '跟随氛围';
@@ -2188,37 +2091,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get autoDjStartTitle => 'Auto DJ 从哪首歌开始？';
-
-  @override
-  String get autoDjStartSubtitle => '队列为空，DJ 需要一首起始曲目。有队列时，它会直接沿用其中的内容。';
-
-  @override
-  String get autoDjStartRandom => '给我惊喜';
-
-  @override
-  String get autoDjStartRandomSub => '从曲库中随机选一首，并以此展开。';
-
-  @override
-  String get autoDjStartPick => '我来选';
-
-  @override
-  String get autoDjStartPickSub => '打开曲库，自己挑选起始曲目。';
-
-  @override
-  String get autoDjStartRemember => '记住此选择';
-
-  @override
-  String get autoDjStartRememberSub => '下次跳过此询问，始终以这种方式开始。';
-
-  @override
   String get autoDjStartPickBanner => '选择起始歌曲 — 在曲库中点击任意曲目';
-
-  @override
-  String get autoDjOnEmptyQueue => '队列为空时';
-
-  @override
-  String get autoDjOnEmptyQueueSub => '队列为空时开启 Auto DJ 的行为。';
 
   @override
   String get autoDjStartAskShort => '询问';
@@ -2241,12 +2114,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return '此服务器版本为 v$version。部分功能需要 v5.5 或更高版本，将不可用。';
   }
-
-  @override
-  String get autoDjNeedsNewerServer => 'BPM 连贯性、和声混音和流派筛选需要更新的服务器版本。更新后即可使用。';
-
-  @override
-  String get autoDjSonicNeedsNewerServer => '需要服务器 6.15.2 或更高版本';
 
   @override
   String get torrentScreenTitle => '添加种子';
@@ -2308,13 +2175,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTorrentAskTitle => '询问如何处理种子文件';
 
   @override
-  String get settingsTorrentAskSub => '使用 mStream 打开种子时，提供交给其他应用的选项';
-
-  @override
   String get settingsTorrentDefaultTitle => '种子文件的默认应用';
 
   @override
-  String get settingsTorrentDefaultSub => '打开 Android 设置，在其中选择由哪个应用处理种子文件和磁力链接';
+  String get settingsTorrentDefaultSub => '打开 Android 设置';
 
   @override
   String get settingsTorrentDefaultFailed => '无法打开 Android 设置';
@@ -3897,46 +3761,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoRecentlyPlayed => '最近播放';
 
   @override
-  String get settingsSectionListening => '收听记录';
+  String get settingsHistoryEnabled => '记录播放';
 
   @override
-  String get settingsHistoryEnabled => '保留收听记录';
+  String get settingsHistorySend => '将播放发送到服务器';
 
   @override
-  String get settingsHistoryEnabledSubtitle =>
-      '记录这部手机播放的内容，包括所有服务器和本地文件。仅保存在本机。';
+  String get settingsHistoryClear => '清除记录';
 
   @override
-  String get settingsHistorySend => '将播放发送到你的服务器';
-
-  @override
-  String get settingsHistorySendSubtitle =>
-      '每次播放都会发送到曲目所在的服务器（伙伴服务器的曲目发送到其上级服务器），这样你的统计就包含这部手机。只有在服务器上关联了 Last.fm 账号时才会转发。';
-
-  @override
-  String get settingsHistoryClear => '清除收听记录';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return '删除这部手机上的记录（$size）。服务器上的记录会保留。';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm => '删除这部手机的收听记录？已发送到服务器的播放会保留在那里。';
-
-  @override
-  String get settingsHistoryCleared => '收听记录已清除';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 次播放等待发送',
-      zero: '全部已同步',
+      other: '这将删除这部手机的收听记录（$size），包括 $count 次尚未同步的播放。服务器上的记录会保留。',
+      zero: '这将删除这部手机的收听记录（$size）。服务器上的记录会保留。',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => '收听记录已清除';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4226,9 +4071,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => '主屏幕小组件';
-
-  @override
-  String get settingsHomeWidgetSubtitle => '将“正在播放”小组件以五种尺寸之一添加到主屏幕。';
 
   @override
   String get settingsHomeWidgetSubtitleIos => '长按主屏幕，添加小组件并选择 mStream Music。';
@@ -5069,4 +4911,230 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => '分享播放列表';
+
+  @override
+  String get autoDjStopShort => '停止';
+
+  @override
+  String get autoDjPlayFrom => '播放来源';
+
+  @override
+  String get autoDjAllServers => '所有服务器';
+
+  @override
+  String autoDjServersTakingPart(int count, int total) {
+    return '$count/$total';
+  }
+
+  @override
+  String get autoDjFirstSong => '第一首';
+
+  @override
+  String get autoDjFirstSongRandom => '随机';
+
+  @override
+  String get autoDjFirstSongChoose => '选择';
+
+  @override
+  String get autoDjMustMatch => '必须符合';
+
+  @override
+  String get autoDjPrefer => '偏好';
+
+  @override
+  String autoDjPercent(int pct) {
+    return '$pct%';
+  }
+
+  @override
+  String get autoDjDrift => '随流漂移';
+
+  @override
+  String get autoDjStayClose => '保持接近';
+
+  @override
+  String get autoDjGenres => '流派';
+
+  @override
+  String get autoDjGenresOnly => '仅限';
+
+  @override
+  String get autoDjGenresSkip => '排除';
+
+  @override
+  String autoDjGenresSkipValue(String genres) {
+    return '排除 $genres';
+  }
+
+  @override
+  String get autoDjRating => '评分';
+
+  @override
+  String autoDjRatingValue(String stars) {
+    return '$stars★及以上';
+  }
+
+  @override
+  String get autoDjAny => '不限';
+
+  @override
+  String autoDjLengthOver(String min) {
+    return '$min 以上';
+  }
+
+  @override
+  String autoDjLengthUnder(String max) {
+    return '$max 以内';
+  }
+
+  @override
+  String autoDjLengthBetween(String min, String max) {
+    return '$min–$max';
+  }
+
+  @override
+  String get autoDjIncludeUnknown => '包括未知';
+
+  @override
+  String get autoDjLengthShortest => '最短';
+
+  @override
+  String get autoDjLengthLongest => '最长';
+
+  @override
+  String get autoDjWheelHours => '小时';
+
+  @override
+  String get autoDjTempo => '节拍匹配';
+
+  @override
+  String get autoDjSkipWords => '排除词';
+
+  @override
+  String get autoDjBatch => '批量';
+
+  @override
+  String get autoDjVaries => '各不相同';
+
+  @override
+  String autoDjMax(int count) {
+    return '最多 $count';
+  }
+
+  @override
+  String autoDjNeedsServer(String version) {
+    return '服务器 $version+';
+  }
+
+  @override
+  String get autoDjDiscoveryOff => '发现已关闭';
+
+  @override
+  String get autoDjStillScanning => '仍在扫描';
+
+  @override
+  String get autoDjTooStrict => '过于严格';
+
+  @override
+  String get autoDjNotOnPeers => '对等服务器不可用';
+
+  @override
+  String get autoDjNoMoodData => '无氛围数据';
+
+  @override
+  String get autoDjOtherModel => '音频模型不同';
+
+  @override
+  String get autoDjUnreachable => '无法连接';
+
+  @override
+  String get autoDjRemember => '记住';
+
+  @override
+  String get autoDjGenresNone => '没有流派';
+
+  @override
+  String get autoDjNoMatches => '无匹配';
+
+  @override
+  String get autoDjRecentlyPlayed => '最近播放';
+
+  @override
+  String get autoDjFirstSongRecent => '最近播放';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
+
+  @override
+  String get settingsSectionVisualizer => '可视化';
+
+  @override
+  String get settingsOfflineQueueFooter => '仅针对播放队列的下载。你自己下载的歌曲始终保留。';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = 不限';
+
+  @override
+  String get settingsStartupRecentHint => '新加入曲库的歌曲';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count+ 项',
+      zero: '始终显示',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint => '用于 A–Z 列表。较短的列表则改为长名称换行。';
+
+  @override
+  String get settingsHistoryFooter => '只有在服务器上关联了账号，服务器才会向 Last.fm 提交播放。';
+
+  @override
+  String get settingsHistoryEmpty => '无记录';
+
+  @override
+  String get settingsHistoryOffTitle => '停止记录播放？';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这将删除这部手机的收听记录，包括 $count 次尚未同步的播放。服务器上的记录会保留。',
+      zero: '这将删除这部手机的收听记录。服务器上的记录会保留。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => '关闭';
+
+  @override
+  String get settingsHistoryClearTitle => '清除记录？';
+
+  @override
+  String get settingsResetTitle => '重置设置？';
+
+  @override
+  String get settingsResetBody =>
+      '同时会重置均衡器、转码，以及设置页面以外的少数选项。服务器、下载内容、收听记录和已保存的预设不受影响。';
+
+  @override
+  String get settingsResetBodyIos => '同时会重置转码，以及设置页面以外的少数选项。服务器、下载内容和收听记录不受影响。';
 }

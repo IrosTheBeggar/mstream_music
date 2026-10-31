@@ -38,6 +38,56 @@ void main() {
     });
   });
 
+  group('read back (a saved filter, an answer\'s echo)', () {
+    test('the wire form round-trips; nothing reads as empty', () {
+      const f = MoodFilter(
+          energy: 'relaxed', voice: 'instrumental', tags: ['acoustic', 'party']);
+      expect(MoodFilter.fromJson(f.toJson()), f);
+      expect(MoodFilter.fromJson(null), MoodFilter.empty);
+    });
+
+    test('an unknown value or tag, and junk, are dropped rather than sent', () {
+      final f = MoodFilter.fromJson({
+        'valence': 'ecstatic',
+        'energy': 'relaxed',
+        'voice': 3,
+        'tags': ['party', 'loud', 'party', 7],
+        'extra': true,
+      });
+      expect(f, const MoodFilter(energy: 'relaxed', tags: ['party']));
+      expect(f.toJson(), {
+        'energy': 'relaxed',
+        'tags': ['party']
+      });
+      expect(MoodFilter.fromJson('relaxed'), MoodFilter.empty);
+      expect(MoodFilter.fromJson({'tags': 'party'}), MoodFilter.empty);
+    });
+  });
+
+  group('an Auto DJ answer echoes the mood it picked under', () {
+    const asked = MoodFilter(energy: 'relaxed', voice: 'instrumental');
+
+    test('the same filter fits, whatever order its tags come in', () {
+      expect(
+          moodEchoFits({'energy': 'relaxed', 'voice': 'instrumental'}, asked),
+          isTrue);
+      expect(
+          moodEchoFits({
+            'tags': ['party', 'acoustic']
+          }, const MoodFilter(tags: ['acoustic', 'party'])),
+          isTrue);
+    });
+
+    test('no echo, {}, junk or another filter does not', () {
+      expect(moodEchoFits(null, asked), isFalse,
+          reason: 'a server that cannot filter leaves the key out');
+      expect(moodEchoFits(<String, dynamic>{}, asked), isFalse,
+          reason: '{} is a pick under no filter');
+      expect(moodEchoFits('relaxed', asked), isFalse);
+      expect(moodEchoFits({'energy': 'relaxed'}, asked), isFalse);
+    });
+  });
+
   group('choices', () {
     test('one value per scale; null lets it go; an unknown value changes '
         'nothing', () {

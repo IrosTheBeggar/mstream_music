@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:rxdart/rxdart.dart';
@@ -23,6 +24,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
   // Works for iroh too: the transcoder reads the iroh loopback source on-device
   // (re-origined to the live tunnel — see ChromecastPlaybackBackend).
   late bool _visualizer = SettingsManager().castVisualizerEnabled;
+  late CastVisualizerQuality _quality = SettingsManager().castVisualizerQuality;
 
   // After an initial window the "searching…" spinner settles to a quiet hint so
   // it doesn't imply an endless scan — discovery keeps running underneath while
@@ -175,6 +177,49 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 ),
               ),
             ),
+            // The resolution the visualizer is rendered + encoded at, next to
+            // the checkbox it depends on and only while it is ticked. Android
+            // encodes the stream on-device; elsewhere there is nothing to set.
+            if (_visualizer && Platform.isAndroid)
+              Padding(
+                padding: const EdgeInsets.only(left: 40, bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SegmentedButton<CastVisualizerQuality>(
+                      segments: [
+                        for (final q in CastVisualizerQuality.values)
+                          ButtonSegment(value: q, label: Text(q.label)),
+                      ],
+                      selected: {_quality},
+                      onSelectionChanged: (set) {
+                        if (set.isEmpty) return;
+                        setState(() => _quality = set.first);
+                        SettingsManager().setCastVisualizerQuality(set.first);
+                      },
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: VelvetColors.primary,
+                        selectedForegroundColor: VelvetColors.onPrimary,
+                        foregroundColor: VelvetColors.textPrimary,
+                        side: BorderSide(color: VelvetColors.border2),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    if (_quality == CastVisualizerQuality.uhd2160)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          l.settingsCastQualitySubtitle4k,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: VelvetColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

@@ -122,7 +122,12 @@ class DownloadManager {
             if (dt.auto) {
               await AutoDownloadLedger()
                   .record(dt.serverName!, dt.dataPath!, dt.localPath!);
-              await _enforceAutoDownloadCap();
+              // A transfer that lands after the queue downloads were turned
+              // off is kept and recorded, but deletes nothing: off means the
+              // queue stops changing what is on the phone.
+              if (SettingsManager().offlineQueue) {
+                await _enforceAutoDownloadCap();
+              }
               // A slot just freed: pull the next unmarked track in. The
               // queue patch above usually re-sweeps too; this makes sure of
               // it when the patch changed nothing.
@@ -593,6 +598,33 @@ class DownloadManager {
     }
   }
 
+  /// Cancel the queue's Wi-Fi-held, not-yet-started transfer of [key] so a
+  /// manual download can replace it. Its tracker goes first, so the cancel
+  /// update that follows finds nothing to tear down (and can't clear the
+  /// replacement's in-flight guard). The guard itself stays: a second manual
+  /// call for the same file arriving during the cancel finds no held tracker
+  /// and returns, instead of enqueuing a duplicate. False when there is no
+  /// such transfer — one that is running is left to finish.
+  Future<bool> _releaseWifiHold(String key) async {
+    final held = [
+      for (final e in downloadMap.entries)
+        if (e.value.filePath == key &&
+            e.value.requiresWiFi &&
+            e.value.progress <= 0)
+          e.key,
+    ];
+    if (held.isEmpty) return false;
+    for (final id in held) {
+      downloadMap.remove(id);
+    }
+    try {
+      await FileDownloader().cancelTasksWithIds(held);
+    } catch (e) {
+      appLog('[dl] cancel of a Wi-Fi-held task failed: $e');
+    }
+    return true;
+  }
+
   Future<void> downloadOneFile(String downloadUrl, String serverName,
       String filepath,
       {DisplayItem? referenceItem,
@@ -688,7 +720,11 @@ class DownloadManager {
       return;
     }
     if (_inFlight.contains(downloadDirectory)) {
-      return; // a download for this exact file is already running
+      // A download for this exact file is already running — unless it is a
+      // queue download still held for Wi-Fi and this one is the user's own:
+      // theirs takes over, with no Wi-Fi hold and no auto flag (which the
+      // restore step would otherwise read back from the hold).
+      if (auto || !await _releaseWifiHold(downloadDirectory)) return;
     }
 
     String targetDir = path.dirname(downloadTo);

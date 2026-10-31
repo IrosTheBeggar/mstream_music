@@ -16,8 +16,10 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../util/write_chain.dart';
+import 'log_manager.dart';
 
 /// Which paths feed random-songs' `similarTo` when sonic mode is on — a
 /// pure client-side policy (the server statelessly averages whatever
@@ -44,6 +46,11 @@ enum EmptyQueueStart {
 
   /// Drop into the library so the user picks the opening track.
   pick,
+
+  /// Offer the songs this phone played last on the DJ's server, in a
+  /// dropdown, and open on the one picked. What is remembered is the way to
+  /// start, not a song: each start asks which.
+  recent,
 }
 
 class AutoDJManager {
@@ -112,9 +119,9 @@ class AutoDJManager {
   // base-conditions layer and NEVER relaxes it in the waterfall (unlike the
   // BPM windows), so an over-tight window 400s rather than quietly widening.
   //
-  // The rails are the off positions: [durationFloorSec] means "no minimum"
+  // The ends are the off positions: [durationFloorSec] means "no minimum"
   // and [durationCeilSec] means "no maximum", so a bound at either end is
-  // simply not sent. That keeps one control able to express min-only,
+  // simply not sent. That keeps one setting able to express min-only,
   // max-only, both, or neither — which is exactly the server's contract.
   bool durationFilterEnabled = false;
   int minDurationSec = 120; // the "skip interludes" default
@@ -125,16 +132,25 @@ class AutoDJManager {
   // than intended, which is what this opts back out of.
   bool allowUnknownDuration = false;
 
-  /// Bottom rail of the length slider — "no minimum".
+  // Mood — server-side via `moods` on POST /api/v1/db/random-songs (mStream
+  // #1096): the browse lists' filter, kept to for every pick. Like the
+  // track-length window it is a base condition the server never relaxes, so
+  // a mood nothing in scope meets 400s rather than playing outside it. App-
+  // level: a mood means the same on every server. Only sent while switched on
+  // with something chosen (see [activeMoodFilter]).
+  bool moodFilterEnabled = false;
+  MoodFilter moodFilter = MoodFilter.empty;
+
+  /// "No minimum".
   static const int durationFloorSec = 0;
 
-  /// Top rail — "no maximum". 20 minutes covers ordinary tracks with room to
-  /// spare; anything longer is the case the user wants to keep, not exclude.
-  static const int durationCeilSec = 1200;
+  /// "No maximum": a day, the server's own cap, one second past the longest
+  /// length the Length sheet's timer wheels can set (23:59:59).
+  static const int durationCeilSec = 86400;
 
-  /// Slider granularity. 15s steps give 80 divisions — fine enough to land on
-  /// a real intent ("over 90 seconds") without pretending to per-second aim.
-  static const int durationStepSec = 15;
+  /// What meant "no maximum" in a file written before the Length sheet took
+  /// any length: 20 minutes, the top of the slider it replaced.
+  static const int _legacyDurationCeilSec = 1200;
 
   // Harmonic mixing — prefer keys that mix well with the currently
   // locked Camelot anchor (which AudioPlayerHandler sets from the
@@ -199,6 +215,13 @@ class AutoDJManager {
   /// where music comes from, needs servers new enough to take a vector seed,
   /// and only makes sense with more than one server configured.
   bool multiServerEnabled = false;
+
+  /// [Server.localname] the Auto DJ screen's Play from names: where Start,
+  /// the queue's Auto DJ button and CarPlay arm the DJ, whichever server is
+  /// being browsed. Null until one is chosen (the current server stands in).
+  /// With [multiServerEnabled] it is the session's home — the last single
+  /// server, and where Play from returns when All servers is let go.
+  String? playFromServer;
 
   /// [Server.localname] Auto DJ was last switched on for, or null when it was
   /// off. Written by the audio handler on every setAutoDJ, and read once at
@@ -272,22 +295,51 @@ class AutoDJManager {
           EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
               EmptyQueueStart.ask;
       durationFilterEnabled = m['durationFilterEnabled'] ?? false;
-      // Clamped on read: a hand-edited or future-written file must not put the
-      // slider off its own track, and an inverted pair would send a window
+      // Clamped on read: a hand-edited or future-written file must not send a
+      // bound the server refuses, and an inverted pair would send a window
       // nothing can satisfy.
       minDurationSec = _clampDuration(m['minDurationSec'], 120);
-      maxDurationSec = _clampDuration(m['maxDurationSec'], durationCeilSec);
+      maxDurationSec = storedMaxDurationSec(m);
       if (minDurationSec > maxDurationSec) {
         minDurationSec = durationFloorSec;
         maxDurationSec = durationCeilSec;
       }
       allowUnknownDuration = m['allowUnknownDuration'] ?? false;
+      // Cleaned on read: the route refuses an unknown value, so a hand-edited
+      // or future-written filter must not 400 every pick.
+      moodFilterEnabled = m['moodFilterEnabled'] == true;
+      moodFilter = MoodFilter.fromJson(m['moodFilter']);
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
+      // A file from before Play from existed starts it where the DJ last ran,
+      // so Start after an upgrade goes back there, not to the browsed server.
+      playFromServer = m['playFromServer'] is String
+          ? m['playFromServer']
+          : enabledServer;
       multiServerEnabled = m['multiServerEnabled'] ?? false;
+      // All servers runs on sonic picks, so it can't stay on without them —
+      // the Sonic similarity sheet enforces that; an older file may not.
+      if (!sonicSimilarityEnabled) multiServerEnabled = false;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
     }
+  }
+
+  /// The maximum length in a saved file [m]. One at the "no maximum" of the
+  /// version that wrote it is still none: an older file's 20:00 is the end of
+  /// the slider it was set on, not a cap.
+  static int storedMaxDurationSec(Map<String, dynamic> m) {
+    final noMax = m['durationCeilSec'] is num
+        ? (m['durationCeilSec'] as num).round()
+        : _legacyDurationCeilSec;
+    final raw = m['maxDurationSec'];
+    // 0 is no maximum too: the sheet's wheel says so, and the old slider
+    // could save it with both thumbs at the left.
+    return raw is num &&
+            raw.round() > durationFloorSec &&
+            raw.round() < noMax
+        ? _clampDuration(raw, durationCeilSec)
+        : durationCeilSec;
   }
 
   static int _clampDuration(dynamic raw, int fallback) {
@@ -307,7 +359,15 @@ class AutoDJManager {
   // auto_dj.json (load() silently resets every setting on a corrupt file).
   final WriteChain _writeChain = WriteChain();
 
-  Future<void> _save() => _writeChain.run(() async {
+  /// Write auto_dj.json. A failure is logged, not thrown: every setter has
+  /// already applied its value (and notified) by then, so a caller doing
+  /// several steps — a sheet's Done — must not have the rest cut short by a
+  /// full disk.
+  Future<void> _save() => _write().catchError((Object e) {
+        appLog('[dj] saving auto_dj.json failed: $e');
+      });
+
+  Future<void> _write() => _writeChain.run(() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
       // Held only until the migration runs; see the field declarations.
@@ -330,11 +390,16 @@ class AutoDJManager {
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
+      'playFromServer': playFromServer,
       'multiServerEnabled': multiServerEnabled,
       'durationFilterEnabled': durationFilterEnabled,
       'minDurationSec': minDurationSec,
       'maxDurationSec': maxDurationSec,
+      // What "no maximum" was when this was written, for the next reader.
+      'durationCeilSec': durationCeilSec,
       'allowUnknownDuration': allowUnknownDuration,
+      'moodFilterEnabled': moodFilterEnabled,
+      'moodFilter': moodFilter.toJson(),
     }));
   });
 
@@ -349,6 +414,13 @@ class AutoDJManager {
     await _save();
   }
 
+  Future<void> setPlayFromServer(String? localname) async {
+    if (playFromServer == localname) return;
+    playFromServer = localname;
+    _notify();
+    await _save();
+  }
+
   // --- Track-length window ---
 
   Future<void> setDurationFilterEnabled(bool v) async {
@@ -357,8 +429,8 @@ class AutoDJManager {
     await _save();
   }
 
-  /// Both bounds move together — the slider is one control, and letting them
-  /// cross would produce a window with no possible match.
+  /// Both bounds move together: letting them cross would produce a window
+  /// with no possible match.
   Future<void> setDurationRange(int minSec, int maxSec) async {
     minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
     maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
@@ -377,6 +449,29 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ screen's Length sheet, applied at once: a window at both
+  /// rails is "Any", which is the filter switched off.
+  Future<void> setDurationFilter(
+      {required int minSec,
+      required int maxSec,
+      required bool allowUnknown}) async {
+    minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
+    // 0 is no maximum, as on the sheet's wheel.
+    maxDurationSec = maxSec <= durationFloorSec
+        ? durationCeilSec
+        : maxSec.clamp(durationFloorSec, durationCeilSec);
+    if (minDurationSec > maxDurationSec) {
+      final swap = minDurationSec;
+      minDurationSec = maxDurationSec;
+      maxDurationSec = swap;
+    }
+    durationFilterEnabled =
+        minDurationSec > durationFloorSec || maxDurationSec < durationCeilSec;
+    allowUnknownDuration = allowUnknown;
+    _notify();
+    await _save();
+  }
+
   /// The bounds actually worth sending. A rail means "unbounded", so it is
   /// omitted; the server treats a missing bound as no constraint on that side.
   /// Null when the window is wide open, which is the cue to send nothing at
@@ -385,10 +480,40 @@ class AutoDJManager {
   ({int? min, int? max})? get activeDurationBounds {
     if (!durationFilterEnabled) return null;
     final min = minDurationSec > durationFloorSec ? minDurationSec : null;
-    final max = maxDurationSec < durationCeilSec ? maxDurationSec : null;
+    final max = maxDurationSec > durationFloorSec &&
+            maxDurationSec < durationCeilSec
+        ? maxDurationSec
+        : null;
     if (min == null && max == null) return null;
     return (min: min, max: max);
   }
+
+  // --- Mood ---
+
+  Future<void> setMoodFilterEnabled(bool v) async {
+    moodFilterEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setMoodFilter(MoodFilter f) async {
+    moodFilter = f;
+    _notify();
+    await _save();
+  }
+
+  /// The Auto DJ screen's Mood sheet: nothing chosen is the filter off.
+  Future<void> setMood(MoodFilter f) async {
+    moodFilter = f;
+    moodFilterEnabled = !f.isEmpty;
+    _notify();
+    await _save();
+  }
+
+  /// The mood actually worth sending: null while switched off, or on with
+  /// nothing chosen — the cue to send no `moods` key at all.
+  MoodFilter? get activeMoodFilter =>
+      moodFilterEnabled && !moodFilter.isEmpty ? moodFilter : null;
 
   // --- Keyword filter ---
 
@@ -414,6 +539,20 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ screen's Skip words sheet: the whole list at once, case-
+  /// insensitively unique and capped like [addKeyword]; an empty list is the
+  /// filter off.
+  Future<void> setKeywords(List<String> words) async {
+    final seen = <String>{};
+    keywordFilterWords = [
+      for (final w in words.map((w) => w.trim()))
+        if (w.isNotEmpty && seen.add(w.toLowerCase())) w,
+    ].take(maxKeywords).toList();
+    keywordFilterEnabled = keywordFilterWords.isNotEmpty;
+    _notify();
+    await _save();
+  }
+
   Future<void> setMultiServerEnabled(bool v) async {
     multiServerEnabled = v;
     _notify();
@@ -421,7 +560,7 @@ class AutoDJManager {
   }
 
   /// The Auto DJ constraints that describe the LIBRARY rather than the
-  /// session: excluded vpaths, minimum rating, genre, track length.
+  /// session: excluded vpaths, minimum rating, genre, track length, mood.
   ///
   /// Shared by the DJ's own picks and by the "Surprise me" opening track so
   /// the two cannot drift. They had: the opener sent only vpaths and rating,
@@ -448,12 +587,21 @@ class AutoDJManager {
     if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {
       out['genres'] = server.autoDJGenres;
       out['genreMode'] = server.autoDJGenreMode;
+      final source = server.autoDJGenreSource.apiValue;
+      if (source != null) out['genreSource'] = source;
     }
     final bounds = activeDurationBounds;
     if (bounds != null) {
       if (bounds.min != null) out['minDuration'] = bounds.min;
       if (bounds.max != null) out['maxDuration'] = bounds.max;
       if (allowUnknownDuration) out['allowUnknownDuration'] = true;
+    }
+    // Only to a server that says it can filter by mood: the route refuses an
+    // unknown key, and the flag is off for a peer, whose flags the app cannot
+    // read (the rule Rated, Recent and Discover follow too).
+    final mood = activeMoodFilter;
+    if (mood != null && server.moodFiltersAvailable == true) {
+      out['moods'] = mood.toJson();
     }
     return out;
   }
@@ -506,6 +654,14 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ screen's Tempo sheet, applied at once.
+  Future<void> setTempo({required bool enabled, required int tolerance}) async {
+    bpmContinuityEnabled = enabled;
+    bpmTolerance = tolerance.clamp(1, 20);
+    _notify();
+    await _save();
+  }
+
   Future<void> setBpmTolerance(int v) async {
     bpmTolerance = v.clamp(1, 20);
     _notify();
@@ -535,6 +691,18 @@ class AutoDJManager {
 
   Future<void> setSonicSimilarityEnabled(bool v) async {
     sonicSimilarityEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  /// The Auto DJ screen's Sonic similarity sheet, applied at once.
+  Future<void> setSonic(
+      {required bool enabled,
+      required double minSimilarity,
+      required SonicAnchorMode anchor}) async {
+    sonicSimilarityEnabled = enabled;
+    sonicMinSimilarity = minSimilarity.clamp(0.0, 1.0);
+    sonicAnchorMode = anchor;
     _notify();
     await _save();
   }

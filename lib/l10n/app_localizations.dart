@@ -174,12 +174,6 @@ abstract class AppLocalizations {
   /// **'System default'**
   String get languageSystemDefault;
 
-  /// Subtitle under the language picker row in Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'The app\'s display language. \"System default\" follows your device.'**
-  String get settingsLanguageSubtitle;
-
   /// Snackbar when a URL fails to launch.
   ///
   /// In en, this message translates to:
@@ -303,7 +297,7 @@ abstract class AppLocalizations {
   /// Shown when the EQ band layout can't be read because nothing is playing.
   ///
   /// In en, this message translates to:
-  /// **'Start a song to configure the EQ.\n\nAndroid\'s native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.'**
+  /// **'This phone\'s equalizer reports its bands only once audio is playing. Your saved preset is applied the moment they appear.'**
   String get eqNeedsPlayback;
 
   /// Shown when the native equalizer throws while initializing.
@@ -317,6 +311,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No EQ bands reported by this device\'s audio driver.'**
   String get eqNoBands;
+
+  /// EQ preset chip: every band at 0 dB (what Reset applies).
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get eqPresetFlat;
+
+  /// EQ preset chip: Android's default curve, a touch of bass and treble.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get eqPresetNormal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Classical'**
+  String get eqPresetClassical;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Dance'**
+  String get eqPresetDance;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Folk'**
+  String get eqPresetFolk;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy Metal'**
+  String get eqPresetHeavyMetal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Hip Hop'**
+  String get eqPresetHipHop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Jazz'**
+  String get eqPresetJazz;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Pop'**
+  String get eqPresetPop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get eqPresetRock;
+
+  /// EQ preset chip shown first when the gains match no preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get eqPresetCustom;
+
+  /// Button under the EQ bands that saves the current curve as a user preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as preset'**
+  String get eqSaveAsPreset;
+
+  /// Title of the sheet that names a new EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save preset'**
+  String get eqSavePresetTitle;
+
+  /// Title of the sheet that renames a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename preset'**
+  String get eqRenamePresetTitle;
+
+  /// Label of the preset name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get eqPresetNameLabel;
+
+  /// Helper text under the preset name field when saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this phone, after the built-in presets. Long-press its chip later to rename or delete it.'**
+  String get eqSavePresetHint;
+
+  /// Save-sheet button when a saved preset of that name exists and will be overwritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get eqReplacePreset;
+
+  /// Helper text when renaming to a name another saved preset has.
+  ///
+  /// In en, this message translates to:
+  /// **'Another saved preset already has this name.'**
+  String get eqPresetNameTaken;
+
+  /// Confirmation when deleting a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String eqDeletePresetConfirm(String name);
+
+  /// Button under the EQ bands: while held, the equalizer is bypassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to compare'**
+  String get eqHoldToCompare;
+
+  /// Accessibility hint for the Hold to compare button.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to hear the sound without the equalizer.'**
+  String get eqHoldToCompareHint;
+
+  /// Title of the EQ options sheet and tooltip of the app-bar button that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer options'**
+  String get eqOptionsTitle;
+
+  /// Options switch: the ten-band engine's limiter.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevent clipping'**
+  String get eqPreventClipping;
+
+  /// Subtitle of the Prevent clipping switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits peaks when bands are boosted.'**
+  String get eqPreventClippingHint;
+
+  /// Options switch: a dB readout over every band.
+  ///
+  /// In en, this message translates to:
+  /// **'Always show band values'**
+  String get eqShowValues;
+
+  /// Subtitle of the Always show band values switch.
+  ///
+  /// In en, this message translates to:
+  /// **'A number over every band, not only while dragging.'**
+  String get eqShowValuesHint;
+
+  /// Title of the Outputs page and of the options-sheet row that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs'**
+  String get eqOutputsTitle;
+
+  /// Options-sheet row subtitle while per-output curves are off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — one curve for every output'**
+  String get eqOutputsRowOff;
+
+  /// Options-sheet row subtitle naming the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} now'**
+  String eqOutputsNow(String name);
+
+  /// Outputs page: the switch that makes the EQ follow the output.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch automatically'**
+  String get eqOutputsSwitch;
+
+  /// Subtitle of that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.'**
+  String get eqOutputsSwitchHint;
+
+  /// Section label over the remembered outputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Remembered outputs'**
+  String get eqOutputsRemembered;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone speaker'**
+  String get eqOutputSpeaker;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Wired headphones'**
+  String get eqOutputWired;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'USB audio'**
+  String get eqOutputUsb;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'HDMI'**
+  String get eqOutputHdmi;
+
+  /// Output kind (Bluetooth devices are shown by their own name; this word is the kind).
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get eqOutputBluetooth;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Other output'**
+  String get eqOutputOther;
+
+  /// Row subtitle part for the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'playing now'**
+  String get eqOutputPlayingNow;
+
+  /// Row subtitle part with a short date.
+  ///
+  /// In en, this message translates to:
+  /// **'last used {date}'**
+  String eqOutputLastUsed(String date);
+
+  /// Outputs page when nothing is remembered yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs appear here as you listen on them.'**
+  String get eqOutputsEmpty;
+
+  /// Confirmation when swiping an output away.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget “{name}”? It comes back as a new output the next time it connects.'**
+  String eqOutputForgetConfirm(String name);
+
+  /// Confirm button of that dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get eqOutputForget;
+
+  /// Title of the preset picker for one output.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset for {name}'**
+  String eqOutputPickPreset(String name);
+
+  /// Footer hint on the Outputs page.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an output to pick its preset. Swipe one away to forget it.'**
+  String get eqOutputsHint;
+
+  /// EQ enable switch subtitle when on and the curve follows the named output.
+  ///
+  /// In en, this message translates to:
+  /// **'On — {name}'**
+  String eqEnabledOnOutput(String name);
+
+  /// Small pill on the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get eqOutputNowPill;
+
+  /// Heading of the EQ state that waits for playback (five-band engine).
+  ///
+  /// In en, this message translates to:
+  /// **'Start a song to set up the bands'**
+  String get eqNeedsPlaybackTitle;
+
+  /// Button in that state that plays the restored queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the queue'**
+  String get eqPlayQueue;
+
+  /// Caption under that button, with the queue length.
+  ///
+  /// In en, this message translates to:
+  /// **'Resumes where you left off · {count, plural, =1{1 song} other{{count} songs}}'**
+  String eqPlayQueueHint(int count);
 
   /// No description provided for @eqDisabledHint.
   ///
@@ -375,38 +669,14 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSectionBrowse.
   ///
   /// In en, this message translates to:
-  /// **'Browse'**
+  /// **'Library'**
   String get settingsSectionBrowse;
 
-  /// No description provided for @settingsSectionAbout.
-  ///
-  /// In en, this message translates to:
-  /// **'About'**
-  String get settingsSectionAbout;
-
-  /// Theme picker row label + per-theme subtitles.
+  /// Theme row title (the row shows the theme name) and its picker sheet title.
   ///
   /// In en, this message translates to:
   /// **'Theme'**
   String get settingsTheme;
-
-  /// No description provided for @themeSubtitleVelvet.
-  ///
-  /// In en, this message translates to:
-  /// **'Navy and purple — the signature dark theme.'**
-  String get themeSubtitleVelvet;
-
-  /// No description provided for @themeSubtitleDark.
-  ///
-  /// In en, this message translates to:
-  /// **'Neutral dark with amber accents.'**
-  String get themeSubtitleDark;
-
-  /// No description provided for @themeSubtitleLight.
-  ///
-  /// In en, this message translates to:
-  /// **'Light body with a dark app bar and amber accents — matches the older shipped theme.'**
-  String get themeSubtitleLight;
 
   /// Transcode toggle row.
   ///
@@ -462,7 +732,7 @@ abstract class AppLocalizations {
   /// **'When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.'**
   String get transcodeReloadQueueSubtitle;
 
-  /// Tap-behavior picker row label + per-mode subtitles.
+  /// Tap-behaviour row title and picker title; the tapSubtitle* strings are the picker hints and the first-run cards.
   ///
   /// In en, this message translates to:
   /// **'When you tap a song'**
@@ -474,101 +744,65 @@ abstract class AppLocalizations {
   /// **'Startup page'**
   String get settingsStartupPage;
 
-  /// No description provided for @settingsStartupPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open the app to this browser view; Back returns to the browser.'**
-  String get settingsStartupPageSubtitle;
-
   /// No description provided for @tapSubtitleAddToQueue.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.'**
+  /// **'Adds it to the end of the queue'**
   String get tapSubtitleAddToQueue;
 
   /// No description provided for @tapSubtitlePlayFromHere.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.'**
+  /// **'Replaces the queue and plays from that song'**
   String get tapSubtitlePlayFromHere;
 
   /// No description provided for @tapSubtitleAppendAndJump.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.'**
+  /// **'Adds it to the end of the queue and plays it now'**
   String get tapSubtitleAppendAndJump;
 
-  /// Subtitle on the Equalizer row in Settings.
+  /// Visualizer audio-source row title under the Visualizer header; the visualizerSourceSubtitle* strings are its picker hints.
   ///
   /// In en, this message translates to:
-  /// **'Tune bass, mids, and treble. Android only.'**
-  String get settingsEqSubtitle;
-
-  /// Visualizer audio-source picker row label + per-source subtitles.
-  ///
-  /// In en, this message translates to:
-  /// **'Visualizer audio source'**
+  /// **'Audio source'**
   String get settingsVisualizerSource;
 
   /// No description provided for @visualizerSourceSubtitleSynthesized.
   ///
   /// In en, this message translates to:
-  /// **'Default. Visualizer reacts to playback timing only — no microphone permission required.'**
+  /// **'No permission needed'**
   String get visualizerSourceSubtitleSynthesized;
 
   /// No description provided for @visualizerSourceSubtitleReal.
   ///
   /// In en, this message translates to:
-  /// **'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.'**
+  /// **'Needs the microphone permission, but never uses the mic'**
   String get visualizerSourceSubtitleReal;
 
   /// Album-grid toggle row.
   ///
   /// In en, this message translates to:
-  /// **'Album grid view'**
+  /// **'Album grid'**
   String get settingsAlbumGrid;
-
-  /// No description provided for @settingsAlbumGridSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show albums as a grid of cards with cover art instead of a plain list.'**
-  String get settingsAlbumGridSubtitle;
 
   /// File-explorer metadata toggle row.
   ///
   /// In en, this message translates to:
-  /// **'Read song metadata in file explorer'**
+  /// **'Song info in File Explorer'**
   String get settingsFileMetadata;
-
-  /// No description provided for @settingsFileMetadataSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Fetch title, artist, and album art for each song when browsing server files. Off shows raw filenames (faster for huge folders).'**
-  String get settingsFileMetadataSubtitle;
 
   /// Letter-scrubber threshold slider row.
   ///
   /// In en, this message translates to:
-  /// **'Letter scrubber threshold'**
+  /// **'A–Z scrubber'**
   String get settingsLetterStrip;
-
-  /// No description provided for @settingsLetterStripSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.'**
-  String get settingsLetterStripSubtitle;
 
   /// Label for the setting choosing which screen edge the A-Z scrubber sits on.
   ///
   /// In en, this message translates to:
-  /// **'Scrubber side'**
+  /// **'Side'**
   String get settingsLetterStripSide;
-
-  /// Explains the scrubber-side setting.
-  ///
-  /// In en, this message translates to:
-  /// **'Which edge the A–Z strip sits on.'**
-  String get settingsLetterStripSideSubtitle;
 
   /// Segmented-button option: scrubber on the left edge.
   ///
@@ -582,25 +816,19 @@ abstract class AppLocalizations {
   /// **'Right'**
   String get settingsLetterStripRight;
 
-  /// Reset-to-defaults row + confirmation snackbar.
+  /// Reset row title; settingsResetDone is the snackbar after it.
   ///
   /// In en, this message translates to:
-  /// **'Reset to defaults'**
+  /// **'Reset settings'**
   String get settingsReset;
-
-  /// No description provided for @settingsResetSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore all settings on this screen to their default values. Servers and downloads are not affected.'**
-  String get settingsResetSubtitle;
 
   /// No description provided for @settingsResetDone.
   ///
   /// In en, this message translates to:
-  /// **'Settings restored to defaults'**
+  /// **'Settings reset'**
   String get settingsResetDone;
 
-  /// Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer audio source — plus the denial snackbars.
+  /// Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer › Audio source — plus the denial snackbars.
   ///
   /// In en, this message translates to:
   /// **'Use real audio?'**
@@ -1272,131 +1500,11 @@ abstract class AppLocalizations {
   /// **'Auto DJ'**
   String get autoDjTitle;
 
-  /// No description provided for @autoDjAddServerFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a server first.'**
-  String get autoDjAddServerFirst;
-
-  /// No description provided for @autoDjSectionServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Server'**
-  String get autoDjSectionServer;
-
-  /// No description provided for @autoDjSectionSources.
-  ///
-  /// In en, this message translates to:
-  /// **'Sources'**
-  String get autoDjSectionSources;
-
-  /// No description provided for @autoDjSectionContinuity.
-  ///
-  /// In en, this message translates to:
-  /// **'Continuity'**
-  String get autoDjSectionContinuity;
-
-  /// No description provided for @autoDjSectionFilters.
-  ///
-  /// In en, this message translates to:
-  /// **'Filters'**
-  String get autoDjSectionFilters;
-
-  /// Switch enabling cross-server Auto DJ.
-  ///
-  /// In en, this message translates to:
-  /// **'Play from every server'**
-  String get autoDjMultiServerTitle;
-
-  /// Subtitle for that switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ picks from every server at once, matching the sound of what is playing'**
-  String get autoDjMultiServerSubtitle;
-
-  /// Warning under the multi-server switch when sonic similarity is off (the mode only runs on sonic picks).
-  ///
-  /// In en, this message translates to:
-  /// **'Needs Sonic similarity switched on, below'**
-  String get autoDjMultiServerNeedsSonic;
-
-  /// Header for settings that apply to every server.
-  ///
-  /// In en, this message translates to:
-  /// **'The session'**
-  String get autoDjSectionShared;
-
-  /// Header for settings that differ per server.
-  ///
-  /// In en, this message translates to:
-  /// **'Each library'**
-  String get autoDjSectionPerServer;
-
-  /// Label above the dropdown choosing whose settings are shown.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings for'**
-  String get autoDjEditingServer;
-
-  /// Readout when every server can take part.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} servers are taking part'**
-  String autoDjMultiServerAllIn(int count);
-
-  /// Second line of the participants readout: how many tunnel servers are still dialing.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} still connecting'**
-  String autoDjMultiServerConnecting(int count);
-
-  /// Readout when some servers cannot take part, and why.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version'**
-  String autoDjMultiServerSomeExcluded(int count, int total);
-
-  /// Header for how Auto DJ fills the queue.
-  ///
-  /// In en, this message translates to:
-  /// **'Queue'**
-  String get autoDjSectionQueue;
-
-  /// Songs-per-fetch row: how many songs one Auto DJ turn queues.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs per fetch'**
-  String get autoDjSongsPerFetchTitle;
-
-  /// Songs-per-fetch row subtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.'**
-  String get autoDjSongsPerFetchSubtitle;
-
   /// Songs-per-fetch readout beside the slider.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 song} other{{count} songs}}'**
   String autoDjSongsPerFetchValue(int count);
-
-  /// BPM continuity row.
-  ///
-  /// In en, this message translates to:
-  /// **'BPM continuity'**
-  String get autoDjBpmTitle;
-
-  /// No description provided for @autoDjBpmSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.'**
-  String get autoDjBpmSubtitle;
-
-  /// No description provided for @autoDjTolerance.
-  ///
-  /// In en, this message translates to:
-  /// **'Tolerance'**
-  String get autoDjTolerance;
 
   /// BPM tolerance readout.
   ///
@@ -1410,23 +1518,11 @@ abstract class AppLocalizations {
   /// **'Harmonic mixing'**
   String get autoDjHarmonicTitle;
 
-  /// No description provided for @autoDjHarmonicSubtitle.
+  /// Line under the Harmonic mixing switch: what turning it on does.
   ///
   /// In en, this message translates to:
-  /// **'Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).'**
-  String get autoDjHarmonicSubtitle;
-
-  /// Auto DJ track-length filter switch title.
-  ///
-  /// In en, this message translates to:
-  /// **'Track length'**
-  String get autoDjDurationTitle;
-
-  /// Subtitle for that switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip interludes and long mixes by only picking tracks in a length range'**
-  String get autoDjDurationSubtitle;
+  /// **'Next song in a key that mixes well'**
+  String get autoDjHarmonicHint;
 
   /// Label beside the length range slider.
   ///
@@ -1434,191 +1530,17 @@ abstract class AppLocalizations {
   /// **'Length'**
   String get autoDjDurationRange;
 
-  /// Range readout when neither bound is set.
+  /// Auto DJ smart filters row (the mood filter) and its sheet's title.
   ///
   /// In en, this message translates to:
-  /// **'Any length'**
-  String get autoDjDurationAny;
-
-  /// Range readout with only a minimum, e.g. Over 2:00.
-  ///
-  /// In en, this message translates to:
-  /// **'Over {min}'**
-  String autoDjDurationOver(String min);
-
-  /// Range readout with only a maximum, e.g. Under 6:00.
-  ///
-  /// In en, this message translates to:
-  /// **'Under {max}'**
-  String autoDjDurationUnder(String max);
-
-  /// Range readout with both bounds, e.g. 2:00 to 6:00.
-  ///
-  /// In en, this message translates to:
-  /// **'{min} to {max}'**
-  String autoDjDurationBetween(String min, String max);
-
-  /// Sub-switch letting unknown-length tracks through.
-  ///
-  /// In en, this message translates to:
-  /// **'Include tracks of unknown length'**
-  String get autoDjDurationAllowUnknown;
-
-  /// Subtitle for that sub-switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Tracks your server has not read a length for are skipped otherwise'**
-  String get autoDjDurationAllowUnknownSub;
-
-  /// Auto DJ status block + enable button.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ is on'**
-  String get autoDjStatusOn;
-
-  /// No description provided for @autoDjStatusOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ is off'**
-  String get autoDjStatusOff;
-
-  /// No description provided for @autoDjStatusOffDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap below to start. The current server\'s library will be used.'**
-  String get autoDjStatusOffDetail;
-
-  /// No description provided for @autoDjStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Auto DJ'**
-  String get autoDjStart;
-
-  /// No description provided for @autoDjStop.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop Auto DJ'**
-  String get autoDjStop;
-
-  /// Auto DJ on-state detail line.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs are picked from {url} when the queue runs low.'**
-  String autoDjStatusOnDetail(String url);
-
-  /// No description provided for @autoDjOneSourceRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'At least one source is required.'**
-  String get autoDjOneSourceRequired;
-
-  /// Minimum-rating filter row ('Any' = no minimum).
-  ///
-  /// In en, this message translates to:
-  /// **'Minimum rating'**
-  String get autoDjMinRating;
-
-  /// No description provided for @autoDjMinRatingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Only pick songs at or above this rating.'**
-  String get autoDjMinRatingSubtitle;
-
-  /// No description provided for @autoDjRatingAny.
-  ///
-  /// In en, this message translates to:
-  /// **'Any'**
-  String get autoDjRatingAny;
-
-  /// Genre filter section.
-  ///
-  /// In en, this message translates to:
-  /// **'Genre filter'**
-  String get autoDjGenreTitle;
-
-  /// No description provided for @autoDjGenreSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Whitelist plays only matching tracks; blacklist skips them.'**
-  String get autoDjGenreSubtitle;
-
-  /// No description provided for @autoDjWhitelist.
-  ///
-  /// In en, this message translates to:
-  /// **'Whitelist'**
-  String get autoDjWhitelist;
-
-  /// No description provided for @autoDjBlacklist.
-  ///
-  /// In en, this message translates to:
-  /// **'Blacklist'**
-  String get autoDjBlacklist;
-
-  /// No description provided for @autoDjNoGenres.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres selected. Tap \"Pick genres\" to choose.'**
-  String get autoDjNoGenres;
-
-  /// No description provided for @autoDjPickGenres.
-  ///
-  /// In en, this message translates to:
-  /// **'Pick genres'**
-  String get autoDjPickGenres;
+  /// **'Smart filters'**
+  String get autoDjMoodTitle;
 
   /// No description provided for @autoDjGenreLoadError.
   ///
   /// In en, this message translates to:
   /// **'Could not load genres'**
   String get autoDjGenreLoadError;
-
-  /// Keyword filter section.
-  ///
-  /// In en, this message translates to:
-  /// **'Keyword filter'**
-  String get autoDjKeywordTitle;
-
-  /// No description provided for @autoDjKeywordSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip picks whose title, artist, album, or filepath contains any of these words.'**
-  String get autoDjKeywordSubtitle;
-
-  /// No description provided for @autoDjNoKeywords.
-  ///
-  /// In en, this message translates to:
-  /// **'No keywords. Add words below to start filtering.'**
-  String get autoDjNoKeywords;
-
-  /// No description provided for @autoDjKeywordHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. \"live\" or \"remix\"'**
-  String get autoDjKeywordHint;
-
-  /// Genre picker sheet.
-  ///
-  /// In en, this message translates to:
-  /// **'Search genres…'**
-  String get autoDjSearchGenres;
-
-  /// No description provided for @autoDjNoGenresOnServer.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres found on this server.'**
-  String get autoDjNoGenresOnServer;
-
-  /// Count of selected genres in the picker header.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} selected'**
-  String autoDjSelectedCount(int count);
-
-  /// Empty-search state in the genre picker.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres match \"{query}\".'**
-  String autoDjNoGenresMatch(String query);
 
   /// Generic Download / Add All action labels (browser toolbar + swipe actions).
   ///
@@ -1890,6 +1812,12 @@ abstract class AppLocalizations {
   /// **'Both'**
   String get genreSourceBoth;
 
+  /// Auto DJ genre filter's source switch: tag and generated genres together.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed'**
+  String get genreSourceMixed;
+
   /// Accessibility label for the genre list's Tags / Generated / Both switch.
   ///
   /// In en, this message translates to:
@@ -2076,16 +2004,16 @@ abstract class AppLocalizations {
   /// **'Tap here to add a server'**
   String get browserWelcomeSubtitle;
 
-  /// Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English).
+  /// Switch for the ShaderToy visualizer tuning sliders, under the Visualizer header (DSP param labels stay English).
   ///
   /// In en, this message translates to:
-  /// **'Visualizer tuning knobs'**
+  /// **'Tuning sliders'**
   String get settingsVisualizerKnobs;
 
   /// No description provided for @settingsVisualizerKnobsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. ShaderToy Visualizer only.'**
+  /// **'ShaderToy only'**
   String get settingsVisualizerKnobsSubtitle;
 
   /// No description provided for @visualizerTuningTitle.
@@ -2160,28 +2088,10 @@ abstract class AppLocalizations {
   /// **'Off'**
   String get commonOff;
 
-  /// No description provided for @settingsCastQuality.
-  ///
-  /// In en, this message translates to:
-  /// **'Cast visualizer quality'**
-  String get settingsCastQuality;
-
-  /// No description provided for @settingsCastQualitySubtitle720.
-  ///
-  /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 720p — lightest on the phone.'**
-  String get settingsCastQualitySubtitle720;
-
-  /// No description provided for @settingsCastQualitySubtitle1080.
-  ///
-  /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).'**
-  String get settingsCastQualitySubtitle1080;
-
   /// No description provided for @settingsCastQualitySubtitle4k.
   ///
   /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.'**
+  /// **'Needs a 4K Chromecast; heaviest on the phone'**
   String get settingsCastQualitySubtitle4k;
 
   /// No description provided for @eqCasting.
@@ -2565,7 +2475,7 @@ abstract class AppLocalizations {
   /// No description provided for @castVisualizerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Stream the visualizer to the TV · Chromecast only'**
+  /// **'Chromecast only'**
   String get castVisualizerSubtitle;
 
   /// The local (phone) target in the cast picker — playback stays on this device instead of a Chromecast/DLNA renderer.
@@ -2577,7 +2487,7 @@ abstract class AppLocalizations {
   /// No description provided for @visualizerNoKnobs.
   ///
   /// In en, this message translates to:
-  /// **'This shader exposes no knobs.'**
+  /// **'This shader has no sliders.'**
   String get visualizerNoKnobs;
 
   /// No description provided for @nowPlaying.
@@ -2616,30 +2526,6 @@ abstract class AppLocalizations {
   /// **'XL'**
   String get playerLayoutXl;
 
-  /// No description provided for @playerLayoutSmallDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Slim bar — maximum queue'**
-  String get playerLayoutSmallDesc;
-
-  /// No description provided for @playerLayoutMediumDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Banner — balanced (default)'**
-  String get playerLayoutMediumDesc;
-
-  /// No description provided for @playerLayoutLargeDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Compact — centered art'**
-  String get playerLayoutLargeDesc;
-
-  /// No description provided for @playerLayoutXlDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Hero — full album art'**
-  String get playerLayoutXlDesc;
-
   /// No description provided for @queueNothingToDownloadEmpty.
   ///
   /// In en, this message translates to:
@@ -2657,12 +2543,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accent color'**
   String get settingsAccentColor;
-
-  /// No description provided for @settingsAccentColorSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'The highlight color used across the app.'**
-  String get settingsAccentColorSubtitle;
 
   /// No description provided for @accentThemeDefault.
   ///
@@ -2724,53 +2604,29 @@ abstract class AppLocalizations {
   /// **'Resume queue on launch'**
   String get settingsResumeQueue;
 
-  /// No description provided for @settingsResumeQueueSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Save the play queue and your place, and restore them when you reopen the app.'**
-  String get settingsResumeQueueSubtitle;
-
   /// No description provided for @settingsOfflineQueue.
   ///
   /// In en, this message translates to:
-  /// **'Keep queue available offline'**
+  /// **'Download the queue'**
   String get settingsOfflineQueue;
 
   /// No description provided for @settingsOfflineQueueSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Automatically download queued tracks to this device so playback survives losing the connection.'**
+  /// **'Playback keeps going when the connection drops.'**
   String get settingsOfflineQueueSubtitle;
 
   /// No description provided for @settingsOfflineQueueWifiOnly.
   ///
   /// In en, this message translates to:
-  /// **'Download on Wi-Fi only'**
+  /// **'Wi-Fi only'**
   String get settingsOfflineQueueWifiOnly;
-
-  /// No description provided for @settingsOfflineQueueWifiOnlySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Wait for Wi-Fi before downloading queued tracks.'**
-  String get settingsOfflineQueueWifiOnlySubtitle;
 
   /// Title of the keep-queue-offline retention-cap setting.
   ///
   /// In en, this message translates to:
-  /// **'Auto-download limit'**
+  /// **'Download limit'**
   String get settingsAutoDownloadCap;
-
-  /// Subtitle when a finite auto-download cap is set.
-  ///
-  /// In en, this message translates to:
-  /// **'Cache this many songs ahead of the one playing; songs left behind are removed as you go.'**
-  String get settingsAutoDownloadCapSubtitle;
-
-  /// Subtitle when the auto-download cap is unlimited (0).
-  ///
-  /// In en, this message translates to:
-  /// **'Cache the whole queue (no limit).'**
-  String get settingsAutoDownloadCapSubtitleUnlimited;
 
   /// Shown as the auto-download cap value when there's no limit.
   ///
@@ -2781,13 +2637,13 @@ abstract class AppLocalizations {
   /// Text field label in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'Number of tracks'**
+  /// **'Songs'**
   String get settingsAutoDownloadCapField;
 
   /// Explainer in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.'**
+  /// **'How many songs to keep downloaded, counting from the one playing. Older ones outside that are deleted as new ones arrive.'**
   String get settingsAutoDownloadCapDialogBody;
 
   /// No description provided for @downloadWaitingWifi.
@@ -2805,7 +2661,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRatingHalfSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Rate songs in half-star steps (long-press a star).'**
+  /// **'Long-press a star'**
   String get settingsRatingHalfSubtitle;
 
   /// No description provided for @ratingTitle.
@@ -2910,12 +2766,6 @@ abstract class AppLocalizations {
   /// **'Imported shaders'**
   String get importedShadersTitle;
 
-  /// Subtitle under the Imported shaders entry in Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'Add your own .glsl files to the ShaderToy Visualizer\'s rotation.'**
-  String get importedShadersSettingsSubtitle;
-
   /// Tooltip for the button that re-scans the shader folder for new files.
   ///
   /// In en, this message translates to:
@@ -2937,19 +2787,19 @@ abstract class AppLocalizations {
   /// Help text explaining where the shader folder is and when imported shaders are used.
   ///
   /// In en, this message translates to:
-  /// **'Reachable over USB or a file manager (under Android/data). Imported shaders join the ShaderToy Visualizer\'s rotation.'**
+  /// **'Reach it over USB. Uninstalling mStream deletes it.'**
   String get importedShadersReachableHint;
 
   /// Tooltip for the button that deletes an imported shader file.
   ///
   /// In en, this message translates to:
-  /// **'Remove'**
+  /// **'Delete'**
   String get importedShadersRemove;
 
   /// Empty-state title when the shader folder has no files.
   ///
   /// In en, this message translates to:
-  /// **'No shaders in the folder yet'**
+  /// **'No shaders yet'**
   String get importedShadersEmptyTitle;
 
   /// Empty-state body when the shader folder has no files.
@@ -2961,7 +2811,7 @@ abstract class AppLocalizations {
   /// Warning subtitle when an imported file does not look like a fragment shader.
   ///
   /// In en, this message translates to:
-  /// **'May not be a valid shader — no mainImage/main entry point.'**
+  /// **'May not run: no mainImage or main'**
   String get importedShadersInvalid;
 
   /// Button that copies .glsl shaders found in the device Downloads folder into the shader folder.
@@ -2973,7 +2823,7 @@ abstract class AppLocalizations {
   /// Snackbar after copying shaders in from the Downloads folder.
   ///
   /// In en, this message translates to:
-  /// **'Imported {count} shader(s) from Downloads'**
+  /// **'{count, plural, one{Imported {count} shader} other{Imported {count} shaders}}'**
   String importedShadersDownloadsImported(int count);
 
   /// Snackbar when the Downloads folder has no new shaders to import.
@@ -3125,6 +2975,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' · via relay'**
   String get irohPathSuffixRelay;
+
+  /// Quick Connect test result when the iroh tunnel is up (the handshake passed) but the server closes the first HTTP request through it without a response — its bridge to 127.0.0.1:<port> is refused when mStream is bound to one interface or another port.
+  ///
+  /// In en, this message translates to:
+  /// **'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.'**
+  String get irohTunnelNoAnswer;
 
   /// Shown when the iroh tunnel connects but the server's HTTP reply times out.
   ///
@@ -3648,36 +3504,6 @@ abstract class AppLocalizations {
   /// **'Sonic similarity'**
   String get autoDjSonicTitle;
 
-  /// Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback.
-  ///
-  /// In en, this message translates to:
-  /// **'Only pick songs that sound like the session, using the server\'s audio analysis.'**
-  String get autoDjSonicSubtitle;
-
-  /// Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability.
-  ///
-  /// In en, this message translates to:
-  /// **'This server doesn\'t have discovery data — picks stay random.'**
-  String get autoDjSonicUnavailable;
-
-  /// Sonic similarity subtitle when discovery is on but the scan has produced no vectors yet (server features.discoveryReady false).
-  ///
-  /// In en, this message translates to:
-  /// **'Discovery is on but the scan hasn\'t produced data yet — picks stay random until it does.'**
-  String get autoDjSonicNotReady;
-
-  /// Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity).
-  ///
-  /// In en, this message translates to:
-  /// **'Match strictness'**
-  String get autoDjSonicStrictness;
-
-  /// Value readout next to the strictness slider: picks must match at least this percentage.
-  ///
-  /// In en, this message translates to:
-  /// **'{pct}% or closer'**
-  String autoDjSonicStrictnessValue(int pct);
-
   /// Label for the sonic seed row and the seed-picker sheet title: the song the session starts from.
   ///
   /// In en, this message translates to:
@@ -3717,13 +3543,13 @@ abstract class AppLocalizations {
   /// Error when the random-seed request fails.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t fetch a song from the server.'**
+  /// **'Couldn\'t get a song'**
   String get autoDjSonicSeedFailed;
 
   /// Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked.
   ///
   /// In en, this message translates to:
-  /// **'No songs match your Auto DJ filters — try loosening them'**
+  /// **'No songs match your filters'**
   String get autoDjSeedNoMatch;
 
   /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
@@ -3755,12 +3581,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sonic session started — Auto DJ is on.'**
   String get discoverSessionStarted;
-
-  /// Label above the sonic anchor-mode selector (rolling vs locked).
-  ///
-  /// In en, this message translates to:
-  /// **'Anchor'**
-  String get autoDjSonicAnchorLabel;
 
   /// Rolling anchor mode: sonic seeds are the session's recent DJ picks.
   ///
@@ -4011,68 +3831,8 @@ abstract class AppLocalizations {
   /// Auto DJ empty-queue start chooser
   ///
   /// In en, this message translates to:
-  /// **'Start Auto DJ with what?'**
-  String get autoDjStartTitle;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.'**
-  String get autoDjStartSubtitle;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Surprise me'**
-  String get autoDjStartRandom;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Pick a random song from the library and build outward from it.'**
-  String get autoDjStartRandomSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Let me choose'**
-  String get autoDjStartPick;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Open the library and pick the opening track yourself.'**
-  String get autoDjStartPickSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Remember this'**
-  String get autoDjStartRemember;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Skip this question next time and always start this way.'**
-  String get autoDjStartRememberSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
   /// **'Pick the opening song — tap a track anywhere in the library'**
   String get autoDjStartPickBanner;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'On an empty queue'**
-  String get autoDjOnEmptyQueue;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'What Auto DJ does when you switch it on with nothing queued.'**
-  String get autoDjOnEmptyQueueSub;
 
   /// Segmented-button label: ask each time
   ///
@@ -4109,18 +3869,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This server is v{version}. Some features need v5.5 or newer and will be unavailable.'**
   String serverTooOldWarning(String version);
-
-  /// Auto DJ server-version gating notes
-  ///
-  /// In en, this message translates to:
-  /// **'BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.'**
-  String get autoDjNeedsNewerServer;
-
-  /// Auto DJ server-version gating notes
-  ///
-  /// In en, this message translates to:
-  /// **'Needs server 6.15.2 or newer'**
-  String get autoDjSonicNeedsNewerServer;
 
   /// Drawer entry + screen title for adding a torrent to the server's client.
   ///
@@ -4236,22 +3984,16 @@ abstract class AppLocalizations {
   /// **'Ask what to do with torrents'**
   String get settingsTorrentAskTitle;
 
-  /// Subtitle for that settings switch.
-  ///
-  /// In en, this message translates to:
-  /// **'When a torrent is opened with mStream, offer to hand it to another app'**
-  String get settingsTorrentAskSub;
-
   /// Settings row opening Android per-app default-handler settings.
   ///
   /// In en, this message translates to:
   /// **'Default app for torrents'**
   String get settingsTorrentDefaultTitle;
 
-  /// Subtitle for that row.
+  /// Screen-reader label of the open-in-new icon on the Default app for torrents row.
   ///
   /// In en, this message translates to:
-  /// **'Opens Android settings, where you can choose which app handles torrents and magnet links'**
+  /// **'Opens Android settings'**
   String get settingsTorrentDefaultSub;
 
   /// Snackbar when no settings screen would open.
@@ -6864,65 +6606,35 @@ abstract class AppLocalizations {
   /// **'Recently Played'**
   String get autoRecentlyPlayed;
 
-  /// Settings section header.
-  ///
-  /// In en, this message translates to:
-  /// **'Listening history'**
-  String get settingsSectionListening;
-
   /// Settings switch.
   ///
   /// In en, this message translates to:
-  /// **'Keep listening history'**
+  /// **'Record plays'**
   String get settingsHistoryEnabled;
 
-  /// Settings switch subtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Record what this phone plays, on every server and for local files. Kept on this device only.'**
-  String get settingsHistoryEnabledSubtitle;
-
   /// Settings switch.
   ///
   /// In en, this message translates to:
-  /// **'Send plays to your servers'**
+  /// **'Send plays to servers'**
   String get settingsHistorySend;
 
-  /// Settings switch subtitle.
+  /// Settings action row title.
   ///
   /// In en, this message translates to:
-  /// **'Each play goes to the server the track lives on (a peer\'s track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.'**
-  String get settingsHistorySendSubtitle;
-
-  /// Settings action row title and its confirm button.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear listening history'**
+  /// **'Clear history'**
   String get settingsHistoryClear;
 
-  /// Settings action row subtitle; {size} is a formatted byte count like '1.2 MB'.
+  /// Clear history confirm body: the history size on this phone and how many unsent plays go with it.
   ///
   /// In en, this message translates to:
-  /// **'Removes this phone\'s record ({size}). Your servers keep theirs.'**
-  String settingsHistoryClearSubtitle(Object size);
-
-  /// Confirm dialog body.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete this phone\'s listening history? Plays already sent to a server stay there.'**
-  String get settingsHistoryClearConfirm;
+  /// **'{count, plural, =0{This deletes this phone\'s listening history ({size}). Servers keep theirs.} one{This deletes this phone\'s listening history ({size}), including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone\'s listening history ({size}), including {count} plays not synced yet. Servers keep theirs.}}'**
+  String settingsHistoryClearConfirm(String size, int count);
 
   /// Snackbar after clearing.
   ///
   /// In en, this message translates to:
   /// **'Listening history cleared'**
   String get settingsHistoryCleared;
-
-  /// Settings line under the send switch: outbox size.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{Everything is synced} =1{1 play waiting to be sent} other{{count} plays waiting to be sent}}'**
-  String settingsHistoryUnsynced(num count);
 
   /// Song Info stats line, server counts.
   ///
@@ -7325,12 +7037,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home screen widget'**
   String get settingsHomeWidget;
-
-  /// Subtitle of that row on Android, where a tap opens the size sheet.
-  ///
-  /// In en, this message translates to:
-  /// **'Add the Now Playing widget to your home screen in one of five sizes.'**
-  String get settingsHomeWidgetSubtitle;
 
   /// Subtitle of that row on iOS, where the system's gallery is the only way; no tap.
   ///
@@ -8547,6 +8253,372 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share playlist'**
   String get queueSharePlaylist;
+
+  /// No description provided for @autoDjStopShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get autoDjStopShort;
+
+  /// No description provided for @autoDjPlayFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Play from'**
+  String get autoDjPlayFrom;
+
+  /// No description provided for @autoDjAllServers.
+  ///
+  /// In en, this message translates to:
+  /// **'All servers'**
+  String get autoDjAllServers;
+
+  /// No description provided for @autoDjServersTakingPart.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total}'**
+  String autoDjServersTakingPart(int count, int total);
+
+  /// No description provided for @autoDjFirstSong.
+  ///
+  /// In en, this message translates to:
+  /// **'First song'**
+  String get autoDjFirstSong;
+
+  /// No description provided for @autoDjFirstSongRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get autoDjFirstSongRandom;
+
+  /// No description provided for @autoDjFirstSongChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose'**
+  String get autoDjFirstSongChoose;
+
+  /// No description provided for @autoDjMustMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Must match'**
+  String get autoDjMustMatch;
+
+  /// No description provided for @autoDjPrefer.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefer'**
+  String get autoDjPrefer;
+
+  /// No description provided for @autoDjPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}%'**
+  String autoDjPercent(int pct);
+
+  /// No description provided for @autoDjDrift.
+  ///
+  /// In en, this message translates to:
+  /// **'Drift'**
+  String get autoDjDrift;
+
+  /// No description provided for @autoDjStayClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay close'**
+  String get autoDjStayClose;
+
+  /// No description provided for @autoDjGenres.
+  ///
+  /// In en, this message translates to:
+  /// **'Genres'**
+  String get autoDjGenres;
+
+  /// No description provided for @autoDjGenresOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only'**
+  String get autoDjGenresOnly;
+
+  /// No description provided for @autoDjGenresSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get autoDjGenresSkip;
+
+  /// No description provided for @autoDjGenresSkipValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip {genres}'**
+  String autoDjGenresSkipValue(String genres);
+
+  /// No description provided for @autoDjRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get autoDjRating;
+
+  /// No description provided for @autoDjRatingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{stars}★+'**
+  String autoDjRatingValue(String stars);
+
+  /// No description provided for @autoDjAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get autoDjAny;
+
+  /// No description provided for @autoDjLengthOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}+'**
+  String autoDjLengthOver(String min);
+
+  /// No description provided for @autoDjLengthUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under {max}'**
+  String autoDjLengthUnder(String max);
+
+  /// No description provided for @autoDjLengthBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}–{max}'**
+  String autoDjLengthBetween(String min, String max);
+
+  /// No description provided for @autoDjIncludeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Include unknown'**
+  String get autoDjIncludeUnknown;
+
+  /// Length sheet: the row whose timer wheel sets the shortest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest'**
+  String get autoDjLengthShortest;
+
+  /// Length sheet: the row whose timer wheel sets the longest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest'**
+  String get autoDjLengthLongest;
+
+  /// Length sheet timer wheel: the short unit beside the hours column (the wheel leaves it ~50 px).
+  ///
+  /// In en, this message translates to:
+  /// **'hr'**
+  String get autoDjWheelHours;
+
+  /// No description provided for @autoDjTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat matching'**
+  String get autoDjTempo;
+
+  /// No description provided for @autoDjSkipWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip words'**
+  String get autoDjSkipWords;
+
+  /// No description provided for @autoDjBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch'**
+  String get autoDjBatch;
+
+  /// No description provided for @autoDjVaries.
+  ///
+  /// In en, this message translates to:
+  /// **'Varies'**
+  String get autoDjVaries;
+
+  /// No description provided for @autoDjMax.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} max'**
+  String autoDjMax(int count);
+
+  /// No description provided for @autoDjNeedsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs server {version}+'**
+  String autoDjNeedsServer(String version);
+
+  /// No description provided for @autoDjDiscoveryOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery off'**
+  String get autoDjDiscoveryOff;
+
+  /// No description provided for @autoDjStillScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Still scanning'**
+  String get autoDjStillScanning;
+
+  /// No description provided for @autoDjTooStrict.
+  ///
+  /// In en, this message translates to:
+  /// **'Too strict'**
+  String get autoDjTooStrict;
+
+  /// No description provided for @autoDjNotOnPeers.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on peers'**
+  String get autoDjNotOnPeers;
+
+  /// No description provided for @autoDjNoMoodData.
+  ///
+  /// In en, this message translates to:
+  /// **'No mood data'**
+  String get autoDjNoMoodData;
+
+  /// No description provided for @autoDjOtherModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Different audio model'**
+  String get autoDjOtherModel;
+
+  /// No description provided for @autoDjUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get autoDjUnreachable;
+
+  /// No description provided for @autoDjRemember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember'**
+  String get autoDjRemember;
+
+  /// No description provided for @autoDjGenresNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No genres'**
+  String get autoDjGenresNone;
+
+  /// No description provided for @autoDjNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get autoDjNoMatches;
+
+  /// No description provided for @autoDjRecentlyPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get autoDjRecentlyPlayed;
+
+  /// The Auto DJ screen's First song row value when First song is Recently played: a short form of autoDjRecentlyPlayed, since the row's value slot is narrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get autoDjFirstSongRecent;
+
+  /// Snackbar when a browse request (Albums, Artists, a folder, a playlist, a search…) fails for any reason other than the user backing out. Generic on purpose: the tunnel status strip explains a Quick Connect state; this is the one line for the request itself.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this from the server. Check the connection and try again.'**
+  String get browseLoadFailed;
+
+  /// Settings section header over the visualizer rows (Android only).
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer'**
+  String get settingsSectionVisualizer;
+
+  /// Note under the Playback card while Download the queue is on: Wi-Fi only and the download limit apply to the automatic queue downloads, never to songs the user downloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue downloads only. Songs you download yourself always stay.'**
+  String get settingsOfflineQueueFooter;
+
+  /// Value on the Download limit row.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} song} other{{count} songs}}'**
+  String settingsAutoDownloadCapValue(int count);
+
+  /// Helper text under the number field in the Download limit dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'0 = no limit'**
+  String get settingsAutoDownloadCapHint;
+
+  /// Hint under 'Recent' in the Startup page picker: the Recent view lists recently ADDED songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get settingsStartupRecentHint;
+
+  /// Value on the A–Z scrubber row: the list length from which the scrubber shows; 0 = on every list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Always} other{{count}+ items}}'**
+  String settingsLetterStripValue(int count);
+
+  /// Line under the A–Z scrubber slider.
+  ///
+  /// In en, this message translates to:
+  /// **'On A–Z lists. Shorter lists wrap long names instead.'**
+  String get settingsLetterStripHint;
+
+  /// Note under the Listening stats card in Settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers scrobble to Last.fm only if you linked an account there.'**
+  String get settingsHistoryFooter;
+
+  /// Value on the Clear history row when there is nothing to clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get settingsHistoryEmpty;
+
+  /// Title of the confirm shown when Record plays is switched off.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop recording plays?'**
+  String get settingsHistoryOffTitle;
+
+  /// Body of that confirm: how many unsent plays are deleted with the history.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{This deletes this phone\'s listening history. Servers keep theirs.} one{This deletes this phone\'s listening history, including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone\'s listening history, including {count} plays not synced yet. Servers keep theirs.}}'**
+  String settingsHistoryOffBody(int count);
+
+  /// Red confirm button of that dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off'**
+  String get settingsHistoryOffConfirm;
+
+  /// Title of the Clear history confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear history?'**
+  String get settingsHistoryClearTitle;
+
+  /// Title of the Reset settings confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset settings?'**
+  String get settingsResetTitle;
+
+  /// Reset confirm body on Android (names the Equalizer).
+  ///
+  /// In en, this message translates to:
+  /// **'Also resets Equalizer, Transcoding and a few options outside Settings. Servers, downloads, listening history and saved presets stay.'**
+  String get settingsResetBody;
+
+  /// Reset confirm body on iPhone (no Equalizer there).
+  ///
+  /// In en, this message translates to:
+  /// **'Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.'**
+  String get settingsResetBodyIos;
 }
 
 class _AppLocalizationsDelegate

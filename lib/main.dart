@@ -34,6 +34,7 @@ import 'screens/setup_flow.dart';
 import 'screens/welcome_screen.dart';
 import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
+import 'screens/eq/eq_screen.dart';
 import 'screens/transcode_screen.dart';
 import 'screens/visualizer_launcher.dart';
 import 'native/torrent_channel.dart';
@@ -66,6 +67,8 @@ import 'l10n/localizations_delegates.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
+import 'package:dynamics_eq/dynamics_eq.dart';
+import 'media/dynamics_equalizer.dart';
 
 void main() {
   // Run the app inside a Zone whose print() handler tees every log line into
@@ -122,6 +125,14 @@ Future<void> _startApp() async {
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
   await SettingsManager().load();
+  // Which equalizer engine this device gets: the ten-band DynamicsProcessing
+  // effect (Android 9+, probed once natively) or just_audio's fixed
+  // five-band Equalizer. Decided here, before the handler builds the player,
+  // because the engine fixes how the player is constructed and toggled.
+  // `--dart-define=EQ_FIVE_BAND=true` forces the fallback for testing it on
+  // a modern device.
+  DynamicsEqualizer.supported = !const bool.fromEnvironment('EQ_FIVE_BAND') &&
+      await DynamicsEq.isSupported();
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();
@@ -318,6 +329,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         ServerManager().noteConnectivityLost();
         return;
       }
+      ServerManager().noteConnectivityRestored();
       _connectivityDebounce?.cancel();
       _connectivityDebounce = Timer(const Duration(milliseconds: 1500), () {
         _connectivityDebounce = null;
@@ -665,6 +677,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
+      // Android 15+ cuts the app's network 5 s from here unless something
+      // plays; the resume run reads how long we were away to tell a tunnel
+      // that died under it from a blip (TunnelTiming.backgroundNetworkCut).
+      ServerManager().noteBackgrounded();
       QueueStore().saveNow();
       PlayTracker().checkpointNow();
       unawaited(PlayHistory().flush());
@@ -1367,6 +1383,21 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             );
           },
         ),
+        // The equalizer is an Android-only engine (lib/screens/eq): on iOS
+        // there is nothing to open, so the entry is absent rather than a page
+        // that says so.
+        if (Platform.isAndroid)
+          ListTile(
+            leading: Icon(Icons.equalizer),
+            title: Text(l.eqTitle),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const EqScreen()),
+              );
+            },
+          ),
         ListTile(
           leading: Icon(Icons.transform),
           title: Text(l.transcodeTitle),

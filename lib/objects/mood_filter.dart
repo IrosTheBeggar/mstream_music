@@ -16,7 +16,9 @@
 // flag (Server.moodFiltersAvailable): its body schema refuses unknown keys.
 // So do the song lists, /api/v1/db/rated and /api/v1/db/recent/added
 // (mStream #1095): their answers are bare arrays, with no room for the
-// echo, and recent/added's schema refuses unknown keys too.
+// echo, and recent/added's schema refuses unknown keys too. So does Auto
+// DJ's /api/v1/db/random-songs (mStream #1096), which keeps every pick of a
+// session inside the mood and echoes the filter it picked under.
 //
 // A score is the model's confidence, not how strongly a song is relaxed.
 // `strict: true` (the strip's Strict) keeps only strong fits — 0.7 rather
@@ -63,6 +65,25 @@ class MoodFilter {
       this.strict = false});
 
   static const empty = MoodFilter();
+
+  /// The wire form read back (a saved filter, or an answer's echo). Only
+  /// what the server knows survives: an unknown value or tag is dropped
+  /// rather than sent to a route that would refuse it.
+  factory MoodFilter.fromJson(Object? json) {
+    if (json is! Map) return empty;
+    var f = empty;
+    for (final scale in MoodScale.values) {
+      final v = json[scale.name];
+      if (v is String) f = f.withScale(scale, v);
+    }
+    final tags = json['tags'];
+    if (tags is List) {
+      for (final t in {...tags.whereType<String>()}) {
+        f = f.toggleTag(t);
+      }
+    }
+    return f;
+  }
 
   bool get isEmpty =>
       valence == null && energy == null && voice == null && tags.isEmpty;
@@ -147,6 +168,13 @@ class MoodFilter {
   int get hashCode =>
       Object.hash(valence, energy, voice, Object.hashAll(tags), strict);
 }
+
+/// Whether a random-songs answer's [echo] (its `moods`) is the filter it was
+/// [asked] for. A server that could not filter leaves the key out, and one
+/// that filtered nothing answers {}: either way its songs are not from
+/// inside the mood.
+bool moodEchoFits(Object? echo, MoodFilter asked) =>
+    echo is Map && MoodFilter.fromJson(echo) == asked;
 
 /// The pages that filter by mood. Each keeps its own filter.
 enum MoodPage { albums, artists, rated, recent, discover }

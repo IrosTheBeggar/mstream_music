@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import '../media/auto_browse.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
-import '../singletons/server_list.dart';
+import '../util/auto_dj_play_from.dart';
 
 /// CarPlay ⇄ Dart. The Swift CarPlay scene (ios/Runner/CarPlay.swift) renders
 /// whatever this hands back: the browse tree Android Auto already uses
@@ -126,7 +126,9 @@ class CarPlayBridge {
           unawaited(handler.customAction('setAutoDJ', {'autoDJServer': null}));
           return null;
         }
-        final server = ServerManager().currentServer;
+        // The Auto DJ screen's Play from, the same server the phone's own
+        // Start uses.
+        final server = autoDjPlayFrom();
         if (server == null) {
           appLog('[carplay] Auto DJ: no server to run it on');
           return null;

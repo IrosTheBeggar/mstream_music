@@ -40,10 +40,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get languageSystemDefault => 'Systemstandard';
 
   @override
-  String get settingsLanguageSubtitle =>
-      'Die Anzeigesprache der App. „Systemstandard“ folgt deinem Gerät.';
-
-  @override
   String couldNotOpen(String url) {
     return '$url konnte nicht geöffnet werden';
   }
@@ -118,7 +114,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Starte einen Song, um den Equalizer einzurichten.\n\nAndroids nativer Equalizer wird mit der Audiositzung initialisiert, daher muss die Wiedergabe aktiv sein, bevor wir das Band-Layout auslesen können.';
+      'Der Equalizer dieses Telefons meldet seine Bänder erst, wenn Audio läuft. Dein gespeichertes Preset wird angewendet, sobald sie erscheinen.';
 
   @override
   String eqInitFailed(String error) {
@@ -128,6 +124,185 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get eqNoBands =>
       'Der Audiotreiber dieses Geräts meldet keine Equalizer-Bänder.';
+
+  @override
+  String get eqPresetFlat => 'Flach';
+
+  @override
+  String get eqPresetNormal => 'Normal';
+
+  @override
+  String get eqPresetClassical => 'Klassik';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy Metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-Hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
+  String get eqPresetCustom => 'Eigene';
+
+  @override
+  String get eqSaveAsPreset => 'Als Preset speichern';
+
+  @override
+  String get eqSavePresetTitle => 'Preset speichern';
+
+  @override
+  String get eqRenamePresetTitle => 'Preset umbenennen';
+
+  @override
+  String get eqPresetNameLabel => 'Name';
+
+  @override
+  String get eqSavePresetHint =>
+      'Wird auf diesem Telefon gespeichert, hinter den eingebauten Presets. Halte den Chip später gedrückt, um ihn umzubenennen oder zu löschen.';
+
+  @override
+  String get eqReplacePreset => 'Ersetzen';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Ein anderes gespeichertes Preset hat diesen Namen bereits.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '„$name“ löschen?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Zum Vergleichen halten';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Gedrückt halten, um den Klang ohne Equalizer zu hören.';
+
+  @override
+  String get eqOptionsTitle => 'Equalizer-Optionen';
+
+  @override
+  String get eqPreventClipping => 'Übersteuern verhindern';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Begrenzt Pegelspitzen, wenn Bänder angehoben werden.';
+
+  @override
+  String get eqShowValues => 'Bandwerte immer anzeigen';
+
+  @override
+  String get eqShowValuesHint =>
+      'Über jedem Band eine Zahl, nicht nur beim Ziehen.';
+
+  @override
+  String get eqOutputsTitle => 'Ausgabegeräte';
+
+  @override
+  String get eqOutputsRowOff => 'Aus — eine Kurve für alle Ausgabegeräte';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Jetzt: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Automatisch wechseln';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Wechselt das Ausgabegerät, wird seine Kurve angewendet. Ziehen auf der Equalizer-Seite bearbeitet das Gerät, das gerade spielt.';
+
+  @override
+  String get eqOutputsRemembered => 'Gemerkte Ausgabegeräte';
+
+  @override
+  String get eqOutputSpeaker => 'Telefonlautsprecher';
+
+  @override
+  String get eqOutputWired => 'Kabelkopfhörer';
+
+  @override
+  String get eqOutputUsb => 'USB-Audio';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Anderes Ausgabegerät';
+
+  @override
+  String get eqOutputPlayingNow => 'spielt gerade';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'zuletzt $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Ausgabegeräte erscheinen hier, sobald du darüber hörst.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '„$name“ vergessen? Beim nächsten Verbinden erscheint es wieder als neues Gerät.';
+  }
+
+  @override
+  String get eqOutputForget => 'Vergessen';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset für $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tippe auf ein Gerät, um sein Preset zu wählen. Wische es weg, um es zu vergessen.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'An — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Jetzt';
+
+  @override
+  String get eqNeedsPlaybackTitle =>
+      'Starte einen Song, um die Bänder einzurichten';
+
+  @override
+  String get eqPlayQueue => 'Warteschlange abspielen';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Songs',
+      one: '1 Song',
+    );
+    return 'Setzt dort fort, wo du aufgehört hast · $_temp0';
+  }
 
   @override
   String get eqDisabledHint =>
@@ -158,25 +333,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsSectionPlayback => 'Wiedergabe';
 
   @override
-  String get settingsSectionBrowse => 'Durchsuchen';
-
-  @override
-  String get settingsSectionAbout => 'Über';
+  String get settingsSectionBrowse => 'Bibliothek';
 
   @override
   String get settingsTheme => 'Design';
-
-  @override
-  String get themeSubtitleVelvet =>
-      'Marineblau und Violett – das charakteristische dunkle Design.';
-
-  @override
-  String get themeSubtitleDark =>
-      'Neutrales Dunkel mit bernsteinfarbenen Akzenten.';
-
-  @override
-  String get themeSubtitleLight =>
-      'Heller Hintergrund mit dunkler App-Leiste und bernsteinfarbenen Akzenten – passt zum älteren mitgelieferten Design.';
 
   @override
   String get settingsTranscode => 'Audio transkodieren';
@@ -215,63 +375,37 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsStartupPage => 'Startbildschirm';
 
   @override
-  String get settingsStartupPageSubtitle =>
-      'Die App in dieser Ansicht der Mediathek öffnen; Zurück kehrt zur Mediathek zurück.';
-
-  @override
-  String get tapSubtitleAddToQueue =>
-      'Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.';
+  String get tapSubtitleAddToQueue => 'Setzt ihn ans Ende der Warteschlange';
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Beim Antippen wird die Warteschlange durch die Songs der aktuellen Ansicht ersetzt und die Wiedergabe beim angetippten Song gestartet.';
+      'Ersetzt die Warteschlange und spielt ab diesem Song';
 
   @override
   String get tapSubtitleAppendAndJump =>
-      'Beim Antippen wird der Song an die Warteschlange angehängt und die Wiedergabe springt dorthin – was gerade läuft, wird unterbrochen.';
+      'Setzt ihn ans Ende der Warteschlange und spielt ihn sofort';
 
   @override
-  String get settingsEqSubtitle =>
-      'Bass, Mitten und Höhen anpassen. Nur Android.';
+  String get settingsVisualizerSource => 'Audioquelle';
 
   @override
-  String get settingsVisualizerSource => 'Visualizer-Audioquelle';
-
-  @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'Standard. Der Visualizer reagiert nur auf das Wiedergabe-Timing – keine Mikrofonberechtigung erforderlich.';
+  String get visualizerSourceSubtitleSynthesized => 'Keine Berechtigung nötig';
 
   @override
   String get visualizerSourceSubtitleReal =>
-      'Der Visualizer reagiert auf die tatsächliche Audioausgabe. Erfordert die RECORD_AUDIO-Berechtigung unter Android.';
+      'Braucht die Mikrofonberechtigung, nutzt das Mikrofon aber nie';
 
   @override
-  String get settingsAlbumGrid => 'Album-Rasteransicht';
+  String get settingsAlbumGrid => 'Album-Raster';
 
   @override
-  String get settingsAlbumGridSubtitle =>
-      'Alben als Raster von Karten mit Cover statt als einfache Liste anzeigen.';
+  String get settingsFileMetadata => 'Songinfos im Datei-Explorer';
 
   @override
-  String get settingsFileMetadata => 'Song-Metadaten im Datei-Explorer lesen';
+  String get settingsLetterStrip => 'A–Z-Leiste';
 
   @override
-  String get settingsFileMetadataSubtitle =>
-      'Titel, Künstler und Cover für jeden Song beim Durchsuchen von Serverdateien abrufen. Aus zeigt rohe Dateinamen (schneller bei großen Ordnern).';
-
-  @override
-  String get settingsLetterStrip => 'Schwellenwert für die Buchstabenleiste';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      'Die A–Z-Buchstabenleiste anzeigen, wenn eine Liste mindestens so viele Einträge hat. Darunter wird die Leiste ausgeblendet und lange Ordner-/Dateinamen werden auf mehrere Zeilen umgebrochen statt abgeschnitten. Auf 0 setzen, um die Leiste immer anzuzeigen.';
-
-  @override
-  String get settingsLetterStripSide => 'Seite der Buchstabenleiste';
-
-  @override
-  String get settingsLetterStripSideSubtitle =>
-      'An welchem Rand die A–Z-Leiste sitzt.';
+  String get settingsLetterStripSide => 'Seite';
 
   @override
   String get settingsLetterStripLeft => 'Links';
@@ -280,14 +414,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLetterStripRight => 'Rechts';
 
   @override
-  String get settingsReset => 'Auf Standard zurücksetzen';
+  String get settingsReset => 'Einstellungen zurücksetzen';
 
   @override
-  String get settingsResetSubtitle =>
-      'Alle Einstellungen auf diesem Bildschirm auf die Standardwerte zurücksetzen. Server und Downloads sind nicht betroffen.';
-
-  @override
-  String get settingsResetDone => 'Einstellungen auf Standard zurückgesetzt';
+  String get settingsResetDone => 'Einstellungen zurückgesetzt';
 
   @override
   String get realAudioDialogTitle => 'Echtes Audio verwenden?';
@@ -678,66 +808,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjTitle => 'Auto DJ';
 
   @override
-  String get autoDjAddServerFirst => 'Füge zuerst einen Server hinzu.';
-
-  @override
-  String get autoDjSectionServer => 'Server';
-
-  @override
-  String get autoDjSectionSources => 'Quellen';
-
-  @override
-  String get autoDjSectionContinuity => 'Kontinuität';
-
-  @override
-  String get autoDjSectionFilters => 'Filter';
-
-  @override
-  String get autoDjMultiServerTitle => 'Von allen Servern abspielen';
-
-  @override
-  String get autoDjMultiServerSubtitle =>
-      'Auto DJ wählt aus allen Servern zugleich – passend zum Klang des laufenden Titels';
-
-  @override
-  String get autoDjMultiServerNeedsSonic =>
-      'Erfordert, dass „Klangliche Ähnlichkeit“ (unten) eingeschaltet ist';
-
-  @override
-  String get autoDjSectionShared => 'Die Session';
-
-  @override
-  String get autoDjSectionPerServer => 'Je Bibliothek';
-
-  @override
-  String get autoDjEditingServer => 'Einstellungen für';
-
-  @override
-  String autoDjMultiServerAllIn(int count) {
-    return '$count Server nehmen teil';
-  }
-
-  @override
-  String autoDjMultiServerConnecting(int count) {
-    return '$count verbinden sich noch';
-  }
-
-  @override
-  String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$count von $total Servern nehmen teil – den übrigen fehlt Discovery, ein passendes Embedding-Modell oder eine ausreichend neue Serverversion';
-  }
-
-  @override
-  String get autoDjSectionQueue => 'Warteschlange';
-
-  @override
-  String get autoDjSongsPerFetchTitle => 'Titel pro Abruf';
-
-  @override
-  String get autoDjSongsPerFetchSubtitle =>
-      'Wie viele Titel Auto DJ bei jedem Durchlauf in die Warteschlange stellt. Die Kontinuitätsfilter bewerten den gesamten Stapel anhand des Titels, der beim Abruf lief.';
-
-  @override
   String autoDjSongsPerFetchValue(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -749,16 +819,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get autoDjBpmTitle => 'BPM-Kontinuität';
-
-  @override
-  String get autoDjBpmSubtitle =>
-      'Bevorzugt Titel innerhalb eines Tempofensters des aktuellen Songs. Berücksichtigt Halb-/Doppeltempo-Äquivalenz.';
-
-  @override
-  String get autoDjTolerance => 'Toleranz';
-
-  @override
   String autoDjBpmTolerance(int bpm) {
     return '± $bpm BPM';
   }
@@ -767,133 +827,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Harmonisches Mixen';
 
   @override
-  String get autoDjHarmonicSubtitle =>
-      'Bevorzugt Titel in Tonarten, die gut zum festgelegten Song passen (Camelot-Rad-Nachbarn).';
-
-  @override
-  String get autoDjDurationTitle => 'Titellänge';
-
-  @override
-  String get autoDjDurationSubtitle =>
-      'Überspringt Interludes und lange Mixe – es werden nur Titel im Längenbereich gewählt';
+  String get autoDjHarmonicHint => 'Nächster Song in einer passenden Tonart';
 
   @override
   String get autoDjDurationRange => 'Länge';
 
   @override
-  String get autoDjDurationAny => 'Beliebige Länge';
-
-  @override
-  String autoDjDurationOver(String min) {
-    return 'Über $min';
-  }
-
-  @override
-  String autoDjDurationUnder(String max) {
-    return 'Unter $max';
-  }
-
-  @override
-  String autoDjDurationBetween(String min, String max) {
-    return '$min bis $max';
-  }
-
-  @override
-  String get autoDjDurationAllowUnknown =>
-      'Titel mit unbekannter Länge einbeziehen';
-
-  @override
-  String get autoDjDurationAllowUnknownSub =>
-      'Titel, deren Länge dein Server nicht gelesen hat, werden sonst übersprungen';
-
-  @override
-  String get autoDjStatusOn => 'Auto DJ ist an';
-
-  @override
-  String get autoDjStatusOff => 'Auto DJ ist aus';
-
-  @override
-  String get autoDjStatusOffDetail =>
-      'Tippe unten zum Starten. Die Bibliothek des aktuellen Servers wird verwendet.';
-
-  @override
-  String get autoDjStart => 'Auto DJ starten';
-
-  @override
-  String get autoDjStop => 'Auto DJ stoppen';
-
-  @override
-  String autoDjStatusOnDetail(String url) {
-    return 'Songs werden aus $url ausgewählt, wenn die Warteschlange zur Neige geht.';
-  }
-
-  @override
-  String get autoDjOneSourceRequired =>
-      'Mindestens eine Quelle ist erforderlich.';
-
-  @override
-  String get autoDjMinRating => 'Mindestbewertung';
-
-  @override
-  String get autoDjMinRatingSubtitle =>
-      'Nur Songs mit dieser Bewertung oder höher auswählen.';
-
-  @override
-  String get autoDjRatingAny => 'Beliebig';
-
-  @override
-  String get autoDjGenreTitle => 'Genre-Filter';
-
-  @override
-  String get autoDjGenreSubtitle =>
-      'Whitelist spielt nur passende Titel; Blacklist überspringt sie.';
-
-  @override
-  String get autoDjWhitelist => 'Whitelist';
-
-  @override
-  String get autoDjBlacklist => 'Blacklist';
-
-  @override
-  String get autoDjNoGenres =>
-      'Keine Genres ausgewählt. Tippe auf „Genres auswählen“.';
-
-  @override
-  String get autoDjPickGenres => 'Genres auswählen';
+  String get autoDjMoodTitle => 'Intelligente Filter';
 
   @override
   String get autoDjGenreLoadError => 'Genres konnten nicht geladen werden';
-
-  @override
-  String get autoDjKeywordTitle => 'Stichwort-Filter';
-
-  @override
-  String get autoDjKeywordSubtitle =>
-      'Überspringt Titel, deren Name, Interpret, Album oder Dateipfad eines dieser Wörter enthält.';
-
-  @override
-  String get autoDjNoKeywords =>
-      'Keine Stichwörter. Füge unten Wörter hinzu, um zu filtern.';
-
-  @override
-  String get autoDjKeywordHint => 'z. B. „live“ oder „remix“';
-
-  @override
-  String get autoDjSearchGenres => 'Genres suchen…';
-
-  @override
-  String get autoDjNoGenresOnServer =>
-      'Keine Genres auf diesem Server gefunden.';
-
-  @override
-  String autoDjSelectedCount(int count) {
-    return '$count ausgewählt';
-  }
-
-  @override
-  String autoDjNoGenresMatch(String query) {
-    return 'Keine Genres passen zu „$query“.';
-  }
 
   @override
   String get download => 'Herunterladen';
@@ -1065,6 +1008,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get genreSourceBoth => 'Beide';
 
   @override
+  String get genreSourceMixed => 'Gemischt';
+
+  @override
   String get genreSourceLabel => 'Genre-Quelle';
 
   @override
@@ -1167,11 +1113,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Hier tippen, um einen Server hinzuzufügen';
 
   @override
-  String get settingsVisualizerKnobs => 'Visualizer-Regler';
+  String get settingsVisualizerKnobs => 'Regler zur Feinabstimmung';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      'Zeigt Live-Regler über dem Visualizer, um die Audio-Reaktivität jedes Shaders anzupassen. Nur ShaderToy-Visualizer.';
+  String get settingsVisualizerKnobsSubtitle => 'Nur ShaderToy';
 
   @override
   String get visualizerTuningTitle => 'Feinabstimmung';
@@ -1231,19 +1176,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonOff => 'Aus';
 
   @override
-  String get settingsCastQuality => 'Cast-Visualizer-Qualität';
-
-  @override
-  String get settingsCastQualitySubtitle720 =>
-      'Auflösung, mit der der Visualizer auf einen Fernseher übertragen wird. 720p – am schonendsten für das Telefon.';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      'Auflösung, mit der der Visualizer auf einen Fernseher übertragen wird. 1080p – scharf auf jedem Chromecast (Standard).';
-
-  @override
   String get settingsCastQualitySubtitle4k =>
-      'Auflösung, mit der der Visualizer auf einen Fernseher übertragen wird. 4K – benötigt einen 4K-Chromecast; deutlich höhere Last für das Telefon.';
+      'Braucht einen 4K-Chromecast; höchste Last fürs Telefon';
 
   @override
   String get eqCasting =>
@@ -1489,14 +1423,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get castVisualizer => 'Visualizer übertragen';
 
   @override
-  String get castVisualizerSubtitle =>
-      'Den Visualizer auf den Fernseher übertragen · nur Chromecast';
+  String get castVisualizerSubtitle => 'Nur Chromecast';
 
   @override
   String get castThisDevice => 'Dieses Gerät';
 
   @override
-  String get visualizerNoKnobs => 'Dieser Shader bietet keine Regler.';
+  String get visualizerNoKnobs => 'Dieser Shader hat keine Regler.';
 
   @override
   String get nowPlaying => 'Aktuelle Wiedergabe';
@@ -1517,18 +1450,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Schmale Leiste – maximale Warteschlange';
-
-  @override
-  String get playerLayoutMediumDesc => 'Banner – ausgewogen (Standard)';
-
-  @override
-  String get playerLayoutLargeDesc => 'Kompakt – zentriertes Cover';
-
-  @override
-  String get playerLayoutXlDesc => 'Großformat – volles Cover';
-
-  @override
   String get queueNothingToDownloadEmpty =>
       'Warteschlange ist leer – nichts herunterzuladen';
 
@@ -1538,10 +1459,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsAccentColor => 'Akzentfarbe';
-
-  @override
-  String get settingsAccentColorSubtitle =>
-      'Die Hervorhebungsfarbe, die in der gesamten App verwendet wird.';
 
   @override
   String get accentThemeDefault => 'Design-Standard';
@@ -1580,43 +1497,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsResumeQueue => 'Warteschlange beim Start fortsetzen';
 
   @override
-  String get settingsResumeQueueSubtitle =>
-      'Speichert die Warteschlange und deine Position und stellt sie beim erneuten Öffnen der App wieder her.';
-
-  @override
-  String get settingsOfflineQueue => 'Warteschlange offline verfügbar halten';
+  String get settingsOfflineQueue => 'Warteschlange herunterladen';
 
   @override
   String get settingsOfflineQueueSubtitle =>
-      'Lädt Titel in der Warteschlange automatisch auf dieses Gerät herunter, damit die Wiedergabe einen Verbindungsverlust übersteht.';
+      'Die Wiedergabe läuft auch ohne Verbindung weiter.';
 
   @override
-  String get settingsOfflineQueueWifiOnly => 'Nur über WLAN herunterladen';
+  String get settingsOfflineQueueWifiOnly => 'Nur über WLAN';
 
   @override
-  String get settingsOfflineQueueWifiOnlySubtitle =>
-      'Wartet mit dem Herunterladen von Titeln in der Warteschlange auf eine WLAN-Verbindung.';
-
-  @override
-  String get settingsAutoDownloadCap => 'Auto-Download-Limit';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      'So viele Titel ab dem laufenden zwischenspeichern; zurückgelassene werden dabei entfernt.';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Die gesamte Warteschlange zwischenspeichern (kein Limit).';
+  String get settingsAutoDownloadCap => 'Download-Limit';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unbegrenzt';
 
   @override
-  String get settingsAutoDownloadCapField => 'Anzahl der Titel';
+  String get settingsAutoDownloadCapField => 'Anzahl Titel';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Wie viele Titel der Warteschlange ab dem laufenden heruntergeladen bleiben. Während der Wiedergabe werden zurückgelassene Titel gelöscht. 0 = die ganze Warteschlange.';
+      'Wie viele Titel ab dem laufenden heruntergeladen bleiben. Ältere, die herausfallen, werden gelöscht, sobald neue dazukommen.';
 
   @override
   String get downloadWaitingWifi => 'Wartet auf WLAN';
@@ -1625,8 +1526,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRatingHalf => 'Halbsterne-Bewertungen';
 
   @override
-  String get settingsRatingHalfSubtitle =>
-      'Songs in Halbstern-Schritten bewerten (Stern lange drücken).';
+  String get settingsRatingHalfSubtitle => 'Stern lange drücken';
 
   @override
   String get ratingTitle => 'Bewerten';
@@ -1683,10 +1583,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get importedShadersTitle => 'Importierte Shader';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      'Füge deine eigenen .glsl-Dateien zur Rotation des ShaderToy-Visualizers hinzu.';
-
-  @override
   String get importedShadersRescan => 'Ordner neu scannen';
 
   @override
@@ -1698,13 +1594,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Über USB oder einen Dateimanager erreichbar (unter Android/data). Importierte Shader werden Teil der Rotation des ShaderToy-Visualizers.';
+      'Über USB erreichbar. Wird beim Deinstallieren von mStream gelöscht.';
 
   @override
-  String get importedShadersRemove => 'Entfernen';
+  String get importedShadersRemove => 'Löschen';
 
   @override
-  String get importedShadersEmptyTitle => 'Noch keine Shader im Ordner';
+  String get importedShadersEmptyTitle => 'Noch keine Shader';
 
   @override
   String get importedShadersEmptyBody =>
@@ -1712,7 +1608,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get importedShadersInvalid =>
-      'Ist möglicherweise kein gültiger Shader – kein mainImage/main-Einstiegspunkt.';
+      'Läuft vielleicht nicht: kein mainImage oder main';
 
   @override
   String get importedShadersImportDownloads =>
@@ -1720,7 +1616,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return '$count Shader aus Downloads importiert';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Shader importiert',
+      one: '$count Shader importiert',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1809,6 +1711,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get irohPathSuffixRelay => ' · über Relay';
+
+  @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
 
   @override
   String get irohTunnelTimeout =>
@@ -2141,26 +2047,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjSonicTitle => 'Klangliche Ähnlichkeit';
 
   @override
-  String get autoDjSonicSubtitle =>
-      'Wählt nur Titel, die wie die Session klingen – auf Basis der Audio-Analyse des Servers.';
-
-  @override
-  String get autoDjSonicUnavailable =>
-      'Dieser Server hat keine Discovery-Daten – die Auswahl bleibt zufällig.';
-
-  @override
-  String get autoDjSonicNotReady =>
-      'Discovery ist aktiv, aber der Scan hat noch keine Daten geliefert – die Auswahl bleibt zufällig, bis er so weit ist.';
-
-  @override
-  String get autoDjSonicStrictness => 'Ähnlichkeitsschwelle';
-
-  @override
-  String autoDjSonicStrictnessValue(int pct) {
-    return '$pct % oder ähnlicher';
-  }
-
-  @override
   String get autoDjSonicSeedLabel => 'Ausgangssong';
 
   @override
@@ -2181,12 +2067,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjSonicSeedRemove => 'Ausgangssong entfernen';
 
   @override
-  String get autoDjSonicSeedFailed =>
-      'Es konnte kein Titel vom Server geladen werden.';
+  String get autoDjSonicSeedFailed => 'Kein Song abrufbar';
 
   @override
-  String get autoDjSeedNoMatch =>
-      'Keine Titel entsprechen deinen Auto-DJ-Filtern – lockere sie etwas';
+  String get autoDjSeedNoMatch => 'Keine Songs passen zu deinen Filtern';
 
   @override
   String get discoverFindSimilar => 'Ähnliches finden';
@@ -2205,9 +2089,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get discoverSessionStarted =>
       'Klang-Session gestartet – Auto DJ ist an.';
-
-  @override
-  String get autoDjSonicAnchorLabel => 'Anker';
 
   @override
   String get autoDjSonicAnchorRolling => 'Der Stimmung folgen';
@@ -2347,43 +2228,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get autoDjStartTitle => 'Auto DJ womit starten?';
-
-  @override
-  String get autoDjStartSubtitle =>
-      'Nichts in der Warteschlange – der DJ braucht einen Starttitel. Mit Warteschlange folgt er einfach dem, was da ist.';
-
-  @override
-  String get autoDjStartRandom => 'Überrasch mich';
-
-  @override
-  String get autoDjStartRandomSub =>
-      'Einen zufälligen Titel aus der Bibliothek wählen und darauf aufbauen.';
-
-  @override
-  String get autoDjStartPick => 'Ich wähle selbst';
-
-  @override
-  String get autoDjStartPickSub =>
-      'Die Bibliothek öffnen und den Starttitel selbst wählen.';
-
-  @override
-  String get autoDjStartRemember => 'Merken';
-
-  @override
-  String get autoDjStartRememberSub =>
-      'Diese Frage künftig überspringen und immer so starten.';
-
-  @override
   String get autoDjStartPickBanner =>
       'Starttitel wählen – tippe irgendwo in der Bibliothek auf einen Titel';
-
-  @override
-  String get autoDjOnEmptyQueue => 'Bei leerer Warteschlange';
-
-  @override
-  String get autoDjOnEmptyQueueSub =>
-      'Was Auto DJ tut, wenn du ihn ohne Warteschlange einschaltest.';
 
   @override
   String get autoDjStartAskShort => 'Fragen';
@@ -2406,13 +2252,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'Dieser Server läuft mit v$version. Einige Funktionen benötigen v5.5 oder neuer und sind nicht verfügbar.';
   }
-
-  @override
-  String get autoDjNeedsNewerServer =>
-      'BPM-Kontinuität, harmonisches Mixen und der Genre-Filter benötigen einen neueren Server. Aktualisiere, um sie zu erhalten.';
-
-  @override
-  String get autoDjSonicNeedsNewerServer => 'Benötigt Server 6.15.2 oder neuer';
 
   @override
   String get torrentScreenTitle => 'Torrent hinzufügen';
@@ -2478,15 +2317,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTorrentAskTitle => 'Bei Torrents nachfragen';
 
   @override
-  String get settingsTorrentAskSub =>
-      'Wenn ein Torrent mit mStream geöffnet wird, Übergabe an eine andere App anbieten';
-
-  @override
   String get settingsTorrentDefaultTitle => 'Standard-App für Torrents';
 
   @override
-  String get settingsTorrentDefaultSub =>
-      'Öffnet die Android-Einstellungen, wo du wählst, welche App Torrents und Magnet-Links öffnet';
+  String get settingsTorrentDefaultSub => 'Öffnet die Android-Einstellungen';
 
   @override
   String get settingsTorrentDefaultFailed =>
@@ -4182,48 +4016,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoRecentlyPlayed => 'Zuletzt gehört';
 
   @override
-  String get settingsSectionListening => 'Hörverlauf';
+  String get settingsHistoryEnabled => 'Wiedergaben aufzeichnen';
 
   @override
-  String get settingsHistoryEnabled => 'Hörverlauf speichern';
+  String get settingsHistorySend => 'Wiedergaben an Server senden';
 
   @override
-  String get settingsHistoryEnabledSubtitle =>
-      'Zeichnet auf, was dieses Telefon abspielt – auf jedem Server und bei lokalen Dateien. Bleibt nur auf diesem Gerät.';
+  String get settingsHistoryClear => 'Verlauf leeren';
 
   @override
-  String get settingsHistorySend => 'Wiedergaben an deine Server senden';
-
-  @override
-  String get settingsHistorySendSubtitle =>
-      'Jede Wiedergabe geht an den Server, auf dem der Titel liegt (der Titel eines Peers an dessen übergeordneten Server), damit deine Statistik dieses Telefon einschließt. Server leiten nur dann an Last.fm weiter, wenn du dort ein Konto verknüpft hast.';
-
-  @override
-  String get settingsHistoryClear => 'Hörverlauf löschen';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return 'Entfernt die Aufzeichnung dieses Telefons ($size). Deine Server behalten ihre.';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm =>
-      'Hörverlauf dieses Telefons löschen? Bereits an einen Server gesendete Wiedergaben bleiben dort erhalten.';
-
-  @override
-  String get settingsHistoryCleared => 'Hörverlauf gelöscht';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Wiedergaben warten auf den Versand',
-      one: '1 Wiedergabe wartet auf den Versand',
-      zero: 'Alles ist synchronisiert',
+      other:
+          'Das löscht den Hörverlauf dieses Telefons ($size), einschließlich $count noch nicht synchronisierter Wiedergaben. Server behalten ihren eigenen.',
+      one:
+          'Das löscht den Hörverlauf dieses Telefons ($size), einschließlich $count noch nicht synchronisierter Wiedergabe. Server behalten ihren eigenen.',
+      zero:
+          'Das löscht den Hörverlauf dieses Telefons ($size). Server behalten ihren eigenen.',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => 'Hörverlauf gelöscht';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4525,10 +4342,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => 'Widget für den Startbildschirm';
-
-  @override
-  String get settingsHomeWidgetSubtitle =>
-      'Füge das Widget „Aktuelle Wiedergabe“ in einer von fünf Größen zum Startbildschirm hinzu.';
 
   @override
   String get settingsHomeWidgetSubtitleIos =>
@@ -5424,4 +5237,240 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Playlist teilen';
+
+  @override
+  String get autoDjStopShort => 'Stopp';
+
+  @override
+  String get autoDjPlayFrom => 'Abspielen von';
+
+  @override
+  String get autoDjAllServers => 'Alle Server';
+
+  @override
+  String autoDjServersTakingPart(int count, int total) {
+    return '$count von $total';
+  }
+
+  @override
+  String get autoDjFirstSong => 'Erster Song';
+
+  @override
+  String get autoDjFirstSongRandom => 'Zufällig';
+
+  @override
+  String get autoDjFirstSongChoose => 'Auswählen';
+
+  @override
+  String get autoDjMustMatch => 'Muss passen';
+
+  @override
+  String get autoDjPrefer => 'Bevorzugen';
+
+  @override
+  String autoDjPercent(int pct) {
+    return '$pct %';
+  }
+
+  @override
+  String get autoDjDrift => 'Treiben lassen';
+
+  @override
+  String get autoDjStayClose => 'Nah bleiben';
+
+  @override
+  String get autoDjGenres => 'Genres';
+
+  @override
+  String get autoDjGenresOnly => 'Nur';
+
+  @override
+  String get autoDjGenresSkip => 'Auslassen';
+
+  @override
+  String autoDjGenresSkipValue(String genres) {
+    return 'Ohne $genres';
+  }
+
+  @override
+  String get autoDjRating => 'Bewertung';
+
+  @override
+  String autoDjRatingValue(String stars) {
+    return '$stars★+';
+  }
+
+  @override
+  String get autoDjAny => 'Beliebig';
+
+  @override
+  String autoDjLengthOver(String min) {
+    return '$min+';
+  }
+
+  @override
+  String autoDjLengthUnder(String max) {
+    return 'Unter $max';
+  }
+
+  @override
+  String autoDjLengthBetween(String min, String max) {
+    return '$min–$max';
+  }
+
+  @override
+  String get autoDjIncludeUnknown => 'Unbekannte einbeziehen';
+
+  @override
+  String get autoDjLengthShortest => 'Mindestens';
+
+  @override
+  String get autoDjLengthLongest => 'Höchstens';
+
+  @override
+  String get autoDjWheelHours => 'Std.';
+
+  @override
+  String get autoDjTempo => 'Beatmatching';
+
+  @override
+  String get autoDjSkipWords => 'Ausschlusswörter';
+
+  @override
+  String get autoDjBatch => 'Stapel';
+
+  @override
+  String get autoDjVaries => 'Unterschiedlich';
+
+  @override
+  String autoDjMax(int count) {
+    return 'max. $count';
+  }
+
+  @override
+  String autoDjNeedsServer(String version) {
+    return 'Ab Server $version';
+  }
+
+  @override
+  String get autoDjDiscoveryOff => 'Discovery aus';
+
+  @override
+  String get autoDjStillScanning => 'Scan läuft noch';
+
+  @override
+  String get autoDjTooStrict => 'Zu streng';
+
+  @override
+  String get autoDjNotOnPeers => 'Nicht bei Peers';
+
+  @override
+  String get autoDjNoMoodData => 'Keine Stimmungsdaten';
+
+  @override
+  String get autoDjOtherModel => 'Anderes Audiomodell';
+
+  @override
+  String get autoDjUnreachable => 'Nicht erreichbar';
+
+  @override
+  String get autoDjRemember => 'Merken';
+
+  @override
+  String get autoDjGenresNone => 'Keine Genres';
+
+  @override
+  String get autoDjNoMatches => 'Keine Treffer';
+
+  @override
+  String get autoDjRecentlyPlayed => 'Zuletzt gehört';
+
+  @override
+  String get autoDjFirstSongRecent => 'Zuletzt gehört';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
+
+  @override
+  String get settingsSectionVisualizer => 'Visualizer';
+
+  @override
+  String get settingsOfflineQueueFooter =>
+      'Nur für Downloads der Warteschlange. Eigene Downloads bleiben immer erhalten.';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Titel',
+      one: '$count Titel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = unbegrenzt';
+
+  @override
+  String get settingsStartupRecentHint => 'Zuletzt hinzugefügt';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count+ Einträge',
+      one: '$count+ Einträge',
+      zero: 'Immer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint =>
+      'In A–Z-Listen. Kürzere Listen brechen lange Namen stattdessen um.';
+
+  @override
+  String get settingsHistoryFooter =>
+      'Server scrobbeln nur an Last.fm, wenn du dort ein Konto verknüpft hast.';
+
+  @override
+  String get settingsHistoryEmpty => 'Leer';
+
+  @override
+  String get settingsHistoryOffTitle => 'Aufzeichnung beenden?';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Das löscht den Hörverlauf dieses Telefons, einschließlich $count noch nicht synchronisierter Wiedergaben. Server behalten ihren eigenen.',
+      one:
+          'Das löscht den Hörverlauf dieses Telefons, einschließlich $count noch nicht synchronisierter Wiedergabe. Server behalten ihren eigenen.',
+      zero:
+          'Das löscht den Hörverlauf dieses Telefons. Server behalten ihren eigenen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => 'Ausschalten';
+
+  @override
+  String get settingsHistoryClearTitle => 'Verlauf leeren?';
+
+  @override
+  String get settingsResetTitle => 'Einstellungen zurücksetzen?';
+
+  @override
+  String get settingsResetBody =>
+      'Setzt auch Equalizer, Transkodierung und einige Optionen außerhalb der Einstellungen zurück. Server, Downloads, Hörverlauf und gespeicherte Presets bleiben erhalten.';
+
+  @override
+  String get settingsResetBodyIos =>
+      'Setzt auch Transkodierung und einige Optionen außerhalb der Einstellungen zurück. Server, Downloads und Hörverlauf bleiben erhalten.';
 }

@@ -203,6 +203,26 @@ class SettingsManager {
   // AndroidEqualizer.parameters.
   bool eqEnabled = false;
   List<double> eqBandGains = const [];
+  // Gains for the ten-band DynamicsProcessing engine (Android 9+), kept
+  // apart from eqBandGains because the two layouts' indices mean different
+  // frequencies (see DynamicsEqualizer.centerFrequencies). Empty = flat.
+  List<double> eqDynamicsGains = const [];
+  // The user's saved EQ curves, as the JSON EqPreset.toJson writes (kept raw
+  // here so settings stay free of the EQ's types). Their own content, so a
+  // settings reset leaves them alone.
+  List<Map<String, dynamic>> eqUserPresets = const [];
+  // "Prevent clipping": the ten-band engine's limiter stage. On by default —
+  // a boosted band on a loud master clips otherwise.
+  bool eqLimiter = true;
+  // "Always show band values": a readout over every band, not only the one
+  // being dragged.
+  bool eqShowValues = false;
+  // "Remember per output": a curve per output (speaker, wired, each Bluetooth
+  // device), swapped in as the route changes. Ten-band engine only.
+  bool eqPerOutput = false;
+  // The remembered outputs, as EqOutputProfile.toJson writes them (raw here,
+  // like the user presets). Their own work, so a settings reset keeps them.
+  List<Map<String, dynamic>> eqOutputProfiles = const [];
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -214,9 +234,10 @@ class SettingsManager {
   // (background_downloader holds them until it's available).
   bool offlineQueue = false;
   bool offlineQueueWifiOnly = true;
-  // Cap on how many auto-downloaded (keep-queue-offline) tracks to retain. When
-  // the total grows past this, the oldest orphans (auto-downloads no longer in
-  // the queue) are deleted, newest kept. 0 = keep everything. Only auto-
+  // Cap on how many auto-downloaded (keep-queue-offline) tracks to retain: the
+  // sweep fetches at most this many from the playing one on, and when the
+  // total grows past it the oldest auto-downloads outside that window are
+  // deleted (DownloadManager.cacheWindow). 0 = keep everything. Only auto-
   // downloads count; user-initiated downloads are never evicted. Default 50.
   int autoDownloadCap = 50;
   // Discover screen: restrict the P2P / federation lead sections to artists
@@ -364,6 +385,16 @@ class SettingsManager {
       final accent = m['accentColor'];
       accentColor = accent is int ? accent : null;
       eqEnabled = m['eqEnabled'] ?? false;
+      eqLimiter = m['eqLimiter'] ?? true;
+      eqShowValues = m['eqShowValues'] ?? false;
+      eqPerOutput = m['eqPerOutput'] ?? false;
+      final rawOutputs = m['eqOutputProfiles'];
+      eqOutputProfiles = rawOutputs is List
+          ? [
+              for (final e in rawOutputs)
+                if (e is Map) Map<String, dynamic>.from(e),
+            ]
+          : const [];
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
       offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
@@ -385,6 +416,17 @@ class SettingsManager {
       final rawGains = m['eqBandGains'];
       eqBandGains = rawGains is List
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
+      final rawDynamics = m['eqDynamicsGains'];
+      eqDynamicsGains = rawDynamics is List
+          ? rawDynamics.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
+      final rawPresets = m['eqUserPresets'];
+      eqUserPresets = rawPresets is List
+          ? [
+              for (final e in rawPresets)
+                if (e is Map) Map<String, dynamic>.from(e),
+            ]
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
       realAudioPromptDismissed = m['realAudioPromptDismissed'] ?? false;
@@ -582,6 +624,10 @@ class SettingsManager {
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
       'eqEnabled': eqEnabled,
+      'eqLimiter': eqLimiter,
+      'eqShowValues': eqShowValues,
+      'eqPerOutput': eqPerOutput,
+      'eqOutputProfiles': eqOutputProfiles,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
@@ -595,6 +641,8 @@ class SettingsManager {
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
+      'eqDynamicsGains': eqDynamicsGains,
+      'eqUserPresets': eqUserPresets,
       'visualizerAudioSource': visualizerAudioSource.name,
       'realAudioPromptDismissed': realAudioPromptDismissed,
       'visualizerEngine': visualizerEngine.name,
@@ -774,6 +822,26 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setEqLimiter(bool v) async {
+    eqLimiter = v;
+    await _save();
+  }
+
+  Future<void> setEqShowValues(bool v) async {
+    eqShowValues = v;
+    await _save();
+  }
+
+  Future<void> setEqPerOutput(bool v) async {
+    eqPerOutput = v;
+    await _save();
+  }
+
+  Future<void> setEqOutputProfiles(List<Map<String, dynamic>> v) async {
+    eqOutputProfiles = v;
+    await _save();
+  }
+
   Future<void> setResumeQueue(bool v) async {
     resumeQueue = v;
     await _save();
@@ -806,6 +874,16 @@ class SettingsManager {
 
   Future<void> setEqBandGains(List<double> v) async {
     eqBandGains = v;
+    await _save();
+  }
+
+  Future<void> setEqDynamicsGains(List<double> v) async {
+    eqDynamicsGains = v;
+    await _save();
+  }
+
+  Future<void> setEqUserPresets(List<Map<String, dynamic>> v) async {
+    eqUserPresets = v;
     await _save();
   }
 
@@ -878,6 +956,9 @@ class SettingsManager {
     playerLayout = PlayerLayout.medium;
     accentColor = null;
     eqEnabled = false;
+    eqLimiter = true;
+    eqShowValues = false;
+    eqPerOutput = false;
     resumeQueue = true;
     offlineQueue = false;
     offlineQueueWifiOnly = true;
@@ -885,6 +966,7 @@ class SettingsManager {
     diagnosticsLogging = true;
     verboseLogging = false;
     eqBandGains = const [];
+    eqDynamicsGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
     realAudioPromptDismissed = false;
     visualizerEngine = VisualizerEngine.milkdrop;
@@ -892,7 +974,13 @@ class SettingsManager {
     visualizerGlobalParams = const [];
     visualizerShaderParams = {};
     language = null;
+    // Rows on the Settings page itself: Reset there must reach them too.
+    torrentSkipChooser = false;
+    castVisualizerQuality = CastVisualizerQuality.fhd1080;
     _albumGridStream.add(albumGrid);
+    // The expanded player follows this stream; without it the player keeps
+    // the old layout until a restart while the row already says Medium.
+    _playerLayoutStream.add(playerLayout);
     _letterStripStream.add(letterStripThreshold);
     _letterStripSideStream.add(letterStripSide);
     _themeStream.add(appTheme);

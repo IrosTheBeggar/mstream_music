@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- An AudioEffect on the app's own audio session needs no permission. -->
+</manifest>
