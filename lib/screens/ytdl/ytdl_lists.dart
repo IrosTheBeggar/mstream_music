@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -10,16 +11,21 @@ import '../../singletons/api.dart';
 import '../../singletons/browser_list.dart';
 import '../../singletons/ytdl_hub.dart';
 import '../../theme/velvet_theme.dart';
-import '../../util/discover_jobs.dart' show fmtBytes, pathCrumbs;
+import '../../util/discover_jobs.dart' show pathCrumbs;
+import '../../util/image_cache.dart';
 import '../../util/queue_actions.dart';
+import '../../util/server_version.dart';
+import '../../util/stream_url.dart';
 import '../../util/ytdl_errors.dart';
 import '../discovery/keep_copy_ui.dart';
+import 'ytdl_choose_folder_sheet.dart';
 import 'ytdl_crumbs.dart';
-import 'ytdl_draft.dart' show ytdlGoneLibrary, ytdlServerWords;
+import 'ytdl_draft.dart' show YtdlDraft, ytdlGoneLibrary, ytdlServerWords;
 
 /// What a row's actions reach outside the hub: playing and queueing a song
-/// the server added, and opening its folder in the File Explorer. Tests swap
-/// them ([reset] puts them back).
+/// the server added, opening its folder in the File Explorer, picking a
+/// folder that exists ("Choose a folder…", C3's sheet) and the library's
+/// album art for ADDED. Tests swap them ([reset] puts them back).
 class YtdlListActions {
   YtdlListActions._();
 
@@ -27,12 +33,18 @@ class YtdlListActions {
   static Future<void> Function(DisplayItem song) queue = addToQueueEnd;
   static void Function(BuildContext context, Server server, String directory)
       showFolder = ytdlShowFolder;
+  static Future<String?> Function(BuildContext context, YtdlDraft draft)
+      chooseFolder = showYtdlChooseFolderSheet;
+  static Future<Map<String, String>> Function(
+      YtdlServerState state, List<String> filepaths) albumArt = ytdlAlbumArt;
 
   @visibleForTesting
   static void reset() {
     play = playNow;
     queue = addToQueueEnd;
     showFolder = ytdlShowFolder;
+    chooseFolder = showYtdlChooseFolderSheet;
+    albumArt = ytdlAlbumArt;
   }
 }
 
@@ -47,6 +59,72 @@ void ytdlShowFolder(BuildContext context, Server server, String directory) {
   unawaited(ApiManager().getFileList(directory, useThisServer: server));
 }
 
+/// The library's album-art file for each of [filepaths] ('Music/Daft
+/// Punk/Random Access Memories/Instant_Crush.mp3', as the download record
+/// names a song: no leading slash) on [state]'s server — one
+/// `POST /api/v1/db/metadata/batch` on the hub's client (its fake in
+/// tests), keyed by the path as sent. Songs without art are left out; a
+/// server before the route, a refusal or no answer is an empty map.
+Future<Map<String, String>> ytdlAlbumArt(
+    YtdlServerState state, List<String> filepaths) async {
+  final server = state.server;
+  if (filepaths.isEmpty ||
+      metadataBatchKnownUnsupported(
+          ServerVersion.tryParse(server.serverVersion))) {
+    return const {};
+  }
+  final api = state.api;
+  try {
+    final res = await (api.client ?? ApiManager().directClient)
+        .post(
+          server.apiUri('/api/v1/db/metadata/batch'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.authToken ?? '',
+          },
+          // A bare JSON array: the route iterates the body itself.
+          body: jsonEncode(filepaths),
+        )
+        .timeout(server.isIrohTransport ? api.irohTry : api.timeout);
+    if (res.statusCode < 200 || res.statusCode > 299) return const {};
+    final body = jsonDecode(res.body);
+    if (body is! Map) return const {};
+    return {
+      for (final e in body.entries)
+        if (e.value case {'metadata': {'album-art': final String art}}
+            when art.isNotEmpty)
+          '${e.key}': art,
+    };
+  } catch (_) {
+    return const {};
+  }
+}
+
+/// "Top of the library" / "Choose a folder…" on a start failure's row (a
+/// folder that could not be made): the same song added again into
+/// [directory] — one that is there (listed, or the library's top), so
+/// nothing is made first — in place of [job]'s row.
+Future<void> ytdlAddInto(
+    YtdlServerState state, YtdlJob job, String directory) async {
+  if (!state.jobs.contains(job) || job.open) return;
+  final next = state.start(YtdlStartRequest(
+    url: job.url,
+    directory: directory.endsWith('/') ? directory : '$directory/',
+    codec: job.codec,
+    metadata: job.tags,
+    title: job.title,
+    cover: job.cover,
+    predictedName: job.predictedName,
+    origin: state.originOf(job),
+  ));
+  state.dismiss(job);
+  await next;
+}
+
+/// Library art per ADDED song, by its filepath (null: asked, none found),
+/// kept with the server's state for the session.
+final Expando<Map<String, String?>> _addedArt = Expando('ytdl-added-art');
+
 /// ADDING, NEEDS A LOOK and ADDED under the result card (spec §6, the
 /// Downloads board): one list with section headers, every row's state in an
 /// icon and words, and its actions on the hub ([YtdlServerState]). Live: it
@@ -54,8 +132,10 @@ void ytdlShowFolder(BuildContext context, Server server, String directory) {
 ///
 /// It draws no side padding — it sits in the screen's padded column, under
 /// the paste card and the limits line. With no rows at all and [showEmpty],
-/// the empty state (the Empty board) takes their place; the screen turns it
-/// off while a result card shows.
+/// the empty state (the Empty board) takes their place once ADDED's read is
+/// in ([YtdlServerState.addedLoading]: nothing before it, so the rows never
+/// replace a flash of it); the screen turns it off while a result card
+/// shows.
 class YtdlLists extends StatefulWidget {
   final YtdlServerState state;
 
@@ -105,6 +185,31 @@ class _YtdlListsState extends State<YtdlLists> {
     });
   }
 
+  /// ADDED's covers: the library's art for songs it can name, asked once
+  /// per song per session in one batch for the rows on hand.
+  Map<String, String?> _askArt(List<YtdlAddedRow> rows) {
+    final st = widget.state;
+    final known = _addedArt[st] ??= <String, String?>{};
+    final ask = <String>[
+      for (final r in rows)
+        if (r.present &&
+            (r.cover ?? '').isEmpty &&
+            r.filepath != null &&
+            !known.containsKey(r.filepath))
+          r.filepath!,
+    ];
+    if (ask.isEmpty) return known;
+    for (final f in ask) {
+      known[f] = null;
+    }
+    YtdlListActions.albumArt(st, ask).then((found) {
+      if (found.isEmpty) return;
+      known.addAll(found);
+      if (mounted) setState(() {});
+    }, onError: (Object _) {});
+    return known;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -118,10 +223,12 @@ class _YtdlListsState extends State<YtdlLists> {
         final earlier = st.canShowEarlier;
         _keepTicking(adding.isNotEmpty);
         if (adding.isEmpty && look.isEmpty && added.isEmpty && !earlier) {
-          return widget.showEmpty
+          // Not while ADDED's first read is out: its rows may be on the way.
+          return widget.showEmpty && !st.addedLoading
               ? _YtdlEmpty(webApp: st.tier == YtdlServerTier.full)
               : const SizedBox.shrink();
         }
+        final art = _askArt(added);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -152,6 +259,7 @@ class _YtdlListsState extends State<YtdlLists> {
                 _AddedRow(
                   state: st,
                   row: added[i],
+                  art: art[added[i].filepath],
                   tag: added[i].recordId?.toString() ??
                       added[i].filepath ??
                       '$i',
@@ -185,49 +293,54 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // One node, the label and its note read together where they stand.
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              title.toUpperCase(),
-              style: TextStyle(
-                fontSize: 11,
-                height: 13 / 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
-                color: keepInkOnPage(),
-              ),
-            ),
-          ),
-          if (note != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
+      child: MergeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              header: true,
               child: Text(
-                note!,
+                title.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 12,
-                  height: 16 / 12,
-                  color: VelvetColors.helper,
+                  fontSize: 11,
+                  height: 13 / 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: keepInkOnPage(),
                 ),
               ),
             ),
-        ],
+            if (note != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  note!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 16 / 12,
+                    color: VelvetColors.helper,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// A row's 48 px picture: the video's thumbnail (centre-cropped) when this
-/// phone looked it up, else a note on a quiet tile. [dim] for a song whose
-/// file is gone.
+/// A row's 48 px picture: the library's art, or the video's thumbnail
+/// (centre-cropped) when this phone looked it up, else a note on a quiet
+/// tile. [dim] for a song whose file is gone; [decorative] inside a row's
+/// tap target, whose words name it (no "Cover" image node there).
 class _Cover extends StatelessWidget {
   final String? url;
   final bool dim;
-  const _Cover({this.url, this.dim = false});
+  final bool decorative;
+  const _Cover({this.url, this.dim = false, this.decorative = false});
 
   @override
   Widget build(BuildContext context) {
@@ -240,24 +353,29 @@ class _Cover extends StatelessWidget {
       child: Icon(Icons.music_note, size: 20, color: VelvetColors.helper),
     );
     final u = url;
+    final picture = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: u == null || u.isEmpty
+            ? tile
+            : Image.network(
+                u,
+                fit: BoxFit.cover,
+                // Decoded at its drawn height: square art and a 16:9
+                // thumbnail both stay sharp once cropped.
+                cacheHeight: artCacheSize(48),
+                errorBuilder: (_, _, _) => tile,
+              ),
+      ),
+    );
+    if (decorative) return ExcludeSemantics(child: picture);
     return Semantics(
       label: l.ytdlA11yCover,
       image: true,
       excludeSemantics: true,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: u == null || u.isEmpty
-              ? tile
-              : Image.network(
-                  u,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => tile,
-                ),
-        ),
-      ),
+      child: picture,
     );
   }
 }
@@ -388,14 +506,10 @@ class _AddingRing extends StatelessWidget {
   }
 }
 
-/// The ⋮ at a row's end, nudged into the page's gutter so its glyph lines up
-/// with the other trailing controls (the board's −12 px margin).
-Widget _gutter(BuildContext context, Widget child) {
-  final rtl = Directionality.of(context) == TextDirection.rtl;
-  return Transform.translate(offset: Offset(rtl ? -12 : 12, 0), child: child);
-}
-
-/// A row's ⋮ menu, read as "More for One More Time".
+/// A row's ⋮ menu, read as "More for One More Time": its whole 48 px
+/// button inside the row, where every tap on it lands. (The board pulls
+/// it 12 px into the page's gutter; the gutter is the screen's padding,
+/// which a tap there never reaches, so the row keeps it.)
 class _RowMenu<T> extends StatelessWidget {
   final String title;
   final List<PopupMenuEntry<T>> Function(BuildContext) items;
@@ -613,30 +727,22 @@ class _AddingRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _gutter(
-            context,
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _AddingRing(),
-                if (hideable)
-                  _RowMenu<int>(
-                    key: ValueKey('ytdl-row-more-${job.id}'),
-                    title: _titleOf(job),
-                    items: (_) => [
-                      _menuItem(0, l.ytdlRowHide,
-                          key: const ValueKey('ytdl-row-hide')),
-                    ],
-                    onSelected: (_) {
-                      state.hide(job);
-                      state.hub.showToast(l.ytdlToastHidden);
-                    },
-                  )
-                else
-                  const SizedBox(width: 48, height: 48),
+          const _AddingRing(),
+          if (hideable)
+            _RowMenu<int>(
+              key: ValueKey('ytdl-row-more-${job.id}'),
+              title: _titleOf(job),
+              items: (_) => [
+                _menuItem(0, l.ytdlRowHide,
+                    key: const ValueKey('ytdl-row-hide')),
               ],
-            ),
-          ),
+              onSelected: (_) {
+                state.hide(job);
+                state.hub.showToast(l.ytdlToastHidden);
+              },
+            )
+          else
+            const SizedBox(width: 48, height: 48),
         ],
       ),
     );
@@ -678,6 +784,28 @@ class _LookRow extends StatelessWidget {
           label: l.discoverPageRetry,
           busy: busy,
           onTap: () => unawaited(state.retry(job)),
+        );
+    // The library the row's folder is in ('Music').
+    final crumbs = pathCrumbs(job.directory);
+    final library = crumbs.isEmpty ? state.library : crumbs.first;
+    Widget topOfLibrary() => _OutlinedAction(
+          key: ValueKey('ytdl-row-top-$id'),
+          label: l.ytdlLayoutTop,
+          busy: busy,
+          onTap: () => unawaited(ytdlAddInto(state, job, '/$library/')),
+        );
+    Widget chooseFolder() => _TextAction(
+          key: ValueKey('ytdl-row-choose-folder-$id'),
+          label: l.ytdlChooseFolderLink,
+          busy: busy,
+          onTap: () async {
+            // The sheet browses the draft's library; the session's draft
+            // for that library's top folder is the one that names it.
+            final dir = await YtdlListActions.chooseFolder(
+                context, state.folderDraft('/$library/'));
+            if (dir == null || dir.isEmpty) return;
+            await ytdlAddInto(state, job, dir);
+          },
         );
     Widget? changeFormat() {
       final others = [
@@ -753,20 +881,24 @@ class _LookRow extends StatelessWidget {
         final problem = _problemOf(job);
         (icon, iconColor, color) = (Icons.error_outline, failedTone, failedTone);
         text = _startFailedText(l, job, problem);
-        actions = [
+        actions = switch (problem) {
+          // The folder couldn't be made: make it again, or add the song
+          // into one that is there (spec §8 "mkdir failed").
+          YtdlProblem.mkdirFailed => [retry(), chooseFolder(), dismiss()],
+          // The account can't make folders: only folders that are there —
+          // the library's top always is (spec §8 "mkdir off"). The
+          // deepest folder that listed isn't known to a row; Choose a
+          // folder reaches it.
+          YtdlProblem.mkdirOff => [topOfLibrary(), chooseFolder(), dismiss()],
           // Nothing a second try can change: the account, the library or
           // the route said no.
-          switch (problem) {
-            YtdlProblem.uploadsOff ||
-            YtdlProblem.mkdirOff ||
-            YtdlProblem.libraryGone ||
-            YtdlProblem.noRoute =>
-              null,
-            YtdlProblem.badFormat => changeFormat(),
-            _ => retry(),
-          },
-          dismiss(),
-        ];
+          YtdlProblem.uploadsOff ||
+          YtdlProblem.libraryGone ||
+          YtdlProblem.noRoute =>
+            [dismiss()],
+          YtdlProblem.badFormat => [changeFormat(), dismiss()],
+          _ => [retry(), dismiss()],
+        };
     }
 
     return Padding(
@@ -893,15 +1025,24 @@ class _FormatRetry extends StatelessWidget {
 
 enum _AddedAction { queue, showFolder }
 
-/// A song the server added: "MP3 · 8.4 MB · 3 min ago". Tap plays it, ⋮ →
-/// Add to queue / Show in folder; a row the phone can't name the file for
-/// does not play. A file gone from the library is greyed: "File missing ·
-/// Oct 12", nothing to tap.
+/// A song the server added: its library art, "MP3 · 8.4 MB · 3 min ago".
+/// Tap plays it, ⋮ → Add to queue / Show in folder; a row the phone can't
+/// name the file for does not play. A file gone from the library is
+/// greyed: "File missing · Oct 12", nothing to tap.
 class _AddedRow extends StatelessWidget {
   final YtdlServerState state;
   final YtdlAddedRow row;
+
+  /// The library's album-art file for the song ([ytdlAlbumArt]); null
+  /// while unknown or when it has none.
+  final String? art;
   final String tag;
-  const _AddedRow({required this.state, required this.row, required this.tag});
+  const _AddedRow({
+    required this.state,
+    required this.row,
+    required this.tag,
+    this.art,
+  });
 
   DisplayItem? get _song {
     final path = row.filepath;
@@ -949,69 +1090,77 @@ class _AddedRow extends StatelessWidget {
     final song = _song;
     final meta = [
       if (row.ext != null) _formatName(row.ext!),
-      if (fmtBytes(row.bytes) case final b when b.isNotEmpty) b,
+      ?_size(row.bytes),
       if (row.when != null) _ago(context, l, row.when!, now),
     ].join(' · ');
+    final artFile = art;
+    final cover = (row.cover ?? '').isNotEmpty
+        ? row.cover
+        : artFile == null
+            ? null
+            : buildAlbumArtUrl(state.server, artFile);
     return Padding(
       key: ValueKey('ytdl-added-$tag'),
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
-              key: ValueKey('ytdl-added-play-$tag'),
-              onTap: song == null
-                  ? null
-                  : () => unawaited(YtdlListActions.play(song)),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    _Cover(url: row.cover),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _RowText(
-                        title: row.title,
-                        directory: row.directory,
-                        status: Text(
-                          meta,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 16 / 12,
-                            color: VelvetColors.textSecondary,
+            // One node for the tap: the song's words, what tapping does.
+            child: MergeSemantics(
+              child: Semantics(
+                button: song != null,
+                child: InkWell(
+                  key: ValueKey('ytdl-added-play-$tag'),
+                  onTap: song == null
+                      ? null
+                      : () => unawaited(YtdlListActions.play(song)),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        _Cover(url: cover, decorative: true),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _RowText(
+                            title: row.title,
+                            directory: row.directory,
+                            status: Text(
+                              meta,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 16 / 12,
+                                color: VelvetColors.textSecondary,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          _gutter(
-            context,
-            _RowMenu<_AddedAction>(
-              key: ValueKey('ytdl-added-more-$tag'),
-              title: row.title,
-              items: (_) => [
-                if (song != null)
-                  _menuItem(_AddedAction.queue, l.discoverJobAddToQueue,
-                      key: const ValueKey('ytdl-added-queue')),
-                _menuItem(_AddedAction.showFolder, l.ytdlRowShowInFolder,
-                    key: const ValueKey('ytdl-added-show-in-folder')),
-              ],
-              onSelected: (a) {
-                switch (a) {
-                  case _AddedAction.queue:
-                    if (song != null) unawaited(YtdlListActions.queue(song));
-                  case _AddedAction.showFolder:
-                    YtdlListActions.showFolder(
-                        context, state.server, row.directory);
-                }
-              },
-            ),
+          _RowMenu<_AddedAction>(
+            key: ValueKey('ytdl-added-more-$tag'),
+            title: row.title,
+            items: (_) => [
+              if (song != null)
+                _menuItem(_AddedAction.queue, l.discoverJobAddToQueue,
+                    key: const ValueKey('ytdl-added-queue')),
+              _menuItem(_AddedAction.showFolder, l.ytdlRowShowInFolder,
+                  key: const ValueKey('ytdl-added-show-in-folder')),
+            ],
+            onSelected: (a) {
+              switch (a) {
+                case _AddedAction.queue:
+                  if (song != null) unawaited(YtdlListActions.queue(song));
+                case _AddedAction.showFolder:
+                  YtdlListActions.showFolder(
+                      context, state.server, row.directory);
+              }
+            },
           ),
         ],
       ),
@@ -1139,6 +1288,19 @@ String _startFailedText(
       },
     _ => l.ytdlErrServer,
   };
+}
+
+/// A file's size as the rows read it — decimal units, megabytes to one
+/// place ("8.4 MB", "13.6 MB"), like the server's own 500 MB cap; null for
+/// none.
+String? _size(int? bytes) {
+  if (bytes == null || bytes <= 0) return null;
+  if (bytes < 1000) return '$bytes B';
+  if (bytes < 1000 * 1000) return '${(bytes / 1000).round()} KB';
+  if (bytes < 1000 * 1000 * 1000) {
+    return '${(bytes / (1000 * 1000)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / (1000 * 1000 * 1000)).toStringAsFixed(1)} GB';
 }
 
 /// "just now", "3 min ago", "2 h ago", "yesterday", "2 days ago", then the

@@ -10,20 +10,32 @@
 // 3 min ago", yesterday, File missing greyed; tap plays the song with a
 // leading '/', ⋮ Add to queue / Show in folder, no play for a file the
 // phone can't name; Show earlier, also before any YouTube row is read),
-// the empty state, the NEEDS A LOOK anchor, the spoken labels, the keys,
-// and 360 dp at 200% text with no overflow.
+// the empty state (not while ADDED's first read is out), the NEEDS A LOOK
+// anchor, the spoken labels (a section's note read with its header; an
+// ADDED row one button named by its words, no "Cover" in it), the keys,
+// the library's art on ADDED rows (one batched metadata read), a folder
+// that couldn't be made → Choose a folder… / Top of the library adding the
+// song into a folder that is there, the ⋮ answering taps across its whole
+// 48 px, and 360 dp at 200% text with no overflow.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/objects/ytdl_job.dart';
+import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_lists.dart';
 import 'package:mstream_music/singletons/ytdl_hub.dart';
+import 'package:mstream_music/util/stream_url.dart';
+import 'package:mstream_music/util/ytdl_api.dart';
 
 import '../singletons/ytdl_fakes.dart';
 
@@ -35,6 +47,8 @@ void main() {
   late List<DisplayItem> played;
   late List<DisplayItem> queued;
   late List<String> folders;
+  late List<List<String>> artAsked;
+  late Map<String, String> artFound;
 
   setUp(() {
     h = YtdlHarness()..wire();
@@ -43,9 +57,18 @@ void main() {
     played = [];
     queued = [];
     folders = [];
+    artAsked = [];
+    artFound = {};
     YtdlListActions.play = (song) async => played.add(song);
     YtdlListActions.queue = (song) async => queued.add(song);
-    YtdlListActions.showFolder = (_, server, directory) => folders.add(directory);
+    YtdlListActions.showFolder = (_, server, directory) {
+      expect(identical(server, s), isTrue, reason: "the row's own server");
+      folders.add(directory);
+    };
+    YtdlListActions.albumArt = (state, paths) async {
+      artAsked.add(paths);
+      return {for (final p in paths) p: ?artFound[p]};
+    };
   });
   tearDown(() {
     h.unwire();
@@ -167,6 +190,21 @@ void main() {
       expect(st.jobs.single.open, isTrue);
       expect(h.toastTexts, ['Hidden. The server keeps going.']);
       expect(key('ytdl-row-a1'), findsNothing);
+    });
+
+    testWidgets('the ⋮ sits inside the row: a tap at its far edge opens it', (t) async {
+      t.view.physicalSize = const Size(390 * 3, 844 * 3);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      h.fake.addEntry(url: kOneMoreTime, directory: dir, pid: 5000);
+      final st = await seed(t, [job('a1', 'adding', pid: 5000)]);
+      await pump(t, st);
+      final more = t.getRect(key('ytdl-row-more-a1'));
+      expect(more.width, greaterThanOrEqualTo(48));
+      expect(more.right, lessThanOrEqualTo(390 - 16), reason: 'not in the gutter, where taps are lost');
+      await t.tapAt(Offset(more.right - 2, more.center.dy));
+      await frames(t);
+      expect(key('ytdl-row-hide'), findsOneWidget);
     });
 
     testWidgets('still starting, or not answered yet: the ring, no ⋮', (t) async {
@@ -342,6 +380,79 @@ void main() {
       expect(key('ytdl-row-format-mp3'), findsOneWidget);
     });
 
+    testWidgets('a folder that couldn\'t be made: Try again, and Choose a folder… '
+        'adds the song into the folder picked, in its library, making nothing', (t) async {
+      s = ytdlServer(libraries: const ['Music', 'Podcasts'], formats: const ['mp3', 'm4a']);
+      h.fake.folder('/Podcasts/Shows/');
+      YtdlDraft? asked;
+      YtdlListActions.chooseFolder = (_, draft) async {
+        asked = draft;
+        return '/Podcasts/Shows/';
+      };
+      final st = await seed(t, [
+        job('x1', 'startFailed',
+            problem: 'mkdirFailed',
+            detail: 'Interviews',
+            directory: '/Podcasts/Shows/Interviews/',
+            mkdir: '/Podcasts/Shows/Interviews/'),
+      ]);
+      await pump(t, st);
+      expect(find.text("Couldn't make the folder “Interviews”."), findsOneWidget);
+      expect(key('ytdl-row-retry-x1'), findsOneWidget);
+      expect(key('ytdl-row-dismiss-x1'), findsOneWidget);
+      expect(t.getSize(key('ytdl-row-choose-folder-x1')).height, greaterThanOrEqualTo(48));
+
+      await t.tap(key('ytdl-row-choose-folder-x1'));
+      await drain(t);
+      expect(identical(asked!.owner, st), isTrue);
+      expect(asked!.choice.library, 'Podcasts', reason: "the row's library, not the remembered one");
+      expect(h.fake.count('POST', '/api/v1/file-explorer/mkdir'), 0);
+      final sent = h.fake.bodies('POST', '/api/v1/ytdl/').single;
+      expect(sent['directory'], '/Podcasts/Shows/');
+      expect(sent['url'], kOneMoreTime);
+      expect(st.jobs.where((j) => j.id == 'x1'), isEmpty, reason: 'in place of the row');
+      expect(st.adding.single.directory, '/Podcasts/Shows/');
+      expect(key('ytdl-row-x1'), findsNothing);
+    });
+
+    testWidgets('Choose a folder… closed without a folder: the row stays', (t) async {
+      YtdlListActions.chooseFolder = (_, _) async => null;
+      final st = await seed(t, [
+        job('x1', 'startFailed', problem: 'mkdirFailed', detail: 'Discovery', mkdir: dir),
+      ]);
+      await pump(t, st);
+      await t.tap(key('ytdl-row-choose-folder-x1'));
+      await drain(t);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+      expect(key('ytdl-row-x1'), findsOneWidget);
+    });
+
+    testWidgets('an account that can\'t make folders: Top of the library adds into '
+        'the library\'s top; Choose a folder…; no Try again', (t) async {
+      YtdlListActions.chooseFolder = (_, _) async => '/Music/Daft Punk/';
+      final st = await seed(t, [
+        job('x1', 'startFailed', problem: 'mkdirOff', mkdir: dir),
+        job('x2', 'startFailed', problem: 'mkdirOff', mkdir: dir, url: kFeelGood, title: 'Feel Good Inc.'),
+      ]);
+      await pump(t, st);
+      expect(find.text("“Discovery” doesn't exist yet and your account can't make folders."),
+          findsNWidgets(2));
+      expect(key('ytdl-row-retry-x1'), findsNothing);
+      expect(key('ytdl-row-choose-folder-x1'), findsOneWidget);
+      expect(find.descendant(of: key('ytdl-row-top-x1'), matching: find.text('Top of the library')),
+          findsOneWidget);
+
+      await t.tap(key('ytdl-row-top-x1'));
+      await drain(t);
+      await t.tap(key('ytdl-row-choose-folder-x2'));
+      await drain(t);
+      expect(h.fake.count('POST', '/api/v1/file-explorer/mkdir'), 0);
+      expect([for (final b in h.fake.bodies('POST', '/api/v1/ytdl/')) b['directory']],
+          ['/Music/', '/Music/Daft Punk/']);
+      expect(key('ytdl-row-x1'), findsNothing);
+      expect(key('ytdl-row-x2'), findsNothing);
+    });
+
     testWidgets('the anchor sits on the NEEDS A LOOK header', (t) async {
       h.fake.addEntry(url: kOneMoreTime, directory: dir, pid: 5000);
       final st = await seed(t, [
@@ -369,18 +480,34 @@ void main() {
           downloadedAt: DateTime(2026, 10, 12, 9).millisecondsSinceEpoch,
           origin: 'https://www.youtube.com/watch?v=s2');
       h.fake.addRecord(
+          relativePath: 'Queen/Bohemian_Rhapsody.mp3',
+          title: 'Bohemian Rhapsody',
+          bytes: 13600000,
+          downloadedAt: at(const Duration(days: 2)),
+          origin: 'https://www.youtube.com/watch?v=br');
+      h.fake.addRecord(
           relativePath: 'Gorillaz/Gorillaz/Clint_Eastwood.m4a',
           title: 'Clint Eastwood',
-          bytes: 5452595,
+          bytes: 5200000,
           downloadedAt: at(const Duration(hours: 20)),
           origin: 'https://www.youtube.com/watch?v=ce');
       h.fake.addRecord(
           relativePath: 'Daft Punk/Random Access Memories/Instant_Crush.mp3',
           title: 'Instant Crush',
-          bytes: 8808038,
+          bytes: 8400000,
           downloadedAt: at(const Duration(minutes: 3)),
           origin: 'https://www.youtube.com/watch?v=ic');
     }
+
+    const instantCrush = 'Music/Daft Punk/Random Access Memories/Instant_Crush.mp3';
+
+    /// The network images drawn, by URL.
+    List<String> images(WidgetTester t) => [
+          for (final i in t.widgetList<Image>(find.byType(Image)))
+            if ((i.image is ResizeImage ? (i.image as ResizeImage).imageProvider : i.image)
+                case NetworkImage(:final url))
+              url,
+        ];
 
     testWidgets('rows read the format, size and when; a missing file is greyed '
         'with nothing to tap', (t) async {
@@ -388,8 +515,10 @@ void main() {
       final st = await seed(t);
       await pump(t, st);
       expect(find.text('ADDED'), findsOneWidget);
+      // Decimal megabytes to one place, as the board reads them.
       expect(find.text('MP3 · 8.4 MB · 3 min ago'), findsOneWidget);
       expect(find.text('M4A · 5.2 MB · yesterday'), findsOneWidget);
+      expect(find.text('MP3 · 13.6 MB · 2 days ago'), findsOneWidget);
       expect(find.text('File missing · Oct 12'), findsOneWidget);
       expect(find.byIcon(Icons.music_off_outlined), findsOneWidget);
       expect(find.byTooltip('More for Song 2'), findsNothing);
@@ -420,6 +549,85 @@ void main() {
       await t.tap(key('ytdl-added-show-in-folder'));
       await frames(t);
       expect(folders, ['/Music/Daft Punk/Random Access Memories/']);
+    });
+
+    testWidgets('the library\'s art: one batched read for the songs it can name, '
+        'drawn on their rows, asked once', (t) async {
+      records();
+      artFound = {instantCrush: 'ab12cd.jpg'};
+      final st = await seed(t);
+      await pump(t, st);
+      await t.pump();
+      expect(artAsked, hasLength(1));
+      expect(artAsked.single.toSet(), {
+        instantCrush,
+        'Music/Gorillaz/Gorillaz/Clint_Eastwood.m4a',
+        'Music/Queen/Bohemian_Rhapsody.mp3',
+      }, reason: 'not the song gone from the library');
+      expect(images(t), [buildAlbumArtUrl(s, 'ab12cd.jpg')], reason: 'the others keep the note');
+
+      await t.runAsync(() => st.refreshAdded());
+      await t.pump();
+      expect(artAsked, hasLength(1));
+    });
+
+    test('ytdlAlbumArt: the paths as one bare array on the hub\'s client; each '
+        'song\'s art file back, none for one without', () async {
+      final asked = <http.Request>[];
+      h.hub.makeApi = (server) => YtdlApi(server, client: MockClient((req) async {
+            asked.add(req);
+            return http.Response(
+                jsonEncode({
+                  'Music/A/One.mp3': {
+                    'filepath': 'Music/A/One.mp3',
+                    'metadata': {'album-art': 'one.jpg', 'title': 'One'},
+                  },
+                  'Music/A/Two.mp3': {
+                    'filepath': 'Music/A/Two.mp3',
+                    'metadata': {'album-art': null},
+                  },
+                  'Music/A/Gone.mp3': {'filepath': 'Music/A/Gone.mp3', 'metadata': null},
+                }),
+                200);
+          }));
+      final paths = ['Music/A/One.mp3', 'Music/A/Two.mp3', 'Music/A/Gone.mp3'];
+      expect(await ytdlAlbumArt(h.hub.stateFor(s), paths), {'Music/A/One.mp3': 'one.jpg'});
+      expect(asked.single.method, 'POST');
+      expect(asked.single.url.toString(), 'http://music.example/api/v1/db/metadata/batch');
+      expect(asked.single.headers['x-access-token'], 'JWT');
+      expect(jsonDecode(asked.single.body), paths);
+    });
+
+    test('ytdlAlbumArt: a server without the route has no art', () async {
+      expect(await ytdlAlbumArt(h.hub.stateFor(s), ['Music/A/One.mp3']), isEmpty);
+      expect(h.fake.count('POST', '/api/v1/db/metadata/batch'), 1);
+    });
+
+    testWidgets('390 dp: the words run up to the ⋮, whose whole 48 px is inside '
+        'the row and answers a tap at its far edge', (t) async {
+      t.view.physicalSize = const Size(390 * 3, 844 * 3);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      records();
+      final st = await seed(t);
+      await pump(t, st);
+      final more = t.getRect(find.ancestor(
+          of: find.byTooltip('More for Instant Crush'),
+          matching: find.byWidgetPredicate((w) => w is PopupMenuButton)));
+      final play = t.getRect(find.ancestor(
+          of: find.text('Instant Crush'),
+          matching: find.byWidgetPredicate((w) =>
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith('ytdl-added-play-'))));
+      expect(more.width, greaterThanOrEqualTo(48));
+      expect(more.right, lessThanOrEqualTo(390 - 16));
+      expect(play.right, more.left, reason: 'no gap: the button\'s own padding is the gap');
+      // cover 48 + 12: the words get the board's ~254 px less the 4 px the
+      // 48 px button takes over the board's 44.
+      expect(play.width - 60, greaterThanOrEqualTo(250));
+      await t.tapAt(Offset(more.right - 2, more.center.dy));
+      await frames(t);
+      expect(key('ytdl-added-show-in-folder'), findsOneWidget);
     });
 
     testWidgets('a file the phone can\'t name: no play and no Add to queue', (t) async {
@@ -489,6 +697,40 @@ void main() {
       expect(find.text('Songs added from the web app show up here too.'), findsNothing);
     });
 
+    testWidgets('not while ADDED\'s first read is out: the rows come, never the '
+        'empty state before them', (t) async {
+      h.fake.addRecord(
+          relativePath: 'Daft Punk/Random Access Memories/Instant_Crush.mp3',
+          title: 'Instant Crush',
+          origin: 'https://www.youtube.com/watch?v=ic');
+      h.fake.recordsGate = Completer<void>();
+      final st = h.hub.stateFor(s);
+      unawaited(st.probeTier());
+      await pump(t, st);
+      expect(st.addedLoading, isTrue);
+      expect(key('ytdl-lists-empty'), findsNothing);
+      h.fake.recordsGate!.complete();
+      h.fake.recordsGate = null;
+      await drain(t);
+      expect(st.addedLoading, isFalse);
+      expect(find.text('Instant Crush'), findsOneWidget);
+      expect(key('ytdl-lists-empty'), findsNothing);
+    });
+
+    testWidgets('a first read that fails: the empty state once it gives up', (t) async {
+      h.fake.recordsGate = Completer<void>();
+      h.fake.recordsThrows = const SocketException('Network is unreachable');
+      final st = h.hub.stateFor(s);
+      unawaited(st.probeTier());
+      await pump(t, st);
+      expect(key('ytdl-lists-empty'), findsNothing);
+      h.fake.recordsGate!.complete();
+      h.fake.recordsGate = null;
+      await drain(t);
+      expect(st.tier, YtdlServerTier.unknown);
+      expect(key('ytdl-lists-empty'), findsOneWidget);
+    });
+
     testWidgets('off while the screen shows a card', (t) async {
       final st = await seed(t);
       await pump(t, st, showEmpty: false);
@@ -524,6 +766,34 @@ void main() {
     await t.drag(find.byType(ListView), const Offset(0, -3000));
     await t.pump();
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('read aloud: a section\'s note with its header; an ADDED row is one '
+      'button named by its words, with no "Cover" image in it', (t) async {
+    final handle = t.ensureSemantics();
+    h.fake.addEntry(url: kOneMoreTime, directory: dir, pid: 5000);
+    h.fake.addRecord(
+        relativePath: 'Daft Punk/Random Access Memories/Instant_Crush.mp3',
+        title: 'Instant Crush',
+        bytes: 8400000,
+        downloadedAt: h.clock.current.subtract(const Duration(minutes: 3)).millisecondsSinceEpoch,
+        origin: 'https://www.youtube.com/watch?v=ic');
+    final st = await seed(t, [job('a1', 'adding', pid: 5000)]);
+    await pump(t, st);
+    expect(
+        t.getSemantics(find.text('ADDING')),
+        isSemantics(
+            label: "ADDING\nRuns on the server · can't be stopped from the app", isHeader: true));
+    expect(find.bySemanticsLabel("Runs on the server · can't be stopped from the app"), findsNothing,
+        reason: 'the note is no other node\'s label');
+    final row = t.getSemantics(find.text('Instant Crush'));
+    final spoken = row.getSemanticsData().label;
+    expect(spoken, startsWith('Instant Crush'));
+    expect(spoken, contains('Music, then Daft Punk, then Random Access Memories'));
+    expect(spoken, contains('MP3 · 8.4 MB · 3 min ago'));
+    expect(spoken, isNot(contains('Cover')));
+    expect(row, isSemantics(isButton: true, hasTapAction: true, isImage: false));
+    handle.dispose();
   });
 
   testWidgets('touch targets are at least 48 px', (t) async {

@@ -4,8 +4,10 @@
 // uploads off, with audio conversion off and with no library; its label is
 // the screen's title. Its second line (YtdlHomeLines) is live from the
 // server's state, first count wins: "Adding {n}" in the primary's ink,
-// "{n} failed" in the error tone, "Added {n}" in grey, else nothing — and
-// the counts the screen has shown clear. In the browser the card opens
+// "{n} failed" in the error tone (failures only: a "not sure" row is a
+// guess), "Added {n}" in grey for an hour — gone on its own while it shows
+// — else nothing, and the counts the screen has shown clear. In the
+// browser the card opens
 // YtdlScreen for its server, and at 360 dp (also at 200% text) the label
 // wraps without overflowing.
 
@@ -184,6 +186,39 @@ void main() {
     testWidgets('"Added" lasts an hour', (t) async {
       s.ytdlJobs = [job('d1', 'added', ago: const Duration(minutes: 70))];
       await pumpLines(t, h.hub.stateFor(s));
+      expect(find.byKey(const ValueKey('ytdl-home-lines')), findsNothing);
+    });
+
+    testWidgets('"Added" goes on its own once its hour is up, while it shows', (t) async {
+      s.ytdlJobs = [
+        job('d1', 'added', ago: const Duration(minutes: 50)),
+        job('d2', 'added', ago: const Duration(minutes: 20), url: kSweater),
+      ];
+      final st = h.hub.stateFor(s);
+      await pumpLines(t, st);
+      expect(find.text('Added 2'), findsOneWidget);
+      await t.runAsync(() => h.timers.elapse(const Duration(minutes: 11)));
+      await t.pump();
+      expect(find.text('Added 1'), findsOneWidget);
+      await t.runAsync(() => h.timers.elapse(const Duration(minutes: 30)));
+      await t.pump();
+      expect(find.byKey(const ValueKey('ytdl-home-lines')), findsNothing);
+      expect(h.timers.active, isEmpty, reason: 'nothing left to wake for');
+    });
+
+    testWidgets('"{n} failed" counts failures, not the rows that are only not sure', (t) async {
+      s.ytdlJobs = [
+        job('n1', 'notSureFinished'),
+        job('n2', 'notSureStarted', url: kFeelGood),
+        job('n3', 'notFound', url: kSweater),
+        job('f1', 'failed', url: 'https://www.youtube.com/watch?v=f1'),
+      ];
+      final st = h.hub.stateFor(s);
+      await pumpLines(t, st);
+      expect(find.text('1 failed'), findsOneWidget);
+      st.dismiss(st.jobs.firstWhere((j) => j.id == 'f1'));
+      await t.pump();
+      expect(st.needsLook, hasLength(3));
       expect(find.byKey(const ValueKey('ytdl-home-lines')), findsNothing);
     });
 

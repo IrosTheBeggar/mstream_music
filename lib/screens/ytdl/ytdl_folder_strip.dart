@@ -187,9 +187,11 @@ class _YtdlFolderStripState extends State<YtdlFolderStrip> {
     } catch (_) {
       return;
     }
+    // What the folder held before, for "new": read before the swap.
+    final had = {for (final r in frame) ?r.data?.toLowerCase()};
     if (!bm.replaceFrame(frame, rows)) return;
     if (job.state != YtdlJobState.added || bm.currentPath != path) return;
-    final lit = _rowFor(job, rows);
+    final lit = _rowFor(job, rows, had);
     if (lit != null) {
       YtdlRowHighlight.light(server, lit, timer: _state.hub.timer);
     }
@@ -197,14 +199,16 @@ class _YtdlFolderStripState extends State<YtdlFolderStrip> {
 
   /// The row [job] put in the folder on screen: its file when it went right
   /// here — named by the download record, else the predicted name — or the
-  /// subfolder it went into. Null when no listed row matches (nothing is
-  /// tinted then).
-  String? _rowFor(YtdlJob job, List<DisplayItem> rows) {
+  /// subfolder it went into, only when that subfolder is new (not among
+  /// [had], the rows listed before). Null when no listed row matches
+  /// (nothing is tinted then).
+  String? _rowFor(YtdlJob job, List<DisplayItem> rows, Set<String> had) {
     final here = pathCrumbs(widget.path);
     final there = pathCrumbs(job.directory);
     String? want;
     if (there.length > here.length) {
       want = p.join(widget.path, there[here.length]);
+      if (had.contains(want.toLowerCase())) return null;
     } else {
       final named = job.filepath;
       if (named != null && named.isNotEmpty) {

@@ -10,12 +10,18 @@
 // Details). The re-list when a job settles in the folder on screen or
 // below: the frame replaced in place (the scroll offset kept), the new
 // subfolder or file tinted for 2 s with its row's height unchanged, nothing
-// for another folder or once the user has left.
+// for a subfolder that was already there, another folder or once the user
+// has left. And a row's Show folder with the real wiring: the screen popped
+// back to the browser, its search and album closed, the folder listed on
+// the row's own server.
 
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/build_variant.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
@@ -23,6 +29,7 @@ import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/browser.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_folder_strip.dart';
+import 'package:mstream_music/screens/ytdl/ytdl_lists.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_screen.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
@@ -388,6 +395,84 @@ void main() {
       await drain(t);
       expect(listings(daftPunk), hasLength(1));
       expect(tile(t, 'Discovery').tileColor, isNull);
+    });
+
+    testWidgets('into a subfolder that was already there: listed again, nothing tinted',
+        (t) async {
+      for (final r in daftPunkRows()) {
+        h.fake.folder('$daftPunk${r.name}/');
+      }
+      open(daftPunk, daftPunkRows());
+      await pump(t);
+      await startIn(t, '${daftPunk}Homework/');
+      await finishAll(t);
+      expect(listings(daftPunk), hasLength(1));
+      expect(tile(t, 'Homework').tileColor, isNull);
+      expect(YtdlRowHighlight.isLit(folder(daftPunk, 'Homework')), isFalse);
+    });
+
+    testWidgets('a parent of the folder: its child that was already there is not '
+        'tinted; one the add made is', (t) async {
+      final music = [folder('/Music/', 'Daft Punk'), folder('/Music/', 'Gorillaz')];
+      h.fake.folder('/Music/Gorillaz/');
+      h.fake.folder(daftPunk);
+      open('/Music/', music);
+      await pump(t);
+      await startIn(t, discovery);
+      await finishAll(t);
+      expect(listings('/Music/'), hasLength(1));
+      expect(tile(t, 'Daft Punk').tileColor, isNull);
+
+      await startIn(t, '/Music/Blur/Parklife/');
+      await finishAll(t);
+      expect(tile(t, 'Blur').tileColor, VelvetColors.primaryDim);
+    });
+  });
+
+  group('Show folder', () {
+    testWidgets('back to the browser under the screen, search and album closed, '
+        'the folder listed on the row\'s own server', (t) async {
+      final other = Server('http://other.example', null, null, 'JWT', 'other');
+      ServerManager().serverList.add(other);
+      ServerManager().currentServer = other;
+      h.fake.folder(discovery, files: ['One_More_Time.mp3']);
+      s.ytdlJobs = [
+        {
+          'id': 'n1',
+          'url': kOneMoreTime,
+          'directory': discovery,
+          'codec': 'mp3',
+          'title': 'One More Time',
+          'predictedName': 'One_More_Time.mp3',
+          'createdAt': h.clock.current.millisecondsSinceEpoch,
+          'endedAt': h.clock.current.millisecondsSinceEpoch,
+          'state': 'notSureFinished',
+        }
+      ];
+      final st = h.hub.stateFor(s);
+      open(daftPunk, daftPunkRows());
+      await pump(t);
+      BrowserManager().openSearch();
+      BrowserManager().openAlbumDetail(DisplayItem(s, 'Homework', 'album', 'Homework', null, null));
+      final nav = t.state<NavigatorState>(find.byType(Navigator));
+      unawaited(nav.push(MaterialPageRoute<void>(
+          builder: (_) => Scaffold(body: ListView(children: [YtdlLists(state: st)])))));
+      await t.pumpAndSettle();
+      expect(find.byType(YtdlLists), findsOneWidget);
+
+      await http.runWithClient(() async {
+        await t.tap(find.byKey(const ValueKey('ytdl-row-show-folder-n1')));
+        await drain(t);
+      }, () => h.fake.client);
+      await t.pumpAndSettle();
+      expect(find.byType(YtdlLists), findsNothing, reason: 'popped back to the browser');
+      expect(BrowserManager().search.open, isFalse);
+      expect(BrowserManager().albumDetail, isNull);
+      final asked = h.fake.calls('POST', '/api/v1/file-explorer').single;
+      expect(asked.url.host, 'music.example', reason: "the row's server, not the current one");
+      expect((jsonDecode(asked.body) as Map)['directory'], discovery);
+      expect(BrowserManager().currentPath, discovery);
+      expect(find.text('One_More_Time.mp3'), findsOneWidget);
     });
   });
 }

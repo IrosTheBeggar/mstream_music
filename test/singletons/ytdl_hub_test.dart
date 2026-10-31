@@ -140,6 +140,34 @@ void main() {
       await state().probeTier();
       expect(state().tier, YtdlServerTier.unknown);
     });
+
+    test('ADDED reads as loading while the probe is out — set with no '
+        'notification (it may start mid-build) — and clears with one, '
+        'answered or not', () async {
+      var told = 0;
+      state().addListener(() => told++);
+      h.fake.recordsGate = Completer<void>();
+      final probe = state().probeTier();
+      expect(state().addedLoading, isTrue);
+      expect(told, 0);
+      h.fake.recordsGate!.complete();
+      await probe;
+      expect(state().addedLoading, isFalse);
+      expect(told, 1);
+
+      h.unwire();
+      h = YtdlHarness()..wire();
+      s = ytdlServer();
+      told = 0;
+      state().addListener(() => told++);
+      h.fake.recordsThrows = const SocketException('Network is unreachable');
+      final failing = state().probeTier();
+      expect(state().addedLoading, isTrue);
+      await failing;
+      expect(state().tier, YtdlServerTier.unknown);
+      expect(state().addedLoading, isFalse);
+      expect(told, 1);
+    });
   });
 
   group('the add (spec §6)', () {
@@ -942,6 +970,39 @@ void main() {
       expect(state().summary, const YtdlHomeSummary(added: 1));
       h.clock.advance(const Duration(minutes: 61));
       expect(state().summary.isEmpty, isTrue);
+    });
+
+    test('"failed" counts failures only: a not-sure row is a guess', () async {
+      h.fake.addThrows = TimeoutException('no answer');
+      final job = (await state().start(h.request())).job!;
+      await h.timers.elapse(YtdlServerState.kClaimWindow + beat);
+      expect(job.state, YtdlJobState.notSureStarted);
+      expect(state().needsLook, [job]);
+      expect(state().summary.isEmpty, isTrue);
+      h.fake.addThrows = null;
+      h.fake.addRefusal = (500, 'Server Error');
+      await state().start(h.request(url: kFeelGood));
+      expect(state().summary, const YtdlHomeSummary(failed: 1));
+    });
+
+    test('addedNewsEnds: when the first counted song\'s hour runs out', () async {
+      expect(state().addedNewsEnds, isNull);
+      final a = await started();
+      h.clock.advance(const Duration(minutes: 10));
+      final b = await started(request: h.request(url: kFeelGood));
+      h.fake.finish(a.pid!);
+      await h.timers.elapse(beat);
+      final aEnded = a.endedAt!;
+      h.clock.advance(const Duration(minutes: 5));
+      h.fake.finish(b.pid!);
+      await h.timers.elapse(beat);
+      expect(state().summary.added, 2);
+      expect(state().addedNewsEnds, aEnded.add(YtdlServerState.kAddedNews));
+      h.clock.advance(const Duration(minutes: 56));
+      expect(state().summary.added, 1);
+      expect(state().addedNewsEnds, b.endedAt!.add(YtdlServerState.kAddedNews));
+      state().markSeen();
+      expect(state().addedNewsEnds, isNull);
     });
 
     test('what settles while the screen shows is seen at once', () async {

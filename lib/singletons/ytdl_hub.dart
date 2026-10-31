@@ -39,7 +39,9 @@ enum YtdlServerTier { unknown, older, full }
 class YtdlHomeSummary {
   final int adding;
 
-  /// Rows in NEEDS A LOOK the screen has not shown yet.
+  /// Failures in NEEDS A LOOK — failed, a name clash, a start refused —
+  /// the screen has not shown yet. A "not sure" row is a guess, not a
+  /// failure (spec §1), and is not counted.
   final int failed;
 
   /// Songs that finished in the last hour, not seen on the screen yet.
@@ -561,7 +563,8 @@ class YtdlServerState extends ChangeNotifier {
         _ => false,
       };
 
-  /// A failure the explorer strip names ("Couldn't add …").
+  /// A failure the explorer strip names ("Couldn't add …") and the home
+  /// card counts ("{n} failed").
   static bool _failure(YtdlJobState s) =>
       s == YtdlJobState.failed ||
       s == YtdlJobState.failedClash ||
@@ -599,6 +602,8 @@ class YtdlServerState extends ChangeNotifier {
     return rows;
   }
 
+  /// ADDED is being read: the tier's probe (its first page), a refresh, or
+  /// Show earlier.
   bool get addedLoading => _addedLoading;
 
   /// "Show earlier" has more to ask for: a page counts every plug-in's
@@ -656,15 +661,34 @@ class YtdlServerState extends ChangeNotifier {
     var done = 0;
     for (final j in _jobs) {
       if (j.hidden || j.seen) continue;
-      if (_needsLook(j.state) && _fresh(j)) failed++;
-      final ended = j.endedAt;
-      if (j.state == YtdlJobState.added &&
-          ended != null &&
-          now.difference(ended) <= kAddedNews) {
-        done++;
-      }
+      if (_failure(j.state) && _fresh(j)) failed++;
+      if (_addedNews(j, now)) done++;
     }
     return YtdlHomeSummary(adding: adding.length, failed: failed, added: done);
+  }
+
+  /// [j] counts in the home's "Added {n}" at [now].
+  static bool _addedNews(YtdlJob j, DateTime now) {
+    final ended = j.endedAt;
+    return !j.hidden &&
+        !j.seen &&
+        j.state == YtdlJobState.added &&
+        ended != null &&
+        now.difference(ended) <= kAddedNews;
+  }
+
+  /// When the home's "Added {n}" next drops by itself — the first counted
+  /// song's hour runs out — with no change to notify of; null when it
+  /// counts nothing. A card showing it redraws then.
+  DateTime? get addedNewsEnds {
+    final now = _now;
+    DateTime? first;
+    for (final j in _jobs) {
+      if (!_addedNews(j, now)) continue;
+      final ended = j.endedAt!;
+      if (first == null || ended.isBefore(first)) first = ended;
+    }
+    return first?.add(kAddedNews);
   }
 
   /// The screen showed every outcome so far: the home's "failed" and
@@ -878,7 +902,12 @@ class YtdlServerState extends ChangeNotifier {
     return _probing ??= _probe().whenComplete(() => _probing = null);
   }
 
+  /// The probe is ADDED's first read: [addedLoading] while it runs, so the
+  /// screen draws no empty state before the rows land. Set without a
+  /// notification — the probe may start in a screen's initState, mid-build —
+  /// and cleared with one once it answers either way.
   Future<void> _probe() async {
+    _addedLoading = true;
     try {
       final read = await _readAdded();
       if (_disposed) return;
@@ -891,9 +920,11 @@ class YtdlServerState extends ChangeNotifier {
         _canShowEarlier = !read.end;
         _attribute();
       }
-      _notify();
     } catch (_) {
       // Unknown still: the older rules, and the next ask probes again.
+    } finally {
+      _addedLoading = false;
+      _notify();
     }
   }
 
