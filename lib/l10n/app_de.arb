@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.",
   "tapSubtitlePlayFromHere": "Beim Antippen wird die Warteschlange durch die Songs der aktuellen Ansicht ersetzt und die Wiedergabe beim angetippten Song gestartet.",
   "tapSubtitleAppendAndJump": "Beim Antippen wird der Song an die Warteschlange angehängt und die Wiedergabe springt dorthin – was gerade läuft, wird unterbrochen.",
-  "settingsEqSubtitle": "Bass, Mitten und Höhen anpassen. Nur Android.",
   "settingsVisualizerSource": "Visualizer-Audioquelle",
   "visualizerSourceSubtitleSynthesized": "Standard. Der Visualizer reagiert nur auf das Wiedergabe-Timing – keine Mikrofonberechtigung erforderlich.",
   "visualizerSourceSubtitleReal": "Der Visualizer reagiert auf die tatsächliche Audioausgabe. Erfordert die RECORD_AUDIO-Berechtigung unter Android.",

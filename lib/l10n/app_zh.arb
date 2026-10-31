@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。",
   "tapSubtitlePlayFromHere": "点击歌曲会用当前视图中的歌曲替换队列，并从所点击的歌曲开始播放。",
   "tapSubtitleAppendAndJump": "点击歌曲会将其添加到队列并跳转播放，打断当前正在播放的内容。",
-  "settingsEqSubtitle": "调节低音、中音和高音。仅限 Android。",
   "settingsVisualizerSource": "可视化音频来源",
   "visualizerSourceSubtitleSynthesized": "默认。可视化效果仅根据播放时间作出反应 — 无需麦克风权限。",
   "visualizerSourceSubtitleReal": "可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。",

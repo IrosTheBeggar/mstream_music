@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "Toucher un morceau l'ajoute à la file. Si la file est vide, la lecture démarre automatiquement.",
   "tapSubtitlePlayFromHere": "Toucher un morceau remplace la file par les morceaux de la vue actuelle et démarre la lecture au morceau touché.",
   "tapSubtitleAppendAndJump": "Toucher un morceau l'ajoute à la file et y saute la lecture, interrompant ce qui était en cours.",
-  "settingsEqSubtitle": "Réglez les basses, les médiums et les aigus. Android uniquement.",
   "settingsVisualizerSource": "Source audio du visualiseur",
   "visualizerSourceSubtitleSynthesized": "Par défaut. Le visualiseur réagit uniquement au rythme de lecture — aucune autorisation micro requise.",
   "visualizerSourceSubtitleReal": "Le visualiseur réagit à la sortie audio réelle. Nécessite l'autorisation RECORD_AUDIO sur Android.",

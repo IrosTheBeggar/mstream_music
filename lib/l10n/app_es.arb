@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "Al tocar una canción se añade a la cola. Si la cola está vacía, la reproducción comienza automáticamente.",
   "tapSubtitlePlayFromHere": "Al tocar una canción se reemplaza la cola con las canciones de la vista actual y la reproducción comienza en la canción tocada.",
   "tapSubtitleAppendAndJump": "Al tocar una canción se añade a la cola y la reproducción salta a ella, interrumpiendo lo que se estuviera reproduciendo.",
-  "settingsEqSubtitle": "Ajusta graves, medios y agudos. Solo en Android.",
   "settingsVisualizerSource": "Fuente de audio del visualizador",
   "visualizerSourceSubtitleSynthesized": "Predeterminado. El visualizador reacciona solo al tiempo de reproducción — no requiere permiso de micrófono.",
   "visualizerSourceSubtitleReal": "El visualizador reacciona a la salida de audio real. Requiere el permiso RECORD_AUDIO en Android.",

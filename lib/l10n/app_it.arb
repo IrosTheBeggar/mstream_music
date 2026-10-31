@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "Toccando un brano lo aggiungi alla coda. Se la coda è vuota, la riproduzione si avvia automaticamente.",
   "tapSubtitlePlayFromHere": "Toccando un brano sostituisci la coda con i brani della vista corrente e la riproduzione inizia dal brano toccato.",
   "tapSubtitleAppendAndJump": "Toccando un brano lo aggiungi alla coda e la riproduzione passa a esso, interrompendo ciò che era in riproduzione.",
-  "settingsEqSubtitle": "Regola bassi, medi e alti. Solo su Android.",
   "settingsVisualizerSource": "Sorgente audio del visualizzatore",
   "visualizerSourceSubtitleSynthesized": "Predefinito. Il visualizzatore reagisce solo alla temporizzazione della riproduzione — non richiede il permesso del microfono.",
   "visualizerSourceSubtitleReal": "Il visualizzatore reagisce all’uscita audio reale. Richiede il permesso RECORD_AUDIO su Android.",

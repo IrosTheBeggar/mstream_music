@@ -386,9 +386,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tapSubtitleAppendAndJump => '点击歌曲会将其添加到队列并跳转播放，打断当前正在播放的内容。';
 
   @override
-  String get settingsEqSubtitle => '调节低音、中音和高音。仅限 Android。';
-
-  @override
   String get settingsVisualizerSource => '可视化音频来源';
 
   @override

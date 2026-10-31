@@ -410,10 +410,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Beim Antippen wird der Song an die Warteschlange angehängt und die Wiedergabe springt dorthin – was gerade läuft, wird unterbrochen.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Bass, Mitten und Höhen anpassen. Nur Android.';
-
-  @override
   String get settingsVisualizerSource => 'Visualizer-Audioquelle';
 
   @override

@@ -798,12 +798,6 @@ abstract class AppLocalizations {
   /// **'Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.'**
   String get tapSubtitleAppendAndJump;
 
-  /// Subtitle on the Equalizer row in Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'Tune bass, mids, and treble. Android only.'**
-  String get settingsEqSubtitle;
-
   /// Visualizer audio-source picker row label + per-source subtitles.
   ///
   /// In en, this message translates to:

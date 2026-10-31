@@ -34,6 +34,7 @@ import 'screens/setup_flow.dart';
 import 'screens/welcome_screen.dart';
 import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
+import 'screens/eq/eq_screen.dart';
 import 'screens/transcode_screen.dart';
 import 'screens/visualizer_launcher.dart';
 import 'native/torrent_channel.dart';
@@ -1377,6 +1378,21 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             );
           },
         ),
+        // The equalizer is an Android-only engine (lib/screens/eq): on iOS
+        // there is nothing to open, so the entry is absent rather than a page
+        // that says so.
+        if (Platform.isAndroid)
+          ListTile(
+            leading: Icon(Icons.equalizer),
+            title: Text(l.eqTitle),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const EqScreen()),
+              );
+            },
+          ),
         ListTile(
           leading: Icon(Icons.transform),
           title: Text(l.transcodeTitle),

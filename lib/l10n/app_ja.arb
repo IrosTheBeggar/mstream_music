@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "曲をタップするとキューに追加されます。キューが空の場合は自動的に再生が始まります。",
   "tapSubtitlePlayFromHere": "曲をタップすると、現在のビューにある曲でキューを置き換え、タップした曲から再生を開始します。",
   "tapSubtitleAppendAndJump": "曲をタップするとキューに追加し、再生中の曲を中断してその曲へ再生を移します。",
-  "settingsEqSubtitle": "低音・中音・高音を調整します。Android のみ。",
   "settingsVisualizerSource": "ビジュアライザーの音声ソース",
   "visualizerSourceSubtitleSynthesized": "デフォルト。ビジュアライザーは再生タイミングのみに反応します — マイクの権限は不要です。",
   "visualizerSourceSubtitleReal": "ビジュアライザーが実際の音声出力に反応します。Android では RECORD_AUDIO 権限が必要です。",

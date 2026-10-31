@@ -404,9 +404,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.';
 
   @override
-  String get settingsEqSubtitle => 'Tune bass, mids, and treble. Android only.';
-
-  @override
   String get settingsVisualizerSource => 'Visualizer audio source';
 
   @override

@@ -410,10 +410,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нажатие на трек добавляет его в очередь и переключает воспроизведение на него, прерывая то, что играло.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Настройте низкие, средние и высокие частоты. Только на Android.';
-
-  @override
   String get settingsVisualizerSource => 'Источник звука визуализации';
 
   @override

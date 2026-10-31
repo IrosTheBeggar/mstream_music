@@ -409,10 +409,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Toucher un morceau l\'ajoute à la file et y saute la lecture, interrompant ce qui était en cours.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Réglez les basses, les médiums et les aigus. Android uniquement.';
-
-  @override
   String get settingsVisualizerSource => 'Source audio du visualiseur';
 
   @override
