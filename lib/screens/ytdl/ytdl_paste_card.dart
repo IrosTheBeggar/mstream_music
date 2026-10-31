@@ -258,9 +258,11 @@ class _YtdlPasteCardState extends State<YtdlPasteCard>
       key: const ValueKey('ytdl-paste'),
       minHeight: kYtdlHit,
       onTap: () => _d.pasteFromClipboard(),
+      // 40 px drawn, taller once its words wrap (200% text at 360 dp):
+      // a fixed height would cut the second line off.
       child: Container(
-        height: 40,
-        padding: const EdgeInsetsDirectional.only(start: 10, end: 14),
+        constraints: const BoxConstraints(minHeight: 40),
+        padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 14, 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: VelvetColors.border2),

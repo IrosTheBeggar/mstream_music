@@ -12,12 +12,13 @@
 // screen closing when a re-ping turns the feature off, a tag field kept in
 // view with SAVES TO above the keyboard — also when the Where sheet asks
 // for one — the iPhone's Done bar over the Year number pad, and 360 dp at
-// 200% text without overflow.
+// 200% text without overflow or a word cut off.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
@@ -562,6 +563,26 @@ void main() {
       h().clipboard = kOneMoreTime;
       await ui.pumpScreen(t, s, size: const Size(360, 800), textScale: 2);
       expect(t.takeException(), isNull);
+    });
+
+    testWidgets('360 dp at 200%: nothing on the empty screen is cut — the '
+        'chip grows with its words, the lands-in line keeps its format',
+        (t) async {
+      h().clipboard = kOneMoreTime;
+      await ui.pumpScreen(t, s, size: const Size(360, 800), textScale: 2);
+      final chip = t.renderObject<RenderParagraph>(find.descendant(
+          of: byKey('ytdl-paste'),
+          matching: find.text(h().l.ytdlPasteFromClipboard)));
+      expect(chip.size.height,
+          greaterThanOrEqualTo(chip.getMaxIntrinsicHeight(chip.size.width) - 0.5),
+          reason: 'every line of "Paste from clipboard" shows');
+      final lands = t.renderObject<RenderParagraph>(find.descendant(
+          of: find.byType(YtdlCrumbLine), matching: find.byType(RichText)));
+      expect(lands.text.toPlainText(), endsWith(' · MP3 ·'));
+      // Even the last folder leaves the format no room on one line: the
+      // line wraps rather than cut it (the test font is wider than the
+      // app's, so how much fits is ytdl_crumbs_test's to pin).
+      expect(lands.maxLines, 2);
     });
 
     testWidgets('360 dp at 200%: a cleaned card with its tags open fits',

@@ -1,7 +1,10 @@
 // Add from YouTube's folder paths: each crumb isolated so right-to-left
 // names keep the › order, read aloud as "Music, then Daft Punk, then
-// Discovery, a new folder", cut at the start on one line so the last folder
-// stays, and wrapped only at the separators inside the card.
+// Discovery, a new folder" (a folder the bracket warning flags read with
+// its warning word, by the warning's own rule), cut at the start on one
+// line so the last folder stays — wrapping rather than cutting the words
+// after it — and wrapped only at the separators inside the card, never
+// inside a name after its hyphen.
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -170,6 +173,36 @@ void main() {
             reason: 'at $w px a line ends "$line"');
       }
     }
+  });
+
+  testWidgets('the lands-in line wraps rather than cut the words after the '
+      'path when even its last folder leaves them no room', (tester) async {
+    tester.view.physicalSize = const Size(360 * 3, 800 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: appSupportedLocales,
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: YtdlCrumbLine(
+              crumbs: const ['Music', 'Artist', 'Album'],
+              prefix: 'Lands in ',
+              suffix: ' · MP3 ·',
+            ),
+          ),
+        ),
+      ),
+    ));
+    final para = tester.renderObject<RenderParagraph>(
+        find.descendant(of: find.byType(YtdlCrumbLine), matching: find.byType(RichText)));
+    expect(para.text.toPlainText(), endsWith('Album\u2069 · MP3 ·'));
+    expect(para.maxLines, 2);
+    expect(para.didExceedMaxLines, isFalse, reason: 'nothing is cut');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a one-line path never overflows at 360 dp and 200% text',

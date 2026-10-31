@@ -193,7 +193,8 @@ class YtdlCrumbLine extends StatelessWidget {
   final TextStyle? style;
   /// Text before the path on the same line ("Lands in "), never cut.
   final String prefix;
-  /// Text after the path on the same line (" · MP3"), never cut.
+  /// Text after the path on the same line (" · MP3"), never cut: when even
+  /// the last folder leaves it no room, the line wraps to a second.
   final String suffix;
 
   const YtdlCrumbLine({
@@ -215,6 +216,26 @@ class YtdlCrumbLine extends StatelessWidget {
     required TextScaler scaler,
     String prefix = '',
     String suffix = '',
+  }) =>
+      _fit(
+        crumbs: crumbs,
+        style: style,
+        maxWidth: maxWidth,
+        direction: direction,
+        scaler: scaler,
+        prefix: prefix,
+        suffix: suffix,
+      ).$1;
+
+  /// [fit]'s text, and whether it fits the one line.
+  static (String, bool) _fit({
+    required List<String> crumbs,
+    required TextStyle style,
+    required double maxWidth,
+    required TextDirection direction,
+    required TextScaler scaler,
+    required String prefix,
+    required String suffix,
   }) {
     bool fits(String text) {
       final tp = TextPainter(
@@ -229,12 +250,14 @@ class YtdlCrumbLine extends StatelessWidget {
     }
 
     final whole = ytdlPathText(crumbs);
-    if (crumbs.length < 2 || fits(whole)) return whole;
+    if (fits(whole)) return (whole, true);
+    if (crumbs.length < 2) return (whole, false);
     for (var drop = 1; drop < crumbs.length; drop++) {
       final tail = '…$kYtdlCrumbSep${ytdlPathText(crumbs.sublist(drop))}';
-      if (fits(tail) || drop == crumbs.length - 1) return tail;
+      if (fits(tail)) return (tail, true);
+      if (drop == crumbs.length - 1) return (tail, false);
     }
-    return whole;
+    return (whole, false);
   }
 
   @override
@@ -248,7 +271,7 @@ class YtdlCrumbLine extends StatelessWidget {
         .merge(TextStyle(fontSize: 12, color: VelvetColors.textSecondary))
         .merge(style);
     return LayoutBuilder(builder: (context, box) {
-      final text = fit(
+      final (text, fits) = _fit(
         crumbs: crumbs,
         style: s,
         maxWidth: box.maxWidth,
@@ -257,13 +280,16 @@ class YtdlCrumbLine extends StatelessWidget {
         prefix: prefix,
         suffix: suffix,
       );
+      // Even the last folder doesn't fit with the words after it (200% at
+      // 360 dp): the line wraps rather than cut them (" · MP3 ·").
+      final wrap = !fits && suffix.trim().isNotEmpty;
       return Semantics(
         label: '$prefix${ytdlSpokenPath(l, crumbs)}$suffix',
         excludeSemantics: true,
         child: Text(
           '$prefix$text$suffix',
           style: s,
-          maxLines: 1,
+          maxLines: wrap ? 2 : 1,
           overflow: TextOverflow.ellipsis,
         ),
       );
