@@ -4,7 +4,8 @@
 // split, cleaned, with its restore chips, Undo all and Swap; YouTube's
 // artist with the tags open by themselves and "↶ VEVO"), "Edited" and each
 // blank field's line, the year rule, SAVES TO (new folders, the file name
-// cut in the middle but read in full, left-out variables, "Couldn't check
+// cut in the middle — measured with the theme's letter spacing — but read
+// in full, left-out variables, "Couldn't check
 // this folder", letters outside A–Z), the bracket warning's links to the
 // field, the name check by tier (Add anyway; blocked with Change format
 // and Change), the noMkdir choices, the summary a screen reader hears, the
@@ -15,6 +16,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
@@ -261,6 +263,40 @@ void main() {
       expect(shown, contains('…'));
       expect(shown, endsWith('.mp3'));
       handle.dispose();
+    });
+
+    testWidgets('the cut is measured in the face it is drawn in: the theme\'s '
+        'letter spacing keeps a long name to one middle-cut line', (t) async {
+      const name = 'Daft_Punk_-_Harder_Better_Faster_Stronger.mp3';
+      // Room for the whole line without the theme's spacing, not with it.
+      final bare = TextPainter(
+        text: TextSpan(children: [
+          const TextSpan(
+              text: 'about ', style: TextStyle(fontSize: 12, height: 16 / 12)),
+          const TextSpan(
+              text: name,
+              style: TextStyle(
+                  fontFamily: 'monospace', fontSize: 11.5, height: 16 / 12)),
+        ]),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final width = bare.width + 20;
+      bare.dispose();
+      ui.phone(t);
+      await t.pumpWidget(ui.app(Scaffold(
+        body: Center(
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(letterSpacing: 2),
+            child: SizedBox(width: width, child: const YtdlFileLine(name: name)),
+          ),
+        ),
+      )));
+      final shown = shownTexts(t).firstWhere((s) => s.startsWith('about '));
+      expect(shown, contains('…'));
+      expect(shown, endsWith('.mp3'));
+      final para = t.renderObject<RenderParagraph>(find.descendant(
+          of: find.byType(YtdlFileLine), matching: find.byType(RichText)));
+      expect(para.size.height, lessThan(24), reason: 'one line, not two');
     });
 
     testWidgets('the restore chips are read as what they put back', (t) async {

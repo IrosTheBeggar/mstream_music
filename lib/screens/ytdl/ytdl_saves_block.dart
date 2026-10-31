@@ -232,11 +232,14 @@ class YtdlFileLine extends StatelessWidget {
     final (before, after) = ytdlAround(
       dropsLetters ? l.ytdlFileAboutLettersDropped : l.ytdlFileAbout,
     );
-    final about = TextStyle(
+    // Measured as drawn: the painter in [_fit] doesn't inherit
+    // DefaultTextStyle, and the theme's face and letter spacing would make
+    // a name it thought fits wrap to a second line.
+    final about = DefaultTextStyle.of(context).style.merge(TextStyle(
       color: VelvetColors.helper,
       fontSize: 12,
       height: 16 / 12,
-    );
+    ));
     final mono = about.copyWith(
       color: VelvetColors.textSecondary,
       fontFamily: 'monospace',
