@@ -42,6 +42,8 @@ enum YtdlAddPhase { idle, starting, failed }
 /// off (a re-ping after "FFmpeg is not available yet" said so) — spec §8:
 /// the button goes and [YtdlServerState.entryAllowed] is false, so the
 /// home card hides; the screen or sheet stays, and the lookup still works.
+/// It comes before [noLink]: the folder sheet's bar shows with no card, and
+/// an empty field or a playlist must not bring the button back.
 enum YtdlBlock {
   none,
   lookingUp,
@@ -1132,8 +1134,8 @@ class YtdlDraft extends ChangeNotifier {
   }
 
   YtdlBlock get block {
-    if (parsed.kind != YtdlLinkKind.video) return YtdlBlock.noLink;
     if (owner.server.transcodeAvailable == false) return YtdlBlock.convertOff;
+    if (parsed.kind != YtdlLinkKind.video) return YtdlBlock.noLink;
     if (_lookup == YtdlLookupState.offline) return YtdlBlock.offline;
     if (_lookup == YtdlLookupState.ytdlpMissing) return YtdlBlock.ytdlpMissing;
     if (!_manual &&

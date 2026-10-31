@@ -1134,6 +1134,10 @@ void main() {
       expect(heard, greaterThan(0));
       expect(d.block, YtdlBlock.convertOff);
       expect(st().entryAllowed, isFalse);
+      // The server's own state outranks the field's: emptied, it still
+      // reads conversion off, so no button comes back (spec §8).
+      d.link.text = '';
+      expect(d.block, YtdlBlock.convertOff);
     });
   });
 

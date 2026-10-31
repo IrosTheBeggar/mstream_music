@@ -14,10 +14,10 @@
 // Right here (but an add still starting going where it was sent); the
 // name check by tier; the feature turned off by a re-ping leaving an
 // open sheet open (on either page; the lookup goes on, Add off or gone
-// with the line saying why), and opening nothing (a stale menu item, the
-// picker coming back), saying why; no keyboard brought back by the format
-// menu closing; the subfolders page deaf to its draft once on its way out;
-// 360 dp at 200% without overflow.
+// with the line saying why, the field emptied too), and opening nothing
+// (a stale menu item, the picker coming back), saying why; no keyboard
+// brought back by the format menu closing; the subfolders page deaf to
+// its draft once on its way out; 360 dp at 200% without overflow.
 
 import 'dart:async';
 
@@ -618,6 +618,23 @@ void main() {
     expect(d.lookup, YtdlLookupState.found);
     expect(h().fake.count('GET', '/api/v1/ytdl/metadata'), 2);
     expect(find.byType(YtdlFolderSheet), findsOneWidget);
+  });
+
+  testWidgets('conversion off, then the link cleared or a playlist pasted: '
+      'still no button, still the line (spec §8: the button goes)', (t) async {
+    final d = await filled(t);
+    s.transcodeAvailable = false;
+    await h().hub.stateFor(s).rememberFormat('mp3');
+    await t.pumpAndSettle();
+    await t.tap(byKey('ytdl-clear'));
+    await t.pumpAndSettle();
+    expect(d.link.text, isEmpty);
+    expect(byKey('ytdl-add'), findsNothing);
+    expect(byKey('ytdl-format'), findsOneWidget);
+    expect(shows(t, h().l.ytdlErrFfmpeg), isTrue);
+    await ui.paste(t, d, 'https://www.youtube.com/playlist?list=PL0123');
+    expect(byKey('ytdl-add'), findsNothing);
+    expect(shows(t, h().l.ytdlErrFfmpeg), isTrue);
   });
 
   testWidgets('a re-ping that turns uploads off keeps the sheet on its '
