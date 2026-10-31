@@ -4945,6 +4945,23 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get autoDjQuickSettings => 'Auto DJ 快速设置';
+
+  @override
+  String get autoDjAllSettings => '所有 Auto DJ 设置';
+
+  @override
+  String autoDjServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 台服务器',
+      one: '1 台服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjFirstSong => '第一首';
 
   @override

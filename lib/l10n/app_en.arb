@@ -5821,6 +5821,23 @@
   "@autoDjServersTakingPart": {
     "placeholders": {"count": {"type": "int"}, "total": {"type": "int"}}
   },
+  "autoDjQuickSettings": "Auto DJ quick settings",
+  "@autoDjQuickSettings": {
+    "description": "Tooltip and screen-reader name of the chevron beside the Auto DJ button (mini player, queue header), and of the popover it opens."
+  },
+  "autoDjAllSettings": "All Auto DJ settings",
+  "@autoDjAllSettings": {
+    "description": "Link at the bottom of Auto DJ quick settings that opens the whole Auto DJ screen."
+  },
+  "autoDjServerCount": "{count, plural, =1{1 server} other{{count} servers}}",
+  "@autoDjServerCount": {
+    "description": "How many servers are ticked in Play from, in Auto DJ quick settings.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "autoDjFirstSong": "First song",
   "autoDjFirstSongRandom": "Random",
   "autoDjFirstSongChoose": "Choose",

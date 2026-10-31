@@ -5393,6 +5393,25 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get autoDjQuickSettings => 'Быстрые настройки Авто-DJ';
+
+  @override
+  String get autoDjAllSettings => 'Все настройки Авто-DJ';
+
+  @override
+  String autoDjServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count сервера',
+      many: '$count серверов',
+      few: '$count сервера',
+      one: '$count сервер',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjFirstSong => 'Первый трек';
 
   @override

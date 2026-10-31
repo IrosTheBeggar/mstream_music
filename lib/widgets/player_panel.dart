@@ -13,6 +13,7 @@ import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import 'more_actions_sheet.dart';
+import 'auto_dj_quick_config.dart';
 import 'discover_queue_bar.dart';
 import 'fact_badge.dart';
 import 'queue_list.dart';
@@ -1086,170 +1087,147 @@ class _MiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final handler = MediaManager().audioHandler;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       onVerticalDragUpdate: onDragUpdate,
       onVerticalDragEnd: onDragEnd,
-      child: Material(
-        color: VelvetColors.appBarBg,
-        elevation: 10,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Lip / grab handle — signals the bar can be pulled up.
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 5),
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.28),
-                  borderRadius: BorderRadius.circular(4),
+      // Quick config opens above the mini player and leaves it undimmed.
+      child: AutoDjAnchorBar(
+        child: Material(
+          color: VelvetColors.appBarBg,
+          elevation: 10,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Lip / grab handle — signals the bar can be pulled up.
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 5),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
-            ),
-            // Title · artist + position / duration.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 3),
-              child: StreamBuilder<_MediaPos>(
-                stream: _mediaPos,
-                builder: (context, snap) {
-                  final item = snap.data?.item;
-                  final pos = snap.data?.position ?? Duration.zero;
-                  final dur = item?.duration;
-                  return SizedBox(
-                    height: 18,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item == null
-                                ? ''
-                                : (item.artist == null
-                                    ? item.title
-                                    : '${item.title}  ·  ${item.artist}'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+              // Title · artist + position / duration.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 3),
+                child: StreamBuilder<_MediaPos>(
+                  stream: _mediaPos,
+                  builder: (context, snap) {
+                    final item = snap.data?.item;
+                    final pos = snap.data?.position ?? Duration.zero;
+                    final dur = item?.duration;
+                    return SizedBox(
+                      height: 18,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item == null
+                                  ? ''
+                                  : (item.artist == null
+                                      ? item.title
+                                      : '${item.title}  ·  ${item.artist}'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: VelvetColors.appBarText,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _transcodeBadge(context, item),
+                          Text(
+                            dur == null
+                                ? _fmt(pos)
+                                : '${_fmt(pos)} / ${_fmt(dur)}',
                             style: TextStyle(
-                                color: VelvetColors.appBarText,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500),
+                                fontFamily: 'monospace',
+                                fontSize: 10.5,
+                                color: VelvetColors.appBarTextSecondary),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        _transcodeBadge(context, item),
-                        Text(
-                          dur == null
-                              ? _fmt(pos)
-                              : '${_fmt(pos)} / ${_fmt(dur)}',
-                          style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10.5,
-                              color: VelvetColors.appBarTextSecondary),
-                        ),
-                      ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Seekable waveform (the "original" mStream bottom-bar scrubber).
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: StreamBuilder<_MediaPos>(
+                  stream: _mediaPos,
+                  builder: (context, snap) {
+                    final item = snap.data?.item;
+                    final pos = snap.data?.position ?? Duration.zero;
+                    final dur = item?.duration;
+                    final ratio = (dur == null || dur.inMilliseconds == 0)
+                        ? 0.0
+                        : (pos.inMilliseconds / dur.inMilliseconds)
+                            .clamp(0.0, 1.0);
+                    return WaveformProgress(
+                      height: 18,
+                      progress: ratio,
+                      seed: item?.id,
+                      onSeek: dur == null
+                          ? null
+                          : (f) => handler.seek(Duration(
+                              milliseconds: (dur.inMilliseconds * f).toInt())),
+                    );
+                  },
+                ),
+              ),
+              // Transport row. Pared back to what a mini player is for: get it
+              // going, skip forward, arm the DJ.
+              // Previous, shuffle, repeat and the overflow all live in the full
+              // player a swipe away — duplicating them here bought a crowded
+              // strip of identical grey glyphs where the one control people
+              // actually reach for was indistinguishable from the rest.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 2, 6, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      // Accent-coloured, not a filled circle: it stays the same
+                      // flat glyph as its neighbours and just carries the theme
+                      // colour, so it reads as the primary action without
+                      // turning into a second, heavier control.
+                      StreamBuilder<bool>(
+                        stream: handler.playbackState
+                            .map((s) => s.playing)
+                            .distinct(),
+                        builder: (context, snap) {
+                          final playing = snap.data ?? false;
+                          return _btn(
+                              playing ? Icons.pause : Icons.play_arrow,
+                              playing ? handler.pause : handler.play,
+                              active: true);
+                        },
+                      ),
+                      _btn(Icons.skip_next, handler.skipToNext),
+                    ]),
+                    // Right: one labelled button rather than three glyphs. Wide
+                    // on purpose — it is the only thing over here, and a word
+                    // reads faster than an icon nobody has learned yet. Its
+                    // chevron opens quick config, above the bar.
+                    const Padding(
+                      padding: EdgeInsets.only(right: 2),
+                      child: AutoDjSplitButton(menuAbove: true),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-            // Seekable waveform (the "original" mStream bottom-bar scrubber).
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: StreamBuilder<_MediaPos>(
-                stream: _mediaPos,
-                builder: (context, snap) {
-                  final item = snap.data?.item;
-                  final pos = snap.data?.position ?? Duration.zero;
-                  final dur = item?.duration;
-                  final ratio = (dur == null || dur.inMilliseconds == 0)
-                      ? 0.0
-                      : (pos.inMilliseconds / dur.inMilliseconds)
-                          .clamp(0.0, 1.0);
-                  return WaveformProgress(
-                    height: 18,
-                    progress: ratio,
-                    seed: item?.id,
-                    onSeek: dur == null
-                        ? null
-                        : (f) => handler.seek(Duration(
-                            milliseconds: (dur.inMilliseconds * f).toInt())),
-                  );
-                },
-              ),
-            ),
-            // Transport row. Pared back to what a mini player is for: get it
-            // going, skip forward, arm the DJ.
-            // Previous, shuffle, repeat and the overflow all live in the full
-            // player a swipe away — duplicating them here bought a crowded
-            // strip of identical grey glyphs where the one control people
-            // actually reach for was indistinguishable from the rest.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 2, 6, 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    // Accent-coloured, not a filled circle: it stays the same
-                    // flat glyph as its neighbours and just carries the theme
-                    // colour, so it reads as the primary action without
-                    // turning into a second, heavier control.
-                    StreamBuilder<bool>(
-                      stream: handler.playbackState
-                          .map((s) => s.playing)
-                          .distinct(),
-                      builder: (context, snap) {
-                        final playing = snap.data ?? false;
-                        return _btn(
-                            playing ? Icons.pause : Icons.play_arrow,
-                            playing ? handler.pause : handler.play,
-                            active: true);
-                      },
-                    ),
-                    _btn(Icons.skip_next, handler.skipToNext),
-                  ]),
-                  // Right: one labelled button rather than three glyphs. Wide
-                  // on purpose — it is the only thing over here, and a word
-                  // reads faster than an icon nobody has learned yet.
-                  StreamBuilder<dynamic>(
-                    stream: handler.customState,
-                    builder: (context, snap) {
-                      final on = snap.data?.autoDJState != null;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 2),
-                        child: OutlinedButton(
-                          onPressed: () => toggleAutoDJ(context),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: on
-                                ? VelvetColors.primary
-                                : VelvetColors.appBarText,
-                            backgroundColor:
-                                on ? VelvetColors.primaryDim : null,
-                            side: BorderSide(
-                                color: on
-                                    ? VelvetColors.primary
-                                    : VelvetColors.border2),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 14),
-                            minimumSize: const Size(0, 34),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w700),
-                          ),
-                          child: Text(l.autoDjTitle),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

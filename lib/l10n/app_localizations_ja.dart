@@ -5014,6 +5014,23 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get autoDjQuickSettings => 'Auto DJ のクイック設定';
+
+  @override
+  String get autoDjAllSettings => 'Auto DJ のすべての設定';
+
+  @override
+  String autoDjServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 台のサーバー',
+      one: '1 台のサーバー',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjFirstSong => '最初の曲';
 
   @override
