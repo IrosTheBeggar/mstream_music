@@ -5229,14 +5229,14 @@ class AppLocalizationsJa extends AppLocalizations {
       'トランスコードのほか、設定画面以外のいくつかのオプションもリセットされます。サーバー、ダウンロード、再生履歴は残ります。';
 
   @override
-  String get ytdlTitle => 'Add from YouTube';
+  String get ytdlTitle => 'YouTube から追加';
 
   @override
   String ytdlHomeAdding(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Adding $count',
+      other: '追加中 $count',
     );
     return '$_temp0';
   }
@@ -5246,7 +5246,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Added $count',
+      other: '追加済み $count',
     );
     return '$_temp0';
   }
@@ -5256,547 +5256,526 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count failed',
+      other: '失敗 $count',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlPasteHint => 'Paste a YouTube link';
+  String get ytdlPasteHint => 'YouTube のリンクを貼り付け';
 
   @override
-  String get ytdlPasteFromClipboard => 'Paste from clipboard';
+  String get ytdlPasteFromClipboard => 'クリップボードから貼り付け';
 
   @override
   String ytdlLandsIn(String path) {
-    return 'Lands in $path';
+    return '保存先: $path';
   }
 
   @override
   String get ytdlLimits =>
-      'One video per link · the server stops at 500 MB or after an hour · no live streams or playlists';
+      '1 リンクにつき動画 1 本 · サーバーは 500 MB または 1 時間で停止 · ライブ配信とプレイリストは不可';
 
   @override
-  String get ytdlEmptyTitle => 'Paste a link to add a song to your library.';
+  String get ytdlEmptyTitle => 'リンクを貼り付けると、曲をライブラリに追加できます。';
 
   @override
-  String get ytdlEmptyWebApp =>
-      'Songs added from the web app show up here too.';
+  String get ytdlEmptyWebApp => 'ウェブアプリから追加した曲もここに表示されます。';
 
   @override
   String ytdlLinkShortSent(String link) {
-    return 'Short link: sent as $link';
+    return '短縮リンク: $link として送信';
   }
 
   @override
   String ytdlLinkSentAs(String link) {
-    return 'Sent as $link';
+    return '$link として送信';
   }
 
   @override
   String get ytdlLinkNotYoutube =>
-      'That\'s not a YouTube link. Paste one from youtube.com or youtu.be.';
+      'YouTube のリンクではありません。youtube.com か youtu.be のリンクを貼り付けてください。';
 
   @override
-  String get ytdlLinkPlaylist =>
-      'That\'s a playlist. Open one video in it and copy that link.';
+  String get ytdlLinkPlaylist => 'これはプレイリストです。その中の動画を 1 本開いて、そのリンクをコピーしてください。';
 
   @override
-  String get ytdlLinkInPlaylist => 'Just this video, not the playlist.';
+  String get ytdlLinkInPlaylist => 'プレイリストではなく、この動画だけを追加します。';
 
   @override
-  String get ytdlLinkLive =>
-      'Live streams can\'t be saved. If this one has ended, it may still work.';
+  String get ytdlLinkLive => 'ライブ配信は保存できません。この配信が終了していれば、追加できることがあります。';
 
   @override
-  String get ytdlLinkLiveOlder =>
-      'This server doesn\'t stop live streams. Add this only if the stream has ended.';
+  String get ytdlLinkLiveOlder => 'このサーバーはライブ配信を拒否しません。配信が終了している場合にだけ追加してください。';
 
   @override
-  String get ytdlLookupReading => 'Reading the video…';
+  String get ytdlLookupReading => '動画の情報を読み込み中…';
 
   @override
-  String get ytdlLookupSlow => 'Still looking — YouTube can be slow.';
+  String get ytdlLookupSlow => 'まだ確認中です — YouTube は時間がかかることがあります。';
 
   @override
-  String get ytdlLookupEnterYourself => 'Enter details yourself';
+  String get ytdlLookupEnterYourself => '情報を自分で入力';
 
   @override
   String get ytdlLookupFailed =>
-      'Couldn\'t read this video\'s details. It may be private, age-restricted or blocked for the server.';
+      'この動画の情報を読み取れませんでした。非公開、年齢制限付き、またはサーバーからのアクセスがブロックされている可能性があります。';
 
   @override
   String get ytdlLookupTimedOut =>
-      'The server took too long — it may still be setting up its downloader. Try again in a minute.';
+      'サーバーの応答に時間がかかりすぎました — まだ YouTube 用のツールを準備している可能性があります。1 分ほどしてからもう一度お試しください。';
 
   @override
-  String get ytdlLookupEnterDetails => 'Enter details';
+  String get ytdlLookupEnterDetails => '情報を入力';
 
   @override
-  String get ytdlLookupNoTags =>
-      'No tags yet, so it goes into the library\'s top folder.';
+  String get ytdlLookupNoTags => 'タグがまだないため、ライブラリの最上位フォルダーに入ります。';
 
   @override
-  String get ytdlLookupFailedUsingYours =>
-      'Couldn\'t read this video\'s details · Your details will be used.';
+  String get ytdlLookupFailedUsingYours => 'この動画の情報を読み取れませんでした · 入力した情報が使われます。';
 
   @override
-  String get ytdlLateFound => 'Details found for this video';
+  String get ytdlLateFound => 'この動画の情報が見つかりました';
 
   @override
-  String get ytdlLateUseThem => 'Use them';
+  String get ytdlLateUseThem => '反映する';
 
   @override
-  String get ytdlLateEditsStay => 'Your edits stay.';
+  String get ytdlLateEditsStay => '編集した内容はそのまま残ります。';
 
   @override
-  String get ytdlOffline =>
-      'You\'re offline — the lookup runs when you\'re back.';
+  String get ytdlOffline => 'オフラインです — 接続が戻ると動画の情報を読み込みます。';
 
   @override
   String get ytdlYtdlpMissing =>
-      'This server can\'t download from YouTube yet. Ask its admin to set up yt-dlp.';
+      'このサーバーはまだ YouTube から追加できません。管理者に yt-dlp の設定を依頼してください。';
 
   @override
-  String get ytdlCardNoAlbum => 'No album';
+  String get ytdlCardNoAlbum => 'アルバムなし';
 
   @override
-  String get ytdlSourceMusic => 'Tags from YouTube Music';
+  String get ytdlSourceMusic => 'YouTube Music のタグ';
 
   @override
-  String get ytdlSourceSplit => 'Artist and title from the video title';
+  String get ytdlSourceSplit => 'アーティストとタイトルは動画タイトルから';
 
   @override
   String get ytdlSourceSplitAgrees =>
-      'Artist and title from the video title · matches the artist YouTube lists';
+      'アーティストとタイトルは動画タイトルから · YouTube のアーティストと一致';
 
   @override
-  String get ytdlSourceChannel => 'Artist may be the channel name — check it';
+  String get ytdlSourceChannel => 'アーティストはチャンネル名かもしれません — 確認してください';
 
   @override
   String ytdlCleanedFrom(String title) {
-    return 'Cleaned from “$title”';
+    return '「$title」を整理しました';
   }
 
   @override
-  String get ytdlUndoAll => 'Undo all';
+  String get ytdlUndoAll => 'すべて元に戻す';
 
   @override
-  String get ytdlEditTags => 'Edit tags';
+  String get ytdlEditTags => 'タグを編集';
 
   @override
-  String get ytdlFieldTitle => 'Title';
+  String get ytdlFieldTitle => 'タイトル';
 
   @override
-  String get ytdlHelpMusic => 'From YouTube Music';
+  String get ytdlHelpMusic => 'YouTube Music から';
 
   @override
-  String get ytdlHelpVideoTitle => 'From the video title';
+  String get ytdlHelpVideoTitle => '動画タイトルから';
 
   @override
-  String get ytdlHelpVideoTitleCleaned => 'From the video title, cleaned';
+  String get ytdlHelpVideoTitleCleaned => '動画タイトルから（整理済み）';
 
   @override
-  String get ytdlHelpYoutubeArtist => 'From YouTube\'s artist field';
+  String get ytdlHelpYoutubeArtist => 'YouTube のアーティスト欄から';
 
   @override
-  String get ytdlHelpYoutubeArtistCheck =>
-      'From YouTube\'s artist field — check it';
+  String get ytdlHelpYoutubeArtistCheck => 'YouTube のアーティスト欄から — 確認してください';
 
   @override
   String ytdlHelpYoutubeArtistStripped(String removed) {
-    return 'From YouTube\'s artist field, “$removed” removed — check it';
+    return 'YouTube のアーティスト欄から（「$removed」を削除） — 確認してください';
   }
 
   @override
-  String get ytdlHelpEdited => 'Edited';
+  String get ytdlHelpEdited => '編集済み';
 
   @override
-  String get ytdlBlankTitle => 'Blank: the file gets the video\'s own title.';
+  String get ytdlBlankTitle => '空欄の場合、ファイルには動画の元のタイトルが付きます。';
 
   @override
-  String get ytdlBlankArtistMusic =>
-      'Blank: the file keeps YouTube Music\'s artist.';
+  String get ytdlBlankArtistMusic => '空欄の場合、ファイルには YouTube Music のアーティストが残ります。';
 
   @override
   String ytdlBlankArtistGuess(String name) {
-    return 'Blank: the file gets YouTube\'s own artist guess, often the raw channel name (here “$name”).';
+    return '空欄の場合、ファイルには YouTube が推測したアーティストが付きます。多くはチャンネル名そのままです（ここでは「$name」）。';
   }
 
   @override
   String get ytdlBlankArtistGuessUnnamed =>
-      'Blank: the file gets YouTube\'s own artist guess, often the raw channel name.';
+      '空欄の場合、ファイルには YouTube が推測したアーティストが付きます。多くはチャンネル名そのままです。';
 
   @override
-  String get ytdlBlankAlbumSingle => 'Leave blank for a single';
+  String get ytdlBlankAlbumSingle => 'シングルなら空欄のまま';
 
   @override
-  String get ytdlBlankAlbumKeeps => 'Blank keeps YouTube\'s album tag';
+  String get ytdlBlankAlbumKeeps => '空欄なら YouTube のアルバムタグが残ります';
 
   @override
-  String get ytdlBlankYear => 'Blank: the file gets YouTube\'s upload year.';
+  String get ytdlBlankYear => '空欄の場合、ファイルには YouTube のアップロード年が付きます。';
 
   @override
-  String get ytdlYearInvalid => 'A year is 4 digits, like 2001';
+  String get ytdlYearInvalid => '年は 2001 のように 4 桁で入力してください';
 
   @override
   String ytdlRestoreSplit(String separator) {
-    return 'Split at $separator';
+    return '$separator で分割';
   }
 
   @override
   String ytdlOrYoutubeArtist(String name) {
-    return 'Or YouTube\'s artist: $name';
+    return 'または YouTube のアーティスト: $name';
   }
 
   @override
-  String get ytdlSwap => 'Swap artist and title';
+  String get ytdlSwap => 'アーティストとタイトルを入れ替える';
 
   @override
-  String get ytdlSavesTo => 'Saves to';
+  String get ytdlSavesTo => '保存先';
 
   @override
-  String get ytdlSavesHere => 'Saves here';
+  String get ytdlSavesHere => 'ここに保存';
 
   @override
-  String get ytdlNewTag => 'new';
+  String get ytdlNewTag => '新規';
 
   @override
-  String get ytdlSampleFile => 'file';
+  String get ytdlSampleFile => 'ファイル';
 
   @override
   String get ytdlSampleFileStem => 'Video_title';
 
   @override
   String ytdlFileAbout(String name) {
-    return 'about $name';
+    return '予想ファイル名: $name';
   }
 
   @override
   String ytdlFileAboutLettersDropped(String name) {
-    return 'about $name · letters outside A–Z are dropped from file names';
+    return '予想ファイル名: $name · A–Z 以外の文字はファイル名から除かれます';
   }
 
   @override
-  String get ytdlCheckFailed => 'Couldn\'t check this folder';
+  String get ytdlCheckFailed => 'このフォルダーを確認できませんでした';
 
   @override
-  String get ytdlJustThisSong => 'Just this song';
+  String get ytdlJustThisSong => 'この曲のみ';
 
   @override
-  String get ytdlUndo => 'Undo';
+  String get ytdlUndo => '元に戻す';
 
   @override
   String ytdlClash(String name) {
-    return 'Something like “$name” looks to be in this folder already. The server won\'t replace it, so this would likely fail.';
+    return '「$name」に似たファイルがすでにこのフォルダーにあるようです。サーバーは置き換えないため、失敗する可能性が高いです。';
   }
 
   @override
-  String get ytdlClashChangeFormat =>
-      'Change format — a different format makes a different file';
+  String get ytdlClashChangeFormat => '形式を変更 — 別の形式なら別のファイルになります';
 
   @override
   String ytdlClashOlder(String name) {
-    return 'A file named “$name” is already in this folder. This server would re-tag that file instead of adding a new one.';
+    return '「$name」という名前のファイルがすでにこのフォルダーにあります。このサーバーは新しく追加せず、そのファイルのタグを書き換えます。';
   }
 
   @override
-  String get ytdlChangeFormat => 'Change format';
+  String get ytdlChangeFormat => '形式を変更';
 
   @override
-  String get ytdlAddToLibrary => 'Add to library';
+  String get ytdlAddToLibrary => 'ライブラリに追加';
 
   @override
-  String get ytdlAddHere => 'Add here';
+  String get ytdlAddHere => 'ここに追加';
 
   @override
-  String get ytdlAddAnyway => 'Add anyway';
+  String get ytdlAddAnyway => 'そのまま追加';
 
   @override
-  String get ytdlAlreadyAdding => 'Already adding to this folder';
+  String get ytdlAlreadyAdding => 'すでにこのフォルダーに追加中です';
 
   @override
-  String get ytdlFormatMenuTitle => 'Best audio the video has, saved as';
+  String get ytdlFormatMenuTitle => '動画の最高音質を次の形式で保存';
 
   @override
   String ytdlFormatRemembered(String server) {
-    return 'Remembered for $server';
+    return '$server 用に記憶されます';
   }
 
   @override
-  String get ytdlFormatMp3Help => 'Plays everywhere';
+  String get ytdlFormatMp3Help => 'どこでも再生できます';
 
   @override
-  String get ytdlFormatM4aHelp => 'Good for Apple devices';
+  String get ytdlFormatM4aHelp => 'Apple デバイスに最適';
 
   @override
-  String get ytdlFormatOpusHelp => 'Usually YouTube\'s own audio, no re-encode';
+  String get ytdlFormatOpusHelp => '通常は YouTube 本来の音声、再エンコードなし';
 
   @override
-  String get ytdlFormatFlacHelp => 'Bigger, not better than the video\'s sound';
+  String get ytdlFormatFlacHelp => 'サイズは大きく、音質は動画以上になりません';
 
   @override
-  String get ytdlFormatWavHelp => 'Biggest, no cover art';
+  String get ytdlFormatWavHelp => '最大サイズ、カバー画像なし';
 
   @override
-  String get ytdlErrFfmpeg =>
-      'The server can\'t convert audio right now. Try again later, or ask its admin.';
+  String get ytdlErrFfmpeg => 'サーバーは現在、音声を変換できません。後でもう一度試すか、管理者に問い合わせてください。';
 
   @override
-  String get ytdlErrUploadsOff =>
-      'Your account can\'t add files to this server.';
+  String get ytdlErrUploadsOff => 'このアカウントはこのサーバーにファイルを追加できません。';
 
   @override
   String ytdlErrLibraryGone(String library) {
-    return 'You can\'t add files to “$library” any more. Pick another library.';
+    return '「$library」にはもうファイルを追加できません。別のライブラリを選んでください。';
   }
 
   @override
   String ytdlErrLibraryGoneSheet(String library) {
-    return 'You can\'t add files to “$library” any more.';
+    return '「$library」にはもうファイルを追加できません。';
   }
 
   @override
-  String get ytdlErrNoRoute => 'This server doesn\'t offer YouTube downloads.';
+  String get ytdlErrNoRoute => 'このサーバーは YouTube からの追加に対応していません。';
 
   @override
   String ytdlErrFormatOff(String format) {
-    return 'This server doesn\'t save $format any more';
+    return 'このサーバーでは $format で保存できなくなりました';
   }
 
   @override
-  String get ytdlErrPickAnother => 'pick another';
+  String get ytdlErrPickAnother => '別の形式を選ぶ';
 
   @override
-  String get ytdlErrBadRequest =>
-      'Something about this link didn\'t suit the server. Try again.';
+  String get ytdlErrBadRequest => '何らかの理由で、サーバーがこのリンクを受け付けませんでした。もう一度お試しください。';
 
   @override
-  String get ytdlErrServer => 'Something went wrong on the server.';
+  String get ytdlErrServer => 'サーバーで問題が発生しました。';
 
   @override
   String ytdlErrOther(String message) {
-    return 'The server said: “$message”';
+    return 'サーバーからの応答: 「$message」';
   }
 
   @override
   String ytdlErrMkdir(String folder) {
-    return 'Couldn\'t make the folder “$folder”.';
+    return 'フォルダー「$folder」を作成できませんでした。';
   }
 
   @override
-  String get ytdlSectionAdding => 'Adding';
+  String get ytdlSectionAdding => '追加中';
 
   @override
-  String get ytdlSectionAddingNote =>
-      'Runs on the server · can\'t be stopped from the app';
+  String get ytdlSectionAddingNote => 'サーバーで実行中 · アプリからは停止できません';
 
   @override
-  String get ytdlSectionNeedsLook => 'Needs a look';
+  String get ytdlSectionNeedsLook => '要確認';
 
   @override
-  String get ytdlSectionAdded => 'Added';
+  String get ytdlSectionAdded => '追加済み';
 
   @override
   String ytdlRowAdding(int minutes, String format) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,
       locale: localeName,
-      other: 'Adding · $minutes min · $format',
+      other: '追加中 · $minutes 分 · $format',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlRowStartUnsure => 'Starting… the server hasn\'t answered yet';
+  String get ytdlRowStartUnsure => '開始しています… サーバーからまだ応答がありません';
 
   @override
-  String get ytdlRowNotSureStarted => 'Not sure it started';
+  String get ytdlRowNotSureStarted => '開始したか不明';
 
   @override
-  String get ytdlRowNotFound => 'Not found on the server';
+  String get ytdlRowNotFound => 'サーバー上に見つかりません';
 
   @override
-  String get ytdlRowClash =>
-      'Failed · a file with this name looks to be there already. Nothing was replaced.';
+  String get ytdlRowClash => '失敗 · 同じ名前のファイルがすでにあるようです。何も置き換えていません。';
 
   @override
   String get ytdlRowFailed =>
-      'Failed · the server didn\'t say why. Common causes: a live stream, YouTube refusing the server, 500 MB, or an hour.';
+      '失敗 · サーバーは理由を返しませんでした。よくある原因: ライブ配信、YouTube によるサーバーの拒否、500 MB または 1 時間の上限。';
 
   @override
   String get ytdlRowFailedOlder =>
-      'Failed · the server didn\'t say why. YouTube may have refused the server.';
+      '失敗 · サーバーは理由を返しませんでした。YouTube がサーバーを拒否した可能性があります。';
 
   @override
-  String get ytdlRowNotSureFinished =>
-      'Not sure it finished · it ended while the app was away and the server has no record of it';
+  String get ytdlRowNotSureFinished => '完了したか不明 · アプリを離れている間に終了し、サーバーに記録がありません';
 
   @override
-  String get ytdlRowWaiting => 'Waiting for connection';
+  String get ytdlRowWaiting => '接続を待機中';
 
   @override
-  String get ytdlRowFileMissing => 'File missing';
+  String get ytdlRowFileMissing => 'ファイルがありません';
 
   @override
-  String get ytdlRowHide => 'Hide from this list';
+  String get ytdlRowHide => 'このリストで非表示にする';
 
   @override
-  String get ytdlRowChangeFormatRetry => 'Change format and retry';
+  String get ytdlRowChangeFormatRetry => '形式を変えて再試行';
 
   @override
-  String get ytdlRowShowFolder => 'Show folder';
+  String get ytdlRowShowFolder => 'フォルダーを表示';
 
   @override
-  String get ytdlRowShowInFolder => 'Show in folder';
+  String get ytdlRowShowInFolder => 'フォルダーで表示';
 
   @override
-  String get ytdlShowEarlier => 'Show earlier';
+  String get ytdlShowEarlier => '以前の曲を表示';
 
   @override
-  String get ytdlWhereTitle => 'Where new songs land';
+  String get ytdlWhereTitle => '新しい曲の保存先';
 
   @override
   String ytdlWhereSub(String server) {
-    return 'Kept on this phone for $server · Discover copies keep their own setting.';
+    return '$server 用にこの端末に保存 · ディスカバーのコピーは別の設定を使います。';
   }
 
   @override
   String ytdlWhereLandsAt(String title) {
-    return '“$title” lands at';
+    return '「$title」の保存先';
   }
 
   @override
-  String get ytdlWhereLandsAtSample => 'A song lands at';
+  String get ytdlWhereLandsAtSample => '曲の保存先';
 
   @override
-  String get ytdlWhereSampleNote =>
-      'Shown with sample words until you paste a link.';
+  String get ytdlWhereSampleNote => 'リンクを貼り付けるまでは、仮の語句で表示されます。';
 
   @override
   String ytdlWhereFileNote(String title) {
-    return 'The file name comes from the video title; your library shows “$title”.';
+    return 'ファイル名は動画タイトルから付けられます。ライブラリには「$title」と表示されます。';
   }
 
   @override
   String ytdlWhereAlwaysEmpty(String vars) {
-    return 'Always empty for YouTube songs, so left out: $vars';
+    return 'YouTube の曲では常に空のため、パスから省かれます: $vars';
   }
 
   @override
-  String get ytdlWhereSetByDiscover => 'Set by Discover';
+  String get ytdlWhereSetByDiscover => 'ディスカバーで設定';
 
   @override
-  String get ytdlLayoutTop => 'Top of the library';
+  String get ytdlLayoutTop => 'ライブラリの最上位';
 
   @override
-  String get ytdlLayoutTopSub => 'No folders';
+  String get ytdlLayoutTopSub => 'フォルダーなし';
 
   @override
-  String get ytdlLayoutDiscover => 'Same as Discover';
+  String get ytdlLayoutDiscover => 'ディスカバーと同じ';
 
   @override
-  String get ytdlWhereUseForSong => 'Use for this song';
+  String get ytdlWhereUseForSong => 'この曲だけに使う';
 
   @override
   String get ytdlWhereNoMkdir =>
-      'Your account can\'t make folders, so only folders that already exist work. Top of the library always does.';
+      'このアカウントはフォルダーを作成できないため、既存のフォルダーだけが使えます。「ライブラリの最上位」はいつでも使えます。';
 
   @override
   String get ytdlCustomHelp =>
-      'Use / between folders. There\'s no TITLE — the file name always comes from the video title.';
+      'フォルダーは / で区切ります。TITLE はありません — ファイル名は常に動画タイトルから付けられます。';
 
   @override
   String ytdlErrNeverVar(String name, String vars) {
-    return '$name is always empty for YouTube songs. Use $vars.';
+    return '$name は YouTube の曲では常に空です。$vars を使ってください。';
   }
 
   @override
-  String get ytdlErrBadChars =>
-      'A folder name can\'t contain : * ? \" < > or |.';
+  String get ytdlErrBadChars => 'フォルダー名に : * ? \" < > | は使えません。';
 
   @override
   String ytdlTrapEmpty(String folder) {
-    return 'Nothing to fill this folder, so it\'s named “$folder”. Add an album and year, or pick another layout.';
+    return 'このフォルダー名に入る値がないため、「$folder」という名前になります。アルバムと年を追加するか、別のレイアウトを選んでください。';
   }
 
   @override
   String ytdlTrapNoYear(String folder) {
-    return 'No year for this song, so the folder reads “$folder”. The file still gets YouTube\'s upload year as its tag.';
+    return 'この曲には年がないため、フォルダー名が「$folder」になります。ファイルのタグには引き続き YouTube のアップロード年が付きます。';
   }
 
   @override
   String ytdlTrapOther(String folder) {
-    return 'A tag is empty, so the folder reads “$folder”. Fill in the tags, or pick another layout.';
+    return 'タグが空のため、フォルダー名が「$folder」になります。タグを入力するか、別のレイアウトを選んでください。';
   }
 
   @override
-  String get ytdlTrapAddYear => 'Add a year';
+  String get ytdlTrapAddYear => '年を追加';
 
   @override
   String ytdlNoMkdirNew(String folder) {
-    return '“$folder” doesn\'t exist yet and your account can\'t make folders.';
+    return '「$folder」はまだ存在せず、このアカウントはフォルダーを作成できません。';
   }
 
   @override
-  String get ytdlNoMkdirUnchecked =>
-      'Your account can\'t make folders and this folder couldn\'t be checked.';
+  String get ytdlNoMkdirUnchecked => 'このアカウントはフォルダーを作成できず、このフォルダーも確認できませんでした。';
 
   @override
   String ytdlSaveToInstead(String path) {
-    return 'Save to $path instead';
+    return '代わりに $path に保存';
   }
 
   @override
-  String get ytdlChooseFolderLink => 'Choose a folder…';
+  String get ytdlChooseFolderLink => 'フォルダーを選択…';
 
   @override
-  String get ytdlChooseTitle => 'Choose a folder';
+  String get ytdlChooseTitle => 'フォルダーを選択';
 
   @override
-  String get ytdlChooseSub =>
-      'Your account can\'t make folders, so pick one that already exists.';
+  String get ytdlChooseSub => 'このアカウントはフォルダーを作成できないため、既存のフォルダーを選んでください。';
 
   @override
-  String get ytdlChooseEmpty => 'No folders here.';
+  String get ytdlChooseEmpty => 'ここにフォルダーはありません。';
 
   @override
-  String get ytdlExplorerEntry => 'Add from YouTube here';
+  String get ytdlExplorerEntry => 'YouTube からここに追加';
 
   @override
   String ytdlSheetInto(String path) {
-    return 'Into $path';
+    return '追加先: $path';
   }
 
   @override
-  String get ytdlSortSubfolders => 'Sort into subfolders…';
+  String get ytdlSortSubfolders => 'サブフォルダーに分ける…';
 
   @override
-  String get ytdlSubfoldersTitle => 'Sort into subfolders';
+  String get ytdlSubfoldersTitle => 'サブフォルダーに分ける';
 
   @override
-  String get ytdlSubfoldersHere => 'The folder you\'re in';
+  String get ytdlSubfoldersHere => '今いるフォルダー';
 
   @override
-  String get ytdlSubfoldersRightHere => 'Right here';
+  String get ytdlSubfoldersRightHere => 'ここに直接';
 
   @override
-  String get ytdlSubfoldersNone => 'No subfolders';
+  String get ytdlSubfoldersNone => 'サブフォルダーなし';
 
   @override
   String ytdlSubfoldersNew(int count, String folders) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count new folders will be made: $folders',
-      one: '$count new folder will be made: $folders',
+      other: '新しいフォルダーを $count 個作成します: $folders',
     );
     return '$_temp0';
   }
 
   @override
   String ytdlStripAdding(String title) {
-    return 'Adding “$title”…';
+    return '「$title」を追加中…';
   }
 
   @override
@@ -5804,143 +5783,140 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Adding $count videos…',
-      one: 'Adding $count video…',
+      other: '動画 $count 本を追加中…',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlStripSeeAll => 'See all';
+  String get ytdlStripSeeAll => 'すべて表示';
 
   @override
-  String get ytdlStripDetails => 'Details';
+  String get ytdlStripDetails => '詳細';
 
   @override
   String ytdlToastAdded(String title, String path) {
-    return 'Added “$title” to $path';
+    return '「$title」を $path に追加しました';
   }
 
   @override
   String ytdlCouldntAdd(String title) {
-    return 'Couldn\'t add “$title”';
+    return '「$title」を追加できませんでした';
   }
 
   @override
   String ytdlToastSaved(String path) {
-    return 'Saved · new songs land in $path';
+    return '保存しました · 新しい曲は $path に保存されます';
   }
 
   @override
-  String get ytdlToastHidden => 'Hidden. The server keeps going.';
+  String get ytdlToastHidden => '非表示にしました。サーバーでは処理が続きます。';
 
   @override
-  String get ytdlA11yLinkField => 'YouTube link';
+  String get ytdlA11yLinkField => 'YouTube のリンク';
 
   @override
-  String get ytdlA11yClearLink => 'Clear link';
+  String get ytdlA11yClearLink => 'リンクをクリア';
 
   @override
   String ytdlA11yFormat(String format) {
-    return 'Format, $format';
+    return '形式、$format';
   }
 
   @override
   String ytdlA11yPutBack(String fragment) {
-    return 'Put back $fragment';
+    return '$fragment を戻す';
   }
 
   @override
-  String get ytdlA11yUndoSplit => 'Undo the split at the dash';
+  String get ytdlA11yUndoSplit => 'ダッシュでの分割を元に戻す';
 
   @override
-  String get ytdlA11yUndoSplitColon => 'Undo the split at the colon';
+  String get ytdlA11yUndoSplitColon => 'コロンでの分割を元に戻す';
 
   @override
   String ytdlA11yMoreFor(String title) {
-    return 'More for $title';
+    return '$title のその他の操作';
   }
 
   @override
-  String get ytdlA11yAdding => 'Adding';
+  String get ytdlA11yAdding => '追加中';
 
   @override
-  String get ytdlA11yNewFolder => 'a new folder';
+  String get ytdlA11yNewFolder => '新しいフォルダー';
 
   @override
   String ytdlCrumbThen(String previous, String next) {
-    return '$previous, then $next';
+    return '$previous、その下に $next';
   }
 
   @override
   String ytdlCrumbNew(String folder) {
-    return '$folder, a new folder';
+    return '$folder、新しいフォルダー';
   }
 
   @override
   String ytdlCrumbFile(String path, String file) {
-    return '$path, file $file';
+    return '$path、ファイル $file';
   }
 
   @override
-  String get ytdlCrumbEmptyBrackets => 'empty brackets';
+  String get ytdlCrumbEmptyBrackets => '空のかっこ';
 
   @override
   String ytdlCrumbWithEmptyBrackets(String folder) {
-    return '$folder with empty brackets';
+    return '$folder、空のかっこ付き';
   }
 
   @override
   String ytdlA11yVarUsed(String name) {
-    return '$name, used';
+    return '$name、使用済み';
   }
 
   @override
-  String get ytdlA11yInsertVariable => 'Insert a variable';
+  String get ytdlA11yInsertVariable => '変数を挿入';
 
   @override
-  String get ytdlA11yLocked => 'Locked';
+  String get ytdlA11yLocked => 'ロック中';
 
   @override
-  String get ytdlA11yFolderPath => 'Folder path';
+  String get ytdlA11yFolderPath => 'フォルダーのパス';
 
   @override
   String ytdlA11yUpTo(String folder) {
-    return 'Up to $folder';
+    return '$folder に戻る';
   }
 
   @override
-  String get ytdlA11yCover => 'Cover';
+  String get ytdlA11yCover => 'カバー画像';
 
   @override
   String ytdlSummaryBy(String title, String artist) {
-    return '$title, by $artist';
+    return '$artist の $title';
   }
 
   @override
   String ytdlSummaryAlbum(String album) {
-    return 'album $album';
+    return 'アルバム $album';
   }
 
   @override
-  String get ytdlSummaryNoAlbum => 'no album';
+  String get ytdlSummaryNoAlbum => 'アルバムなし';
 
   @override
   String ytdlSummary(String details, String source, String path) {
-    return '$details. $source. Saves to $path.';
+    return '$details。$source。保存先は $path。';
   }
 
   @override
-  String get ytdlErrAddOffline =>
-      'You\'re offline — try again when you\'re back.';
+  String get ytdlErrAddOffline => 'オフラインです — 接続が戻ったら、もう一度お試しください。';
 
   @override
-  String get ytdlHelpVideoRelease => 'From the video\'s release date';
+  String get ytdlHelpVideoRelease => '動画の公開日から';
 
   @override
-  String get ytdlChooseLoading => 'Loading folders';
+  String get ytdlChooseLoading => 'フォルダーを読み込み中';
 
   @override
-  String get ytdlRowNoConnection =>
-      'Didn\'t start · the phone couldn\'t reach the server';
+  String get ytdlRowNoConnection => '開始されませんでした · 端末がサーバーに接続できませんでした';
 }

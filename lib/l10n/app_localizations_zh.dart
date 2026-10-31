@@ -5157,14 +5157,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResetBodyIos => '同时会重置转码，以及设置页面以外的少数选项。服务器、下载内容和收听记录不受影响。';
 
   @override
-  String get ytdlTitle => 'Add from YouTube';
+  String get ytdlTitle => '从 YouTube 添加';
 
   @override
   String ytdlHomeAdding(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Adding $count',
+      other: '添加中 $count 首',
     );
     return '$_temp0';
   }
@@ -5174,7 +5174,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Added $count',
+      other: '已添加 $count 首',
     );
     return '$_temp0';
   }
@@ -5184,547 +5184,518 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count failed',
+      other: '$count 首失败',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlPasteHint => 'Paste a YouTube link';
+  String get ytdlPasteHint => '粘贴 YouTube 链接';
 
   @override
-  String get ytdlPasteFromClipboard => 'Paste from clipboard';
+  String get ytdlPasteFromClipboard => '从剪贴板粘贴';
 
   @override
   String ytdlLandsIn(String path) {
-    return 'Lands in $path';
+    return '存放到 $path';
   }
 
   @override
-  String get ytdlLimits =>
-      'One video per link · the server stops at 500 MB or after an hour · no live streams or playlists';
+  String get ytdlLimits => '每个链接一个视频 · 服务器达到 500 MB 或一小时即停止 · 不支持直播和播放列表';
 
   @override
-  String get ytdlEmptyTitle => 'Paste a link to add a song to your library.';
+  String get ytdlEmptyTitle => '粘贴链接，把歌曲添加到你的曲库。';
 
   @override
-  String get ytdlEmptyWebApp =>
-      'Songs added from the web app show up here too.';
+  String get ytdlEmptyWebApp => '从网页版添加的歌曲也会显示在这里。';
 
   @override
   String ytdlLinkShortSent(String link) {
-    return 'Short link: sent as $link';
+    return '短链接：以 $link 发送';
   }
 
   @override
   String ytdlLinkSentAs(String link) {
-    return 'Sent as $link';
+    return '以 $link 发送';
   }
 
   @override
   String get ytdlLinkNotYoutube =>
-      'That\'s not a YouTube link. Paste one from youtube.com or youtu.be.';
+      '这不是 YouTube 链接。请粘贴来自 youtube.com 或 youtu.be 的链接。';
 
   @override
-  String get ytdlLinkPlaylist =>
-      'That\'s a playlist. Open one video in it and copy that link.';
+  String get ytdlLinkPlaylist => '这是播放列表。请打开其中一个视频，再复制该视频的链接。';
 
   @override
-  String get ytdlLinkInPlaylist => 'Just this video, not the playlist.';
+  String get ytdlLinkInPlaylist => '只添加这个视频，不包括播放列表。';
 
   @override
-  String get ytdlLinkLive =>
-      'Live streams can\'t be saved. If this one has ended, it may still work.';
+  String get ytdlLinkLive => '无法保存直播。如果这场直播已经结束，或许仍能成功。';
 
   @override
-  String get ytdlLinkLiveOlder =>
-      'This server doesn\'t stop live streams. Add this only if the stream has ended.';
+  String get ytdlLinkLiveOlder => '此服务器不会拦截直播。请仅在直播结束后再添加。';
 
   @override
-  String get ytdlLookupReading => 'Reading the video…';
+  String get ytdlLookupReading => '正在读取视频…';
 
   @override
-  String get ytdlLookupSlow => 'Still looking — YouTube can be slow.';
+  String get ytdlLookupSlow => '仍在查找 — YouTube 有时较慢。';
 
   @override
-  String get ytdlLookupEnterYourself => 'Enter details yourself';
+  String get ytdlLookupEnterYourself => '自己填写信息';
 
   @override
-  String get ytdlLookupFailed =>
-      'Couldn\'t read this video\'s details. It may be private, age-restricted or blocked for the server.';
+  String get ytdlLookupFailed => '无法读取此视频的信息。它可能是私密视频、有年龄限制，或对该服务器屏蔽。';
 
   @override
-  String get ytdlLookupTimedOut =>
-      'The server took too long — it may still be setting up its downloader. Try again in a minute.';
+  String get ytdlLookupTimedOut => '服务器响应超时 — 它可能仍在安装所需的工具。请一分钟后重试。';
 
   @override
-  String get ytdlLookupEnterDetails => 'Enter details';
+  String get ytdlLookupEnterDetails => '填写信息';
 
   @override
-  String get ytdlLookupNoTags =>
-      'No tags yet, so it goes into the library\'s top folder.';
+  String get ytdlLookupNoTags => '还没有标签，因此会放进曲库的顶层文件夹。';
 
   @override
-  String get ytdlLookupFailedUsingYours =>
-      'Couldn\'t read this video\'s details · Your details will be used.';
+  String get ytdlLookupFailedUsingYours => '无法读取此视频的信息 · 将使用你填写的信息。';
 
   @override
-  String get ytdlLateFound => 'Details found for this video';
+  String get ytdlLateFound => '已找到此视频的信息';
 
   @override
-  String get ytdlLateUseThem => 'Use them';
+  String get ytdlLateUseThem => '使用';
 
   @override
-  String get ytdlLateEditsStay => 'Your edits stay.';
+  String get ytdlLateEditsStay => '你的修改会保留。';
 
   @override
-  String get ytdlOffline =>
-      'You\'re offline — the lookup runs when you\'re back.';
+  String get ytdlOffline => '你已离线 — 恢复连接后会自动查找。';
 
   @override
-  String get ytdlYtdlpMissing =>
-      'This server can\'t download from YouTube yet. Ask its admin to set up yt-dlp.';
+  String get ytdlYtdlpMissing => '此服务器还不能从 YouTube 获取音频。请让其管理员设置 yt-dlp。';
 
   @override
-  String get ytdlCardNoAlbum => 'No album';
+  String get ytdlCardNoAlbum => '无专辑';
 
   @override
-  String get ytdlSourceMusic => 'Tags from YouTube Music';
+  String get ytdlSourceMusic => '标签来自 YouTube Music';
 
   @override
-  String get ytdlSourceSplit => 'Artist and title from the video title';
+  String get ytdlSourceSplit => '艺术家和标题取自视频标题';
 
   @override
-  String get ytdlSourceSplitAgrees =>
-      'Artist and title from the video title · matches the artist YouTube lists';
+  String get ytdlSourceSplitAgrees => '艺术家和标题取自视频标题 · 与 YouTube 列出的艺术家一致';
 
   @override
-  String get ytdlSourceChannel => 'Artist may be the channel name — check it';
+  String get ytdlSourceChannel => '艺术家可能是频道名称 — 请核对';
 
   @override
   String ytdlCleanedFrom(String title) {
-    return 'Cleaned from “$title”';
+    return '已清理原标题“$title”';
   }
 
   @override
-  String get ytdlUndoAll => 'Undo all';
+  String get ytdlUndoAll => '全部撤销';
 
   @override
-  String get ytdlEditTags => 'Edit tags';
+  String get ytdlEditTags => '编辑标签';
 
   @override
-  String get ytdlFieldTitle => 'Title';
+  String get ytdlFieldTitle => '标题';
 
   @override
-  String get ytdlHelpMusic => 'From YouTube Music';
+  String get ytdlHelpMusic => '来自 YouTube Music';
 
   @override
-  String get ytdlHelpVideoTitle => 'From the video title';
+  String get ytdlHelpVideoTitle => '取自视频标题';
 
   @override
-  String get ytdlHelpVideoTitleCleaned => 'From the video title, cleaned';
+  String get ytdlHelpVideoTitleCleaned => '取自视频标题，已清理';
 
   @override
-  String get ytdlHelpYoutubeArtist => 'From YouTube\'s artist field';
+  String get ytdlHelpYoutubeArtist => '来自 YouTube 的艺术家字段';
 
   @override
-  String get ytdlHelpYoutubeArtistCheck =>
-      'From YouTube\'s artist field — check it';
+  String get ytdlHelpYoutubeArtistCheck => '来自 YouTube 的艺术家字段 — 请核对';
 
   @override
   String ytdlHelpYoutubeArtistStripped(String removed) {
-    return 'From YouTube\'s artist field, “$removed” removed — check it';
+    return '来自 YouTube 的艺术家字段，已去掉“$removed” — 请核对';
   }
 
   @override
-  String get ytdlHelpEdited => 'Edited';
+  String get ytdlHelpEdited => '已编辑';
 
   @override
-  String get ytdlBlankTitle => 'Blank: the file gets the video\'s own title.';
+  String get ytdlBlankTitle => '留空：文件使用视频本身的标题。';
 
   @override
-  String get ytdlBlankArtistMusic =>
-      'Blank: the file keeps YouTube Music\'s artist.';
+  String get ytdlBlankArtistMusic => '留空：文件保留 YouTube Music 的艺术家。';
 
   @override
   String ytdlBlankArtistGuess(String name) {
-    return 'Blank: the file gets YouTube\'s own artist guess, often the raw channel name (here “$name”).';
+    return '留空：文件使用 YouTube 自己猜测的艺术家，通常就是原始频道名（这里是“$name”）。';
   }
 
   @override
   String get ytdlBlankArtistGuessUnnamed =>
-      'Blank: the file gets YouTube\'s own artist guess, often the raw channel name.';
+      '留空：文件使用 YouTube 自己猜测的艺术家，通常就是原始频道名。';
 
   @override
-  String get ytdlBlankAlbumSingle => 'Leave blank for a single';
+  String get ytdlBlankAlbumSingle => '单曲请留空';
 
   @override
-  String get ytdlBlankAlbumKeeps => 'Blank keeps YouTube\'s album tag';
+  String get ytdlBlankAlbumKeeps => '留空则保留 YouTube 的专辑标签';
 
   @override
-  String get ytdlBlankYear => 'Blank: the file gets YouTube\'s upload year.';
+  String get ytdlBlankYear => '留空：文件使用 YouTube 的上传年份。';
 
   @override
-  String get ytdlYearInvalid => 'A year is 4 digits, like 2001';
+  String get ytdlYearInvalid => '年份为 4 位数字，例如 2001';
 
   @override
   String ytdlRestoreSplit(String separator) {
-    return 'Split at $separator';
+    return '按 $separator 拆分';
   }
 
   @override
   String ytdlOrYoutubeArtist(String name) {
-    return 'Or YouTube\'s artist: $name';
+    return '或 YouTube 的艺术家：$name';
   }
 
   @override
-  String get ytdlSwap => 'Swap artist and title';
+  String get ytdlSwap => '交换艺术家和标题';
 
   @override
-  String get ytdlSavesTo => 'Saves to';
+  String get ytdlSavesTo => '保存到';
 
   @override
-  String get ytdlSavesHere => 'Saves here';
+  String get ytdlSavesHere => '保存到这里';
 
   @override
-  String get ytdlNewTag => 'new';
+  String get ytdlNewTag => '新建';
 
   @override
-  String get ytdlSampleFile => 'file';
+  String get ytdlSampleFile => '文件';
 
   @override
   String get ytdlSampleFileStem => 'Video_title';
 
   @override
   String ytdlFileAbout(String name) {
-    return 'about $name';
+    return '预计文件名为 $name';
   }
 
   @override
   String ytdlFileAboutLettersDropped(String name) {
-    return 'about $name · letters outside A–Z are dropped from file names';
+    return '预计文件名为 $name · A–Z 以外的文字会从文件名中去掉';
   }
 
   @override
-  String get ytdlCheckFailed => 'Couldn\'t check this folder';
+  String get ytdlCheckFailed => '无法检查此文件夹';
 
   @override
-  String get ytdlJustThisSong => 'Just this song';
+  String get ytdlJustThisSong => '仅这首歌';
 
   @override
-  String get ytdlUndo => 'Undo';
+  String get ytdlUndo => '撤销';
 
   @override
   String ytdlClash(String name) {
-    return 'Something like “$name” looks to be in this folder already. The server won\'t replace it, so this would likely fail.';
+    return '此文件夹中似乎已有类似“$name”的文件。服务器不会替换它，因此这次添加很可能会失败。';
   }
 
   @override
-  String get ytdlClashChangeFormat =>
-      'Change format — a different format makes a different file';
+  String get ytdlClashChangeFormat => '更改格式 — 换一种格式会生成不同的文件';
 
   @override
   String ytdlClashOlder(String name) {
-    return 'A file named “$name” is already in this folder. This server would re-tag that file instead of adding a new one.';
+    return '此文件夹中已有名为“$name”的文件。此服务器会重写该文件的标签，而不是添加新文件。';
   }
 
   @override
-  String get ytdlChangeFormat => 'Change format';
+  String get ytdlChangeFormat => '更改格式';
 
   @override
-  String get ytdlAddToLibrary => 'Add to library';
+  String get ytdlAddToLibrary => '添加到曲库';
 
   @override
-  String get ytdlAddHere => 'Add here';
+  String get ytdlAddHere => '添加到这里';
 
   @override
-  String get ytdlAddAnyway => 'Add anyway';
+  String get ytdlAddAnyway => '仍然添加';
 
   @override
-  String get ytdlAlreadyAdding => 'Already adding to this folder';
+  String get ytdlAlreadyAdding => '已在添加到此文件夹';
 
   @override
-  String get ytdlFormatMenuTitle => 'Best audio the video has, saved as';
+  String get ytdlFormatMenuTitle => '以视频的最佳音质保存为';
 
   @override
   String ytdlFormatRemembered(String server) {
-    return 'Remembered for $server';
+    return '已为 $server 记住';
   }
 
   @override
-  String get ytdlFormatMp3Help => 'Plays everywhere';
+  String get ytdlFormatMp3Help => '随处可播放';
 
   @override
-  String get ytdlFormatM4aHelp => 'Good for Apple devices';
+  String get ytdlFormatM4aHelp => '适合 Apple 设备';
 
   @override
-  String get ytdlFormatOpusHelp => 'Usually YouTube\'s own audio, no re-encode';
+  String get ytdlFormatOpusHelp => '通常就是 YouTube 自己的音频，无需重新编码';
 
   @override
-  String get ytdlFormatFlacHelp => 'Bigger, not better than the video\'s sound';
+  String get ytdlFormatFlacHelp => '更大，但音质不会超过视频';
 
   @override
-  String get ytdlFormatWavHelp => 'Biggest, no cover art';
+  String get ytdlFormatWavHelp => '最大，无封面';
 
   @override
-  String get ytdlErrFfmpeg =>
-      'The server can\'t convert audio right now. Try again later, or ask its admin.';
+  String get ytdlErrFfmpeg => '服务器暂时无法转换音频。请稍后重试，或联系其管理员。';
 
   @override
-  String get ytdlErrUploadsOff =>
-      'Your account can\'t add files to this server.';
+  String get ytdlErrUploadsOff => '你的账户无法向此服务器添加文件。';
 
   @override
   String ytdlErrLibraryGone(String library) {
-    return 'You can\'t add files to “$library” any more. Pick another library.';
+    return '你已无法向“$library”添加文件。请选择其他曲库。';
   }
 
   @override
   String ytdlErrLibraryGoneSheet(String library) {
-    return 'You can\'t add files to “$library” any more.';
+    return '你已无法向“$library”添加文件。';
   }
 
   @override
-  String get ytdlErrNoRoute => 'This server doesn\'t offer YouTube downloads.';
+  String get ytdlErrNoRoute => '此服务器不支持从 YouTube 添加。';
 
   @override
   String ytdlErrFormatOff(String format) {
-    return 'This server doesn\'t save $format any more';
+    return '此服务器已不再支持 $format';
   }
 
   @override
-  String get ytdlErrPickAnother => 'pick another';
+  String get ytdlErrPickAnother => '换一种';
 
   @override
-  String get ytdlErrBadRequest =>
-      'Something about this link didn\'t suit the server. Try again.';
+  String get ytdlErrBadRequest => '此链接有些地方不符合服务器的要求。请重试。';
 
   @override
-  String get ytdlErrServer => 'Something went wrong on the server.';
+  String get ytdlErrServer => '服务器出错了。';
 
   @override
   String ytdlErrOther(String message) {
-    return 'The server said: “$message”';
+    return '服务器返回：“$message”';
   }
 
   @override
   String ytdlErrMkdir(String folder) {
-    return 'Couldn\'t make the folder “$folder”.';
+    return '无法创建文件夹“$folder”。';
   }
 
   @override
-  String get ytdlSectionAdding => 'Adding';
+  String get ytdlSectionAdding => '正在添加';
 
   @override
-  String get ytdlSectionAddingNote =>
-      'Runs on the server · can\'t be stopped from the app';
+  String get ytdlSectionAddingNote => '在服务器上运行 · 无法从应用中停止';
 
   @override
-  String get ytdlSectionNeedsLook => 'Needs a look';
+  String get ytdlSectionNeedsLook => '需要查看';
 
   @override
-  String get ytdlSectionAdded => 'Added';
+  String get ytdlSectionAdded => '已添加';
 
   @override
   String ytdlRowAdding(int minutes, String format) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,
       locale: localeName,
-      other: 'Adding · $minutes min · $format',
+      other: '正在添加 · $minutes 分钟 · $format',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlRowStartUnsure => 'Starting… the server hasn\'t answered yet';
+  String get ytdlRowStartUnsure => '正在开始…服务器尚未响应';
 
   @override
-  String get ytdlRowNotSureStarted => 'Not sure it started';
+  String get ytdlRowNotSureStarted => '不确定是否已开始';
 
   @override
-  String get ytdlRowNotFound => 'Not found on the server';
+  String get ytdlRowNotFound => '在服务器上未找到';
 
   @override
-  String get ytdlRowClash =>
-      'Failed · a file with this name looks to be there already. Nothing was replaced.';
+  String get ytdlRowClash => '失败 · 似乎已有同名文件。未替换任何内容。';
 
   @override
   String get ytdlRowFailed =>
-      'Failed · the server didn\'t say why. Common causes: a live stream, YouTube refusing the server, 500 MB, or an hour.';
+      '失败 · 服务器未说明原因。常见原因：直播、YouTube 拒绝了服务器、超过 500 MB 或超过一小时。';
 
   @override
-  String get ytdlRowFailedOlder =>
-      'Failed · the server didn\'t say why. YouTube may have refused the server.';
+  String get ytdlRowFailedOlder => '失败 · 服务器未说明原因。可能是 YouTube 拒绝了服务器。';
 
   @override
-  String get ytdlRowNotSureFinished =>
-      'Not sure it finished · it ended while the app was away and the server has no record of it';
+  String get ytdlRowNotSureFinished => '不确定是否已完成 · 它在应用关闭或处于后台时结束，服务器上也没有相关记录';
 
   @override
-  String get ytdlRowWaiting => 'Waiting for connection';
+  String get ytdlRowWaiting => '等待连接';
 
   @override
-  String get ytdlRowFileMissing => 'File missing';
+  String get ytdlRowFileMissing => '文件缺失';
 
   @override
-  String get ytdlRowHide => 'Hide from this list';
+  String get ytdlRowHide => '从此列表中隐藏';
 
   @override
-  String get ytdlRowChangeFormatRetry => 'Change format and retry';
+  String get ytdlRowChangeFormatRetry => '更改格式并重试';
 
   @override
-  String get ytdlRowShowFolder => 'Show folder';
+  String get ytdlRowShowFolder => '查看文件夹';
 
   @override
-  String get ytdlRowShowInFolder => 'Show in folder';
+  String get ytdlRowShowInFolder => '在文件夹中显示';
 
   @override
-  String get ytdlShowEarlier => 'Show earlier';
+  String get ytdlShowEarlier => '显示更早的歌曲';
 
   @override
-  String get ytdlWhereTitle => 'Where new songs land';
+  String get ytdlWhereTitle => '新歌存放位置';
 
   @override
   String ytdlWhereSub(String server) {
-    return 'Kept on this phone for $server · Discover copies keep their own setting.';
+    return '为 $server 保存在这部手机上 · “发现”副本使用自己的设置。';
   }
 
   @override
   String ytdlWhereLandsAt(String title) {
-    return '“$title” lands at';
+    return '“$title”将存放到';
   }
 
   @override
-  String get ytdlWhereLandsAtSample => 'A song lands at';
+  String get ytdlWhereLandsAtSample => '歌曲将存放到';
 
   @override
-  String get ytdlWhereSampleNote =>
-      'Shown with sample words until you paste a link.';
+  String get ytdlWhereSampleNote => '粘贴链接前，这里用示例文字显示。';
 
   @override
   String ytdlWhereFileNote(String title) {
-    return 'The file name comes from the video title; your library shows “$title”.';
+    return '文件名取自视频标题；你的曲库会显示“$title”。';
   }
 
   @override
   String ytdlWhereAlwaysEmpty(String vars) {
-    return 'Always empty for YouTube songs, so left out: $vars';
+    return 'YouTube 歌曲始终没有该值，因此不计入路径：$vars';
   }
 
   @override
-  String get ytdlWhereSetByDiscover => 'Set by Discover';
+  String get ytdlWhereSetByDiscover => '由“发现”决定';
 
   @override
-  String get ytdlLayoutTop => 'Top of the library';
+  String get ytdlLayoutTop => '曲库顶层';
 
   @override
-  String get ytdlLayoutTopSub => 'No folders';
+  String get ytdlLayoutTopSub => '无文件夹';
 
   @override
-  String get ytdlLayoutDiscover => 'Same as Discover';
+  String get ytdlLayoutDiscover => '与“发现”相同';
 
   @override
-  String get ytdlWhereUseForSong => 'Use for this song';
+  String get ytdlWhereUseForSong => '仅用于这首歌';
 
   @override
-  String get ytdlWhereNoMkdir =>
-      'Your account can\'t make folders, so only folders that already exist work. Top of the library always does.';
+  String get ytdlWhereNoMkdir => '你的账户无法创建文件夹，因此只能使用已有的文件夹。“曲库顶层”始终可用。';
 
   @override
-  String get ytdlCustomHelp =>
-      'Use / between folders. There\'s no TITLE — the file name always comes from the video title.';
+  String get ytdlCustomHelp => '用 / 分隔文件夹。没有 TITLE 变量 — 文件名始终取自视频标题。';
 
   @override
   String ytdlErrNeverVar(String name, String vars) {
-    return '$name is always empty for YouTube songs. Use $vars.';
+    return '$name 对 YouTube 歌曲始终为空。请使用 $vars。';
   }
 
   @override
-  String get ytdlErrBadChars =>
-      'A folder name can\'t contain : * ? \" < > or |.';
+  String get ytdlErrBadChars => '文件夹名称不能包含 : * ? \" < > 或 |。';
 
   @override
   String ytdlTrapEmpty(String folder) {
-    return 'Nothing to fill this folder, so it\'s named “$folder”. Add an album and year, or pick another layout.';
+    return '没有内容可填入此文件夹，因此它会被命名为“$folder”。请添加专辑和年份，或选择其他布局。';
   }
 
   @override
   String ytdlTrapNoYear(String folder) {
-    return 'No year for this song, so the folder reads “$folder”. The file still gets YouTube\'s upload year as its tag.';
+    return '这首歌没有年份，因此文件夹名为“$folder”。文件仍会以 YouTube 的上传年份作为标签。';
   }
 
   @override
   String ytdlTrapOther(String folder) {
-    return 'A tag is empty, so the folder reads “$folder”. Fill in the tags, or pick another layout.';
+    return '有标签为空，因此文件夹名为“$folder”。请填写标签，或选择其他布局。';
   }
 
   @override
-  String get ytdlTrapAddYear => 'Add a year';
+  String get ytdlTrapAddYear => '添加年份';
 
   @override
   String ytdlNoMkdirNew(String folder) {
-    return '“$folder” doesn\'t exist yet and your account can\'t make folders.';
+    return '“$folder”尚不存在，而你的账户无法创建文件夹。';
   }
 
   @override
-  String get ytdlNoMkdirUnchecked =>
-      'Your account can\'t make folders and this folder couldn\'t be checked.';
+  String get ytdlNoMkdirUnchecked => '你的账户无法创建文件夹，且无法检查此文件夹。';
 
   @override
   String ytdlSaveToInstead(String path) {
-    return 'Save to $path instead';
+    return '改为保存到 $path';
   }
 
   @override
-  String get ytdlChooseFolderLink => 'Choose a folder…';
+  String get ytdlChooseFolderLink => '选择文件夹…';
 
   @override
-  String get ytdlChooseTitle => 'Choose a folder';
+  String get ytdlChooseTitle => '选择文件夹';
 
   @override
-  String get ytdlChooseSub =>
-      'Your account can\'t make folders, so pick one that already exists.';
+  String get ytdlChooseSub => '你的账户无法创建文件夹，请选择一个已有的文件夹。';
 
   @override
-  String get ytdlChooseEmpty => 'No folders here.';
+  String get ytdlChooseEmpty => '此处没有文件夹。';
 
   @override
-  String get ytdlExplorerEntry => 'Add from YouTube here';
+  String get ytdlExplorerEntry => '从 YouTube 添加到这里';
 
   @override
   String ytdlSheetInto(String path) {
-    return 'Into $path';
+    return '存入 $path';
   }
 
   @override
-  String get ytdlSortSubfolders => 'Sort into subfolders…';
+  String get ytdlSortSubfolders => '整理到子文件夹…';
 
   @override
-  String get ytdlSubfoldersTitle => 'Sort into subfolders';
+  String get ytdlSubfoldersTitle => '整理到子文件夹';
 
   @override
-  String get ytdlSubfoldersHere => 'The folder you\'re in';
+  String get ytdlSubfoldersHere => '当前所在的文件夹';
 
   @override
-  String get ytdlSubfoldersRightHere => 'Right here';
+  String get ytdlSubfoldersRightHere => '就放在这里';
 
   @override
-  String get ytdlSubfoldersNone => 'No subfolders';
+  String get ytdlSubfoldersNone => '无子文件夹';
 
   @override
   String ytdlSubfoldersNew(int count, String folders) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count new folders will be made: $folders',
-      one: '$count new folder will be made: $folders',
+      other: '将创建 $count 个新文件夹：$folders',
     );
     return '$_temp0';
   }
 
   @override
   String ytdlStripAdding(String title) {
-    return 'Adding “$title”…';
+    return '正在添加“$title”…';
   }
 
   @override
@@ -5732,143 +5703,140 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Adding $count videos…',
-      one: 'Adding $count video…',
+      other: '正在添加 $count 个视频…',
     );
     return '$_temp0';
   }
 
   @override
-  String get ytdlStripSeeAll => 'See all';
+  String get ytdlStripSeeAll => '查看全部';
 
   @override
-  String get ytdlStripDetails => 'Details';
+  String get ytdlStripDetails => '详情';
 
   @override
   String ytdlToastAdded(String title, String path) {
-    return 'Added “$title” to $path';
+    return '已将“$title”添加到 $path';
   }
 
   @override
   String ytdlCouldntAdd(String title) {
-    return 'Couldn\'t add “$title”';
+    return '无法添加“$title”';
   }
 
   @override
   String ytdlToastSaved(String path) {
-    return 'Saved · new songs land in $path';
+    return '已保存 · 新歌将存放到 $path';
   }
 
   @override
-  String get ytdlToastHidden => 'Hidden. The server keeps going.';
+  String get ytdlToastHidden => '已隐藏。服务器会继续处理。';
 
   @override
-  String get ytdlA11yLinkField => 'YouTube link';
+  String get ytdlA11yLinkField => 'YouTube 链接';
 
   @override
-  String get ytdlA11yClearLink => 'Clear link';
+  String get ytdlA11yClearLink => '清除链接';
 
   @override
   String ytdlA11yFormat(String format) {
-    return 'Format, $format';
+    return '格式，$format';
   }
 
   @override
   String ytdlA11yPutBack(String fragment) {
-    return 'Put back $fragment';
+    return '恢复 $fragment';
   }
 
   @override
-  String get ytdlA11yUndoSplit => 'Undo the split at the dash';
+  String get ytdlA11yUndoSplit => '撤销按横线拆分';
 
   @override
-  String get ytdlA11yUndoSplitColon => 'Undo the split at the colon';
+  String get ytdlA11yUndoSplitColon => '撤销按冒号拆分';
 
   @override
   String ytdlA11yMoreFor(String title) {
-    return 'More for $title';
+    return '$title 的更多操作';
   }
 
   @override
-  String get ytdlA11yAdding => 'Adding';
+  String get ytdlA11yAdding => '正在添加';
 
   @override
-  String get ytdlA11yNewFolder => 'a new folder';
+  String get ytdlA11yNewFolder => '新文件夹';
 
   @override
   String ytdlCrumbThen(String previous, String next) {
-    return '$previous, then $next';
+    return '$previous，然后是 $next';
   }
 
   @override
   String ytdlCrumbNew(String folder) {
-    return '$folder, a new folder';
+    return '$folder，新文件夹';
   }
 
   @override
   String ytdlCrumbFile(String path, String file) {
-    return '$path, file $file';
+    return '$path，文件 $file';
   }
 
   @override
-  String get ytdlCrumbEmptyBrackets => 'empty brackets';
+  String get ytdlCrumbEmptyBrackets => '空括号';
 
   @override
   String ytdlCrumbWithEmptyBrackets(String folder) {
-    return '$folder with empty brackets';
+    return '$folder 带空括号';
   }
 
   @override
   String ytdlA11yVarUsed(String name) {
-    return '$name, used';
+    return '$name，已使用';
   }
 
   @override
-  String get ytdlA11yInsertVariable => 'Insert a variable';
+  String get ytdlA11yInsertVariable => '插入变量';
 
   @override
-  String get ytdlA11yLocked => 'Locked';
+  String get ytdlA11yLocked => '已锁定';
 
   @override
-  String get ytdlA11yFolderPath => 'Folder path';
+  String get ytdlA11yFolderPath => '文件夹路径';
 
   @override
   String ytdlA11yUpTo(String folder) {
-    return 'Up to $folder';
+    return '返回 $folder';
   }
 
   @override
-  String get ytdlA11yCover => 'Cover';
+  String get ytdlA11yCover => '封面';
 
   @override
   String ytdlSummaryBy(String title, String artist) {
-    return '$title, by $artist';
+    return '$title，艺术家 $artist';
   }
 
   @override
   String ytdlSummaryAlbum(String album) {
-    return 'album $album';
+    return '专辑 $album';
   }
 
   @override
-  String get ytdlSummaryNoAlbum => 'no album';
+  String get ytdlSummaryNoAlbum => '无专辑';
 
   @override
   String ytdlSummary(String details, String source, String path) {
-    return '$details. $source. Saves to $path.';
+    return '$details。$source。保存到 $path。';
   }
 
   @override
-  String get ytdlErrAddOffline =>
-      'You\'re offline — try again when you\'re back.';
+  String get ytdlErrAddOffline => '你已离线 — 恢复连接后请重试。';
 
   @override
-  String get ytdlHelpVideoRelease => 'From the video\'s release date';
+  String get ytdlHelpVideoRelease => '取自视频的发布日期';
 
   @override
-  String get ytdlChooseLoading => 'Loading folders';
+  String get ytdlChooseLoading => '正在加载文件夹';
 
   @override
-  String get ytdlRowNoConnection =>
-      'Didn\'t start · the phone couldn\'t reach the server';
+  String get ytdlRowNoConnection => '未开始 · 手机无法连接服务器';
 }
