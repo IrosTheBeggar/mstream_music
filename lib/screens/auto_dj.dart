@@ -30,6 +30,7 @@ import '../util/fan_out_readout.dart';
 import '../util/server_tree.dart';
 import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/mood_filter_sheet.dart' show moodLabels, showMoodFilterSheet;
 import '../widgets/queue_list.dart' show toggleAutoDJ;
 
 class AutoDJScreen extends StatefulWidget {
@@ -263,6 +264,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             _minRatingTile(_panelServer!),
           if (!_durationHidden) _durationFilterSection(),
           if (_panelServer != null) _genreFilterSection(_panelServer!),
+          if (!_moodHidden) _moodFilterSection(),
           _keywordFilterSection(),
         ],
       ];
@@ -284,9 +286,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         _bpmContinuitySection(),
         _harmonicMixingSection(),
       ],
-      // Length and keywords are app-level: seconds and words mean the same
-      // thing on every server, so they belong with the session, not a library.
+      // Length, mood and keywords are app-level: seconds, moods and words mean
+      // the same thing on every server, so they belong with the session, not a
+      // library.
       if (!_durationHidden) _durationFilterSection(),
+      if (!_moodHidden) _moodFilterSection(),
       _keywordFilterSection(),
       Divider(color: VelvetColors.border, height: 1),
       _sectionHeader(l.autoDjSectionPerServer),
@@ -526,6 +530,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// gate — a multi-server participant already needs the same release for
   /// its vector seed.
   bool get _batchHidden => autoDjBatchKnownUnsupported(_panelServerVersion);
+
+  /// True unless the DJ server says it can filter by mood (its `moodFilters`
+  /// flag; off for a peer). Hidden rather than shown-and-ignored, as above:
+  /// the mood is only sent where the server can apply it.
+  bool get _moodHidden => _panelServer?.moodFiltersAvailable != true;
 
   Widget _olderServerNote(AppLocalizations l) {
     return Padding(
@@ -941,6 +950,81 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 ),
               ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// The browse lists' mood filter, kept to for every pick (mStream #1096).
+  /// A switch like the track-length window's; while it is on, the choices
+  /// below it open the browse lists' mood sheet. Nothing is sent until
+  /// something is chosen.
+  Widget _moodFilterSection() {
+    final l = AppLocalizations.of(context);
+    final mgr = AutoDJManager();
+    final chosen = moodLabels(l, mgr.moodFilter);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.autoDjMoodTitle,
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text(
+                      l.autoDjMoodSubtitle,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                key: const ValueKey('auto-dj-mood-switch'),
+                value: mgr.moodFilterEnabled,
+                onChanged: (v) => mgr.setMoodFilterEnabled(v),
+                activeThumbColor: VelvetColors.primary,
+              ),
+            ],
+          ),
+          if (mgr.moodFilterEnabled)
+            InkWell(
+              key: const ValueKey('auto-dj-mood-choices'),
+              onTap: () async {
+                final f = await showMoodFilterSheet(context, mgr.moodFilter);
+                if (f != null) await mgr.setMoodFilter(f);
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        chosen.isEmpty ? l.autoDjMoodChoose : chosen.join(' · '),
+                        style: TextStyle(
+                          color: chosen.isEmpty
+                              ? VelvetColors.textSecondary
+                              : VelvetColors.primary,
+                          fontSize: 13,
+                          fontWeight: chosen.isEmpty
+                              ? FontWeight.normal
+                              : FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.chevron_right,
+                        size: 18, color: VelvetColors.textTertiary),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

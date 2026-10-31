@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../util/write_chain.dart';
 
@@ -124,6 +125,15 @@ class AutoDJManager {
   // bound. On a partially-scanned library that can shrink the pool much more
   // than intended, which is what this opts back out of.
   bool allowUnknownDuration = false;
+
+  // Mood — server-side via `moods` on POST /api/v1/db/random-songs (mStream
+  // #1096): the browse lists' filter, kept to for every pick. Like the
+  // track-length window it is a base condition the server never relaxes, so
+  // a mood nothing in scope meets 400s rather than playing outside it. App-
+  // level: a mood means the same on every server. Only sent while switched on
+  // with something chosen (see [activeMoodFilter]).
+  bool moodFilterEnabled = false;
+  MoodFilter moodFilter = MoodFilter.empty;
 
   /// Bottom rail of the length slider — "no minimum".
   static const int durationFloorSec = 0;
@@ -282,6 +292,10 @@ class AutoDJManager {
         maxDurationSec = durationCeilSec;
       }
       allowUnknownDuration = m['allowUnknownDuration'] ?? false;
+      // Cleaned on read: the route refuses an unknown value, so a hand-edited
+      // or future-written filter must not 400 every pick.
+      moodFilterEnabled = m['moodFilterEnabled'] == true;
+      moodFilter = MoodFilter.fromJson(m['moodFilter']);
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
       multiServerEnabled = m['multiServerEnabled'] ?? false;
       _notify();
@@ -335,6 +349,8 @@ class AutoDJManager {
       'minDurationSec': minDurationSec,
       'maxDurationSec': maxDurationSec,
       'allowUnknownDuration': allowUnknownDuration,
+      'moodFilterEnabled': moodFilterEnabled,
+      'moodFilter': moodFilter.toJson(),
     }));
   });
 
@@ -390,6 +406,25 @@ class AutoDJManager {
     return (min: min, max: max);
   }
 
+  // --- Mood ---
+
+  Future<void> setMoodFilterEnabled(bool v) async {
+    moodFilterEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setMoodFilter(MoodFilter f) async {
+    moodFilter = f;
+    _notify();
+    await _save();
+  }
+
+  /// The mood actually worth sending: null while switched off, or on with
+  /// nothing chosen — the cue to send no `moods` key at all.
+  MoodFilter? get activeMoodFilter =>
+      moodFilterEnabled && !moodFilter.isEmpty ? moodFilter : null;
+
   // --- Keyword filter ---
 
   Future<void> setKeywordFilterEnabled(bool v) async {
@@ -421,7 +456,7 @@ class AutoDJManager {
   }
 
   /// The Auto DJ constraints that describe the LIBRARY rather than the
-  /// session: excluded vpaths, minimum rating, genre, track length.
+  /// session: excluded vpaths, minimum rating, genre, track length, mood.
   ///
   /// Shared by the DJ's own picks and by the "Surprise me" opening track so
   /// the two cannot drift. They had: the opener sent only vpaths and rating,
@@ -454,6 +489,13 @@ class AutoDJManager {
       if (bounds.min != null) out['minDuration'] = bounds.min;
       if (bounds.max != null) out['maxDuration'] = bounds.max;
       if (allowUnknownDuration) out['allowUnknownDuration'] = true;
+    }
+    // Only to a server that says it can filter by mood: the route refuses an
+    // unknown key, and the flag is off for a peer, whose flags the app cannot
+    // read (the rule Rated, Recent and Discover follow too).
+    final mood = activeMoodFilter;
+    if (mood != null && server.moodFiltersAvailable == true) {
+      out['moods'] = mood.toJson();
     }
     return out;
   }

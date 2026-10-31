@@ -925,6 +925,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tracks your server has not read a length for are skipped otherwise';
 
   @override
+  String get autoDjMoodTitle => 'Mood';
+
+  @override
+  String get autoDjMoodSubtitle => 'Only pick songs that fit a mood';
+
+  @override
+  String get autoDjMoodChoose => 'Choose a mood';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ is on';
 
   @override

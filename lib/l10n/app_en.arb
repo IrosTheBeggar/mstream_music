@@ -849,6 +849,18 @@
   "@autoDjDurationAllowUnknownSub": {
     "description": "Subtitle for that sub-switch."
   },
+  "autoDjMoodTitle": "Mood",
+  "@autoDjMoodTitle": {
+    "description": "Auto DJ mood filter switch title."
+  },
+  "autoDjMoodSubtitle": "Only pick songs that fit a mood",
+  "@autoDjMoodSubtitle": {
+    "description": "Subtitle for that switch."
+  },
+  "autoDjMoodChoose": "Choose a mood",
+  "@autoDjMoodChoose": {
+    "description": "Shown under the mood switch while it is on and nothing is chosen yet; tapping opens the mood sheet."
+  },
   "autoDjStatusOn": "Auto DJ is on",
   "autoDjStatusOff": "Auto DJ is off",
   "autoDjStatusOffDetail": "Tap below to start. The current server's library will be used.",

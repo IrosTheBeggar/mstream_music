@@ -1698,6 +1698,24 @@ abstract class AppLocalizations {
   /// **'Tracks your server has not read a length for are skipped otherwise'**
   String get autoDjDurationAllowUnknownSub;
 
+  /// Auto DJ mood filter switch title.
+  ///
+  /// In en, this message translates to:
+  /// **'Mood'**
+  String get autoDjMoodTitle;
+
+  /// Subtitle for that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Only pick songs that fit a mood'**
+  String get autoDjMoodSubtitle;
+
+  /// Shown under the mood switch while it is on and nothing is chosen yet; tapping opens the mood sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a mood'**
+  String get autoDjMoodChoose;
+
   /// Auto DJ status block + enable button.
   ///
   /// In en, this message translates to:

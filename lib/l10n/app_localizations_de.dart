@@ -937,6 +937,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Titel, deren Länge dein Server nicht gelesen hat, werden sonst übersprungen';
 
   @override
+  String get autoDjMoodTitle => 'Stimmung';
+
+  @override
+  String get autoDjMoodSubtitle =>
+      'Nur Titel wählen, die zu einer Stimmung passen';
+
+  @override
+  String get autoDjMoodChoose => 'Stimmung wählen';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ ist an';
 
   @override

@@ -943,6 +943,15 @@ class AppLocalizationsRu extends AppLocalizations {
       'Иначе треки, длительность которых сервер не определил, пропускаются';
 
   @override
+  String get autoDjMoodTitle => 'Настроение';
+
+  @override
+  String get autoDjMoodSubtitle => 'Выбирать только треки под настроение';
+
+  @override
+  String get autoDjMoodChoose => 'Выберите настроение';
+
+  @override
   String get autoDjStatusOn => 'Авто-DJ включён';
 
   @override

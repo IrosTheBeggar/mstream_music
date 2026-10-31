@@ -893,6 +893,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjDurationAllowUnknownSub => '否则将跳过服务器未读取到时长的曲目';
 
   @override
+  String get autoDjMoodTitle => '氛围';
+
+  @override
+  String get autoDjMoodSubtitle => '只挑选符合某种氛围的歌曲';
+
+  @override
+  String get autoDjMoodChoose => '选择氛围';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ 已开启';
 
   @override

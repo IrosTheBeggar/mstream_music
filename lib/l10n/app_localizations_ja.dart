@@ -902,6 +902,15 @@ class AppLocalizationsJa extends AppLocalizations {
       'オフのときは、サーバーが長さを読み取れなかった曲はスキップされます';
 
   @override
+  String get autoDjMoodTitle => 'ムード';
+
+  @override
+  String get autoDjMoodSubtitle => 'ムードに合う曲だけを選ぶ';
+
+  @override
+  String get autoDjMoodChoose => 'ムードを選ぶ';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ はオンです';
 
   @override
