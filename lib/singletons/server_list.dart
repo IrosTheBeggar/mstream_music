@@ -69,6 +69,9 @@ class ServerManager {
       BehaviorSubject<List<Server>>.seeded(serverList);
   late final BehaviorSubject<Server?> _currentServerStream =
       BehaviorSubject<Server?>.seeded(currentServer);
+  // A server whose stored capabilities a refresh just changed — its first
+  // answer through a tunnel that came up, an upgrade, discovery switched on.
+  final PublishSubject<Server> _capabilities = PublishSubject();
 
   ServerManager._privateConstructor();
   static final ServerManager _instance = ServerManager._privateConstructor();
@@ -434,6 +437,7 @@ class ServerManager {
           server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
+        _capabilities.add(server);
       }
       // The home's cards that follow a flag. Discover wants discovery AND
       // the taste route, so either half changing redraws it — a server
@@ -2754,6 +2758,11 @@ class ServerManager {
   Stream<Server?> get currentServerStream => _currentServerStream.stream;
 
   Stream<List<Server>> get serverListStream => _serverListStream.stream;
+
+  /// Each server whose stored capabilities a refresh changed (the flags
+  /// [getServerPaths] persists): who can take part in an Auto DJ session
+  /// across servers follows them.
+  Stream<Server> get capabilityChanges => _capabilities.stream;
 }
 
 /// What asking the parent for a peer's direct access came to.

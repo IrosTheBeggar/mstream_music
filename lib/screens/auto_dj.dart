@@ -24,6 +24,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:rxdart/rxdart.dart' show MergeStream;
 
 import '../l10n/app_localizations.dart';
 import '../media/audio_stuff.dart' show SonicDrop;
@@ -55,6 +56,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   StreamSubscription<dynamic>? _customStateSub;
   StreamSubscription<int>? _autoDjMgrSub;
   StreamSubscription? _tunnelSub;
+  StreamSubscription? _capabilitiesSub;
 
   /// The server the DJ is running on, or null while it is off.
   Server? _dj;
@@ -77,6 +79,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _tunnelSub = ServerManager().tunnelTransitions.listen((_) {
       if (mounted) setState(() {});
     });
+    // And how many take part, which a server's flags decide — the first
+    // answer through a tunnel lands a moment after the tunnel comes up.
+    _capabilitiesSub = ServerManager().capabilityChanges.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -84,6 +91,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _customStateSub?.cancel();
     _autoDjMgrSub?.cancel();
     _tunnelSub?.cancel();
+    _capabilitiesSub?.cancel();
     super.dispose();
   }
 
@@ -245,6 +253,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           connecting: (s) =>
               _dj != null &&
               fanOutConnecting([s], ServerManager().tunnelServes).isNotEmpty,
+          changes: MergeStream([
+            ServerManager().tunnelTransitions,
+            ServerManager().capabilityChanges,
+          ]),
         ));
     if (set.length < 2) {
       return _ValueRow(

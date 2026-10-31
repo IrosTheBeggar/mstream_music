@@ -105,8 +105,9 @@ enum SonicDrop { tooStrict, scanning, discoveryOff }
 
 /// Why a server is not taking part in a multi-server Auto DJ session (see
 /// [AudioPlayerHandler.multiServerSitOut]). [unreachable] covers a server
-/// that has never reported its flags, and one dropped this session for a
-/// reason the screen has no better word for.
+/// that has never reported its flags though it has had the chance (not a
+/// Quick Connect one still waiting for its tunnel), and one dropped this
+/// session for a reason the screen has no better word for.
 enum FanOutSitOut {
   discoveryOff,
   scanning,
@@ -4068,11 +4069,27 @@ class AudioPlayerHandler extends BaseAudioHandler
     return null;
   }
 
+  /// [sitOutReason] as the Auto DJ screen shows it, [tunnelUp] saying whether
+  /// a server's tunnel is live. A Quick Connect server nothing has dialed
+  /// yet has had no chance to report its flags: it is on its way, not
+  /// unreachable, so — as for the tunnel targets — flags it never reported
+  /// don't count against it until its tunnel is up. The pick itself stays
+  /// strict ([multiServerCandidates]). Pure; unit-tested.
+  static FanOutSitOut? shownSitOut(Server s, Set<String> excluded,
+          {Map<String, FanOutSitOut> why = const {},
+          required bool Function(Server) tunnelUp,
+          bool moodSet = false}) =>
+      sitOutReason(s, excluded,
+          why: why,
+          allowUnknownDiscovery: s.isIrohTransport && !tunnelUp(s),
+          moodSet: moodSet);
+
   /// Why [s] is not taking part in a multi-server session right now, or null
   /// when it is — the Auto DJ screen's Play from sheet, by each server.
-  FanOutSitOut? multiServerSitOut(Server s) => sitOutReason(
+  FanOutSitOut? multiServerSitOut(Server s) => shownSitOut(
       s, _multiServerExcluded,
       why: _multiServerExcludedWhy,
+      tunnelUp: ServerManager().tunnelServes,
       moodSet: AutoDJManager().activeMoodFilter != null);
 
   /// Every song in a random-songs answer with its own similarity. A batch

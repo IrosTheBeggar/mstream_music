@@ -631,7 +631,8 @@ class PlayFromSheet extends StatefulWidget {
       required this.chosen,
       required this.home,
       required this.sitOut,
-      required this.connecting});
+      required this.connecting,
+      this.changes});
 
   /// Every server the picker may offer, grouped (a peer under its parent).
   final List<Server> servers;
@@ -643,12 +644,18 @@ class PlayFromSheet extends StatefulWidget {
   final Server? home;
 
   /// Why a server would sit out of a session across several, or null when
-  /// it would take part — the running session's own drops included.
+  /// it would take part — the running session's own drops included. A
+  /// server not reached yet has no reason: nothing is known against it.
   final FanOutSitOut? Function(Server) sitOut;
 
   /// Whether a server taking part is still on its way: the session is on
   /// and the server's tunnel is not up yet.
   final bool Function(Server) connecting;
+
+  /// Fires when what [sitOut] or [connecting] says may have changed — a
+  /// tunnel coming up or dropping, a server's flags arriving — so the rows
+  /// follow while the sheet is open.
+  final Stream<Object?>? changes;
 
   @override
   State<PlayFromSheet> createState() => _PlayFromSheetState();
@@ -666,6 +673,21 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
     for (final s in {...widget.servers, ...widget.chosen, ?widget.home})
       s.localname: Map.of(s.autoDJPaths),
   };
+  StreamSubscription<Object?>? _changesSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _changesSub = widget.changes?.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
+  }
 
   AudioPlayerHandler get _handler => MediaManager().audioHandler;
 

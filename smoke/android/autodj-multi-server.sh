@@ -20,8 +20,10 @@
 #                   the-DJ), and the pick must answer 2/2 over it.
 #   4. DJ off — the mini-player's Auto DJ pill switches the session off; B's
 #                   tunnel must be released at once (`tunnel stopped
-#                   (no-target/dj-off)`) and not re-dialed. Skipped when the
-#                   phase-3 pick came from B: a queued track keeps its tunnel.
+#                   (no-target/dj-off)`) and not re-dialed. A queued track
+#                   keeps its tunnel, and the phase-3 batch nearly always
+#                   queues one of B's: the app is then relaunched on an empty
+#                   queue first, so the restored session is B's only holder.
 #
 # Pass lines to look for in the app log: `[dj] <server> answers in model
 # test-fake (N analysed)` (the health handshake), `[dj] multi-server: 2/2
@@ -38,7 +40,13 @@
 # Taps are Galaxy S25 defaults (home grid Albums tile, first album, a track
 # row — which queues the whole album — and the mini-player's Auto DJ pill).
 # Override with SMOKE_HOME_ALBUMS_XY, SMOKE_ALBUM1_XY, SMOKE_TRACK1_XY,
-# SMOKE_DJ_PILL_XY, SMOKE_PEER_ALBUMS_XY for other phones.
+# SMOKE_DJ_PILL_XY, SMOKE_PEER_ALBUMS_XY, SMOKE_PICKER_XY for other phones.
+# A track row queues the album only with Settings › Tap behavior on "Play
+# from here" (a settings.json without the key reads as "Add to queue"). On
+# the arm64 "smoke" AVD (1080x2400): SMOKE_HOME_ALBUMS_XY="282 797"
+# SMOKE_ALBUM1_XY="191 674" SMOKE_TRACK1_XY="468 822"
+# SMOKE_DJ_PILL_XY="961 2268" SMOKE_PEER_ALBUMS_XY="798 802"
+# SMOKE_PICKER_XY="1017 210", and SMOKE_RIG_HOST=10.0.2.2.
 set -u
 source "$(dirname "$0")/../lib.sh"
 [ "${SMOKE_RIG_SERVERS_ONLY:-0}" = 1 ] || { pick_device; cfg_backup; }
@@ -297,24 +305,41 @@ if [ -z "$CODE" ]; then fail "phase 3: no pairing code from B"; else
   play_album p3; N=$TRACKS
   [ "${N:-0}" -gt 0 ] && expect_pick "phase 3" "$N" rig-a iroh-rig-b
 
+  media_key pause; sleep 1; save_applog phase3
+
   # ── phase 4: the DJ switched off releases the fan-out tunnel ─────────────
   # The pill toggles the DJ off when it is armed on the browsed server (rig-a
-  # here). B is neither browsed nor queued, so the session was its only
-  # reason to hold a tunnel: the manager reconciles at once on the DJ-off
-  # path (no grace) and must not dial it again.
+  # here). The session must be B's only reason to hold a tunnel: the manager
+  # then reconciles at once on the DJ-off path (no grace) and must not dial
+  # it again. A queued track of B's would hold it too, and the phase-3 pick
+  # queues a batch (songsPerFetch) that nearly always carries one — so then
+  # relaunch on an empty queue: the DJ restores armed and dials B for the
+  # session alone.
   if cfg_read queue.json | python3 -c "
 import sys,json
 d=json.load(sys.stdin); sys.exit(0 if any(((it.get('extras') or {}).get('server'))=='iroh-rig-b' for it in (d.get('items') or [])) else 1)" 2>/dev/null; then
-    skip "phase 4: the pick came from B, whose queued track keeps its tunnel — the DJ-off release is not observable this run"
-  else
-    T=$(now_ts); tap $DJ_PILL; sleep 2; shot p4-dj-off
-    if wait_for_log_after "$T" 'tunnel stopped .*for=iroh-rig-b' 20; then
-      LINE=$(applog | grep -E 'tunnel stopped .*for=iroh-rig-b' | tail -1 | sed 's/^[0-9:.]* //')
-      case "$LINE" in *no-target/dj-off*) pass "phase 4: B's tunnel released when the DJ was switched off — $LINE";; *) fail "phase 4: B's tunnel stopped for another reason: $LINE";; esac
-      sleep 15; UPS=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE 'tunnel up .*for=iroh-rig-b')
-      [ "$UPS" -eq 0 ] && pass "phase 4: B not re-dialed in the 35s after the switch-off" || fail "phase 4: B re-dialed $UPS time(s) after the switch-off"
-    else save_applog p4-off; log "$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -E '\[dj\]|\[autodj\]|\[iroh\]' | tail -6)"; fail "phase 4: B's tunnel still up 20s after the DJ was switched off"; fi
+    log "phase 4: a track of B's is queued (it holds the tunnel) — relaunching on an empty queue"
+    app_stop; adbx shell "run-as $PKG rm -f app_flutter/queue.json"; logcat_clear; wake; app_start
+    wait_for_log '\[autodj\] restored on rig-a' 30 || fail "phase 4: DJ not restored on rig-a after the relaunch"
+    if wait_for_log '\[iroh\] tunnel up .*for=iroh-rig-b' 90; then pass "phase 4: B dialed for the session alone, nothing queued"
+    else save_applog p4-launch; fail "phase 4: B's tunnel did not come up after the relaunch"; fi
+    sleep 3  # let the relaunch settle before the tap
   fi
-  media_key pause; sleep 1; save_applog phase3
+  T=$(now_ts); tap $DJ_PILL; sleep 2
+  # A tap swallowed while the app settles leaves the DJ armed; one that
+  # landed clears enabledServer at once, however long the release takes.
+  if ! wait_for_log_after "$T" 'tunnel stopped .*for=iroh-rig-b' 8 && cfg_read auto_dj.json | python3 -c "
+import sys,json
+sys.exit(0 if json.load(sys.stdin).get('enabledServer') else 1)" 2>/dev/null; then
+    log "phase 4: the pill tap did not switch the DJ off — once more"; T=$(now_ts); tap $DJ_PILL; sleep 2
+  fi
+  shot p4-dj-off
+  if wait_for_log_after "$T" 'tunnel stopped .*for=iroh-rig-b' 20; then
+    LINE=$(applog | grep -E 'tunnel stopped .*for=iroh-rig-b' | tail -1 | sed 's/^[0-9:.]* //')
+    case "$LINE" in *no-target/dj-off*) pass "phase 4: B's tunnel released when the DJ was switched off — $LINE";; *) fail "phase 4: B's tunnel stopped for another reason: $LINE";; esac
+    sleep 15; UPS=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE 'tunnel up .*for=iroh-rig-b')
+    [ "$UPS" -eq 0 ] && pass "phase 4: B not re-dialed in the 35s after the switch-off" || fail "phase 4: B re-dialed $UPS time(s) after the switch-off"
+  else save_applog p4-off; log "$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -E '\[dj\]|\[autodj\]|\[iroh\]' | tail -6)"; fail "phase 4: B's tunnel still up 20s after the DJ was switched off"; fi
+  save_applog phase4
 fi
 summary

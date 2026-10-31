@@ -11,6 +11,7 @@
 // never finishes on the fake clock — so a tap that saves runs under
 // runAsync and waits for the sheet to close.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -814,13 +815,15 @@ void main() {
             {List<Server>? chosen,
             Server? home,
             Map<String, FanOutSitOut> sitOut = const {},
-            Set<String> connecting = const {}}) =>
+            Set<String> connecting = const {},
+            Stream<Object?>? changes}) =>
         PlayFromSheet(
           servers: servers,
           chosen: chosen ?? [servers.first],
           home: home ?? (chosen ?? servers).first,
           sitOut: (s) => sitOut[s.localname],
           connecting: (s) => connecting.contains(s.localname),
+          changes: changes,
         );
 
     setUp(() {
@@ -983,6 +986,40 @@ void main() {
               matching: find.byType(CircularProgressIndicator)),
           findsNothing,
           reason: 'alone it is not fanning anything out');
+    });
+
+    testWidgets('the rows follow the session while the sheet is open',
+        (tester) async {
+      final home = server('home');
+      final office = server('office');
+      final sitOut = <String, FanOutSitOut>{};
+      final connecting = {'office'};
+      final changes = StreamController<Object?>.broadcast();
+      addTearDown(changes.close);
+      Finder spinner(String name) => find.descendant(
+          of: pick(name), matching: find.byType(CircularProgressIndicator));
+      await open(
+          tester,
+          (_) => sheet([home, office],
+              chosen: [home, office],
+              sitOut: sitOut,
+              connecting: connecting,
+              changes: changes.stream),
+          settle: false);
+      expect(spinner('office'), findsOneWidget);
+
+      // Its tunnel comes up.
+      connecting.clear();
+      changes.add(null);
+      await tester.pump();
+      expect(spinner('office'), findsNothing);
+
+      // Its first answer says discovery is off.
+      sitOut['office'] = FanOutSitOut.discoveryOff;
+      changes.add(null);
+      await tester.pump();
+      expect(within(pick('office'), 'Discovery off'), findsOneWidget);
+      expect(warned(pick('office')), isTrue);
     });
 
     testWidgets('the last folder on cannot be switched off; closing discards '

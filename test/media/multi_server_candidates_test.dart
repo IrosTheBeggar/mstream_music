@@ -13,6 +13,12 @@ Server _server(String name,
       ..discoveryEnabled = discovery
       ..discoveryReady = ready;
 
+Server _quickConnect(String name, {bool? discovery = true}) =>
+    Server('iroh://$name', 'u', 'p', 'JWT', name)
+      ..connectionType = 'iroh'
+      ..serverVersion = '6.26.0'
+      ..discoveryEnabled = discovery;
+
 Server _peer({bool hidden = false, bool missing = false}) =>
     Server('federated://home/3', null, null, null, 'peer-basement')
       ..federationParent = 'home'
@@ -353,6 +359,59 @@ void main() {
         }
       }
       expect(checked, fixtures.length * exclusions.length * 4);
+    });
+  });
+
+  // The same reasons as the Auto DJ screen shows them (the Play from sheet,
+  // the participants readout): a Quick Connect server nothing has dialed yet
+  // has had no chance to report its flags.
+  group('AudioPlayerHandler.shownSitOut', () {
+    FanOutSitOut? shown(Server s,
+            {bool tunnelUp = false,
+            Set<String> excluded = const {},
+            Map<String, FanOutSitOut> reasons = const {},
+            bool moodSet = false}) =>
+        AudioPlayerHandler.shownSitOut(s, excluded,
+            why: reasons, tunnelUp: (_) => tunnelUp, moodSet: moodSet);
+
+    test('a Quick Connect server not reached yet is on its way, not '
+        'unreachable', () {
+      expect(shown(_quickConnect('b', discovery: null)), isNull);
+      expect(shown(_quickConnect('b', discovery: null), moodSet: true), isNull,
+          reason: 'its mood flag is just as unreported');
+    });
+
+    test('once its tunnel is up, flags it still has not reported count', () {
+      expect(shown(_quickConnect('b', discovery: null), tunnelUp: true),
+          FanOutSitOut.unreachable);
+    });
+
+    test('a standard server that never reported is unreachable — its ping is '
+        'its chance', () {
+      expect(shown(_server('a', discovery: null)), FanOutSitOut.unreachable);
+      expect(shown(_server('a', discovery: null), tunnelUp: true),
+          FanOutSitOut.unreachable);
+    });
+
+    test('what is known still shows while the tunnel is down', () {
+      expect(shown(_quickConnect('b', discovery: false)),
+          FanOutSitOut.discoveryOff);
+      expect(shown(_quickConnect('b')..serverVersion = '6.25.0'),
+          FanOutSitOut.olderServer);
+      expect(
+          shown(_quickConnect('b')..moodFiltersAvailable = false,
+              moodSet: true),
+          FanOutSitOut.noMood);
+      expect(
+          shown(_quickConnect('b'),
+              excluded: {'b'}, reasons: {'b': FanOutSitOut.otherModel}),
+          FanOutSitOut.otherModel,
+          reason: 'dropped this session, reconnecting or not');
+    });
+
+    test('a Quick Connect server that has reported reads like any other', () {
+      expect(shown(_quickConnect('b')), isNull);
+      expect(shown(_quickConnect('b'), tunnelUp: true), isNull);
     });
   });
 
