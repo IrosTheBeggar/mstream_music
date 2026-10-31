@@ -25,6 +25,32 @@ String destToken(String name) => '{{$name}}';
 String destHold(String s) =>
     s.replaceAll(' ', '\u00A0').replaceAll('-', '-\u2060');
 
+/// A variable button's name for a screen reader ("Insert artist"), with
+/// the name it shows when the words do not already say it ("Insert album
+/// artist, ALBUMARTIST"; every one in a translation): Voice Control finds a
+/// button by what it shows.
+String destInsertLabel(AppLocalizations l, String name) {
+  final words = switch (name) {
+    'ARTIST' => l.discoverDestInsertArtist,
+    'ALBUM' => l.discoverDestInsertAlbum,
+    'YEAR' => l.discoverDestInsertYear,
+    'GENRE' => l.discoverDestInsertGenre,
+    'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
+    'PEER' => l.discoverDestInsertPeer,
+    'SERVERFOLDER' => l.discoverDestInsertServerFolder,
+    _ => destToken(name),
+  };
+  return words.toLowerCase().contains(name.toLowerCase())
+      ? words
+      : '$words, $name';
+}
+
+/// [layout] uses the variable [name] — spaced or in any case, as the
+/// engine reads it ("{{ artist }}").
+bool destUsesVar(String layout, String name) =>
+    RegExp('\\{\\{\\s*$name\\s*\\}\\}', caseSensitive: false)
+        .hasMatch(layout);
+
 /// A variable button: [token] where [field]'s caret is (over the selection,
 /// at the end when the field never had one), the caret after it, [focus]
 /// back in the field. The caller turns off a button with no room left for

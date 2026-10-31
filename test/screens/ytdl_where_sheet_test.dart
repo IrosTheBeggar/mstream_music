@@ -10,7 +10,8 @@
 // links (sheet closed, the choice kept for this song, Album or Year asked
 // to focus), read out 800 ms after it settles through one live region that
 // never carries a refusal over a path or back — the Custom editor (chips
-// insert at the caret and tick, the YouTube check's three refusals, both
+// insert at the caret and tick, named by what they show in every language,
+// the YouTube check's three refusals, both
 // buttons off and the preview amber, the preview pinned over the form with
 // the keyboard up when there is room, the field keeping its focus), the
 // noMkdir note, Save (remembered, toasted; on with a just-this-song choice
@@ -24,8 +25,11 @@ import 'dart:async';
 import 'package:flutter/semantics.dart' show SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/discovery/destination_pieces.dart'
+    show destInsertLabel;
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_where_sheet.dart';
 import 'package:mstream_music/singletons/ytdl_hub.dart';
@@ -526,7 +530,29 @@ void main() {
       expect(find.bySemanticsLabel(h.l.ytdlA11yVarUsed(h.l.discoverDestInsertArtist)),
           findsOneWidget);
       expect(find.bySemanticsLabel(h.l.ytdlA11yInsertVariable), findsOneWidget);
+      // Named by what it shows too, where its words don't say it: Voice
+      // Control finds a button by its label ("Tap ALBUMARTIST").
+      expect(
+          find.bySemanticsLabel(
+              '${h.l.discoverDestInsertAlbumArtist}, ALBUMARTIST'),
+          findsOneWidget);
+      // A spaced token is the engine's too.
+      await tester.enterText(key('ytdl-where-custom'), '{{ album }}');
+      await pumps(tester);
+      expect(
+          find.bySemanticsLabel(
+              h.l.ytdlA11yVarUsed(h.l.discoverDestInsertAlbum)),
+          findsOneWidget);
       semantics.dispose();
+    });
+
+    test('in another language every chip carries what it shows', () {
+      final de = lookupAppLocalizations(const Locale('de'));
+      for (final v in ['ARTIST', 'ALBUMARTIST', 'ALBUM', 'YEAR']) {
+        final label = destInsertLabel(de, v);
+        expect(label.toLowerCase(), contains(v.toLowerCase()), reason: label);
+      }
+      expect(destInsertLabel(de, 'ARTIST'), 'Künstler einfügen, ARTIST');
     });
 
     testWidgets('a valid layout previews and saves as Custom', (tester) async {

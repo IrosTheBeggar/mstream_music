@@ -1119,14 +1119,8 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   }
 
   Widget _varChip(AppLocalizations l, String name, int room) {
-    final words = switch (name) {
-      'ARTIST' => l.discoverDestInsertArtist,
-      'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
-      'ALBUM' => l.discoverDestInsertAlbum,
-      _ => l.discoverDestInsertYear,
-    };
-    final used = RegExp('\\{\\{\\s*$name\\s*\\}\\}', caseSensitive: false)
-        .hasMatch(_custom.text);
+    final words = destInsertLabel(l, name);
+    final used = destUsesVar(_custom.text, name);
     final token = destToken(name);
     return DestVarChip(
       key: ValueKey('ytdl-where-var-$name'),

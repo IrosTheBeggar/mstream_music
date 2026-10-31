@@ -321,25 +321,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     });
   }
 
-  /// A variable button's name for a screen reader ("Insert artist"), with
-  /// the name it shows when the words do not already say it: Voice Control
-  /// finds a button by what it shows.
-  String _insertLabel(AppLocalizations l, String name) {
-    final words = switch (name) {
-      'ARTIST' => l.discoverDestInsertArtist,
-      'ALBUM' => l.discoverDestInsertAlbum,
-      'YEAR' => l.discoverDestInsertYear,
-      'GENRE' => l.discoverDestInsertGenre,
-      'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
-      'PEER' => l.discoverDestInsertPeer,
-      'SERVERFOLDER' => l.discoverDestInsertServerFolder,
-      _ => destToken(name),
-    };
-    return words.toLowerCase().contains(name.toLowerCase())
-        ? words
-        : '$words, $name';
-  }
-
   /// The account's own destination is in force (not the library default).
   static bool _mine(DestinationView view) {
     final d = view.destination;
@@ -955,7 +936,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                   DestVarChip(
                     key: ValueKey('destination-var-$v'),
                     token: destToken(v),
-                    label: _insertLabel(l, v),
+                    label: destInsertLabel(l, v),
                     // Off while saving, or with no room left for it.
                     onTap: saving || destToken(v).length > room
                         ? null

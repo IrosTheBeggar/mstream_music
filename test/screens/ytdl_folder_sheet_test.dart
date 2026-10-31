@@ -8,20 +8,27 @@
 // library"); "Sort into subfolders…" turns the sheet to its second page —
 // the locked folder, the choices, the preview's new folder, Done applying
 // (SAVES TO, "Add to library"), back cancelling, Custom's refusals turning
-// Done off, the bracket warning's "Edit tags" — and is hidden under
-// noMkdir; the name check by tier; a re-ping closing the sheet; 360 dp at
-// 200% without overflow.
+// Done off, the bracket warning's "Edit tags", the preview read once the
+// typing stops, Custom's field keeping what is typed and its chips named
+// by what they show — and is hidden under noMkdir; every sheet starting at
+// Right here (but an add still starting going where it was sent); the
+// name check by tier; the feature gone closing the sheet, or opening
+// nothing (a stale menu item, the picker coming back), saying why; 360 dp
+// at 200% without overflow.
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/discovery/destination_pieces.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_card_parts.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_folder_sheet.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_saves_block.dart';
+import 'package:mstream_music/util/discover_jobs.dart' show kMaxLayoutLength;
 import 'package:mstream_music/util/ytdl_layout.dart';
 
 import '../singletons/ytdl_fakes.dart';
@@ -488,6 +495,33 @@ void main() {
               .isLiveRegion,
           isTrue);
       semantics.dispose();
+    });
+
+    testWidgets('Custom keeps what is typed: no smart quotes or dashes, the '
+        'layout\'s length cap; the chips say what they show', (t) async {
+      await page(t);
+      await t.tap(byKey('ytdl-sub-custom'));
+      await t.pump();
+      final field = t.widget<TextField>(byKey('ytdl-sub-custom-field'));
+      expect(field.smartQuotesType, SmartQuotesType.disabled);
+      expect(field.smartDashesType, SmartDashesType.disabled);
+      expect(
+          field.inputFormatters!
+              .whereType<LengthLimitingTextInputFormatter>()
+              .single
+              .maxLength,
+          kMaxLayoutLength);
+      final chip = t.widget<DestVarChip>(byKey('ytdl-var-ALBUMARTIST'));
+      expect(chip.label, '${h().l.discoverDestInsertAlbumArtist}, ALBUMARTIST');
+      // A spaced token is the engine's too: ticked.
+      await t.enterText(byKey('ytdl-sub-custom-field'), '{{ artist }}/Singles');
+      await t.pump();
+      expect(t.widget<DestVarChip>(byKey('ytdl-var-ARTIST')).used, isTrue);
+      // No room left for a token: its chip is off.
+      await t.enterText(
+          byKey('ytdl-sub-custom-field'), 'a' * (kMaxLayoutLength - 4));
+      await t.pump();
+      expect(t.widget<DestVarChip>(byKey('ytdl-var-ALBUM')).onTap, isNull);
     });
 
     testWidgets('a variable chip inserts at the caret and ticks', (t) async {

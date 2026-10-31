@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../objects/server.dart';
 import '../../singletons/ytdl_hub.dart';
 import '../../theme/velvet_theme.dart';
-import '../../util/discover_jobs.dart' show pathCrumbs;
+import '../../util/discover_jobs.dart' show kMaxLayoutLength, pathCrumbs;
 import '../../util/ytdl_layout.dart';
 import '../discovery/destination_pieces.dart';
 import '../discovery/keep_copy_ui.dart';
@@ -613,12 +614,7 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
       borderSide: BorderSide(color: c, width: w),
     );
     final text = _custom.text;
-    String insertLabel(String v) => switch (v) {
-      'ARTIST' => l.discoverDestInsertArtist,
-      'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
-      'ALBUM' => l.discoverDestInsertAlbum,
-      _ => l.discoverDestInsertYear,
-    };
+    final room = kMaxLayoutLength - text.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -630,6 +626,13 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
             focusNode: _customFocus,
             autocorrect: false,
             enableSuggestions: false,
+            // A folder name typed in stays as typed: "Rock 'n' Roll" is
+            // never made beside the real one as "Rock ’n’ Roll".
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(kMaxLayoutLength),
+            ],
             style: TextStyle(
               color: VelvetColors.textPrimary,
               fontFamily: 'monospace',
@@ -667,13 +670,16 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
                 DestVarChip(
                   key: ValueKey('ytdl-var-$v'),
                   token: v,
-                  label: text.contains(destToken(v))
-                      ? l.ytdlA11yVarUsed(insertLabel(v))
-                      : insertLabel(v),
-                  used: text.contains(destToken(v)),
+                  label: destUsesVar(text, v)
+                      ? l.ytdlA11yVarUsed(destInsertLabel(l, v))
+                      : destInsertLabel(l, v),
+                  used: destUsesVar(text, v),
                   minHit: kYtdlHit,
-                  onTap: () =>
-                      destInsertVar(_custom, _customFocus, destToken(v)),
+                  // Off with no room left for it.
+                  onTap: destToken(v).length > room
+                      ? null
+                      : () =>
+                            destInsertVar(_custom, _customFocus, destToken(v)),
                 ),
             ],
           ),
