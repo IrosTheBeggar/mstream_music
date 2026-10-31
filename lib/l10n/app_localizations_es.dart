@@ -805,66 +805,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoDjTitle => 'Auto DJ';
 
   @override
-  String get autoDjAddServerFirst => 'Primero añade un servidor.';
-
-  @override
-  String get autoDjSectionServer => 'Servidor';
-
-  @override
-  String get autoDjSectionSources => 'Fuentes';
-
-  @override
-  String get autoDjSectionContinuity => 'Continuidad';
-
-  @override
-  String get autoDjSectionFilters => 'Filtros';
-
-  @override
-  String get autoDjMultiServerTitle => 'Reproducir desde todos los servidores';
-
-  @override
-  String get autoDjMultiServerSubtitle =>
-      'Auto DJ elige de todos los servidores a la vez, según el sonido de lo que suena';
-
-  @override
-  String get autoDjMultiServerNeedsSonic =>
-      'Requiere activar Similitud sonora, más abajo';
-
-  @override
-  String get autoDjSectionShared => 'La sesión';
-
-  @override
-  String get autoDjSectionPerServer => 'Cada biblioteca';
-
-  @override
-  String get autoDjEditingServer => 'Ajustes de';
-
-  @override
-  String autoDjMultiServerAllIn(int count) {
-    return '$count servidores participan';
-  }
-
-  @override
-  String autoDjMultiServerConnecting(int count) {
-    return '$count todavía conectando';
-  }
-
-  @override
-  String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$count de $total servidores participan; al resto le falta el descubrimiento, un modelo de embeddings compatible o una versión de servidor suficientemente reciente';
-  }
-
-  @override
-  String get autoDjSectionQueue => 'Cola';
-
-  @override
-  String get autoDjSongsPerFetchTitle => 'Canciones por tanda';
-
-  @override
-  String get autoDjSongsPerFetchSubtitle =>
-      'Cuántas canciones añade Auto DJ a la cola cada vez que se ejecuta. Los filtros de continuidad juzgan toda la tanda respecto a la canción que sonaba al pedirla.';
-
-  @override
   String autoDjSongsPerFetchValue(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -876,16 +816,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get autoDjBpmTitle => 'Continuidad de BPM';
-
-  @override
-  String get autoDjBpmSubtitle =>
-      'Prefiere selecciones dentro de un margen de tempo respecto a la canción actual. Respeta la equivalencia de tempo medio/doble.';
-
-  @override
-  String get autoDjTolerance => 'Tolerancia';
-
-  @override
   String autoDjBpmTolerance(int bpm) {
     return '± $bpm BPM';
   }
@@ -894,142 +824,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Mezcla armónica';
 
   @override
-  String get autoDjHarmonicSubtitle =>
-      'Prefiere selecciones en tonalidades que mezclen bien con la canción fijada (vecinos de la rueda Camelot).';
-
-  @override
-  String get autoDjDurationTitle => 'Duración de la pista';
-
-  @override
-  String get autoDjDurationSubtitle =>
-      'Omite interludios y mezclas largas eligiendo solo pistas dentro de un rango de duración';
+  String get autoDjHarmonicHint =>
+      'Siguiente canción en una tonalidad compatible';
 
   @override
   String get autoDjDurationRange => 'Duración';
 
   @override
-  String get autoDjDurationAny => 'Cualquier duración';
-
-  @override
-  String autoDjDurationOver(String min) {
-    return 'Más de $min';
-  }
-
-  @override
-  String autoDjDurationUnder(String max) {
-    return 'Menos de $max';
-  }
-
-  @override
-  String autoDjDurationBetween(String min, String max) {
-    return 'De $min a $max';
-  }
-
-  @override
-  String get autoDjDurationAllowUnknown =>
-      'Incluir pistas de duración desconocida';
-
-  @override
-  String get autoDjDurationAllowUnknownSub =>
-      'De lo contrario, se omiten las pistas cuya duración tu servidor no ha leído';
-
-  @override
-  String get autoDjMoodTitle => 'Estado de ánimo';
-
-  @override
-  String get autoDjMoodSubtitle =>
-      'Elegir solo canciones que encajen con un estado de ánimo';
-
-  @override
-  String get autoDjMoodChoose => 'Elige un estado de ánimo';
-
-  @override
-  String get autoDjStatusOn => 'Auto DJ está activado';
-
-  @override
-  String get autoDjStatusOff => 'Auto DJ está desactivado';
-
-  @override
-  String get autoDjStatusOffDetail =>
-      'Toca abajo para iniciar. Se usará la biblioteca del servidor actual.';
-
-  @override
-  String get autoDjStart => 'Iniciar Auto DJ';
-
-  @override
-  String get autoDjStop => 'Detener Auto DJ';
-
-  @override
-  String autoDjStatusOnDetail(String url) {
-    return 'Las canciones se seleccionan de $url cuando la cola se está agotando.';
-  }
-
-  @override
-  String get autoDjOneSourceRequired => 'Se requiere al menos una fuente.';
-
-  @override
-  String get autoDjMinRating => 'Valoración mínima';
-
-  @override
-  String get autoDjMinRatingSubtitle =>
-      'Solo selecciona canciones con esta valoración o superior.';
-
-  @override
-  String get autoDjRatingAny => 'Cualquiera';
-
-  @override
-  String get autoDjGenreTitle => 'Filtro de géneros';
-
-  @override
-  String get autoDjGenreSubtitle =>
-      'La lista blanca reproduce solo las pistas coincidentes; la lista negra las omite.';
-
-  @override
-  String get autoDjWhitelist => 'Lista blanca';
-
-  @override
-  String get autoDjBlacklist => 'Lista negra';
-
-  @override
-  String get autoDjNoGenres =>
-      'No hay géneros seleccionados. Toca \"Elegir géneros\" para elegir.';
-
-  @override
-  String get autoDjPickGenres => 'Elegir géneros';
+  String get autoDjMoodTitle => 'Filtros inteligentes';
 
   @override
   String get autoDjGenreLoadError => 'No se pudieron cargar los géneros';
-
-  @override
-  String get autoDjKeywordTitle => 'Filtro de palabras clave';
-
-  @override
-  String get autoDjKeywordSubtitle =>
-      'Omite selecciones cuyo título, artista, álbum o ruta de archivo contenga alguna de estas palabras.';
-
-  @override
-  String get autoDjNoKeywords =>
-      'Sin palabras clave. Añade palabras abajo para empezar a filtrar.';
-
-  @override
-  String get autoDjKeywordHint => 'p. ej. \"live\" o \"remix\"';
-
-  @override
-  String get autoDjSearchGenres => 'Buscar géneros…';
-
-  @override
-  String get autoDjNoGenresOnServer =>
-      'No se encontraron géneros en este servidor.';
-
-  @override
-  String autoDjSelectedCount(int count) {
-    return '$count seleccionados';
-  }
-
-  @override
-  String autoDjNoGenresMatch(String query) {
-    return 'Ningún género coincide con \"$query\".';
-  }
 
   @override
   String get download => 'Descargar';
@@ -1203,6 +1008,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get genreSourceBoth => 'Ambos';
+
+  @override
+  String get genreSourceMixed => 'Mixto';
 
   @override
   String get genreSourceLabel => 'Origen de los géneros';
@@ -2232,26 +2040,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoDjSonicTitle => 'Similitud sonora';
 
   @override
-  String get autoDjSonicSubtitle =>
-      'Elige solo canciones que suenen como la sesión, usando el análisis de audio del servidor.';
-
-  @override
-  String get autoDjSonicUnavailable =>
-      'Este servidor no tiene datos de descubrimiento — la selección seguirá siendo aleatoria.';
-
-  @override
-  String get autoDjSonicNotReady =>
-      'El descubrimiento está activo pero el análisis aún no ha producido datos — la selección seguirá siendo aleatoria hasta entonces.';
-
-  @override
-  String get autoDjSonicStrictness => 'Umbral de similitud';
-
-  @override
-  String autoDjSonicStrictnessValue(int pct) {
-    return '$pct % o más parecido';
-  }
-
-  @override
   String get autoDjSonicSeedLabel => 'Canción semilla';
 
   @override
@@ -2272,12 +2060,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoDjSonicSeedRemove => 'Quitar canción semilla';
 
   @override
-  String get autoDjSonicSeedFailed =>
-      'No se pudo obtener una canción del servidor.';
+  String get autoDjSonicSeedFailed => 'No se pudo obtener una canción';
 
   @override
-  String get autoDjSeedNoMatch =>
-      'Ninguna canción coincide con tus filtros de Auto DJ; prueba a relajarlos';
+  String get autoDjSeedNoMatch => 'Ninguna canción coincide con tus filtros';
 
   @override
   String get discoverFindSimilar => 'Buscar similares';
@@ -2296,9 +2082,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get discoverSessionStarted =>
       'Sesión sonora iniciada — Auto DJ activado.';
-
-  @override
-  String get autoDjSonicAnchorLabel => 'Ancla';
 
   @override
   String get autoDjSonicAnchorRolling => 'Seguir el ambiente';
@@ -2438,43 +2221,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get autoDjStartTitle => '¿Con qué empieza Auto DJ?';
-
-  @override
-  String get autoDjStartSubtitle =>
-      'No hay nada en la cola, así que el DJ necesita una primera canción. Con cola, simplemente sigue lo que ya tienes.';
-
-  @override
-  String get autoDjStartRandom => 'Sorpréndeme';
-
-  @override
-  String get autoDjStartRandomSub =>
-      'Elegir una canción al azar de la biblioteca y construir a partir de ahí.';
-
-  @override
-  String get autoDjStartPick => 'Déjame elegir';
-
-  @override
-  String get autoDjStartPickSub =>
-      'Abrir la biblioteca y elegir tú la primera canción.';
-
-  @override
-  String get autoDjStartRemember => 'Recordar esto';
-
-  @override
-  String get autoDjStartRememberSub =>
-      'Omitir esta pregunta la próxima vez y empezar siempre así.';
-
-  @override
   String get autoDjStartPickBanner =>
       'Elige la primera canción — toca una pista en cualquier parte de la biblioteca';
-
-  @override
-  String get autoDjOnEmptyQueue => 'Con la cola vacía';
-
-  @override
-  String get autoDjOnEmptyQueueSub =>
-      'Qué hace Auto DJ cuando lo activas sin nada en la cola.';
 
   @override
   String get autoDjStartAskShort => 'Preguntar';
@@ -2497,14 +2245,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'Este servidor es la v$version. Algunas funciones requieren la v5.5 o posterior y no estarán disponibles.';
   }
-
-  @override
-  String get autoDjNeedsNewerServer =>
-      'La continuidad de BPM, la mezcla armónica y el filtro de géneros requieren un servidor más reciente. Actualiza para obtenerlos.';
-
-  @override
-  String get autoDjSonicNeedsNewerServer =>
-      'Requiere un servidor 6.15.2 o posterior';
 
   @override
   String get torrentScreenTitle => 'Añadir torrent';
@@ -5484,6 +5224,156 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Compartir lista de reproducción';
+
+  @override
+  String get autoDjStopShort => 'Detener';
+
+  @override
+  String get autoDjPlayFrom => 'Reproducir desde';
+
+  @override
+  String get autoDjAllServers => 'Todos los servidores';
+
+  @override
+  String autoDjServersTakingPart(int count, int total) {
+    return '$count de $total';
+  }
+
+  @override
+  String get autoDjFirstSong => 'Primera canción';
+
+  @override
+  String get autoDjFirstSongRandom => 'Aleatoria';
+
+  @override
+  String get autoDjFirstSongChoose => 'Elegir';
+
+  @override
+  String get autoDjMustMatch => 'Debe coincidir';
+
+  @override
+  String get autoDjPrefer => 'Preferir';
+
+  @override
+  String autoDjPercent(int pct) {
+    return '$pct %';
+  }
+
+  @override
+  String get autoDjDrift => 'Evolucionar';
+
+  @override
+  String get autoDjStayClose => 'Quedarse cerca';
+
+  @override
+  String get autoDjGenres => 'Géneros';
+
+  @override
+  String get autoDjGenresOnly => 'Solo';
+
+  @override
+  String get autoDjGenresSkip => 'Omitir';
+
+  @override
+  String autoDjGenresSkipValue(String genres) {
+    return 'Sin $genres';
+  }
+
+  @override
+  String get autoDjRating => 'Valoración';
+
+  @override
+  String autoDjRatingValue(String stars) {
+    return '$stars★+';
+  }
+
+  @override
+  String get autoDjAny => 'Cualquiera';
+
+  @override
+  String autoDjLengthOver(String min) {
+    return '$min+';
+  }
+
+  @override
+  String autoDjLengthUnder(String max) {
+    return 'Menos de $max';
+  }
+
+  @override
+  String autoDjLengthBetween(String min, String max) {
+    return '$min–$max';
+  }
+
+  @override
+  String get autoDjIncludeUnknown => 'Incluir desconocidas';
+
+  @override
+  String get autoDjLengthShortest => 'Mínimo';
+
+  @override
+  String get autoDjLengthLongest => 'Máximo';
+
+  @override
+  String get autoDjWheelHours => 'h';
+
+  @override
+  String get autoDjTempo => 'Beatmatching';
+
+  @override
+  String get autoDjSkipWords => 'Palabras a omitir';
+
+  @override
+  String get autoDjBatch => 'Lote';
+
+  @override
+  String get autoDjVaries => 'Varía';
+
+  @override
+  String autoDjMax(int count) {
+    return 'máx. $count';
+  }
+
+  @override
+  String autoDjNeedsServer(String version) {
+    return 'Servidor $version+';
+  }
+
+  @override
+  String get autoDjDiscoveryOff => 'Sin descubrimiento';
+
+  @override
+  String get autoDjStillScanning => 'Aún escaneando';
+
+  @override
+  String get autoDjTooStrict => 'Demasiado estricto';
+
+  @override
+  String get autoDjNotOnPeers => 'No en pares';
+
+  @override
+  String get autoDjNoMoodData => 'Sin datos de ánimo';
+
+  @override
+  String get autoDjOtherModel => 'Otro modelo de audio';
+
+  @override
+  String get autoDjUnreachable => 'Inaccesible';
+
+  @override
+  String get autoDjRemember => 'Recordar';
+
+  @override
+  String get autoDjGenresNone => 'Sin géneros';
+
+  @override
+  String get autoDjNoMatches => 'Sin resultados';
+
+  @override
+  String get autoDjRecentlyPlayed => 'Reproducido recientemente';
+
+  @override
+  String get autoDjFirstSongRecent => 'Recientes';
 
   @override
   String get browseLoadFailed =>

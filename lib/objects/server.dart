@@ -1,3 +1,5 @@
+import 'genre_source.dart';
+
 class Server {
   String url;
   String localname; // name we use when mappings files to the fs
@@ -318,6 +320,9 @@ class Server {
   bool autoDJGenreEnabled = false;
   String autoDJGenreMode = 'whitelist'; // 'whitelist' | 'blacklist'
   List<String> autoDJGenres = [];
+  // Which of the server's genre links the list matches: the files' tags, the
+  // discovery model's (genre_source.dart), or both — sent as `genreSource`.
+  GenreSource autoDJGenreSource = GenreSource.both;
   List<String> playlists = [];
 
   Server(this.url, this.username, this.password, this.jwt, this.localname);
@@ -405,6 +410,8 @@ class Server {
         autoDJGenreMode =
             json['autoDJGenreMode'] == 'blacklist' ? 'blacklist' : 'whitelist',
         autoDJGenres = List<String>.from(json['autoDJGenres'] ?? []),
+        autoDJGenreSource = genreSourceFromName(json['autoDJGenreSource'],
+            fallback: GenreSource.both),
         playlists = List<String>.from(json['playlists'] ?? []),
         allowSelfSigned = json['allowSelfSigned'] == true,
         // Migrate the old boolean: absent/false → appLocal; true → the
@@ -483,6 +490,7 @@ class Server {
         'autoDJGenreEnabled': autoDJGenreEnabled,
         'autoDJGenreMode': autoDJGenreMode,
         'autoDJGenres': autoDJGenres,
+        'autoDJGenreSource': autoDJGenreSource.name,
         'playlists': playlists,
         'allowSelfSigned': allowSelfSigned,
         'storageMode': storageMode,

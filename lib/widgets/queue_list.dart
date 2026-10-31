@@ -9,16 +9,21 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../singletons/api.dart';
 import '../singletons/track_capture.dart';
+import '../objects/play_event.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
+import '../singletons/play_history.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
+import '../util/auto_dj_play_from.dart';
+import '../util/auto_dj_recent.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
+import 'auto_dj_recent_menu.dart';
 import 'auto_dj_start_sheet.dart';
 
 /// Active-row state — which queue slot is playing, and whether it's playing —
@@ -574,40 +579,41 @@ void downloadQueue(BuildContext context) {
     );
 }
 
-/// Toggle Auto DJ for the current server — off when it's already driving it,
-/// on (or switched over) otherwise — with the standard confirmation
-/// snackbars. Shared by the queue header's DJ button and the player sheet's
-/// Auto DJ switch.
-Future<void> toggleAutoDJ(BuildContext context) async {
+/// Start Auto DJ on the Auto DJ screen's Play from server, or stop it. Stop
+/// always stops, whichever server is being browsed: it used to re-arm the DJ
+/// on the browsed server instead, so the same button meant two things. Shared
+/// by the queue header's and the mini player's Auto DJ buttons and the Auto
+/// DJ screen's Start; [announce] confirms with a snackbar, which the screen
+/// turns off because its own button already says so.
+Future<void> toggleAutoDJ(BuildContext context, {bool announce = true}) async {
   final l = AppLocalizations.of(context);
-  final current = ServerManager().currentServer;
-  if (current == null) return;
   final handler = MediaManager().audioHandler;
   final messenger = ScaffoldMessenger.of(context);
+  final Server? state = handler.customState.valueOrNull?.autoDJState as Server?;
+  if (state != null) {
+    handler.customAction('setAutoDJ', {'autoDJServer': null});
+    if (announce) {
+      messenger.showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
+    }
+    return;
+  }
   // A shared (federated) server hosts the DJ like any other since mStream
   // #946 put random-songs on the federation allowlist.
-  final Server? state = handler.customState.valueOrNull?.autoDJState as Server?;
-  if (state == null) {
-    // Nothing queued: the DJ has no cue to work from, so it needs a first
-    // track before it means anything. With a queue this never runs — the DJ
-    // reads what is already there, which is why the old standing "seed song"
-    // setting is gone.
-    if (handler.queue.value.isEmpty &&
-        !await _seedEmptyQueue(context, current)) {
-      return; // dismissed, or the pick handed off to the browser
-    }
-    handler.customAction('setAutoDJ', {'autoDJServer': current});
+  final server = autoDjPlayFrom();
+  if (server == null) return;
+  // Nothing queued: the DJ has no cue to work from, so it needs a first
+  // track before it means anything. With a queue this never runs — the DJ
+  // reads what is already there, which is why the old standing "seed song"
+  // setting is gone.
+  if (handler.queue.value.isEmpty && !await _seedEmptyQueue(context, server)) {
+    return; // dismissed, or the pick handed off to the browser
+  }
+  handler.customAction('setAutoDJ', {'autoDJServer': server});
+  if (announce) {
     messenger.showSnackBar(SnackBar(
         content: Text(ServerManager().serverList.length == 1
             ? l.autoDjEnabled
-            : l.autoDjEnabledFor(current.displayName))));
-  } else if (current == state) {
-    handler.customAction('setAutoDJ', {'autoDJServer': null});
-    messenger.showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
-  } else {
-    handler.customAction('setAutoDJ', {'autoDJServer': current});
-    messenger.showSnackBar(
-        SnackBar(content: Text(l.autoDjEnabledFor(current.displayName))));
+            : l.autoDjEnabledFor(server.displayName))));
   }
 }
 
@@ -618,20 +624,31 @@ Future<void> toggleAutoDJ(BuildContext context) async {
 Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
   final mgr = AutoDJManager();
   var choice = mgr.emptyQueueStart;
-  if (choice == EmptyQueueStart.ask) {
-    final picked = await showModalBottomSheet<EmptyQueueStart>(
+  TrackFacts? song;
+  // Recently played names a song, so it asks every time too — with its
+  // dropdown already open.
+  if (choice == EmptyQueueStart.ask || choice == EmptyQueueStart.recent) {
+    final recent =
+        recentlyPlayedOn(await PlayHistory().events(), server.localname);
+    if (!context.mounted) return false;
+    final picked = await showModalBottomSheet<AutoDjStartChoice>(
       context: context,
       backgroundColor: VelvetColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => const AutoDjStartSheet(),
+      builder: (_) => AutoDjStartSheet(
+          recent: recent, openRecent: choice == EmptyQueueStart.recent),
     );
     if (picked == null) return false; // dismissed — leave the DJ off
-    choice = picked;
+    choice = picked.how;
+    song = picked.song;
   }
   if (!context.mounted) return false;
 
   if (choice == EmptyQueueStart.random) return _seedRandom(context, server);
+  if (choice == EmptyQueueStart.recent) {
+    return song != null && await _seedSong(context, server, song);
+  }
 
   // Pick-from-library: hand off to the browser. Switching the DJ on happens in
   // onPicked, not here — there is nothing to start from until a row lands, and
@@ -643,6 +660,27 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
           .audioHandler
           .customAction('setAutoDJ', {'autoDJServer': server}));
   return false;
+}
+
+/// Store [song] — one this phone played on [server] — as the one-shot opener.
+/// False, with a snackbar, when the server says it no longer has it (moved,
+/// renamed or deleted since it played, or in a library this account has lost):
+/// opening on it would take the queue for a track that can't play. A server
+/// that can't say (an error, an older server) gets the benefit of the doubt.
+Future<bool> _seedSong(
+    BuildContext context, Server server, TrackFacts song) async {
+  if (await ApiManager().trackExists(server, song.path) == false) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).autoDjSonicSeedFailed)));
+    }
+    return false;
+  }
+  await AutoDJManager().setSonicSeed(
+      path: song.path,
+      title: song.title ?? song.path.split('/').last,
+      server: server.localname);
+  return true;
 }
 
 /// Store a random opening track as the one-shot sonic seed. True when a seed
@@ -679,6 +717,12 @@ Future<bool> _seedRandom(BuildContext context, Server server) async {
 /// own: main.dart watches TrackCapture.active).
 void _armLibraryPick(
     BuildContext context, Server server, Future<void> Function() onSeeded) {
+  // The pick has to come from [server] — Play from, which need not be the
+  // server being browsed — so the library opens on it.
+  final servers = ServerManager().serverList;
+  if (server != ServerManager().currentServer && servers.contains(server)) {
+    unawaited(ServerManager().changeCurrentServer(servers.indexOf(server)));
+  }
   TrackCapture.arm(TrackCaptureRequest(
     server: server,
     bannerLabel: (l) => l.autoDjStartPickBanner,
@@ -702,14 +746,38 @@ void _armLibraryPick(
 /// opening song (a clear keeps the DJ on but adds nothing itself), so this
 /// offers the two ways to give it one; with the DJ off it is just the label.
 /// Reads the DJ state live, so switching the DJ off takes the buttons away.
-class _EmptyQueue extends StatelessWidget {
+class _EmptyQueue extends StatefulWidget {
   const _EmptyQueue();
+
+  @override
+  State<_EmptyQueue> createState() => _EmptyQueueState();
+}
+
+class _EmptyQueueState extends State<_EmptyQueue> {
+  // Recently played's songs, read once per DJ server: a FutureBuilder handed
+  // a new future on every rebuild would flash the row away each time.
+  String? _recentFor;
+  Future<List<TrackFacts>>? _recent;
+
+  Future<List<TrackFacts>> _recentOn(Server dj) {
+    if (_recent == null || _recentFor != dj.localname) {
+      _recentFor = dj.localname;
+      _recent = PlayHistory()
+          .events()
+          .then((events) => recentlyPlayedOn(events, dj.localname));
+    }
+    return _recent!;
+  }
 
   static Future<void> _start() =>
       MediaManager().audioHandler.customAction('startAutoDJFromSeed');
 
   Future<void> _random(BuildContext context, Server server) async {
     if (await _seedRandom(context, server)) await _start();
+  }
+
+  Future<void> _fromSong(Server server, TrackFacts song) async {
+    if (await _seedSong(context, server, song)) await _start();
   }
 
   @override
@@ -726,39 +794,64 @@ class _EmptyQueue extends StatelessWidget {
       builder: (context, snap) {
         final Server? dj = snap.data?.autoDJState as Server?;
         if (dj == null) return Center(child: label);
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                label,
-                const SizedBox(height: 6),
-                Text(
-                  l.queueEmptyDjHint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 12),
+        // Centred while it fits; scrolls when the slot is short (a small
+        // phone, large text) rather than cutting off the last button.
+        return LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      label,
+                      const SizedBox(height: 6),
+                      Text(
+                        l.queueEmptyDjHint,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary, fontSize: 12),
+                      ),
+                      const SizedBox(height: 14),
+                      FutureBuilder<List<TrackFacts>>(
+                        future: _recentOn(dj),
+                        builder: (context, recent) => Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: () => _random(context, dj),
+                              icon: const Icon(Icons.casino, size: 18),
+                              label: Text(l.queueEmptyDjRandom),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _armLibraryPick(context, dj, _start),
+                              icon:
+                                  const Icon(Icons.library_music_outlined, size: 18),
+                              label: Text(l.queueEmptyDjChoose),
+                            ),
+                            // Left out until there is something to offer.
+                            if (recent.data case final songs? when songs.isNotEmpty)
+                              RecentlyPlayedMenu(
+                                songs: songs,
+                                onPicked: (song) => _fromSong(dj, song),
+                                builder: (context, open) => OutlinedButton.icon(
+                                  key: const ValueKey('queue-empty-dj-recent'),
+                                  onPressed: open,
+                                  icon: const Icon(Icons.history, size: 18),
+                                  label: Text(l.autoDjRecentlyPlayed),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () => _random(context, dj),
-                      icon: const Icon(Icons.casino, size: 18),
-                      label: Text(l.queueEmptyDjRandom),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => _armLibraryPick(context, dj, _start),
-                      icon: const Icon(Icons.library_music_outlined, size: 18),
-                      label: Text(l.queueEmptyDjChoose),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         );

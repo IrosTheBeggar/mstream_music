@@ -247,4 +247,25 @@ void main() {
       expect(verdict('<!doctype html>'), FloorVerdict.unknown);
     });
   });
+
+  // What the Auto DJ screen says a server needs ("Needs server 6.26+").
+  group('paramFloorLabel', () {
+    test('a .0 release drops the patch, any other keeps it', () {
+      expect(paramFloorLabel(ServerParam.similarToVector), '6.26');
+      expect(paramFloorLabel(ServerParam.limit), '6.26');
+      expect(paramFloorLabel(ServerParam.minDuration), '6.25');
+      expect(paramFloorLabel(ServerParam.ignoreVPaths), '4.6');
+      expect(paramFloorLabel(ServerParam.genres), '6.7.1');
+      expect(paramFloorLabel(ServerParam.similarTo), '6.15.2');
+      expect(paramFloorLabel(ServerParam.noLyrics), '6.13.1');
+    });
+
+    test('every parameter has a floor to name', () {
+      for (final p in ServerParam.values) {
+        expect(() => paramFloorLabel(p), returnsNormally, reason: p.name);
+        expect(paramFloorLabel(p), matches(RegExp(r'^\d+\.\d+(\.\d+)?$')),
+            reason: p.name);
+      }
+    });
+  });
 }

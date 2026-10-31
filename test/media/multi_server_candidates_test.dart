@@ -173,4 +173,185 @@ void main() {
       });
     });
   });
+
+  // The reason behind each "sits out" above, for the Auto DJ screen's Play
+  // from sheet (one short word per server). canJoinMultiServer is now this
+  // with the reason thrown away.
+  group('AudioPlayerHandler.sitOutReason', () {
+    FanOutSitOut? why(Server s,
+            {Set<String> excluded = const {},
+            Map<String, FanOutSitOut> reasons = const {},
+            bool allowUnknownDiscovery = false,
+            bool moodSet = false}) =>
+        AudioPlayerHandler.sitOutReason(s, excluded,
+            why: reasons,
+            allowUnknownDiscovery: allowUnknownDiscovery,
+            moodSet: moodSet);
+
+    test('a server that may take part has no reason', () {
+      expect(why(_server('a')), isNull);
+      expect(why(_server('a', version: null)), isNull);
+      expect(why(_server('a', ready: true)), isNull);
+      expect(why(_peer()), isNull);
+      expect(why(_server('a', discovery: null), allowUnknownDiscovery: true),
+          isNull);
+      expect(why(_server('a')..moodFiltersAvailable = true, moodSet: true),
+          isNull);
+    });
+
+    test('discovery switched off', () {
+      expect(why(_server('a', discovery: false)), FanOutSitOut.discoveryOff);
+      expect(why(_peer()..discoveryEnabled = false), FanOutSitOut.discoveryOff);
+      expect(
+          why(_server('a', discovery: false), allowUnknownDiscovery: true),
+          FanOutSitOut.discoveryOff);
+    });
+
+    test('discovery on but nothing analysed yet', () {
+      expect(why(_server('a', ready: false)), FanOutSitOut.scanning);
+      expect(why(_peer()..discoveryReady = false), FanOutSitOut.scanning);
+      expect(why(_server('a', ready: false), allowUnknownDiscovery: true),
+          FanOutSitOut.scanning);
+    });
+
+    test('a version known to predate the vector seed', () {
+      expect(why(_server('a', version: '6.25.0')), FanOutSitOut.olderServer);
+      expect(why(_server('a', version: '5.0.0')), FanOutSitOut.olderServer);
+      expect(why(_server('a', version: '6.4.2-velvet')), isNull,
+          reason: 'a fork is not known to be anything');
+    });
+
+    test('a mood nothing on the server can filter by', () {
+      expect(why(_server('a')..moodFiltersAvailable = false, moodSet: true),
+          FanOutSitOut.noMood);
+      expect(why(_server('a'), moodSet: true), FanOutSitOut.noMood,
+          reason: 'never reported its mood flag');
+      expect(why(_peer()..moodFiltersAvailable = false, moodSet: true),
+          FanOutSitOut.noMood);
+      expect(
+          why(_peer()..moodFiltersAvailable = false,
+              moodSet: true, allowUnknownDiscovery: true),
+          FanOutSitOut.noMood);
+      expect(why(_server('a'), moodSet: true, allowUnknownDiscovery: true),
+          isNull,
+          reason: 'a tunnel target is dialed to learn its flags');
+      expect(why(_server('a')..moodFiltersAvailable = false), isNull,
+          reason: 'without a mood the flag does not matter');
+    });
+
+    test('unreachable: never reported, hidden or no longer listed', () {
+      expect(why(_server('a', discovery: null)), FanOutSitOut.unreachable);
+      expect(why(_peer(hidden: true)), FanOutSitOut.unreachable);
+      expect(why(_peer(missing: true)), FanOutSitOut.unreachable);
+    });
+
+    test('dropped this session: the why map names it, unreachable without '
+        'one', () {
+      expect(why(_server('a'), excluded: {'a'}), FanOutSitOut.unreachable);
+      expect(
+          why(_server('a'),
+              excluded: {'a'}, reasons: {'a': FanOutSitOut.otherModel}),
+          FanOutSitOut.otherModel);
+      expect(
+          why(_server('a'),
+              excluded: {'a'}, reasons: {'a': FanOutSitOut.olderServer}),
+          FanOutSitOut.olderServer);
+      expect(
+          why(_server('a'), excluded: {'b'}, reasons: {'b': FanOutSitOut.otherModel}),
+          isNull,
+          reason: "another server's reason is not this one's");
+      expect(why(_server('a'), reasons: {'a': FanOutSitOut.otherModel}), isNull,
+          reason: 'a reason without the exclusion means nothing');
+    });
+
+    test('the session drop is checked first, then the listing, then the '
+        'flags, then the mood, then the version', () {
+      // Every rule failing at once: the earliest one names it.
+      Server worst() => _peer(hidden: true)
+        ..discoveryEnabled = false
+        ..discoveryReady = false
+        ..moodFiltersAvailable = false
+        ..serverVersion = '6.25.0';
+      expect(
+          why(worst(),
+              excluded: {'peer-basement'},
+              reasons: {'peer-basement': FanOutSitOut.otherModel},
+              moodSet: true),
+          FanOutSitOut.otherModel);
+      expect(why(worst(), moodSet: true), FanOutSitOut.unreachable);
+      expect(why(worst()..federationHidden = false, moodSet: true),
+          FanOutSitOut.discoveryOff);
+      expect(
+          why(worst()
+                ..federationHidden = false
+                ..discoveryEnabled = true,
+              moodSet: true),
+          FanOutSitOut.scanning);
+      expect(
+          why(worst()
+                ..federationHidden = false
+                ..discoveryEnabled = true
+                ..discoveryReady = true,
+              moodSet: true),
+          FanOutSitOut.noMood);
+      expect(
+          why(worst()
+                ..federationHidden = false
+                ..discoveryEnabled = true
+                ..discoveryReady = true,
+              moodSet: false),
+          FanOutSitOut.olderServer);
+    });
+
+    test('canJoinMultiServer is exactly "no reason" across every fixture', () {
+      final fixtures = <String, Server Function()>{
+        'plain': () => _server('a'),
+        'unknown version': () => _server('a', version: null),
+        'old version': () => _server('a', version: '6.25.0'),
+        'fork': () => _server('a', version: '6.4.2-velvet'),
+        'discovery off': () => _server('a', discovery: false),
+        'discovery unreported': () => _server('a', discovery: null),
+        'scanning': () => _server('a', ready: false),
+        'ready': () => _server('a', ready: true),
+        'mood can': () => _server('a')..moodFiltersAvailable = true,
+        'mood cannot': () => _server('a')..moodFiltersAvailable = false,
+        'peer': () => _peer(),
+        'peer discovery off': () => _peer()..discoveryEnabled = false,
+        'peer scanning': () => _peer()..discoveryReady = false,
+        'peer mood pinned off': () => _peer()..moodFiltersAvailable = false,
+        'hidden peer': () => _peer(hidden: true),
+        'missing peer': () => _peer(missing: true),
+        'legacy UI flag': () =>
+            Server('https://old.example.com', 'u', 'p', 'JWT', 'old')
+              ..serverVersion = '6.26.0'
+              ..discoveryAvailable = true,
+      };
+      final exclusions = <Set<String>>[
+        {},
+        {'a'},
+        {'b'},
+        {'peer-basement'},
+        {'old'},
+      ];
+      var checked = 0;
+      for (final f in fixtures.entries) {
+        for (final ex in exclusions) {
+          for (final unknown in [false, true]) {
+            for (final mood in [false, true]) {
+              final s = f.value();
+              final can = AudioPlayerHandler.canJoinMultiServer(s, ex,
+                  allowUnknownDiscovery: unknown, moodSet: mood);
+              final reason = AudioPlayerHandler.sitOutReason(s, ex,
+                  allowUnknownDiscovery: unknown, moodSet: mood);
+              expect(can, reason == null,
+                  reason: '${f.key}, excluded $ex, unknown $unknown, '
+                      'mood $mood: $reason');
+              checked++;
+            }
+          }
+        }
+      }
+      expect(checked, fixtures.length * exclusions.length * 4);
+    });
+  });
 }

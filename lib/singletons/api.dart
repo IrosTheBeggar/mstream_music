@@ -91,18 +91,23 @@ class ApiManager {
   DateTime? _lastBrowseFailureSnack;
 
   /// POST /api/v1/db/genres — returns the server's distinct genre
-  /// list with track counts. Used by the AutoDJ screen to populate
-  /// the genre-picker autocomplete.
+  /// list with track counts, of one [source] kind or both. Used by the
+  /// Auto DJ Genres sheet.
   ///
-  /// Each entry is `{ name: String, track_count: int }`.
-  Future<List<Map<String, dynamic>>> getGenres({
+  /// Each entry is `{ name: String, track_count: int }`; `sources` is how
+  /// many genres each kind has, null from a server that can't tell.
+  Future<({List<Map<String, dynamic>> genres, GenreSources? sources})>
+      getGenres({
     Server? useThisServer,
     List<String>? ignoreVPaths,
+    GenreSource source = GenreSource.both,
   }) async {
     final server = useThisServer ?? ServerManager().currentServer;
     if (server == null) throw Exception('No server selected');
 
-    final body = <String, dynamic>{};
+    // A server that predates the source filter ignores `source` and sends
+    // no `sources` (genre_source.dart).
+    final body = <String, dynamic>{...source.listBody};
     if (ignoreVPaths != null && ignoreVPaths.isNotEmpty) {
       body['ignoreVPaths'] = ignoreVPaths;
     }
@@ -121,7 +126,10 @@ class ApiManager {
       throw Exception('Failed to fetch genres (HTTP ${response.statusCode})');
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return List<Map<String, dynamic>>.from(decoded['genres'] ?? []);
+    return (
+      genres: List<Map<String, dynamic>>.from(decoded['genres'] ?? []),
+      sources: GenreSources.fromJson(decoded['sources']),
+    );
   }
 
   /// POST /api/v1/share — creates a share link for [filepaths] on
@@ -935,6 +943,34 @@ class ApiManager {
     }
   }
 
+  /// Whether [filepath] is still in [server]'s library: true or false from
+  /// POST /api/v1/db/metadata, which 200s with `metadata: null` both for a
+  /// path that is gone and for one outside the caller's libraries (which
+  /// /media would refuse too). Null when it can't tell — an error, a timeout,
+  /// a non-2xx answer, an older server without the route. For a song from the
+  /// phone's own history, which may have moved or gone since it played.
+  Future<bool?> trackExists(Server server, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    try {
+      final response = await _direct
+          .post(
+            server.apiUri('/api/v1/db/metadata'),
+            body: jsonEncode({'filepath': fp}),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.authToken ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map || !decoded.containsKey('metadata')) return null;
+      return decoded['metadata'] is Map;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// POST /api/v1/db/metadata — the full metadata block for a single track by its
   /// (library-prefixed) [filepath]. Used to enrich queue items built from the
   /// lightweight search endpoint, which returns only name/filepath/art. Returns
@@ -1290,19 +1326,35 @@ class ApiManager {
     // The same drop-what-this-server-cannot-take pass the DJ makes: one
     // unrecognised key 400s the whole request on a Joi-validated server, so
     // an older server would fail here for the wrong reason entirely.
-    final filtered = ServerCapabilities().filter(server, wanted);
-    final constrained = filtered.body.isNotEmpty;
+    var filtered = ServerCapabilities().filter(server, wanted);
+    Future<http.Response> post() => http
+        .post(
+          server.apiUri('/api/v1/db/random-songs'),
+          body: jsonEncode(filtered.body),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.authToken ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
     try {
-      final response = await http
-          .post(
-            server.apiUri('/api/v1/db/random-songs'),
-            body: jsonEncode(filtered.body),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-access-token': server.authToken ?? '',
-            },
-          )
-          .timeout(const Duration(seconds: 15));
+      var response = await post();
+      // A key the version table could not rule out — a fork, a version not
+      // read yet — is learned from the rejection and the pick sent again
+      // without it, as the DJ's own picks do; otherwise "not allowed" would
+      // read as "nothing matched". Each pass drops a key, so the cap is only
+      // a backstop.
+      for (var tries = 0;
+          response.statusCode > 299 && tries < wanted.length;
+          tries++) {
+        if (ServerCapabilities().noteRejection(server, response.body) ==
+            null) {
+          break;
+        }
+        filtered = ServerCapabilities().filter(server, wanted);
+        response = await post();
+      }
+      final constrained = filtered.body.isNotEmpty;
       if (response.statusCode > 299) {
         verboseLog('[api] auto-dj seed HTTP ${response.statusCode}');
         // Only a 400 means "nothing matched" — anything else (401, 5xx) is a

@@ -1500,131 +1500,11 @@ abstract class AppLocalizations {
   /// **'Auto DJ'**
   String get autoDjTitle;
 
-  /// No description provided for @autoDjAddServerFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a server first.'**
-  String get autoDjAddServerFirst;
-
-  /// No description provided for @autoDjSectionServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Server'**
-  String get autoDjSectionServer;
-
-  /// No description provided for @autoDjSectionSources.
-  ///
-  /// In en, this message translates to:
-  /// **'Sources'**
-  String get autoDjSectionSources;
-
-  /// No description provided for @autoDjSectionContinuity.
-  ///
-  /// In en, this message translates to:
-  /// **'Continuity'**
-  String get autoDjSectionContinuity;
-
-  /// No description provided for @autoDjSectionFilters.
-  ///
-  /// In en, this message translates to:
-  /// **'Filters'**
-  String get autoDjSectionFilters;
-
-  /// Switch enabling cross-server Auto DJ.
-  ///
-  /// In en, this message translates to:
-  /// **'Play from every server'**
-  String get autoDjMultiServerTitle;
-
-  /// Subtitle for that switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ picks from every server at once, matching the sound of what is playing'**
-  String get autoDjMultiServerSubtitle;
-
-  /// Warning under the multi-server switch when sonic similarity is off (the mode only runs on sonic picks).
-  ///
-  /// In en, this message translates to:
-  /// **'Needs Sonic similarity switched on, below'**
-  String get autoDjMultiServerNeedsSonic;
-
-  /// Header for settings that apply to every server.
-  ///
-  /// In en, this message translates to:
-  /// **'The session'**
-  String get autoDjSectionShared;
-
-  /// Header for settings that differ per server.
-  ///
-  /// In en, this message translates to:
-  /// **'Each library'**
-  String get autoDjSectionPerServer;
-
-  /// Label above the dropdown choosing whose settings are shown.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings for'**
-  String get autoDjEditingServer;
-
-  /// Readout when every server can take part.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} servers are taking part'**
-  String autoDjMultiServerAllIn(int count);
-
-  /// Second line of the participants readout: how many tunnel servers are still dialing.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} still connecting'**
-  String autoDjMultiServerConnecting(int count);
-
-  /// Readout when some servers cannot take part, and why.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version'**
-  String autoDjMultiServerSomeExcluded(int count, int total);
-
-  /// Header for how Auto DJ fills the queue.
-  ///
-  /// In en, this message translates to:
-  /// **'Queue'**
-  String get autoDjSectionQueue;
-
-  /// Songs-per-fetch row: how many songs one Auto DJ turn queues.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs per fetch'**
-  String get autoDjSongsPerFetchTitle;
-
-  /// Songs-per-fetch row subtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.'**
-  String get autoDjSongsPerFetchSubtitle;
-
   /// Songs-per-fetch readout beside the slider.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 song} other{{count} songs}}'**
   String autoDjSongsPerFetchValue(int count);
-
-  /// BPM continuity row.
-  ///
-  /// In en, this message translates to:
-  /// **'BPM continuity'**
-  String get autoDjBpmTitle;
-
-  /// No description provided for @autoDjBpmSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.'**
-  String get autoDjBpmSubtitle;
-
-  /// No description provided for @autoDjTolerance.
-  ///
-  /// In en, this message translates to:
-  /// **'Tolerance'**
-  String get autoDjTolerance;
 
   /// BPM tolerance readout.
   ///
@@ -1638,23 +1518,11 @@ abstract class AppLocalizations {
   /// **'Harmonic mixing'**
   String get autoDjHarmonicTitle;
 
-  /// No description provided for @autoDjHarmonicSubtitle.
+  /// Line under the Harmonic mixing switch: what turning it on does.
   ///
   /// In en, this message translates to:
-  /// **'Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).'**
-  String get autoDjHarmonicSubtitle;
-
-  /// Auto DJ track-length filter switch title.
-  ///
-  /// In en, this message translates to:
-  /// **'Track length'**
-  String get autoDjDurationTitle;
-
-  /// Subtitle for that switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip interludes and long mixes by only picking tracks in a length range'**
-  String get autoDjDurationSubtitle;
+  /// **'Next song in a key that mixes well'**
+  String get autoDjHarmonicHint;
 
   /// Label beside the length range slider.
   ///
@@ -1662,209 +1530,17 @@ abstract class AppLocalizations {
   /// **'Length'**
   String get autoDjDurationRange;
 
-  /// Range readout when neither bound is set.
+  /// Auto DJ smart filters row (the mood filter) and its sheet's title.
   ///
   /// In en, this message translates to:
-  /// **'Any length'**
-  String get autoDjDurationAny;
-
-  /// Range readout with only a minimum, e.g. Over 2:00.
-  ///
-  /// In en, this message translates to:
-  /// **'Over {min}'**
-  String autoDjDurationOver(String min);
-
-  /// Range readout with only a maximum, e.g. Under 6:00.
-  ///
-  /// In en, this message translates to:
-  /// **'Under {max}'**
-  String autoDjDurationUnder(String max);
-
-  /// Range readout with both bounds, e.g. 2:00 to 6:00.
-  ///
-  /// In en, this message translates to:
-  /// **'{min} to {max}'**
-  String autoDjDurationBetween(String min, String max);
-
-  /// Sub-switch letting unknown-length tracks through.
-  ///
-  /// In en, this message translates to:
-  /// **'Include tracks of unknown length'**
-  String get autoDjDurationAllowUnknown;
-
-  /// Subtitle for that sub-switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Tracks your server has not read a length for are skipped otherwise'**
-  String get autoDjDurationAllowUnknownSub;
-
-  /// Auto DJ mood filter switch title.
-  ///
-  /// In en, this message translates to:
-  /// **'Mood'**
+  /// **'Smart filters'**
   String get autoDjMoodTitle;
-
-  /// Subtitle for that switch.
-  ///
-  /// In en, this message translates to:
-  /// **'Only pick songs that fit a mood'**
-  String get autoDjMoodSubtitle;
-
-  /// Shown under the mood switch while it is on and nothing is chosen yet; tapping opens the mood sheet.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a mood'**
-  String get autoDjMoodChoose;
-
-  /// Auto DJ status block + enable button.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ is on'**
-  String get autoDjStatusOn;
-
-  /// No description provided for @autoDjStatusOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ is off'**
-  String get autoDjStatusOff;
-
-  /// No description provided for @autoDjStatusOffDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap below to start. The current server\'s library will be used.'**
-  String get autoDjStatusOffDetail;
-
-  /// No description provided for @autoDjStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Auto DJ'**
-  String get autoDjStart;
-
-  /// No description provided for @autoDjStop.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop Auto DJ'**
-  String get autoDjStop;
-
-  /// Auto DJ on-state detail line.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs are picked from {url} when the queue runs low.'**
-  String autoDjStatusOnDetail(String url);
-
-  /// No description provided for @autoDjOneSourceRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'At least one source is required.'**
-  String get autoDjOneSourceRequired;
-
-  /// Minimum-rating filter row ('Any' = no minimum).
-  ///
-  /// In en, this message translates to:
-  /// **'Minimum rating'**
-  String get autoDjMinRating;
-
-  /// No description provided for @autoDjMinRatingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Only pick songs at or above this rating.'**
-  String get autoDjMinRatingSubtitle;
-
-  /// No description provided for @autoDjRatingAny.
-  ///
-  /// In en, this message translates to:
-  /// **'Any'**
-  String get autoDjRatingAny;
-
-  /// Genre filter section.
-  ///
-  /// In en, this message translates to:
-  /// **'Genre filter'**
-  String get autoDjGenreTitle;
-
-  /// No description provided for @autoDjGenreSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Whitelist plays only matching tracks; blacklist skips them.'**
-  String get autoDjGenreSubtitle;
-
-  /// No description provided for @autoDjWhitelist.
-  ///
-  /// In en, this message translates to:
-  /// **'Whitelist'**
-  String get autoDjWhitelist;
-
-  /// No description provided for @autoDjBlacklist.
-  ///
-  /// In en, this message translates to:
-  /// **'Blacklist'**
-  String get autoDjBlacklist;
-
-  /// No description provided for @autoDjNoGenres.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres selected. Tap \"Pick genres\" to choose.'**
-  String get autoDjNoGenres;
-
-  /// No description provided for @autoDjPickGenres.
-  ///
-  /// In en, this message translates to:
-  /// **'Pick genres'**
-  String get autoDjPickGenres;
 
   /// No description provided for @autoDjGenreLoadError.
   ///
   /// In en, this message translates to:
   /// **'Could not load genres'**
   String get autoDjGenreLoadError;
-
-  /// Keyword filter section.
-  ///
-  /// In en, this message translates to:
-  /// **'Keyword filter'**
-  String get autoDjKeywordTitle;
-
-  /// No description provided for @autoDjKeywordSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip picks whose title, artist, album, or filepath contains any of these words.'**
-  String get autoDjKeywordSubtitle;
-
-  /// No description provided for @autoDjNoKeywords.
-  ///
-  /// In en, this message translates to:
-  /// **'No keywords. Add words below to start filtering.'**
-  String get autoDjNoKeywords;
-
-  /// No description provided for @autoDjKeywordHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. \"live\" or \"remix\"'**
-  String get autoDjKeywordHint;
-
-  /// Genre picker sheet.
-  ///
-  /// In en, this message translates to:
-  /// **'Search genres…'**
-  String get autoDjSearchGenres;
-
-  /// No description provided for @autoDjNoGenresOnServer.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres found on this server.'**
-  String get autoDjNoGenresOnServer;
-
-  /// Count of selected genres in the picker header.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} selected'**
-  String autoDjSelectedCount(int count);
-
-  /// Empty-search state in the genre picker.
-  ///
-  /// In en, this message translates to:
-  /// **'No genres match \"{query}\".'**
-  String autoDjNoGenresMatch(String query);
 
   /// Generic Download / Add All action labels (browser toolbar + swipe actions).
   ///
@@ -2135,6 +1811,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Both'**
   String get genreSourceBoth;
+
+  /// Auto DJ genre filter's source switch: tag and generated genres together.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed'**
+  String get genreSourceMixed;
 
   /// Accessibility label for the genre list's Tags / Generated / Both switch.
   ///
@@ -3810,36 +3492,6 @@ abstract class AppLocalizations {
   /// **'Sonic similarity'**
   String get autoDjSonicTitle;
 
-  /// Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback.
-  ///
-  /// In en, this message translates to:
-  /// **'Only pick songs that sound like the session, using the server\'s audio analysis.'**
-  String get autoDjSonicSubtitle;
-
-  /// Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability.
-  ///
-  /// In en, this message translates to:
-  /// **'This server doesn\'t have discovery data — picks stay random.'**
-  String get autoDjSonicUnavailable;
-
-  /// Sonic similarity subtitle when discovery is on but the scan has produced no vectors yet (server features.discoveryReady false).
-  ///
-  /// In en, this message translates to:
-  /// **'Discovery is on but the scan hasn\'t produced data yet — picks stay random until it does.'**
-  String get autoDjSonicNotReady;
-
-  /// Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity).
-  ///
-  /// In en, this message translates to:
-  /// **'Match strictness'**
-  String get autoDjSonicStrictness;
-
-  /// Value readout next to the strictness slider: picks must match at least this percentage.
-  ///
-  /// In en, this message translates to:
-  /// **'{pct}% or closer'**
-  String autoDjSonicStrictnessValue(int pct);
-
   /// Label for the sonic seed row and the seed-picker sheet title: the song the session starts from.
   ///
   /// In en, this message translates to:
@@ -3879,13 +3531,13 @@ abstract class AppLocalizations {
   /// Error when the random-seed request fails.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t fetch a song from the server.'**
+  /// **'Couldn\'t get a song'**
   String get autoDjSonicSeedFailed;
 
   /// Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked.
   ///
   /// In en, this message translates to:
-  /// **'No songs match your Auto DJ filters — try loosening them'**
+  /// **'No songs match your filters'**
   String get autoDjSeedNoMatch;
 
   /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
@@ -3917,12 +3569,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sonic session started — Auto DJ is on.'**
   String get discoverSessionStarted;
-
-  /// Label above the sonic anchor-mode selector (rolling vs locked).
-  ///
-  /// In en, this message translates to:
-  /// **'Anchor'**
-  String get autoDjSonicAnchorLabel;
 
   /// Rolling anchor mode: sonic seeds are the session's recent DJ picks.
   ///
@@ -4173,68 +3819,8 @@ abstract class AppLocalizations {
   /// Auto DJ empty-queue start chooser
   ///
   /// In en, this message translates to:
-  /// **'Start Auto DJ with what?'**
-  String get autoDjStartTitle;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.'**
-  String get autoDjStartSubtitle;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Surprise me'**
-  String get autoDjStartRandom;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Pick a random song from the library and build outward from it.'**
-  String get autoDjStartRandomSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Let me choose'**
-  String get autoDjStartPick;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Open the library and pick the opening track yourself.'**
-  String get autoDjStartPickSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Remember this'**
-  String get autoDjStartRemember;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'Skip this question next time and always start this way.'**
-  String get autoDjStartRememberSub;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
   /// **'Pick the opening song — tap a track anywhere in the library'**
   String get autoDjStartPickBanner;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'On an empty queue'**
-  String get autoDjOnEmptyQueue;
-
-  /// Auto DJ empty-queue start chooser
-  ///
-  /// In en, this message translates to:
-  /// **'What Auto DJ does when you switch it on with nothing queued.'**
-  String get autoDjOnEmptyQueueSub;
 
   /// Segmented-button label: ask each time
   ///
@@ -4271,18 +3857,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This server is v{version}. Some features need v5.5 or newer and will be unavailable.'**
   String serverTooOldWarning(String version);
-
-  /// Auto DJ server-version gating notes
-  ///
-  /// In en, this message translates to:
-  /// **'BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.'**
-  String get autoDjNeedsNewerServer;
-
-  /// Auto DJ server-version gating notes
-  ///
-  /// In en, this message translates to:
-  /// **'Needs server 6.15.2 or newer'**
-  String get autoDjSonicNeedsNewerServer;
 
   /// Drawer entry + screen title for adding a torrent to the server's client.
   ///
@@ -8667,6 +8241,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share playlist'**
   String get queueSharePlaylist;
+
+  /// No description provided for @autoDjStopShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get autoDjStopShort;
+
+  /// No description provided for @autoDjPlayFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Play from'**
+  String get autoDjPlayFrom;
+
+  /// No description provided for @autoDjAllServers.
+  ///
+  /// In en, this message translates to:
+  /// **'All servers'**
+  String get autoDjAllServers;
+
+  /// No description provided for @autoDjServersTakingPart.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total}'**
+  String autoDjServersTakingPart(int count, int total);
+
+  /// No description provided for @autoDjFirstSong.
+  ///
+  /// In en, this message translates to:
+  /// **'First song'**
+  String get autoDjFirstSong;
+
+  /// No description provided for @autoDjFirstSongRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get autoDjFirstSongRandom;
+
+  /// No description provided for @autoDjFirstSongChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose'**
+  String get autoDjFirstSongChoose;
+
+  /// No description provided for @autoDjMustMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Must match'**
+  String get autoDjMustMatch;
+
+  /// No description provided for @autoDjPrefer.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefer'**
+  String get autoDjPrefer;
+
+  /// No description provided for @autoDjPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}%'**
+  String autoDjPercent(int pct);
+
+  /// No description provided for @autoDjDrift.
+  ///
+  /// In en, this message translates to:
+  /// **'Drift'**
+  String get autoDjDrift;
+
+  /// No description provided for @autoDjStayClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay close'**
+  String get autoDjStayClose;
+
+  /// No description provided for @autoDjGenres.
+  ///
+  /// In en, this message translates to:
+  /// **'Genres'**
+  String get autoDjGenres;
+
+  /// No description provided for @autoDjGenresOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only'**
+  String get autoDjGenresOnly;
+
+  /// No description provided for @autoDjGenresSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get autoDjGenresSkip;
+
+  /// No description provided for @autoDjGenresSkipValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip {genres}'**
+  String autoDjGenresSkipValue(String genres);
+
+  /// No description provided for @autoDjRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get autoDjRating;
+
+  /// No description provided for @autoDjRatingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{stars}★+'**
+  String autoDjRatingValue(String stars);
+
+  /// No description provided for @autoDjAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get autoDjAny;
+
+  /// No description provided for @autoDjLengthOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}+'**
+  String autoDjLengthOver(String min);
+
+  /// No description provided for @autoDjLengthUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under {max}'**
+  String autoDjLengthUnder(String max);
+
+  /// No description provided for @autoDjLengthBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}–{max}'**
+  String autoDjLengthBetween(String min, String max);
+
+  /// No description provided for @autoDjIncludeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Include unknown'**
+  String get autoDjIncludeUnknown;
+
+  /// Length sheet: the row whose timer wheel sets the shortest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest'**
+  String get autoDjLengthShortest;
+
+  /// Length sheet: the row whose timer wheel sets the longest song Auto DJ plays.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest'**
+  String get autoDjLengthLongest;
+
+  /// Length sheet timer wheel: the short unit beside the hours column (the wheel leaves it ~50 px).
+  ///
+  /// In en, this message translates to:
+  /// **'hr'**
+  String get autoDjWheelHours;
+
+  /// No description provided for @autoDjTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat matching'**
+  String get autoDjTempo;
+
+  /// No description provided for @autoDjSkipWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip words'**
+  String get autoDjSkipWords;
+
+  /// No description provided for @autoDjBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch'**
+  String get autoDjBatch;
+
+  /// No description provided for @autoDjVaries.
+  ///
+  /// In en, this message translates to:
+  /// **'Varies'**
+  String get autoDjVaries;
+
+  /// No description provided for @autoDjMax.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} max'**
+  String autoDjMax(int count);
+
+  /// No description provided for @autoDjNeedsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs server {version}+'**
+  String autoDjNeedsServer(String version);
+
+  /// No description provided for @autoDjDiscoveryOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery off'**
+  String get autoDjDiscoveryOff;
+
+  /// No description provided for @autoDjStillScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Still scanning'**
+  String get autoDjStillScanning;
+
+  /// No description provided for @autoDjTooStrict.
+  ///
+  /// In en, this message translates to:
+  /// **'Too strict'**
+  String get autoDjTooStrict;
+
+  /// No description provided for @autoDjNotOnPeers.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on peers'**
+  String get autoDjNotOnPeers;
+
+  /// No description provided for @autoDjNoMoodData.
+  ///
+  /// In en, this message translates to:
+  /// **'No mood data'**
+  String get autoDjNoMoodData;
+
+  /// No description provided for @autoDjOtherModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Different audio model'**
+  String get autoDjOtherModel;
+
+  /// No description provided for @autoDjUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get autoDjUnreachable;
+
+  /// No description provided for @autoDjRemember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember'**
+  String get autoDjRemember;
+
+  /// No description provided for @autoDjGenresNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No genres'**
+  String get autoDjGenresNone;
+
+  /// No description provided for @autoDjNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get autoDjNoMatches;
+
+  /// No description provided for @autoDjRecentlyPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get autoDjRecentlyPlayed;
+
+  /// The Auto DJ screen's First song row value when First song is Recently played: a short form of autoDjRecentlyPlayed, since the row's value slot is narrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get autoDjFirstSongRecent;
 
   /// Snackbar when a browse request (Albums, Artists, a folder, a playlist, a search…) fails for any reason other than the user backing out. Generic on purpose: the tunnel status strip explains a Quick Connect state; this is the one line for the request itself.
   ///

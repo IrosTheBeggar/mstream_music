@@ -98,6 +98,24 @@ typedef DirectAuthVerdict = ({
 /// when the recovery lost its purpose while waiting.
 enum DirectPeerRoom { room, none, moot }
 
+/// Why an Auto DJ session is picking without sonic similarity (see
+/// [AudioPlayerHandler.sonicDrop]): nothing was within the match, the scan has
+/// not reached the seed yet, or discovery was switched off server-side.
+enum SonicDrop { tooStrict, scanning, discoveryOff }
+
+/// Why a server is not taking part in a multi-server Auto DJ session (see
+/// [AudioPlayerHandler.multiServerSitOut]). [unreachable] covers a server
+/// that has never reported its flags, and one dropped this session for a
+/// reason the screen has no better word for.
+enum FanOutSitOut {
+  discoveryOff,
+  scanning,
+  olderServer,
+  noMood,
+  otherModel,
+  unreachable,
+}
+
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   // ignore: close_sinks
@@ -212,9 +230,17 @@ class AudioPlayerHandler extends BaseAudioHandler
   // dropped when the server reports it unanalyzed/unknown so a dead pin
   // can't wedge the whole session.
   String? _sonicLockedAnchor;
-  // One toast per session for a sonic fail-loud (pool empty / seed not
-  // analyzed) — same retrigger-spam collapse as [_autoDJAuthWarned].
-  bool _sonicWarned = false;
+  /// Why this session dropped sonic similarity and is picking without it, or
+  /// null while it hasn't. The Auto DJ screen shows it on the Sonic similarity
+  /// row, in place of the toast that used to say so. Session state: a new
+  /// lane clears it, and so does 'retrySonic' — the screen's Sonic similarity
+  /// sheet, after the user loosens the match to try again.
+  SonicDrop? sonicDrop;
+
+  // Bumped by 'retrySonic' (the sonic settings changed): a pick that went out
+  // under the old ones and is told "nothing within the range" was asking about
+  // a threshold that is no longer set, so its verdict must not stand.
+  int _sonicGen = 0;
 
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
@@ -255,12 +281,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     _sonicHistory = const [];
     _sonicSeedOwners.clear();
     _multiServerExcluded.clear();
+    _multiServerExcludedWhy.clear();
     _multiServerIgnore.clear();
     _fanOutDeclined.clear();
     _sonicNotReadyLogged = false;
     _sonicLockedAnchor = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
-    _sonicWarned = false;
+    sonicDrop = null;
     _clearDeferredPick();
   }
 
@@ -1227,10 +1254,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     // transient blip in place, or skips a genuinely bad source.
     _recoverHttpError(error);
   }
-
-  // The wire names sonicParams produces. Named once so the suppress/skip
-  // pair below can't drift apart from what is actually sent.
-  static const List<String> _kSonicParamKeys = ['similarTo', 'minSimilarity'];
 
   // Consecutive load failures against a tunnel that says it is connected.
   // Reset by the `ready` handler — anything loading at all means the path
@@ -3219,6 +3242,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;
+      case 'retrySonic':
+        // The sonic settings changed (the Auto DJ screen's Sonic similarity
+        // sheet): a session that dropped sonic gets another go with them.
+        _sonicGen++;
+        if (sonicDrop != null) {
+          sonicDrop = null;
+          customState.add(CustomEvent(autoDJServer));
+        }
+        break;
       case 'clearSonicSession':
         // "New lane": setting/clearing the explicit sonic seed (or toggling
         // the feature off) restarts the sonic session — rolling history AND
@@ -3244,6 +3276,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Remembered across restarts. Every toggle path funnels through here,
         // so this is the one place that has to record it.
         unawaited(AutoDJManager().setEnabledServer(nextDJ?.localname));
+        // And it is where the Auto DJ screen's Play from points from now on,
+        // whichever path armed it (a Discover play, Android Auto's Shuffle
+        // All): the screen names the DJ's own server.
+        if (nextDJ != null) {
+          unawaited(AutoDJManager().setPlayFromServer(nextDJ.localname));
+        }
 
         customState.add(CustomEvent(autoDJServer));
 
@@ -3800,11 +3838,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Only the path and a display title are persisted, so the row is
     // reconstructed and buildServerFileMediaItem fetches the rest (it also
     // resolves a downloaded copy, which a seed track may well have).
+    // In the browse rows' form, with the leading slash: that is what a
+    // downloaded copy is filed under, and what a play of it is recorded as.
     final MediaItem? seed = await buildServerFileMediaItem(DisplayItem(
         server,
         mgr.sonicSeedTitle ?? path.split('/').last,
         'file',
-        path,
+        '/$path',
         null,
         null));
     if (seed == null) return false;
@@ -3847,6 +3887,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ([_fanOutModels]); the server's own refusal (a 400, because comparing
   // across model spaces returns confident nonsense) stays as the backstop.
   final Set<String> _multiServerExcluded = {};
+  // Why each of [_multiServerExcluded] was dropped, for the Auto DJ screen.
+  final Map<String, FanOutSitOut> _multiServerExcludedWhy = {};
 
   // Which model each server answers in, by localname — the handshake mStream
   // #929 expects before a vector is sent, cached so a session pays one GET
@@ -3919,21 +3961,46 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// (Server.moodFiltersAvailable, pinned off for a peer): any other server
   /// would answer from outside the mood. Pure; unit-tested.
   static bool canJoinMultiServer(Server s, Set<String> excluded,
-      {bool allowUnknownDiscovery = false, bool moodSet = false}) {
-    if (excluded.contains(s.localname)) return false;
-    if (!s.isSelectable) return false;
+          {bool allowUnknownDiscovery = false, bool moodSet = false}) =>
+      sitOutReason(s, excluded,
+          allowUnknownDiscovery: allowUnknownDiscovery, moodSet: moodSet) ==
+      null;
+
+  /// Why [s] may not take part ([canJoinMultiServer]'s rules), or null when
+  /// it may. [why] names the reason a server in [excluded] was dropped.
+  /// Pure; unit-tested.
+  static FanOutSitOut? sitOutReason(Server s, Set<String> excluded,
+      {Map<String, FanOutSitOut> why = const {},
+      bool allowUnknownDiscovery = false,
+      bool moodSet = false}) {
+    if (excluded.contains(s.localname)) {
+      return why[s.localname] ?? FanOutSitOut.unreachable;
+    }
+    if (!s.isSelectable) return FanOutSitOut.unreachable;
     final on = s.discoveryOn;
-    if (on == false) return false;
-    if (s.discoveryReady == false) return false;
-    if (on == null && !s.isFederated && !allowUnknownDiscovery) return false;
+    if (on == false) return FanOutSitOut.discoveryOff;
+    if (s.discoveryReady == false) return FanOutSitOut.scanning;
+    if (on == null && !s.isFederated && !allowUnknownDiscovery) {
+      return FanOutSitOut.unreachable;
+    }
     if (moodSet) {
       final mood = s.moodFiltersAvailable;
-      if (mood == false) return false;
-      if (mood == null && !allowUnknownDiscovery) return false;
+      if (mood == false) return FanOutSitOut.noMood;
+      if (mood == null && !allowUnknownDiscovery) return FanOutSitOut.noMood;
     }
-    return !crossServerSeedKnownUnsupported(
-        ServerVersion.tryParse(s.serverVersion));
+    if (crossServerSeedKnownUnsupported(
+        ServerVersion.tryParse(s.serverVersion))) {
+      return FanOutSitOut.olderServer;
+    }
+    return null;
   }
+
+  /// Why [s] is not taking part in a multi-server session right now, or null
+  /// when it is — the Auto DJ screen's Play from sheet, by each server.
+  FanOutSitOut? multiServerSitOut(Server s) => sitOutReason(
+      s, _multiServerExcluded,
+      why: _multiServerExcludedWhy,
+      moodSet: AutoDJManager().activeMoodFilter != null);
 
   /// Every song in a random-songs answer with its own similarity. A batch
   /// answer (mStream #966) carries `sonic.similarities` aligned with `songs`;
@@ -4141,6 +4208,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             'with right now — sits this pick out');
       } else {
         _multiServerExcluded.add(s.localname);
+        _multiServerExcludedWhy[s.localname] = FanOutSitOut.otherModel;
         appLog('[dj] ${s.localname} indexes model $model, the session is '
             '${seed.modelId} — dropped from this session');
         _reconcileFanOutTunnels('dj-fanout');
@@ -4246,6 +4314,8 @@ class AudioPlayerHandler extends BaseAudioHandler
               // The handshake above should have caught this; a stale cache
               // (a rescan under a new model) still ends here.
               _multiServerExcluded.add(server.localname);
+              _multiServerExcludedWhy[server.localname] =
+                  FanOutSitOut.otherModel;
               _fanOutModels.record(server.localname, null, DateTime.now());
               appLog('[dj] ${server.localname} indexes a different embedding '
                   'model — dropped from this session');
@@ -4261,6 +4331,8 @@ class AudioPlayerHandler extends BaseAudioHandler
               if (learned == 'similarToVector' ||
                   learned == 'similarToModelId') {
                 _multiServerExcluded.add(server.localname);
+                _multiServerExcludedWhy[server.localname] =
+                    FanOutSitOut.olderServer;
                 appLog('[dj] ${server.localname} does not take a vector '
                     'seed — dropped from this session');
                 _reconcileFanOutTunnels('dj-fanout');
@@ -4371,7 +4443,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     _djFailLogged = false;
     _deferredPickFailures = 0;
     _autoDJAuthWarned = false;
-    _sonicWarned = false;
 
     await _queueAutoDJSongs(
         [for (final c in chosen) (song: c.song, source: c.server)],
@@ -4481,14 +4552,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     // anchor: the last few DJ picks (session centroid), else the playing
     // track; a cold start on an empty queue has no anchor and stays plain
     // random until the first pick seeds the session.
-    // Suppressed after a no-data failure earlier this session (see the
-    // degradation below), so skip building the params at all rather than
-    // building them and having filter() strip them — that also keeps the
-    // error branch from thinking sonic is still in play.
+    // Dropped after a failure earlier this session (see the degradation
+    // below), so skip building the params at all — that also keeps the error
+    // branch from thinking sonic is still in play.
     final sonicEnabled = mgr.sonicSimilarityEnabled &&
         autoDJServer!.sonicUsable &&
-        !ServerCapabilities()
-            .allSuppressed(autoDJServer!, _kSonicParamKeys);
+        sonicDrop == null;
     // Discovery on but nothing analysed yet (mStream #879): the mode is
     // wanted and the server would only 400. Say so once per session — a
     // sonic switch that is on while picks come out random needs explaining.
@@ -4520,6 +4589,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         _sonicLockedAnchor == null) {
       _sonicLockedAnchor = _normSonicPath(explicitSeed ?? sonicCurrent);
     }
+    // The sonic settings these params are built from: a verdict on them only
+    // stands while they are still the ones set (see [_sonicGen]).
+    final sonicGen = _sonicGen;
     // The session's anchors from every server that has contributed a pick
     // — what a cross-server seed averages over.
     final sonicAll = sonicParams(
@@ -4575,10 +4647,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     // rejected track twice. After 5 blocks accept the last response
     // anyway — mirrors the webapp's fallback so the queue doesn't
     // stall forever on an over-aggressive filter.
+    // Whether the attempt in hand carried the sonic keys — what its picks are
+    // badged by — and whether this pick has to go without them.
+    var sentSonic = false;
+    var sonicOffThisPick = false;
     for (var attempt = 0; attempt < 5; attempt++) {
+      // Left out once this session has dropped it (see [sonicDrop]).
+      sentSonic = sonic != null && sonicDrop == null && !sonicOffThisPick;
       final payload = <String, dynamic>{
         'ignoreList': jsonAutoDJIgnoreList ?? [],
-        ...?sonic,
+        if (sentSonic) ...sonic,
         // Rating, vpaths, genre and track length — shared with the
         // "Surprise me" opener so the two can't drift apart again.
         ...mgr.libraryFilters(autoDJServer!),
@@ -4629,6 +4707,11 @@ class AudioPlayerHandler extends BaseAudioHandler
           },
           body: jsonEncode(filtered.body),
         ).timeout(const Duration(seconds: 15));
+        // The lane changed while the request was out (a queue clear, the DJ
+        // off or on another server): nothing in its answer belongs to the
+        // new one — not a learned rejection, which would be filed against
+        // whatever server the DJ is on now, and least of all a sonic verdict.
+        if (epoch != _djSessionEpoch) return;
         // A rejection names the offending key, so learn it and go again
         // without it. Bounded by the payload size and terminating by
         // construction: every pass removes one key permanently for this
@@ -4664,6 +4747,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             },
             body: jsonEncode(retry.body),
           ).timeout(const Duration(seconds: 15));
+          if (epoch != _djSessionEpoch) return; // as above
         }
         if (res.statusCode > 299) {
           appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
@@ -4672,7 +4756,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           // pool or an unanalyzed seed stops the session with an
           // explanation instead of silently playing outside the range
           // (webapp parity — it discriminates on the error message too).
-          if (sonic != null) {
+          if (sentSonic) {
             String serverMsg = '';
             try {
               final b = jsonDecode(res.body);
@@ -4695,27 +4779,15 @@ class AudioPlayerHandler extends BaseAudioHandler
             // the CONSTRAINT, not the music: drop the sonic keys for this
             // session and take the same pick without them.
             //
-            // Still says so once, because a session that quietly stopped
-            // honouring "only songs that sound like this" would be lying
-            // about what it is doing. Once, not per pick.
-            String? degraded;
+            // Still says so, because a session that quietly stopped honouring
+            // "only songs that sound like this" would be lying about what it
+            // is doing — on the Auto DJ screen's Sonic similarity row
+            // ([sonicDrop]), which is where the user goes to loosen it.
+            SonicDrop? drop;
             if (lower.contains('similarity range')) {
-              degraded = 'nothing within the similarity range';
-              if (!_sonicWarned) {
-                _sonicWarned = true;
-                _showPlaybackErrorToast(
-                    'Auto DJ: nothing is within the similarity range, so it '
-                    'is playing without that filter. Loosen the match slider '
-                    'to use it again.');
-              }
+              drop = SonicDrop.tooStrict;
             } else if (lower.contains('analyzed')) {
-              degraded = 'library not analyzed yet';
-              if (!_sonicWarned) {
-                _sonicWarned = true;
-                _showPlaybackErrorToast(
-                    "Auto DJ: the discovery scan hasn't reached these tracks "
-                    'yet, so it is playing without sonic similarity.');
-              }
+              drop = SonicDrop.scanning;
             } else if (lower.contains('discovery is disabled')) {
               // requireIndex() answers this for both "the feature is off"
               // and "it is on but there is no index yet", the same status on
@@ -4732,16 +4804,36 @@ class AudioPlayerHandler extends BaseAudioHandler
               // library never reaches here anyway; it answers 400 "Sonic seed
               // track has not been analyzed yet", which the branch above
               // already explains.
-              degraded = 'discovery switched off server-side';
+              drop = SonicDrop.discoveryOff;
             }
-            if (degraded != null) {
-              ServerCapabilities()
-                  .suppress(autoDJServer!, _kSonicParamKeys, degraded);
+            // The anchor names a track the server no longer has (moved or
+            // deleted since it played — an opener from Recently played):
+            // this pick goes without it rather than not at all.
+            if (drop == null &&
+                res.statusCode == 404 &&
+                lower.contains('track not found')) {
               _sonicLockedAnchor = null;
+              sonicOffThisPick = true;
+              continue;
+            }
+            if (drop != null) {
+              if (sonicGen == _sonicGen) {
+                appLog('[dj] sonic dropped for this session — ${drop.name}');
+                sonicDrop = drop;
+                customState.add(CustomEvent(autoDJServer));
+              } else {
+                // The sonic settings changed while this pick was out, so the
+                // verdict is about ones no longer set: this pick goes without
+                // sonic, and the next is built with the new settings.
+                sonicOffThisPick = true;
+              }
+              // The anchor stays: these verdicts are about the threshold or
+              // the server, not the pinned song (a dead pin is unpinned
+              // above), so loosening the match resumes on the same anchor.
               // Retry this same pick without the constraint. Bounded by the
-              // enclosing attempt loop, and cannot spin: the keys are now
-              // suppressed, so the next pass sends a payload that no longer
-              // carries them.
+              // enclosing attempt loop, and cannot spin: with [sonicDrop] or
+              // sonicOffThisPick set the next pass builds a payload that no
+              // longer carries it.
               continue;
             }
           }
@@ -4767,10 +4859,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
         // A working pick re-arms the auth warning: the once-per-session flag
         // exists to collapse queue-end retrigger spam of ONE expiry episode,
-        // not to silence a NEW expiry after a recovery. Same for the sonic
-        // fail-loud toast.
+        // not to silence a NEW expiry after a recovery.
         _autoDJAuthWarned = false;
-        _sonicWarned = false;
         _djPickPending = false;
         _djFailLogged = false;
         _deferredPickFailures = 0;
@@ -4820,7 +4910,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             [for (final s in accepted) (song: s, source: autoDJServer!)],
             autoPlay: autoPlay,
             incrementIndex: incrementIndex,
-            sonicPick: sonic != null);
+            sonicPick: sentSonic);
         return;
       }
       // Otherwise loop — the updated ignoreList means the next call
@@ -4838,7 +4928,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           ],
           autoPlay: autoPlay,
           incrementIndex: incrementIndex,
-          sonicPick: sonic != null);
+          sonicPick: sentSonic);
     }
   }
 

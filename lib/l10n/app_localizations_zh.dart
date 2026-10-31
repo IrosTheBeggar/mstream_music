@@ -771,64 +771,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjTitle => 'Auto DJ';
 
   @override
-  String get autoDjAddServerFirst => '请先添加服务器。';
-
-  @override
-  String get autoDjSectionServer => '服务器';
-
-  @override
-  String get autoDjSectionSources => '来源';
-
-  @override
-  String get autoDjSectionContinuity => '连贯性';
-
-  @override
-  String get autoDjSectionFilters => '筛选';
-
-  @override
-  String get autoDjMultiServerTitle => '从所有服务器播放';
-
-  @override
-  String get autoDjMultiServerSubtitle => 'Auto DJ 同时从所有服务器挑选，匹配当前播放的声音';
-
-  @override
-  String get autoDjMultiServerNeedsSonic => '需要在下方开启“声音相似度”';
-
-  @override
-  String get autoDjSectionShared => '本次会话';
-
-  @override
-  String get autoDjSectionPerServer => '各个曲库';
-
-  @override
-  String get autoDjEditingServer => '设置对象';
-
-  @override
-  String autoDjMultiServerAllIn(int count) {
-    return '$count 台服务器正在参与';
-  }
-
-  @override
-  String autoDjMultiServerConnecting(int count) {
-    return '$count 台仍在连接';
-  }
-
-  @override
-  String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中有 $count 台参与 — 其余缺少发现功能、匹配的嵌入模型或足够新的服务器版本';
-  }
-
-  @override
-  String get autoDjSectionQueue => '队列';
-
-  @override
-  String get autoDjSongsPerFetchTitle => '每次获取的歌曲数';
-
-  @override
-  String get autoDjSongsPerFetchSubtitle =>
-      'Auto DJ 每次运行时加入队列的歌曲数量。连贯性筛选会以获取时正在播放的歌曲为基准评判整批歌曲。';
-
-  @override
   String autoDjSongsPerFetchValue(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -840,15 +782,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get autoDjBpmTitle => 'BPM 连贯性';
-
-  @override
-  String get autoDjBpmSubtitle => '优先选择与当前歌曲速度相近的曲目。兼顾半速/倍速等价关系。';
-
-  @override
-  String get autoDjTolerance => '容差';
-
-  @override
   String autoDjBpmTolerance(int bpm) {
     return '± $bpm BPM';
   }
@@ -857,130 +790,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjHarmonicTitle => '和声混音';
 
   @override
-  String get autoDjHarmonicSubtitle => '优先选择与锁定歌曲调性相配的曲目（Camelot 轮盘相邻调）。';
-
-  @override
-  String get autoDjDurationTitle => '曲目时长';
-
-  @override
-  String get autoDjDurationSubtitle => '仅选择时长在指定范围内的曲目，跳过间奏和长混音';
+  String get autoDjHarmonicHint => '下一首选调性相合的歌曲';
 
   @override
   String get autoDjDurationRange => '时长';
 
   @override
-  String get autoDjDurationAny => '不限时长';
-
-  @override
-  String autoDjDurationOver(String min) {
-    return '超过 $min';
-  }
-
-  @override
-  String autoDjDurationUnder(String max) {
-    return '少于 $max';
-  }
-
-  @override
-  String autoDjDurationBetween(String min, String max) {
-    return '$min 至 $max';
-  }
-
-  @override
-  String get autoDjDurationAllowUnknown => '包含时长未知的曲目';
-
-  @override
-  String get autoDjDurationAllowUnknownSub => '否则将跳过服务器未读取到时长的曲目';
-
-  @override
-  String get autoDjMoodTitle => '氛围';
-
-  @override
-  String get autoDjMoodSubtitle => '只挑选符合某种氛围的歌曲';
-
-  @override
-  String get autoDjMoodChoose => '选择氛围';
-
-  @override
-  String get autoDjStatusOn => 'Auto DJ 已开启';
-
-  @override
-  String get autoDjStatusOff => 'Auto DJ 已关闭';
-
-  @override
-  String get autoDjStatusOffDetail => '点击下方开始。将使用当前服务器的曲库。';
-
-  @override
-  String get autoDjStart => '启动 Auto DJ';
-
-  @override
-  String get autoDjStop => '停止 Auto DJ';
-
-  @override
-  String autoDjStatusOnDetail(String url) {
-    return '当队列即将播完时，将从 $url 挑选歌曲。';
-  }
-
-  @override
-  String get autoDjOneSourceRequired => '至少需要一个来源。';
-
-  @override
-  String get autoDjMinRating => '最低评分';
-
-  @override
-  String get autoDjMinRatingSubtitle => '仅挑选评分达到或高于此值的歌曲。';
-
-  @override
-  String get autoDjRatingAny => '不限';
-
-  @override
-  String get autoDjGenreTitle => '流派筛选';
-
-  @override
-  String get autoDjGenreSubtitle => '白名单仅播放匹配的曲目；黑名单则跳过它们。';
-
-  @override
-  String get autoDjWhitelist => '白名单';
-
-  @override
-  String get autoDjBlacklist => '黑名单';
-
-  @override
-  String get autoDjNoGenres => '未选择任何流派。点击“选择流派”进行选择。';
-
-  @override
-  String get autoDjPickGenres => '选择流派';
+  String get autoDjMoodTitle => '智能筛选';
 
   @override
   String get autoDjGenreLoadError => '无法加载流派';
-
-  @override
-  String get autoDjKeywordTitle => '关键词筛选';
-
-  @override
-  String get autoDjKeywordSubtitle => '跳过标题、艺术家、专辑或文件路径中包含以下任一词语的曲目。';
-
-  @override
-  String get autoDjNoKeywords => '暂无关键词。在下方添加词语即可开始筛选。';
-
-  @override
-  String get autoDjKeywordHint => '例如“live”或“remix”';
-
-  @override
-  String get autoDjSearchGenres => '搜索流派…';
-
-  @override
-  String get autoDjNoGenresOnServer => '在此服务器上未找到任何流派。';
-
-  @override
-  String autoDjSelectedCount(int count) {
-    return '已选择 $count 个';
-  }
-
-  @override
-  String autoDjNoGenresMatch(String query) {
-    return '没有与“$query”匹配的流派。';
-  }
 
   @override
   String get download => '下载';
@@ -1145,6 +964,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get genreSourceBoth => '全部';
+
+  @override
+  String get genreSourceMixed => '混合';
 
   @override
   String get genreSourceLabel => '流派来源';
@@ -2097,23 +1919,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicTitle => '声音相似度';
 
   @override
-  String get autoDjSonicSubtitle => '利用服务器的音频分析，只挑选与本次会话声音相似的歌曲。';
-
-  @override
-  String get autoDjSonicUnavailable => '此服务器没有发现数据 — 选曲保持随机。';
-
-  @override
-  String get autoDjSonicNotReady => '发现功能已开启，但扫描尚未产生数据 — 在此之前选曲保持随机。';
-
-  @override
-  String get autoDjSonicStrictness => '相似度门槛';
-
-  @override
-  String autoDjSonicStrictnessValue(int pct) {
-    return '$pct% 或更相似';
-  }
-
-  @override
   String get autoDjSonicSeedLabel => '种子歌曲';
 
   @override
@@ -2132,10 +1937,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicSeedRemove => '移除种子歌曲';
 
   @override
-  String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
+  String get autoDjSonicSeedFailed => '无法获取歌曲';
 
   @override
-  String get autoDjSeedNoMatch => '没有歌曲符合你的 Auto DJ 筛选条件，请放宽条件';
+  String get autoDjSeedNoMatch => '没有符合筛选条件的歌曲';
 
   @override
   String get discoverFindSimilar => '查找相似歌曲';
@@ -2151,9 +1956,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverSessionStarted => '声音会话已开始 — Auto DJ 已开启。';
-
-  @override
-  String get autoDjSonicAnchorLabel => '锚点';
 
   @override
   String get autoDjSonicAnchorRolling => '跟随氛围';
@@ -2283,37 +2085,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get autoDjStartTitle => 'Auto DJ 从哪首歌开始？';
-
-  @override
-  String get autoDjStartSubtitle => '队列为空，DJ 需要一首起始曲目。有队列时，它会直接沿用其中的内容。';
-
-  @override
-  String get autoDjStartRandom => '给我惊喜';
-
-  @override
-  String get autoDjStartRandomSub => '从曲库中随机选一首，并以此展开。';
-
-  @override
-  String get autoDjStartPick => '我来选';
-
-  @override
-  String get autoDjStartPickSub => '打开曲库，自己挑选起始曲目。';
-
-  @override
-  String get autoDjStartRemember => '记住此选择';
-
-  @override
-  String get autoDjStartRememberSub => '下次跳过此询问，始终以这种方式开始。';
-
-  @override
   String get autoDjStartPickBanner => '选择起始歌曲 — 在曲库中点击任意曲目';
-
-  @override
-  String get autoDjOnEmptyQueue => '队列为空时';
-
-  @override
-  String get autoDjOnEmptyQueueSub => '队列为空时开启 Auto DJ 的行为。';
 
   @override
   String get autoDjStartAskShort => '询问';
@@ -2336,12 +2108,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return '此服务器版本为 v$version。部分功能需要 v5.5 或更高版本，将不可用。';
   }
-
-  @override
-  String get autoDjNeedsNewerServer => 'BPM 连贯性、和声混音和流派筛选需要更新的服务器版本。更新后即可使用。';
-
-  @override
-  String get autoDjSonicNeedsNewerServer => '需要服务器 6.15.2 或更高版本';
 
   @override
   String get torrentScreenTitle => '添加种子';
@@ -5139,6 +4905,156 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => '分享播放列表';
+
+  @override
+  String get autoDjStopShort => '停止';
+
+  @override
+  String get autoDjPlayFrom => '播放来源';
+
+  @override
+  String get autoDjAllServers => '所有服务器';
+
+  @override
+  String autoDjServersTakingPart(int count, int total) {
+    return '$count/$total';
+  }
+
+  @override
+  String get autoDjFirstSong => '第一首';
+
+  @override
+  String get autoDjFirstSongRandom => '随机';
+
+  @override
+  String get autoDjFirstSongChoose => '选择';
+
+  @override
+  String get autoDjMustMatch => '必须符合';
+
+  @override
+  String get autoDjPrefer => '偏好';
+
+  @override
+  String autoDjPercent(int pct) {
+    return '$pct%';
+  }
+
+  @override
+  String get autoDjDrift => '随流漂移';
+
+  @override
+  String get autoDjStayClose => '保持接近';
+
+  @override
+  String get autoDjGenres => '流派';
+
+  @override
+  String get autoDjGenresOnly => '仅限';
+
+  @override
+  String get autoDjGenresSkip => '排除';
+
+  @override
+  String autoDjGenresSkipValue(String genres) {
+    return '排除 $genres';
+  }
+
+  @override
+  String get autoDjRating => '评分';
+
+  @override
+  String autoDjRatingValue(String stars) {
+    return '$stars★及以上';
+  }
+
+  @override
+  String get autoDjAny => '不限';
+
+  @override
+  String autoDjLengthOver(String min) {
+    return '$min 以上';
+  }
+
+  @override
+  String autoDjLengthUnder(String max) {
+    return '$max 以内';
+  }
+
+  @override
+  String autoDjLengthBetween(String min, String max) {
+    return '$min–$max';
+  }
+
+  @override
+  String get autoDjIncludeUnknown => '包括未知';
+
+  @override
+  String get autoDjLengthShortest => '最短';
+
+  @override
+  String get autoDjLengthLongest => '最长';
+
+  @override
+  String get autoDjWheelHours => '小时';
+
+  @override
+  String get autoDjTempo => '节拍匹配';
+
+  @override
+  String get autoDjSkipWords => '排除词';
+
+  @override
+  String get autoDjBatch => '批量';
+
+  @override
+  String get autoDjVaries => '各不相同';
+
+  @override
+  String autoDjMax(int count) {
+    return '最多 $count';
+  }
+
+  @override
+  String autoDjNeedsServer(String version) {
+    return '服务器 $version+';
+  }
+
+  @override
+  String get autoDjDiscoveryOff => '发现已关闭';
+
+  @override
+  String get autoDjStillScanning => '仍在扫描';
+
+  @override
+  String get autoDjTooStrict => '过于严格';
+
+  @override
+  String get autoDjNotOnPeers => '对等服务器不可用';
+
+  @override
+  String get autoDjNoMoodData => '无氛围数据';
+
+  @override
+  String get autoDjOtherModel => '音频模型不同';
+
+  @override
+  String get autoDjUnreachable => '无法连接';
+
+  @override
+  String get autoDjRemember => '记住';
+
+  @override
+  String get autoDjGenresNone => '没有流派';
+
+  @override
+  String get autoDjNoMatches => '无匹配';
+
+  @override
+  String get autoDjRecentlyPlayed => '最近播放';
+
+  @override
+  String get autoDjFirstSongRecent => '最近播放';
 
   @override
   String get browseLoadFailed =>
