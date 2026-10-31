@@ -952,6 +952,24 @@ class YtdlDraft extends ChangeNotifier {
     });
   }
 
+  /// The path checked again at once, after an add that ran a mkdir
+  /// failed. What the last check found stands until a listing answers: a
+  /// re-check that lists nothing (no connection) changes nothing, and one
+  /// for a path since left is dropped.
+  void _recheck() {
+    final t = target;
+    if (_cardUrl == null || !t.valid || _checkDir != t.directory) return;
+    final rid = _checkRid;
+    unawaited(_walk(t, () => _disposed || rid != _checkRid).then((found) {
+      if (found == null || found.state != YtdlCheckState.known) return;
+      _check = found.state;
+      _newSegments = found.newSegments;
+      _deepest = found.deepest;
+      _files = found.files;
+      _notify();
+    }));
+  }
+
   /// The check for the path now, at once (the add waits for it).
   Future<void> _checkNow() {
     final out = _checking;
@@ -1214,6 +1232,10 @@ class YtdlDraft extends ChangeNotifier {
     }
     final failure = outcome.failure;
     if (failure?.problem == YtdlProblem.uploadsOff) _uploadsRefused = true;
+    // The mkdir ran: the folders may be there now, all or some, whether it
+    // failed (its answer lost after the server made them) or the add after
+    // it did. No "new" tag outlives them.
+    if (makeFolder) _recheck();
     if (outcome.job?.state == YtdlJobState.startFailed ||
         failure == null ||
         _cardUrl != url) {

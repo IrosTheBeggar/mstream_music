@@ -8,8 +8,9 @@
 // destination (remembered, first use, just this song, Save), the explorer
 // sheet's folder and subfolders; the new-folder check (600 ms, walking up,
 // a file in the way, the name clash by tier, noMkdir's three choices); the
-// format; and Add — every reason it is disabled, the reset after a 200, and
-// a failure shown inline or left to a row.
+// format; and Add — every reason it is disabled, the reset after a 200, a
+// failure shown inline or left to a row, and the folder checked again
+// after an add that ran a mkdir failed.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -1031,6 +1032,62 @@ void main() {
       expect(d.addPhase, YtdlAddPhase.failed);
       expect(d.addFailure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Discovery'));
       expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+    });
+
+    test('a failed mkdir that made the folder anyway: the folder is checked '
+        'again, no "new" tag, and Try again posts without a mkdir', () async {
+      h.fake
+        ..folder('/Music/Daft Punk/')
+        ..mkdirAnswersLost = 2;
+      final d = await ready();
+      expect(d.newSegments, {1});
+      d.attach();
+      expect(await d.add(), isFalse);
+      expect(d.addFailure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Discovery'));
+      expect(h.fake.exists(target), isTrue, reason: 'the server made it');
+      await ytdlSettle();
+      expect(d.check, YtdlCheckState.known);
+      expect(d.newSegments, isEmpty);
+      expect(d.addFailure, isNotNull, reason: 'the failure still shows');
+      final mkdirs = h.fake.count('POST', '/file-explorer/mkdir');
+      expect(await d.add(), isTrue);
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), mkdirs);
+      expect(h.fake.bodies('POST', '/api/v1/ytdl/').single['directory'], target);
+    });
+
+    test('a mkdir that worked before the add failed: the folder is checked '
+        'again', () async {
+      h.fake
+        ..folder('/Music/Daft Punk/')
+        ..addRefusal = (500, 'Server Error');
+      final d = await ready();
+      expect(d.newSegments, {1});
+      d.attach();
+      expect(await d.add(), isFalse);
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), 1);
+      await ytdlSettle();
+      expect(d.newSegments, isEmpty);
+    });
+
+    test('a refused mkdir made nothing: the "new" tag stays throughout; a '
+        're-check that lists nothing changes nothing', () async {
+      h.fake
+        ..folder('/Music/Daft Punk/')
+        ..mkdirRefusal = (500, 'EACCES: permission denied');
+      final d = await ready();
+      d.attach();
+      final seen = <Set<int>>[];
+      d.addListener(() => seen.add(d.newSegments));
+      expect(await d.add(), isFalse);
+      await ytdlSettle();
+      expect(d.newSegments, {1});
+      expect(seen, everyElement({1}), reason: 'no blink while it re-checks');
+      // No connection for the re-check after the next refusal.
+      h.fake.listFails.addAll(['/Music/Daft Punk/Discovery/', '/Music/Daft Punk/', '/Music/']);
+      expect(await d.add(), isFalse);
+      await ytdlSettle();
+      expect(d.check, YtdlCheckState.known);
+      expect(d.newSegments, {1});
     });
 
     test('a failure cleared by a change takes "Try again" with it', () async {
