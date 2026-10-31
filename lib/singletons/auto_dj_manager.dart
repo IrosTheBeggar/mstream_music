@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -206,21 +207,33 @@ class AutoDJManager {
   /// didn't ask for.
   EmptyQueueStart emptyQueueStart = EmptyQueueStart.ask;
 
-  /// Draw picks from EVERY eligible server, not just the one the DJ was
-  /// armed on.
+  /// Play from's All servers: draw picks from EVERY eligible server, the ones
+  /// added later included, rather than the ones [playFromServers] names.
   ///
-  /// The seed still comes from what is playing, but it travels as a vector
-  /// (see ApiManager.fetchEmbeddings) so servers that have never seen that
-  /// file can still answer "something like this". Off by default: it changes
-  /// where music comes from, needs servers new enough to take a vector seed,
-  /// and only makes sense with more than one server configured.
-  bool multiServerEnabled = false;
+  /// Stored under 'multiServerEnabled', the key that meant exactly this
+  /// before a set of servers could be chosen, so a file reads the same in
+  /// either version.
+  bool playFromAll = false;
 
-  /// [Server.localname] the Auto DJ screen's Play from names: where Start,
-  /// the queue's Auto DJ button and CarPlay arm the DJ, whichever server is
-  /// being browsed. Null until one is chosen (the current server stands in).
-  /// With [multiServerEnabled] it is the session's home — the last single
-  /// server, and where Play from returns when All servers is let go.
+  /// [Server.localname]s Play from names when it is not [playFromAll]: the
+  /// servers the DJ's picks come from, [playFromServer] among them. Empty
+  /// until a set is chosen — the home alone stands in.
+  ///
+  /// One server is a plain session on it. Two or more fan every pick out
+  /// across them: the seed still comes from what is playing, but it travels
+  /// as a vector (see ApiManager.fetchEmbeddings) so servers that have never
+  /// seen that file can still answer "something like this", and the closest
+  /// match wins. That runs on sonic similarity, and needs servers new enough
+  /// to take a vector seed.
+  List<String> playFromServers = const [];
+
+  /// Whether Play from names more than one server: the DJ fans each pick out.
+  bool get multiServerEnabled => playFromAll || playFromServers.length > 1;
+
+  /// [Server.localname] of Play from's home: where Start, the queue's Auto DJ
+  /// button and CarPlay arm the DJ, whichever server is being browsed, and
+  /// what a session across several servers falls back to when the others
+  /// can't answer. Null until one is chosen (the current server stands in).
   String? playFromServer;
 
   /// [Server.localname] Auto DJ was last switched on for, or null when it was
@@ -315,10 +328,18 @@ class AutoDJManager {
       playFromServer = m['playFromServer'] is String
           ? m['playFromServer']
           : enabledServer;
-      multiServerEnabled = m['multiServerEnabled'] ?? false;
-      // All servers runs on sonic picks, so it can't stay on without them —
-      // the Sonic similarity sheet enforces that; an older file may not.
-      if (!sonicSimilarityEnabled) multiServerEnabled = false;
+      playFromAll = m['multiServerEnabled'] == true;
+      final chosen = m['playFromServers'];
+      playFromServers = chosen is List
+          ? List.unmodifiable(chosen.whereType<String>())
+          : const <String>[];
+      // Several servers run on sonic picks, so they can't stay chosen without
+      // them — the Sonic similarity sheet enforces that; an older file may
+      // not.
+      if (!sonicSimilarityEnabled) {
+        playFromAll = false;
+        playFromServers = List.unmodifiable([?playFromServer]);
+      }
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -391,7 +412,9 @@ class AutoDJManager {
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
       'playFromServer': playFromServer,
-      'multiServerEnabled': multiServerEnabled,
+      'playFromServers': playFromServers,
+      // All servers, under its old name; see [playFromAll].
+      'multiServerEnabled': playFromAll,
       'durationFilterEnabled': durationFilterEnabled,
       'minDurationSec': minDurationSec,
       'maxDurationSec': maxDurationSec,
@@ -414,9 +437,56 @@ class AutoDJManager {
     await _save();
   }
 
-  Future<void> setPlayFromServer(String? localname) async {
-    if (playFromServer == localname) return;
+  /// The Play from sheet, applied at once: [all], or the [servers] chosen,
+  /// with [home] the one the session runs on. The home is always chosen.
+  Future<void> setPlayFrom(
+      {required bool all,
+      required Iterable<String> servers,
+      required String home}) async {
+    final chosen = [...servers.toSet()];
+    if (!chosen.contains(home)) chosen.insert(0, home);
+    if (playFromAll == all &&
+        playFromServer == home &&
+        listEquals(playFromServers, chosen)) {
+      return;
+    }
+    playFromAll = all;
+    playFromServers = List.unmodifiable(chosen);
+    playFromServer = home;
+    _notify();
+    await _save();
+  }
+
+  /// The DJ was switched on for [localname], whichever path did it — Start,
+  /// a Discover play, Android Auto's Shuffle All. Play from always holds the
+  /// server the DJ runs on, as its home: one outside the chosen servers joins
+  /// them when there are several, and takes over from the one when it is
+  /// alone.
+  Future<void> setPlayFromHome(String localname) async {
+    final joins = !playFromAll && !playFromServers.contains(localname);
+    if (!joins && playFromServer == localname) return;
+    if (joins) {
+      playFromServers = List.unmodifiable(
+          [if (playFromServers.length > 1) ...playFromServers, localname]);
+    }
     playFromServer = localname;
+    _notify();
+    await _save();
+  }
+
+  /// Servers deleted from the app ([localnames]) leave Play from. A peer that
+  /// is only hidden, or missing from its parent's list for now, is not
+  /// deleted: it stays chosen, and takes part again once it is back.
+  Future<void> forgetServers(Iterable<String> localnames) async {
+    final gone = localnames.toSet();
+    final kept = [
+      for (final s in playFromServers)
+        if (!gone.contains(s)) s,
+    ];
+    final homeGone = gone.contains(playFromServer);
+    if (kept.length == playFromServers.length && !homeGone) return;
+    playFromServers = List.unmodifiable(kept);
+    if (homeGone) playFromServer = kept.firstOrNull;
     _notify();
     await _save();
   }
@@ -549,12 +619,6 @@ class AutoDJManager {
         if (w.isNotEmpty && seen.add(w.toLowerCase())) w,
     ].take(maxKeywords).toList();
     keywordFilterEnabled = keywordFilterWords.isNotEmpty;
-    _notify();
-    await _save();
-  }
-
-  Future<void> setMultiServerEnabled(bool v) async {
-    multiServerEnabled = v;
     _notify();
     await _save();
   }

@@ -8,6 +8,7 @@ import '../objects/server.dart';
 import '../objects/direct_access.dart';
 import './api.dart';
 import './app_messenger.dart';
+import './auto_dj_manager.dart';
 import './browser_list.dart';
 import './federation_inbox_alerts.dart';
 import './log_manager.dart';
@@ -2301,6 +2302,9 @@ class ServerManager {
     } catch (err) {
       appLog('[server] clearing listening history failed: $err');
     }
+    // And Auto DJ's Play from lets them go (a save failure is logged there).
+    await AutoDJManager().forgetServers(
+        [removeThisServer, ...orphans].map((s) => s.localname));
     // Drop a stale queue-tunnel pointer to the removed server so the ensure
     // below doesn't try to keep its tunnel up (the queue listener would clear
     // it on the next edit, but do it now).

@@ -5,7 +5,8 @@ import 'package:mstream_music/singletons/auto_dj_manager.dart';
 // The pure helpers behind Auto DJ's sonic-similarity mode: the rolling
 // anchor ring buffer and the `similarTo`/`minSimilarity` fields it turns
 // into for the random-songs body (mirrors webapp/alpha/auto-dj.js
-// pushSonicHistory / buildSonicParams).
+// pushSonicHistory / buildSonicParams); and, for a session across several
+// servers, which playing track anchors it and what locked mode pins.
 
 void main() {
   group('AudioPlayerHandler.pushSonicHistory', () {
@@ -244,6 +245,96 @@ void main() {
         isNull,
         reason: 'nothing this server holds: no sonic params, not a foreign path',
       );
+    });
+  });
+
+  // A session across several servers anchors on the playing track from any
+  // of its servers — its sound is read from the server that holds it — so
+  // the first pick follows what was playing, not a random track from the
+  // DJ's own server.
+  group('AudioPlayerHandler.fanOutCurrentSeed', () {
+    bool session(String s) => {'home', 'office'}.contains(s);
+
+    test('a track on any of the session\'s servers, normalized', () {
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: '/music/a.mp3', server: 'office', inSession: session),
+          (path: 'music/a.mp3', server: 'office'));
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: 'music/a.mp3', server: 'home', inSession: session),
+          (path: 'music/a.mp3', server: 'home'));
+    });
+
+    test('a track from a server outside the session anchors nothing', () {
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: '/music/a.mp3', server: 'lab', inSession: session),
+          isNull);
+    });
+
+    test('no server behind it (a local file), or no path: nothing', () {
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: '/music/a.mp3', server: null, inSession: session),
+          isNull);
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: '/music/a.mp3', server: 42, inSession: session),
+          isNull);
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: '/', server: 'home', inSession: session),
+          isNull);
+      expect(
+          AudioPlayerHandler.fanOutCurrentSeed(
+              path: null, server: 'home', inSession: session),
+          isNull);
+    });
+  });
+
+  group('AudioPlayerHandler.inFanOut', () {
+    test('the chosen servers, and always the DJ\'s own', () {
+      bool inIt(String s) =>
+          AudioPlayerHandler.inFanOut(s, all: false, chosen: ['a', 'b'], dj: 'c');
+      expect(inIt('a'), isTrue);
+      expect(inIt('b'), isTrue);
+      expect(inIt('c'), isTrue, reason: "the DJ's own");
+      expect(inIt('d'), isFalse);
+    });
+
+    test('All servers takes in every one', () {
+      expect(
+          AudioPlayerHandler.inFanOut('d',
+              all: true, chosen: const [], dj: null),
+          isTrue);
+    });
+  });
+
+  group('AudioPlayerHandler.sonicPin', () {
+    const elsewhere = (path: 'music/b.mp3', server: 'office');
+
+    test('the DJ server\'s own anchor first, normalized — either route '
+        'carries it', () {
+      expect(
+          AudioPlayerHandler.sonicPin(
+              own: '/music/a.mp3', dj: 'home', elsewhere: elsewhere),
+          (path: 'music/a.mp3', server: 'home'));
+    });
+
+    test('else the playing track on another of the session\'s servers', () {
+      expect(
+          AudioPlayerHandler.sonicPin(
+              own: null, dj: 'home', elsewhere: elsewhere),
+          elsewhere);
+      expect(
+          AudioPlayerHandler.sonicPin(own: '/', dj: 'home', elsewhere: elsewhere),
+          elsewhere,
+          reason: 'an empty path is no anchor');
+    });
+
+    test('nothing to pin: null, and the pick stays plain random', () {
+      expect(AudioPlayerHandler.sonicPin(own: null, dj: 'home'), isNull);
     });
   });
 }
