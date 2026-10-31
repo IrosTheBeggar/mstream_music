@@ -197,9 +197,38 @@ class YtdlGuess {
     return _squeeze(_rebuild(_pieces, _split, restored).left);
   }
 
+  // The pieces follow from rawTitle, the tier and the fragments, so the
+  // public fields decide equality (a late lookup that read the same).
+  @override
+  bool operator ==(Object other) =>
+      other is YtdlGuess &&
+      other.tier == tier &&
+      other.rawTitle == rawTitle &&
+      other.title == title &&
+      other.artist == artist &&
+      other.album == album &&
+      other.year == year &&
+      _sameFragments(other.fragments, fragments) &&
+      other.youtubeArtistRaw == youtubeArtistRaw &&
+      other.youtubeArtist == youtubeArtist &&
+      other.artistStrip == artistStrip &&
+      other.artistAgrees == artistAgrees;
+
+  @override
+  int get hashCode => Object.hash(tier, rawTitle, title, artist, album, year,
+      Object.hashAll(fragments), youtubeArtistRaw, artistStrip, artistAgrees);
+
   @override
   String toString() =>
       'YtdlGuess(${tier.name}, "$title" by "$artist", "$album", "$year", $fragments)';
+}
+
+bool _sameFragments(List<YtdlFragment> a, List<YtdlFragment> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// Read a `GET /ytdl/metadata` answer. [year] may come as an int
@@ -343,12 +372,13 @@ String? _keepOf(String group) {
 }
 
 final RegExp _featTail = RegExp(
-  r'^(.*?\S)\s+(?:feat\.?|ft\.|featuring)\s+([^()\[\]【】]+)$',
+  r'^(.*?\S)\s+(?:feat\.|ft\.|featuring)\s+([^()\[\]【】]+)$',
   caseSensitive: false,
 );
 
 /// "Song ft. X" → "Song (feat. X)", only for a credit at the very end and
-/// outside brackets.
+/// outside brackets. "feat" and "ft" need their dots: "A Feat of Strength"
+/// and "6 ft under" are titles, and the rewrite has no chip to undo it.
 String _featured(String title) {
   final m = _featTail.firstMatch(title);
   if (m == null) return title;

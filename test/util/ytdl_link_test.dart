@@ -123,6 +123,11 @@ void main() {
           YtdlLinkKind.playlist);
       expect(parseYtdlLink('https://www.youtube.com/playlist').kind,
           YtdlLinkKind.notYoutube);
+      // An embedded playlist: "videoseries" is not a video id.
+      expect(parseYtdlLink('https://www.youtube.com/embed/videoseries?list=PLx0sYbCqOb8T').kind,
+          YtdlLinkKind.playlist);
+      expect(parseYtdlLink('https://www.youtube.com/embed/videoseries').kind,
+          YtdlLinkKind.notYoutube);
     });
   });
 
@@ -287,6 +292,20 @@ void main() {
           url: 'https://www.youtube.com/watch?v=FGBhQbmPwH8',
           id: 'FGBhQbmPwH8',
           shortForm: true);
+    });
+
+    test('a link run straight into text or full-width punctuation ends where the text starts', () {
+      for (final text in [
+        'https://youtu.be/FGBhQbmPwH8。',
+        '看看https://youtu.be/FGBhQbmPwH8，很好听',
+        '「https://youtu.be/FGBhQbmPwH8」',
+        'https://youtu.be/FGBhQbmPwH8”',
+      ]) {
+        expectVideo(text,
+            url: 'https://www.youtube.com/watch?v=FGBhQbmPwH8',
+            id: 'FGBhQbmPwH8',
+            shortForm: true);
+      }
     });
 
     test('the first YouTube link wins, past a link to another site', () {

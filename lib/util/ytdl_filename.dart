@@ -392,4 +392,9 @@ const Map<int, String> _compatMany = {
   0x2A74: '::=', 0x2A75: '==', 0x2A76: '===',
   0xFB00: 'ff', 0xFB01: 'fi', 0xFB02: 'fl', 0xFB03: 'ffi', 0xFB04: 'ffl',
   0xFB05: 'st', 0xFB06: 'st', 0xFE19: '...', 0xFE30: '..',
+  // The tone-mark singletons are canonical, not compatibility, mappings,
+  // but NFKC makes them the plain marks before composing: "n" + U+0341 is
+  // "ń" (a substitute), not "n".
+  0x0340: '\u{300}', 0x0341: '\u{301}', 0x0343: '\u{313}',
+  0x0344: '\u{308}\u{301}',
 };

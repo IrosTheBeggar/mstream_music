@@ -355,7 +355,6 @@ void main() {
           'Get Lucky (feat. Pharrell Williams)');
       expect(ytdlGuess(title: 'Get Lucky Featuring Pharrell Williams, Nile Rodgers').title,
           'Get Lucky (feat. Pharrell Williams, Nile Rodgers)');
-      expect(ytdlGuess(title: 'Get Lucky feat Pharrell').title, 'Get Lucky (feat. Pharrell)');
       // After the split: the credit at the end of the title half.
       final g = ytdlGuess(
           title: 'Daft Punk - Get Lucky ft. Pharrell Williams (Official Audio)',
@@ -372,6 +371,9 @@ void main() {
       expect(g.artist, 'Daft Punk ft. Pharrell');
       expect(g.title, 'Get Lucky');
       expect(ytdlGuess(title: '6 ft under').title, '6 ft under', reason: '"ft" needs its dot');
+      expect(ytdlGuess(title: 'A Feat of Strength').title, 'A Feat of Strength',
+          reason: '"feat" needs its dot too');
+      expect(ytdlGuess(title: 'Get Lucky feat Pharrell').title, 'Get Lucky feat Pharrell');
       expect(ytdlGuess(title: 'Feat. Nobody').title, 'Feat. Nobody');
     });
   });
@@ -435,5 +437,15 @@ void main() {
       final g = ytdlGuess(title: 'Sweater Weather (Official Video)', artist: 'TheNeighbourhoodVEVO');
       expect(g.artistWith({0}), 'TheNeighbourhood');
     });
+  });
+
+  test('two readings of the same answer are equal; a different answer is not', () {
+    YtdlGuess read() => ytdlGuess(
+        title: 'Gorillaz - Feel Good Inc. (Official Video) [HD]', artist: 'GorillazVEVO');
+    expect(read(), read());
+    expect(read().hashCode, read().hashCode);
+    expect(read(), isNot(ytdlGuess(title: 'Gorillaz - Feel Good Inc. (Official Video)', artist: 'GorillazVEVO')));
+    expect(read(), isNot(ytdlGuess(title: 'Gorillaz - Feel Good Inc. (Official Video) [HD]', artist: 'Gorillaz')));
+    expect(ytdlGuess(), YtdlGuess.none);
   });
 }

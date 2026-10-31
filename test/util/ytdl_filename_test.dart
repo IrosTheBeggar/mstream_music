@@ -114,6 +114,10 @@ const derived = <(String, String)>[
   ('Ĳsselmeer ǅ', 'IJsselmeer_D'),
   ('ᵀᴴᴱ small caps', 'THE_small_caps'),
   ('H₂O x²', 'H2O_x2'),
+  // The tone-mark singletons become the plain marks and compose.
+  ('Pin\u{303}a n\u{341}', 'Pina'), // ñ is transliterated, ń is not
+  ('Ste\u{340}le Ange\u{341}lique', 'Stele_Angelique'),
+  ('u\u{344}', '_'), // ü + acute is ǘ
 ];
 
 void main() {

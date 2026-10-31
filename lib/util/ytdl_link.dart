@@ -74,10 +74,12 @@ class YtdlLink {
 /// A YouTube host inside free text: "youtu.be", "youtube.com" or a
 /// subdomain of either it or youtube-nocookie.com, with an optional scheme,
 /// port and path. Not when it is the tail of a longer name
-/// ("notyoutube.com") or sits inside another link's path.
+/// ("notyoutube.com") or sits inside another link's path. The path is
+/// ASCII, as a copied YouTube link is, so a link run straight into text
+/// ("…/dQw4w9WgXcQ。看看") ends where the text starts.
 final RegExp _candidate = RegExp(
   r'(?<![\w.@/-])(https?://)?((?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|youtube-nocookie\.com))'
-  r'(?![a-z0-9-]|\.[a-z0-9])(:\d+)?([/?#][^\s<>"]*)?',
+  r'(?![a-z0-9-]|\.[a-z0-9])(:\d+)?([/?#][^\x00-\x20<>"\x7f-\uffff]*)?',
   caseSensitive: false,
 );
 
@@ -130,6 +132,11 @@ YtdlLink parseYtdlLink(String text) {
     return rewritten(first == 'embed' ? second : (first == 'watch' ? v : null));
   }
   switch (first) {
+    // An embedded playlist names no video: /embed/videoseries?list=….
+    case 'embed' when second == 'videoseries':
+      return inPlaylist
+          ? const YtdlLink._(YtdlLinkKind.playlist)
+          : YtdlLink._notYoutube;
     case 'shorts' || 'embed':
       return rewritten(second);
     case 'live':
