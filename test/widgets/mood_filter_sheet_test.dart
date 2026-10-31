@@ -19,12 +19,12 @@ void main() {
   /// A page whose button opens the sheet on [start]; each answer lands in
   /// the list returned (null: closed without Done).
   Future<List<MoodFilter?>> openSheet(WidgetTester tester,
-      {MoodFilter start = MoodFilter.empty}) async {
+      {MoodFilter start = MoodFilter.empty, String? title}) async {
     final answers = <MoodFilter?>[];
     await tester.pumpWidget(_app(Builder(
       builder: (context) => TextButton(
-        onPressed: () async =>
-            answers.add(await showMoodFilterSheet(context, start)),
+        onPressed: () async => answers
+            .add(await showMoodFilterSheet(context, start, title: title)),
         child: const Text('open'),
       ),
     )));
@@ -153,6 +153,26 @@ void main() {
     await tester.tap(find.text('Danceable'));
     await tester.pumpAndSettle();
     expect(tagOn(tester, 'danceable'), isTrue);
+  });
+
+  testWidgets("a title replaces Filters (Auto DJ's Mood row); the sheet is "
+      'otherwise the same', (tester) async {
+    final answers = await openSheet(tester,
+        start: const MoodFilter(energy: 'relaxed'), title: 'Mood');
+    expect(find.text('Mood'), findsOneWidget);
+    expect(find.text('Filters'), findsNothing);
+    expect(chosen(tester, MoodScale.energy), {'relaxed'});
+    await tester.tap(find.text('Sad'));
+    await tester.pumpAndSettle();
+    await tester.tap(done);
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+    expect(answers.single?.toJson(), {'valence': 'sad', 'energy': 'relaxed'});
+
+    // No title: the browse lists' own word.
+    await openSheet(tester);
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Mood'), findsNothing);
   });
 
   testWidgets('the button counts the choices set', (tester) async {

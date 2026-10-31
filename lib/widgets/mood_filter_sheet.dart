@@ -72,9 +72,10 @@ class MoodFilterButton extends StatelessWidget {
 }
 
 /// The sheet on [initial]: the choices made when Done is pressed, or null
-/// when it is closed any other way (nothing changes then).
+/// when it is closed any other way (nothing changes then). [title] replaces
+/// the browse lists' "Filters" (Auto DJ's sheet is its Mood row's).
 Future<MoodFilter?> showMoodFilterSheet(
-        BuildContext context, MoodFilter initial) =>
+        BuildContext context, MoodFilter initial, {String? title}) =>
     showModalBottomSheet<MoodFilter>(
       context: context,
       isScrollControlled: true,
@@ -82,13 +83,14 @@ Future<MoodFilter?> showMoodFilterSheet(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => MoodFilterSheet(initial: initial),
+      builder: (_) => MoodFilterSheet(initial: initial, title: title),
     );
 
 class MoodFilterSheet extends StatefulWidget {
-  const MoodFilterSheet({super.key, required this.initial});
+  const MoodFilterSheet({super.key, required this.initial, this.title});
 
   final MoodFilter initial;
+  final String? title;
 
   @override
   State<MoodFilterSheet> createState() => _MoodFilterSheetState();
@@ -185,7 +187,7 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
               child: Row(children: [
                 Expanded(
                   child: Text(
-                    l.moodFilters,
+                    widget.title ?? l.moodFilters,
                     style: TextStyle(
                       color: VelvetColors.textPrimary,
                       fontSize: 18,

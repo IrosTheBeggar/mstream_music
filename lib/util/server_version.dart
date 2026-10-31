@@ -224,6 +224,13 @@ enum ServerParam {
 /// server names back at us in a rejection.
 String paramWireName(ServerParam p) => p.name;
 
+/// The release that brought [p], in words: "6.25" for 6.25.0, "6.7.1" as is —
+/// what the Auto DJ screen says a server needs.
+String paramFloorLabel(ServerParam p) {
+  final v = _paramFloor[p]!;
+  return v.patch == 0 ? '${v.major}.${v.minor}' : '${v.major}.${v.minor}.${v.patch}';
+}
+
 /// Lowest upstream version known to accept each parameter. See the doc on
 /// [ServerParam] for how these were derived and why they are lower bounds.
 const Map<ServerParam, ServerVersion> _paramFloor = {
