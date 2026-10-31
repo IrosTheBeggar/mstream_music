@@ -95,31 +95,35 @@ void main() {
       expect(taps, 0);
     });
 
-    testWidgets('locked: raised, a plain edge, the lock side tighter', (
-      tester,
-    ) async {
-      await pump(
-        tester,
-        const DestLibraryChip(name: 'Music', selected: true, locked: true),
-      );
-      final material = tester.widget<Material>(
-        find.descendant(
-          of: find.byType(DestLibraryChip),
-          matching: find.byType(Material),
-        ),
-      );
-      expect(material.color, VelvetColors.raised);
-      final box = tester.widget<Container>(
-        find.descendant(
-          of: find.byType(DestLibraryChip),
-          matching: find.byType(Container),
-        ),
-      );
-      final border = (box.decoration! as BoxDecoration).border! as Border;
-      expect(border.top.color, VelvetColors.border2);
-      expect(border.top.width, 1);
-      expect(box.padding, const EdgeInsetsDirectional.only(start: 12, end: 14));
-    });
+    testWidgets(
+      'locked: the card ground, a plain edge, the lock side tighter',
+      (tester) async {
+        await pump(
+          tester,
+          const DestLibraryChip(name: 'Music', selected: true, locked: true),
+        );
+        final material = tester.widget<Material>(
+          find.descendant(
+            of: find.byType(DestLibraryChip),
+            matching: find.byType(Material),
+          ),
+        );
+        expect(material.color, VelvetColors.card);
+        final box = tester.widget<Container>(
+          find.descendant(
+            of: find.byType(DestLibraryChip),
+            matching: find.byType(Container),
+          ),
+        );
+        final border = (box.decoration! as BoxDecoration).border! as Border;
+        expect(border.top.color, VelvetColors.border2);
+        expect(border.top.width, 1);
+        expect(
+          box.padding,
+          const EdgeInsetsDirectional.only(start: 12, end: 14),
+        );
+      },
+    );
 
     testWidgets('the band: 44 by default, 48 when asked; the chip stays 40', (
       tester,

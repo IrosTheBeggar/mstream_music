@@ -22,7 +22,8 @@ String destToken(String name) => '{{$name}}';
 /// [s] as one unbreakable run: no-break spaces, and a word joiner after
 /// each hyphen ("01 - Rooftop Cypher.mp3" would otherwise break after its
 /// dash).
-String destHold(String s) => s.replaceAll(' ', ' ').replaceAll('-', '-⁠');
+String destHold(String s) =>
+    s.replaceAll(' ', '\u00A0').replaceAll('-', '-\u2060');
 
 /// A variable button: [token] where [field]'s caret is (over the selection,
 /// at the end when the field never had one), the caret after it, [focus]
@@ -185,8 +186,10 @@ class DestPreviewShell extends StatelessWidget {
 /// A library choice (FedChipRow's chip in the canvas's size): 40 px, radius
 /// 10, on a [minHit] band; the chosen one primary-dim with a 1.5 px primary
 /// edge and a check. A [locked] one is the library another setting fixes
-/// (Add from YouTube's "Same as Discover"): raised, a lock for the check,
-/// read as off and deaf to taps; the caption beside it says what sets it.
+/// (Add from YouTube's "Same as Discover"): on the card ground (a step
+/// under the raised controls, as the canvas draws it), a lock for the
+/// check, read as off and deaf to taps; the caption beside it says what
+/// sets it.
 class DestLibraryChip extends StatelessWidget {
   final String name;
   final bool selected;
@@ -218,7 +221,7 @@ class DestLibraryChip extends StatelessWidget {
           color: chosen
               ? VelvetColors.primaryDim
               : locked
-              ? VelvetColors.raised
+              ? VelvetColors.card
               : Colors.transparent,
           borderRadius: radius,
           child: Container(
