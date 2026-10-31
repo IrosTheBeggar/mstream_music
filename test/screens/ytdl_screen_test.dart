@@ -365,9 +365,12 @@ void main() {
       h().fake.addGate = Completer<void>();
       await t.tap(byKey('ytdl-add'));
       await ui.settle(t);
-      // The card's own add shows on its button only: no ADDING row yet.
+      // The card's own add shows on its button only: no ADDING row yet,
+      // and no "Already adding" over it — that note is for an earlier add
+      // (spec §3).
       expect(find.text(h().l.discoverJobStarting), findsOneWidget);
       expect(byKey('ytdl-section-adding'), findsNothing);
+      expect(byKey('ytdl-already-adding'), findsNothing);
       h().fake.addGate!.complete();
       await ui.settle(t);
       await ui.settle(t);

@@ -754,6 +754,39 @@ void main() {
       expect(d.alreadyAdding, isFalse);
     });
 
+    test('its own add starting is no "Already adding" (spec §3); another '
+        'surface\'s add of the link to the folder still is', () async {
+      h.fake.folder(target);
+      final d = await ready();
+      h.fake.addGate = Completer<void>();
+      final first = d.add();
+      await ytdlSettle();
+      expect(d.addPhase, YtdlAddPhase.starting);
+      expect(d.alreadyAdding, isTrue, reason: 'the hub holds its job');
+      expect(d.block, YtdlBlock.none);
+      h.fake.addGate!.complete();
+      expect(await first, isTrue);
+      // The folder sheet for the same folder, the same link: an earlier add.
+      final other = await ready(kOneMoreTime, st().folderDraft(target));
+      expect(other.block, YtdlBlock.alreadyAdding);
+    });
+
+    test('an add of the link to the folder that starts while this one waits '
+        'for its check: this one sends nothing', () async {
+      final d = await found();
+      expect(d.check, YtdlCheckState.checking);
+      h.fake.listGate = Completer<void>();
+      final mine = d.add();
+      await ytdlSettle();
+      expect(d.addPhase, YtdlAddPhase.starting);
+      await st().start(h.request(directory: target, mkdir: target));
+      h.fake.listGate!.complete();
+      h.fake.listGate = null;
+      expect(await mine, isFalse);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1, reason: 'the other one');
+      expect(d.block, YtdlBlock.alreadyAdding);
+    });
+
     test('disabled for an account that may not upload', () async {
       s.noUpload = true;
       final d = await ready();

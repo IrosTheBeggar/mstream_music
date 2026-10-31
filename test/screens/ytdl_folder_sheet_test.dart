@@ -101,6 +101,8 @@ void main() {
     await ui.settle(t);
     expect(find.byType(YtdlFolderSheet), findsOneWidget);
     expect(addLabel(t), h().l.discoverJobStarting);
+    // Its own add is held by the hub now, but no earlier one (spec §3).
+    expect(byKey('ytdl-already-adding'), findsNothing);
     h().fake.addGate!.complete();
     await ui.settle(t);
     await ui.settle(t);

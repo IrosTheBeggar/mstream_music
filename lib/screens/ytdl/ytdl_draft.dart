@@ -1103,7 +1103,8 @@ class YtdlDraft extends ChangeNotifier {
   /// any more"); the remembered one has already reset.
   String? get failedCodec => _failedCodec;
 
-  /// An open job adds this link to this folder.
+  /// An open job adds this link to this folder — this draft's own add too,
+  /// once the hub holds it: [block] leaves that one out while it starts.
   bool get alreadyAdding {
     final url = _cardUrl;
     final t = target;
@@ -1124,7 +1125,11 @@ class YtdlDraft extends ChangeNotifier {
     if (owner.server.noUpload == true || _uploadsRefused) {
       return YtdlBlock.uploadsOff;
     }
-    if (alreadyAdding) return YtdlBlock.alreadyAdding;
+    // While this draft's add starts, the open job is its own: "Starting…"
+    // says so (spec §3: the note is for an earlier add).
+    if (_addPhase != YtdlAddPhase.starting && alreadyAdding) {
+      return YtdlBlock.alreadyAdding;
+    }
     if (!target.valid) return YtdlBlock.invalidLayout;
     if (yearInvalid) return YtdlBlock.yearInvalid;
     if (mkdirBlocked) return YtdlBlock.mkdirBlocked;
@@ -1156,7 +1161,11 @@ class YtdlDraft extends ChangeNotifier {
     final checked = await _awaitCheck();
     if (_disposed) return false;
     final rightHere = _rightHere;
-    if (block != YtdlBlock.none || (!checked && !rightHere && _mayNotMkdir)) {
+    // An add of this link to this folder that started while the check
+    // ran (the other surface's): this one's own job isn't held yet.
+    if (block != YtdlBlock.none ||
+        alreadyAdding ||
+        (!checked && !rightHere && _mayNotMkdir)) {
       _addPhase = YtdlAddPhase.idle;
       _afterChange();
       return false;
