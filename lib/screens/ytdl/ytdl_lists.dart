@@ -200,14 +200,17 @@ class _YtdlListsState extends State<YtdlLists> {
   }
 
   /// ADDED's covers: the library's art for songs it can name, asked once
-  /// per song per session in one batch for the rows on hand.
+  /// per song per session in one batch for the rows on hand — for a
+  /// record's row even when it has a thumbnail (the library's art wins; the
+  /// thumbnail stands in for none), not for a job's own row, which shows
+  /// its thumbnail.
   Map<String, String?> _askArt(List<YtdlAddedRow> rows) {
     final st = widget.state;
     final known = _addedArt[st] ??= <String, String?>{};
     final ask = <String>[
       for (final r in rows)
         if (r.present &&
-            (r.cover ?? '').isEmpty &&
+            (r.recordId != null || (r.cover ?? '').isEmpty) &&
             r.filepath != null &&
             !known.containsKey(r.filepath))
           r.filepath!,
@@ -1043,7 +1046,8 @@ class _FormatRetry extends StatelessWidget {
 
 enum _AddedAction { queue, showFolder }
 
-/// A song the server added: its library art, "MP3 · 8.4 MB · 3 min ago".
+/// A song the server added: its library art (or the video's thumbnail),
+/// "MP3 · 8.4 MB · 3 min ago".
 /// Tap plays it, ⋮ → Add to queue / Show in folder; a row the phone can't
 /// name the file for does not play. A file gone from the library is
 /// greyed: "File missing · Oct 12", nothing to tap.
@@ -1111,12 +1115,13 @@ class _AddedRow extends StatelessWidget {
       ?_size(row.bytes),
       if (row.when != null) _ago(context, l, row.when!, now),
     ].join(' · ');
+    // The library's art, else the video's thumbnail, else the blank cover.
     final artFile = art;
-    final cover = (row.cover ?? '').isNotEmpty
-        ? row.cover
-        : artFile == null
-            ? null
-            : buildAlbumArtUrl(state.server, artFile);
+    final cover = artFile != null
+        ? buildAlbumArtUrl(state.server, artFile)
+        : (row.cover ?? '').isNotEmpty
+            ? row.cover
+            : null;
     return Padding(
       key: ValueKey('ytdl-added-$tag'),
       padding: const EdgeInsets.symmetric(vertical: 4),

@@ -1381,6 +1381,23 @@ void main() {
   });
 
   group('ADDED rows', () {
+    test('a record this phone\'s job matched carries the job\'s cover; one '
+        'no job holds has none', () async {
+      const thumb = 'https://i.ytimg.com/vi/FGBhQbmPwH8/hq.jpg';
+      await state().probeTier();
+      final job = await started(request: h.request(cover: thumb));
+      h.fake.finish(job.pid!);
+      await h.timers.elapse(beat);
+      expect(job.recordId, isNotNull);
+      final row = state().added.single;
+      expect(row.recordId, job.recordId);
+      expect(row.cover, thumb);
+      h.fake.addRecord(
+          relativePath: 'Other.mp3', origin: 'https://www.youtube.com/watch?v=x');
+      await state().refreshAdded();
+      expect(state().added.map((r) => r.cover), [null, thumb]);
+    });
+
     test('a job settled before its record could be read takes it: one row', () async {
       await state().probeTier();
       final job = await started();

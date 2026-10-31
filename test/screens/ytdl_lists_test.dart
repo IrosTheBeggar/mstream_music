@@ -574,6 +574,34 @@ void main() {
       expect(artAsked, hasLength(1));
     });
 
+    testWidgets('a song this phone added: the library\'s art when it has '
+        'some, else the video\'s thumbnail, never the blank cover', (t) async {
+      const thumb = 'https://i.ytimg.com/vi/FGBhQbmPwH8/hq.jpg';
+      const path = 'Music/Daft Punk/Discovery/One_More_Time.mp3';
+      final r = h.fake.addRecord(
+          relativePath: 'Daft Punk/Discovery/One_More_Time.mp3',
+          title: 'One More Time');
+      final added = job('a1', 'added', filepath: path)
+        ..['cover'] = thumb
+        ..['recordId'] = r['id'];
+      final st = await seed(t, [added]);
+      expect(st.added.single.recordId, r['id']);
+      await pump(t, st);
+      await t.pump();
+      expect(artAsked.single, [path], reason: 'the library\'s art is asked first');
+      expect(images(t), [thumb]);
+
+      // The library has art for it: that wins.
+      YtdlListActions.reset();
+      h.hub.reset();
+      h.wire();
+      YtdlListActions.albumArt = (state, paths) async => {path: 'ab12cd.jpg'};
+      final again = await seed(t, [added]);
+      await pump(t, again);
+      await t.pump();
+      expect(images(t), [buildAlbumArtUrl(s, 'ab12cd.jpg')]);
+    });
+
     test('ytdlAlbumArt: the paths as one bare array on the hub\'s client; each '
         'song\'s art file back, none for one without', () async {
       final asked = <http.Request>[];

@@ -92,8 +92,8 @@ class YtdlAddedRow {
   final String? filepath;
   final int? recordId;
 
-  /// The video's thumbnail URL from this phone's lookup (its jobs only;
-  /// a record has none).
+  /// The video's thumbnail URL from this phone's lookup: its jobs, and
+  /// the records they answer (the server's record has none of its own).
   final String? cover;
 
   /// The library's track id (the record's, or the job's from it): album
@@ -615,7 +615,9 @@ class YtdlServerState extends ChangeNotifier {
   /// job's settle still out, or failed) is not there yet: the job's own row
   /// stands in for it until it is. One older than the loaded pages comes
   /// with "Show earlier": the job waits for it rather than standing out of
-  /// order above it.
+  /// order above it. A record's row takes the cover of the job it answers
+  /// (by id, or the same file): the video's thumbnail where the library
+  /// has no art for the song.
   List<YtdlAddedRow> get added {
     final full = _tier == YtdlServerTier.full;
     final loaded = full ? {for (final r in _records) r.id} : const <int>{};
@@ -641,7 +643,24 @@ class YtdlServerState extends ChangeNotifier {
           _rowOfJob(j),
     ];
     if (!full) return mine;
-    final rows = [...mine, for (final r in _records) _rowOfRecord(r)];
+    final coverById = <int, String>{};
+    final coverByFile = <String, String>{};
+    for (final j in _jobs) {
+      final cover = j.cover;
+      if (j.state != YtdlJobState.added || cover == null || cover.isEmpty) {
+        continue;
+      }
+      final id = j.recordId;
+      if (id != null) coverById[id] = cover;
+      final file = j.filepath;
+      if (file != null) coverByFile[file.toLowerCase()] = cover;
+    }
+    final rows = [
+      ...mine,
+      for (final r in _records)
+        _rowOfRecord(r,
+            cover: coverById[r.id] ?? coverByFile[r.filepath.toLowerCase()]),
+    ];
     rows.sort((a, b) => (b.when?.millisecondsSinceEpoch ?? 0)
         .compareTo(a.when?.millisecondsSinceEpoch ?? 0));
     return rows;
@@ -656,7 +675,7 @@ class YtdlServerState extends ChangeNotifier {
   /// end.
   bool get canShowEarlier => _tier == YtdlServerTier.full && _canShowEarlier;
 
-  static YtdlAddedRow _rowOfRecord(YtdlRecord r) {
+  static YtdlAddedRow _rowOfRecord(YtdlRecord r, {String? cover}) {
     final folder = _folderOf(r.filepath);
     final name = r.filepath.split('/').last;
     final dot = name.lastIndexOf('.');
@@ -671,6 +690,7 @@ class YtdlServerState extends ChangeNotifier {
       present: r.present,
       filepath: r.filepath.isEmpty ? null : r.filepath,
       recordId: r.id,
+      cover: cover,
       trackId: r.trackId,
     );
   }
