@@ -18,12 +18,14 @@ import 'package:flutter/foundation.dart' show TargetPlatform;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mstream_music/build_variant.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/objects/ytdl_job.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/ytdl_hub.dart';
+import 'package:mstream_music/util/ytdl_api.dart';
 import 'package:mstream_music/util/ytdl_errors.dart';
 import 'package:mstream_music/util/ytdl_layout.dart';
 
@@ -1419,6 +1421,85 @@ void main() {
       expect(state().added.single.trackId, 4242);
       expect(state().added.single.recordId, r['id']);
     });
+
+    /// The server's client with the record reads counted ([RecordReads]).
+    RecordReads watchRecordReads() {
+      final reads = RecordReads();
+      h.hub.makeApi = (srv) => YtdlApi(srv,
+          client: MockClient((req) async {
+            if (req.url.path.endsWith('/api/v1/discovery/downloads')) {
+              await reads.next();
+            }
+            return h.fake.handle(req);
+          }),
+          awaitTunnel: (_) async => true);
+      return reads;
+    }
+
+    test('a job that took its record keeps its row while the refresh after '
+        'it fails (spec §6: the row moves to ADDED)', () async {
+      final reads = watchRecordReads();
+      await state().probeTier();
+      final job = await started();
+      h.fake.finish(job.pid!);
+      // Its own record page answers; the refresh right after it fails.
+      reads.failFrom = reads.count + 2;
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.added);
+      expect(job.recordId, isNotNull);
+      expect(h.toasts.last.success, isTrue);
+      expect(state().added.map((r) => r.title), ['One More Time']);
+      expect(state().added.single.recordId, job.recordId);
+      // A later read brings the record's row in its place: one row.
+      reads.failFrom = null;
+      await state().refreshAdded();
+      expect(state().added, hasLength(1));
+      expect(state().added.single.recordId, job.recordId);
+    });
+
+    test('… and while that refresh is still out: never in no list', () async {
+      final reads = watchRecordReads();
+      await state().probeTier();
+      final job = await started();
+      h.fake.finish(job.pid!);
+      final hold = Completer<void>();
+      reads
+        ..holdFrom = reads.count + 2
+        ..hold = hold;
+      await h.timers.elapse(beat);
+      expect(job.recordId, isNotNull);
+      expect(state().addedLoading, isTrue);
+      expect(state().adding, isEmpty);
+      expect(state().added.map((r) => r.title), ['One More Time']);
+      hold.complete();
+      await ytdlSettle();
+      expect(state().addedLoading, isFalse);
+      expect(state().added.single.recordId, job.recordId);
+    });
+
+    test('a job whose record is older than the loaded pages waits for Show '
+        'earlier instead of standing above them', () async {
+      await state().probeTier();
+      final job = await started();
+      h.fake.finish(job.pid!);
+      await h.timers.elapse(beat);
+      final id = job.recordId!;
+      for (var i = 0; i < 25; i++) {
+        h.fake.addRecord(
+            relativePath: 'Other/$i.mp3',
+            origin: 'https://www.youtube.com/watch?v=other$i');
+      }
+      // A restart: the first page holds only newer rows.
+      h.hub.reset();
+      h.wire();
+      await state().probeTier();
+      expect(state().jobs.single.recordId, id);
+      expect(state().added, hasLength(20));
+      expect(state().added.map((r) => r.recordId), isNot(contains(id)));
+      await state().showEarlier();
+      expect(state().added.where((r) => r.recordId == id), hasLength(1));
+      expect(state().added.where((r) => r.title == 'One More Time'), hasLength(1));
+    });
   });
 
   group('failures: the clash read, Try again, re-pings', () {
@@ -1510,4 +1591,23 @@ void main() {
       expect(h.toastTexts.single, 'Added “One More Time” to … › \u2068B\u2069 › \u2068C\u2069');
     });
   });
+}
+
+/// Record reads as a test's client counts them: from the [failFrom]th on
+/// they throw, from the [holdFrom]th on they wait for [hold].
+class RecordReads {
+  int count = 0;
+  int? failFrom;
+  int? holdFrom;
+  Completer<void>? hold;
+
+  Future<void> next() async {
+    final n = ++count;
+    final fail = failFrom;
+    if (fail != null && n >= fail) {
+      throw http.ClientException('Connection reset by peer');
+    }
+    final from = holdFrom;
+    if (from != null && n >= from) await hold!.future;
+  }
 }

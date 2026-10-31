@@ -577,22 +577,35 @@ class YtdlServerState extends ChangeNotifier {
   /// this phone's finished jobs no record answered for; on older servers
   /// (and until the tier is known) this phone's finished jobs. A job that
   /// settled before its record could be read takes it once a page holds it
-  /// ([_attribute]), and a job naming the same file as a loaded record is
-  /// left to the record's row: one row per song.
+  /// ([_attribute]), and a job whose record is loaded — or that names the
+  /// same file as a loaded record — is left to the record's row: one row
+  /// per song. A record newer than what is loaded (the refresh after the
+  /// job's settle still out, or failed) is not there yet: the job's own row
+  /// stands in for it until it is. One older than the loaded pages comes
+  /// with "Show earlier": the job waits for it rather than standing out of
+  /// order above it.
   List<YtdlAddedRow> get added {
     final full = _tier == YtdlServerTier.full;
+    final loaded = full ? {for (final r in _records) r.id} : const <int>{};
     final recorded = full
         ? {
             for (final r in _records)
               if (r.filepath.isNotEmpty) r.filepath.toLowerCase()
           }
         : const <String>{};
+    final cursor = _canShowEarlier ? _addedCursor : null;
+    bool recordShows(YtdlJob j) {
+      final id = j.recordId;
+      if (id != null &&
+          (loaded.contains(id) || (cursor != null && id < cursor))) {
+        return true;
+      }
+      return recorded.contains(j.filepath?.toLowerCase());
+    }
+
     final mine = [
       for (final j in _jobs)
-        if (j.state == YtdlJobState.added &&
-            (!full ||
-                (j.recordId == null &&
-                    !recorded.contains(j.filepath?.toLowerCase()))))
+        if (j.state == YtdlJobState.added && (!full || !recordShows(j)))
           _rowOfJob(j),
     ];
     if (!full) return mine;
