@@ -1509,6 +1509,90 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guardado en una carpeta de la tarjeta SD que elijas. Puede dejar de estar disponible si se retira la tarjeta. Algunos dispositivos no permiten que las apps escriban en tarjetas SD — si la selección de carpeta sigue fallando, usa Permanente o Local de la app.';
 
   @override
+  String get mirrorRootLabel => 'Carpeta de copia local (opcional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Una carpeta que ya contiene una copia de esta biblioteca, sincronizada por otra herramienta (Syncthing, rclone, un NAS). Los archivos encontrados allí se reproducen desde el disco. La app nunca escribe en ella.';
+
+  @override
+  String get libraryCopyTitle => 'Copia de la biblioteca';
+
+  @override
+  String get libraryCopyKeepSection =>
+      'Mantener una copia completa en este dispositivo';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Cada pista se descarga en calidad original y se mantiene sincronizada: llegan los archivos nuevos, se reemplazan los modificados y los eliminados en el servidor pasan un tiempo a una carpeta de papelera.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'Este servidor no ofrece sincronización de biblioteca. Necesita mStream 6.27 o más reciente.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'Aún no se han detectado bibliotecas: abre el servidor una vez y vuelve.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Todavía no sincronizado';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Última sincronización $when · $files archivos · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Sincronizando… $done de $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Comprobando el servidor…';
+
+  @override
+  String get libraryCopySyncNow => 'Sincronizar ahora';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n archivos fallaron';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Archivos fallidos';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'La última sincronización falló: $error';
+  }
+
+  @override
+  String get libraryCopyRetention =>
+      'Conservar los archivos eliminados durante';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n días';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Para siempre';
+
+  @override
+  String get libraryCopyWifiOnly => 'Solo con Wi-Fi';
+
+  @override
+  String get libraryCopyDesktopNote =>
+      'Se sincroniza mientras la app está abierta.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Aún no hay índice de la biblioteca: sincroniza una vez mientras el servidor esté disponible.';
+
+  @override
+  String get offlineChip => 'Copia sin conexión';
+
+  @override
   String get storageChooseFolder => 'Elegir carpeta';
 
   @override
@@ -5586,4 +5670,77 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Compartir lista de reproducción';
+
+  @override
+  String get keepOffline => 'Guardar sin conexión';
+
+  @override
+  String get keepOfflineOn => 'Guardado sin conexión';
+
+  @override
+  String get keepOfflineHelp =>
+      'Se descarga y se mantiene sincronizado en este dispositivo.';
+
+  @override
+  String get keepRatedTitle => 'Guardar canciones valoradas sin conexión';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n estrellas o más';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 estrellas';
+
+  @override
+  String get keptOfflineSection => 'También guardado sin conexión';
+
+  @override
+  String get keptOfflineNone =>
+      'Nada todavía. «Guardar sin conexión» está en álbumes, artistas, listas y carpetas.';
+
+  @override
+  String get keepQualityTitle => 'Calidad de lo guardado sin conexión';
+
+  @override
+  String get keepQualityHelp =>
+      'Los álbumes, artistas, listas, carpetas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
+
+  @override
+  String get keepQualityOriginal => 'Archivos originales';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
+
+  @override
+  String get browserSectionOffline => 'Sin conexión';
+
+  @override
+  String get browserBrowseOffline => 'Explorar sin conexión';
+
+  @override
+  String get browserBackOnline => 'Volver a conectar';
+
+  @override
+  String get browserOfflineReady => 'Copia local';
+
+  @override
+  String get browserOfflineNone => 'Aún sin copia';
+
+  @override
+  String get browserOfflineOn => 'Usando la copia local';
+
+  @override
+  String get browserOfflineAuto => 'Servidor inaccesible';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files archivos · $size';
+  }
+
+  @override
+  String get keepFolderHelp =>
+      'Esta carpeta y todo su contenido, sincronizados en este dispositivo.';
 }

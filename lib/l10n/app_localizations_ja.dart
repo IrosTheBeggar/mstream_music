@@ -1452,6 +1452,87 @@ class AppLocalizationsJa extends AppLocalizations {
       'SD カード上の選んだフォルダに保存されます。カードを取り外すと利用できなくなることがあります。一部の端末ではアプリが SD カードに書き込めません — フォルダの選択が繰り返し失敗する場合は「永続」または「アプリ内」を使用してください。';
 
   @override
+  String get mirrorRootLabel => 'ローカルコピーのフォルダー（任意）';
+
+  @override
+  String get mirrorRootHelp =>
+      'このライブラリのコピーがすでにあるフォルダーです。別のツール（Syncthing、rclone、NAS など）で同期されます。そこにあるファイルはディスクから再生されます。アプリがこのフォルダーに書き込むことはありません。';
+
+  @override
+  String get libraryCopyTitle => 'ライブラリのコピー';
+
+  @override
+  String get libraryCopyKeepSection => 'この端末に完全なコピーを保持';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'すべてのトラックをオリジナル品質でダウンロードし、同期を保ちます。新しいファイルは追加され、変更されたファイルは置き換えられ、サーバーで削除されたファイルはしばらくゴミ箱フォルダーに移されます。';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'このサーバーはライブラリ同期に対応していません。mStream 6.27 以降が必要です。';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'まだライブラリが報告されていません。サーバーを一度開いてから戻ってきてください。';
+
+  @override
+  String get libraryCopyNeverSynced => 'まだ同期されていません';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return '最終同期 $when · $files ファイル · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return '同期中… $done / $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'サーバーを確認しています…';
+
+  @override
+  String get libraryCopySyncNow => '今すぐ同期';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n 件のファイルが失敗';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => '失敗したファイル';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return '前回の同期に失敗しました: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => '削除されたファイルの保持期間';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n 日';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => '無期限';
+
+  @override
+  String get libraryCopyWifiOnly => 'Wi-Fi のみ';
+
+  @override
+  String get libraryCopyDesktopNote => 'アプリを開いている間に同期します。';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'ライブラリインデックスがまだありません。サーバーに接続できるうちに一度同期してください。';
+
+  @override
+  String get offlineChip => 'オフラインコピー';
+
+  @override
   String get storageChooseFolder => 'フォルダを選択';
 
   @override
@@ -5317,4 +5398,75 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'プレイリストを共有';
+
+  @override
+  String get keepOffline => 'オフラインで保持';
+
+  @override
+  String get keepOfflineOn => 'オフラインで保持中';
+
+  @override
+  String get keepOfflineHelp => 'ダウンロードし、この端末で同期を保ちます。';
+
+  @override
+  String get keepRatedTitle => '評価した曲をオフラインで保持';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$nつ星以上';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5つ星';
+
+  @override
+  String get keptOfflineSection => 'その他のオフライン保持';
+
+  @override
+  String get keptOfflineNone =>
+      'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリスト・フォルダーにあります。';
+
+  @override
+  String get keepQualityTitle => 'オフライン保存の音質';
+
+  @override
+  String get keepQualityHelp =>
+      'オフラインで保持するアルバム、アーティスト、プレイリスト、フォルダー、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
+
+  @override
+  String get keepQualityOriginal => '元のファイル';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
+
+  @override
+  String get browserSectionOffline => 'オフライン';
+
+  @override
+  String get browserBrowseOffline => 'オフラインで閲覧';
+
+  @override
+  String get browserBackOnline => 'オンラインに戻る';
+
+  @override
+  String get browserOfflineReady => 'ローカルコピー';
+
+  @override
+  String get browserOfflineNone => 'コピーはまだありません';
+
+  @override
+  String get browserOfflineOn => 'ローカルコピーを使用中';
+
+  @override
+  String get browserOfflineAuto => 'サーバーに接続できません';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files ファイル · $size';
+  }
+
+  @override
+  String get keepFolderHelp => 'このフォルダーとその中身すべてを、この端末で同期します。';
 }

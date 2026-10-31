@@ -48,6 +48,9 @@ import 'singletons/play_history.dart';
 import 'singletons/play_sync.dart';
 import 'util/stats_api.dart';
 import 'singletons/log_manager.dart';
+import 'singletons/library_index.dart';
+import 'singletons/mirror_manager.dart';
+import 'singletons/art_cache.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
@@ -133,6 +136,12 @@ Future<void> _startApp() async {
   // a modern device.
   DynamicsEqualizer.supported = !const bool.fromEnvironment('EQ_FIVE_BAND') &&
       await DynamicsEq.isSupported();
+  // Local library index (SQLite). Milliseconds to open, and optional: a
+  // load failure leaves it unavailable and nothing user-facing changes yet.
+  await LibraryIndexManager().open();
+  // Album art the mirror cached (served offline, and instead of a round-trip
+  // online). Lists a few folders; never throws.
+  await ArtCache().init();
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();
@@ -157,6 +166,12 @@ Future<void> _startApp() async {
   // (Discover's Keep a copy): one per server, shared by Discover and the
   // home's SERVER "Copies" row, with their end-of-copy toasts.
   CopiesHub().install();
+  // One-time import of the downloads that predate the index — off the
+  // critical path; the tree walk runs on a worker isolate.
+  unawaited(LibraryIndexManager().importExistingDownloads());
+  // Library copy: schedules the mirror runs (2 min after boot, then every
+  // 6 h while the app is open) and owns the mirror group's transfers.
+  unawaited(MirrorManager().init());
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,
@@ -335,6 +350,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         unawaited(PlaySync().drain(reason: 'connectivity', bypassBackoff: true));
         unawaited(ServerManager()
             .handleNetworkChange(reason: 'connectivity:$names'));
+        // A server the library copy stood in for is asked again now.
+        ServerManager().recheckOffline();
         // Resume on-device playback if a network outage had paused it (no-op
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();
@@ -1082,13 +1099,37 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   final Server? cServer = snapshot.data;
                   return Visibility(
                     visible: cServer != null,
-                    child: Text(
-                      cServer == null ? '' : cServer.displayName,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: VelvetColors.appBarTextSecondary,
-                          fontWeight: FontWeight.normal),
-                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Flexible(
+                        child: Text(
+                          cServer == null ? '' : cServer.displayName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: VelvetColors.appBarTextSecondary,
+                              fontWeight: FontWeight.normal),
+                        ),
+                      ),
+                      // Browsing the library copy on this device (A4): by
+                      // choice, or because the server could not be reached.
+                      if (cServer?.browseOffline == true) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: VelvetColors.warning.withValues(alpha: 0.18),
+                            borderRadius:
+                                BorderRadius.circular(VelvetColors.radiusSmall),
+                          ),
+                          child: Text(l.offlineChip,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: VelvetColors.warning,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ]),
                   );
                 }),
           ],

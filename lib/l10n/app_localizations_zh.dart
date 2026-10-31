@@ -1428,6 +1428,84 @@ class AppLocalizationsZh extends AppLocalizations {
       '保存到你在 SD 卡上选择的文件夹。移除卡后可能变得不可用。部分设备不允许应用写入 SD 卡 — 如果文件夹选择持续失败，请使用“永久”或“应用内部”。';
 
   @override
+  String get mirrorRootLabel => '本地副本文件夹（可选）';
+
+  @override
+  String get mirrorRootHelp =>
+      '一个已经包含此音乐库副本的文件夹，由其他工具（Syncthing、rclone、NAS）保持同步。在其中找到的文件将从磁盘播放。应用永远不会向其中写入。';
+
+  @override
+  String get libraryCopyTitle => '音乐库副本';
+
+  @override
+  String get libraryCopyKeepSection => '在此设备上保留完整副本';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      '每首曲目都会以原始音质下载并保持同步：新增文件会被下载，更改的文件会被替换，服务器上删除的文件会暂时移入回收站文件夹。';
+
+  @override
+  String get libraryCopyUnsupported => '此服务器不支持音乐库同步，需要 mStream 6.27 或更高版本。';
+
+  @override
+  String get libraryCopyNoLibraries => '尚未获取到音乐库——请先打开该服务器一次，然后再回来。';
+
+  @override
+  String get libraryCopyNeverSynced => '尚未同步';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return '上次同步 $when · $files 个文件 · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return '正在同步… $done / $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => '正在检查服务器…';
+
+  @override
+  String get libraryCopySyncNow => '立即同步';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n 个文件失败';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => '失败的文件';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return '上次同步失败：$error';
+  }
+
+  @override
+  String get libraryCopyRetention => '已删除文件的保留时间';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n 天';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => '永久';
+
+  @override
+  String get libraryCopyWifiOnly => '仅限 Wi-Fi';
+
+  @override
+  String get libraryCopyDesktopNote => '应用打开时会进行同步。';
+
+  @override
+  String get offlineBrowseUnavailable => '尚无音乐库索引——请在服务器可用时同步一次。';
+
+  @override
+  String get offlineChip => '离线副本';
+
+  @override
   String get storageChooseFolder => '选择文件夹';
 
   @override
@@ -5228,4 +5306,74 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => '分享播放列表';
+
+  @override
+  String get keepOffline => '离线保留';
+
+  @override
+  String get keepOfflineOn => '已离线保留';
+
+  @override
+  String get keepOfflineHelp => '下载并在此设备上保持同步。';
+
+  @override
+  String get keepRatedTitle => '离线保留已评分的歌曲';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n 星及以上';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 星';
+
+  @override
+  String get keptOfflineSection => '另外离线保留';
+
+  @override
+  String get keptOfflineNone => '暂无。“离线保留”位于专辑、艺术家、播放列表和文件夹。';
+
+  @override
+  String get keepQualityTitle => '离线内容的音质';
+
+  @override
+  String get keepQualityHelp =>
+      '离线保留的专辑、艺术家、播放列表、文件夹和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
+
+  @override
+  String get keepQualityOriginal => '原始文件';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
+
+  @override
+  String get browserSectionOffline => '离线';
+
+  @override
+  String get browserBrowseOffline => '离线浏览';
+
+  @override
+  String get browserBackOnline => '恢复在线';
+
+  @override
+  String get browserOfflineReady => '本地副本';
+
+  @override
+  String get browserOfflineNone => '还没有副本';
+
+  @override
+  String get browserOfflineOn => '正在使用本地副本';
+
+  @override
+  String get browserOfflineAuto => '无法连接服务器';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files 个文件 · $size';
+  }
+
+  @override
+  String get keepFolderHelp => '此文件夹及其中的所有内容，在此设备上保持同步。';
 }

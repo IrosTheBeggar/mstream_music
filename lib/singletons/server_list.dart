@@ -13,6 +13,8 @@ import './federation_inbox_alerts.dart';
 import './log_manager.dart';
 import 'play_history.dart';
 import 'play_sync.dart';
+import './library_index.dart';
+import './outbox.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
@@ -352,6 +354,9 @@ class ServerManager {
       // route a federated server answers: /api/v1/ping is off the federation
       // allowlist and 403s a peer key.
       final info = await _fetchServerInfo(server);
+      _clearAutoOffline(server);
+      // Reachable: send what was written while it was not.
+      unawaited(OutboxManager().replay(server));
 
       final bool? prevAvail = server.transcodeAvailable;
       final String? prevCodec = server.transcodeDefaultCodec;
@@ -478,10 +483,88 @@ class ServerManager {
         }
       }
     } catch (err) {
+      _maybeAutoOffline(server);
       if (throwErr) {
         rethrow;
       }
     }
+  }
+
+  /// How long after a failed ping the confirming retry runs. Right after a
+  /// resume the iroh connection is stale for a couple of seconds while the
+  /// native side reconnects on its own (the 2026-09-13 phone log: a ping
+  /// one second after resume failed, the tunnel was back two seconds
+  /// later), so one failure is a suspicion, not evidence. Settable for
+  /// tests.
+  static Duration autoOfflineRetry = const Duration(seconds: 6);
+  final Set<String> _offlineSuspects = {};
+  final Map<String, Timer> _offlineRetries = {};
+
+  /// Ping failed: if the index holds this server's library, browse it from
+  /// there until the server answers again — but only once a retry after
+  /// [autoOfflineRetry] has failed too; the first failure just schedules
+  /// it. Any successful ping clears the suspicion. Manual offline mode is
+  /// left as the user set it.
+  void _maybeAutoOffline(Server server) {
+    if (server.browseOffline) return;
+    final ix = LibraryIndexManager().index;
+    if (ix == null || ix.remoteCount(server.localname) == 0) return;
+    final name = server.localname;
+    if (_offlineRetries.containsKey(name)) return; // the retry is still due
+    if (_offlineSuspects.add(name)) {
+      _offlineRetries[name] = Timer(autoOfflineRetry, () {
+        _offlineRetries.remove(name);
+        unawaited(getServerPaths(server));
+      });
+      return;
+    }
+    _offlineSuspects.remove(name);
+    server.browseOffline = true;
+    server.offlineAuto = true;
+    appLog('[offline] $name: unreachable — browsing the library copy');
+    notifyServerChanged();
+  }
+
+  void _clearAutoOffline(Server server) {
+    _offlineSuspects.remove(server.localname);
+    _offlineRetries.remove(server.localname)?.cancel();
+    if (!server.offlineAuto) return;
+    server.browseOffline = false;
+    server.offlineAuto = false;
+    appLog('[offline] ${server.localname}: reachable again — back online');
+    notifyServerChanged();
+  }
+
+  /// The network is back: ask every server the copy stands in for now, not
+  /// at the next app resume, so an automatic switch ends as soon as the
+  /// server answers. A server behind an iroh tunnel is asked when its
+  /// tunnel reconnects instead; the copy chosen by hand is left alone.
+  void recheckOffline() {
+    for (final s in serverList) {
+      if (s.offlineAuto && !s.isIrohTransport) unawaited(getServerPaths(s));
+    }
+  }
+
+  /// Back to the server after browsing the copy by choice: the writes
+  /// queued meanwhile are sent, and a ping decides whether the server is
+  /// really there — one that is still unreachable flips straight back on
+  /// its own. A no-op when the copy is not being browsed.
+  void leaveOffline(Server s) {
+    if (!s.browseOffline) return;
+    s.browseOffline = false;
+    s.offlineAuto = false;
+    unawaited(OutboxManager().replay(s));
+    unawaited(getServerPaths(s));
+    notifyServerChanged();
+  }
+
+  /// Re-emits the server streams after a runtime flag flipped (the app bar's
+  /// offline chip, the Library copy screen), and redraws a home in front
+  /// whose Offline card the flip made stale.
+  void notifyServerChanged() {
+    _serverListStream.sink.add(serverList);
+    _currentServerStream.sink.add(currentServer);
+    BrowserManager().refreshOfflineCard();
   }
 
   /// `GET /api/` — the layered server-info endpoint (mStream #932/#934):
@@ -525,6 +608,8 @@ class ServerManager {
     _applyTranscode(server, features is Map ? features['transcode'] : null);
 
     server.discoveryAvailable = features is Map && features['discovery'] == true;
+    // Library sync manifest (mStream 6.27+): flags, never probes.
+    server.syncAvailable = features is Map && features['sync'] == true;
     // The raw engine flags (see Server.discoveryEnabled): kept as reported
     // even for a peer, whose UI flags the defaults below pin.
     server.discoveryEnabled = features is Map && features['discovery'] == true;
@@ -1985,6 +2070,15 @@ class ServerManager {
       final from = h.lastStatus;
       h.lastStatus = st;
       _transitions.add((server: h.server, from: from, to: st));
+      // Back through the tunnel: a server the copy stood in for is asked
+      // again now, not at the next scheduled ping minutes away.
+      if (st == IrohTunnelStatus.connected) {
+        for (final s in serverList) {
+          if (s.offlineAuto && identical(s.transportServer, h.server)) {
+            unawaited(getServerPaths(s));
+          }
+        }
+      }
     }
     if (st == IrohTunnelStatus.connected) {
       h.notConnectedSince = null;
@@ -2222,6 +2316,11 @@ class ServerManager {
     // the same sweep.
     final orphans = federatedChildren(removeThisServer);
     serverList.removeWhere(orphans.contains);
+    // The index's rows for the removed servers go too; the files on disk are
+    // removeSyncedFiles' business, as before.
+    for (final gone in [removeThisServer, ...orphans]) {
+      LibraryIndexManager().removeServer(gone.localname);
+    }
     _serverListStream.sink.add(serverList);
     // Deleting a server also deletes its queued tracks — they can't stream
     // anymore and their metadata context (ratings, art, URL re-resolution)

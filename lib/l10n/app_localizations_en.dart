@@ -1491,6 +1491,87 @@ class AppLocalizationsEn extends AppLocalizations {
       'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.';
 
   @override
+  String get mirrorRootLabel => 'Local copy folder (optional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.';
+
+  @override
+  String get libraryCopyTitle => 'Library copy';
+
+  @override
+  String get libraryCopyKeepSection => 'Keep a full copy on this device';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Every track is downloaded in original quality and kept in sync: new files arrive, changed files are replaced, and files deleted on the server move to a trash folder for a while.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'This server does not offer library sync. It needs mStream 6.27 or newer.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'No libraries reported yet — open the server once, then come back.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Not synced yet';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Last synced $when · $files files · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Syncing… $done of $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Checking the server…';
+
+  @override
+  String get libraryCopySyncNow => 'Sync now';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n files failed';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Failed files';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'Last sync failed: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Keep deleted files for';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n days';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Forever';
+
+  @override
+  String get libraryCopyWifiOnly => 'Wi-Fi only';
+
+  @override
+  String get libraryCopyDesktopNote => 'Syncs while the app is open.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'No library index yet — sync once while the server is reachable.';
+
+  @override
+  String get offlineChip => 'Offline copy';
+
+  @override
   String get storageChooseFolder => 'Choose folder';
 
   @override
@@ -5524,4 +5605,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Share playlist';
+
+  @override
+  String get keepOffline => 'Keep offline';
+
+  @override
+  String get keepOfflineOn => 'Kept offline';
+
+  @override
+  String get keepOfflineHelp => 'Downloaded and kept in sync on this device.';
+
+  @override
+  String get keepRatedTitle => 'Keep rated songs offline';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n stars and up';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 stars';
+
+  @override
+  String get keptOfflineSection => 'Also kept offline';
+
+  @override
+  String get keptOfflineNone =>
+      'Nothing yet. \"Keep offline\" lives on albums, artists, playlists and folders.';
+
+  @override
+  String get keepQualityTitle => 'Quality of kept items';
+
+  @override
+  String get keepQualityHelp =>
+      'Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.';
+
+  @override
+  String get keepQualityOriginal => 'Original files';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
+
+  @override
+  String get browserSectionOffline => 'Offline';
+
+  @override
+  String get browserBrowseOffline => 'Browse offline';
+
+  @override
+  String get browserBackOnline => 'Back online';
+
+  @override
+  String get browserOfflineReady => 'Local copy';
+
+  @override
+  String get browserOfflineNone => 'No copy yet';
+
+  @override
+  String get browserOfflineOn => 'Using the local copy';
+
+  @override
+  String get browserOfflineAuto => 'Server unreachable';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files files · $size';
+  }
+
+  @override
+  String get keepFolderHelp =>
+      'This folder and everything in it, kept in sync on this device.';
 }

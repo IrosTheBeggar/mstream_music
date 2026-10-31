@@ -7,8 +7,11 @@ import 'metadata.dart';
 import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
+import '../util/local_copy.dart';
+import '../singletons/art_cache.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../util/format_bytes.dart';
 
 class DisplayItem {
   final Server? server;
@@ -44,6 +47,12 @@ class DisplayItem {
     String? aaFile = altAlbumArt ?? metadata?.albumArt;
 
     if (server != null && aaFile != null) {
+      // Art the mirror cached serves offline and saves a round-trip online.
+      final cached = ArtCache().pathFor(server!.localname, aaFile);
+      if (cached != null) {
+        return Image.file(File(cached),
+            errorBuilder: (_, _, _) => icon ?? const SizedBox.shrink());
+      }
       // A cover the server cannot serve (a cache that was cleared, a stale
       // file name) falls back to the row's own icon, as a row with no art
       // draws — never the framework's error box.
@@ -67,17 +76,26 @@ class DisplayItem {
     final BorderRadius radius =
         BorderRadius.circular(VelvetColors.radiusSmall);
     if (server != null && aaFile != null) {
-      final String url = buildAlbumArtUrl(server!, aaFile);
+      final String? cached = ArtCache().pathFor(server!.localname, aaFile);
       return ClipRRect(
         borderRadius: radius,
-        child: Image.network(
-          url,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          cacheWidth: artCacheSize(size),
-          errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
-        ),
+        child: cached != null
+            ? Image.file(
+                File(cached),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                cacheWidth: artCacheSize(size),
+                errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
+              )
+            : Image.network(
+                buildAlbumArtUrl(server!, aaFile),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                cacheWidth: artCacheSize(size),
+                errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
+              ),
       );
     }
     return _albumThumbPlaceholder(size, radius);
@@ -140,7 +158,10 @@ class DisplayItem {
       // Server folder/file names pass through browserChromeLabel
       // unchanged (default case), so real data is never mistranslated.
       (l != null &&
-              (type == 'execAction' || type == 'addServer' || type == 'note'))
+              (type == 'execAction' ||
+                  type == 'addServer' ||
+                  type == 'note' ||
+                  type == 'offlineHeader'))
           ? browserChromeLabel(l, name)
           : name,
       // Same style as the metadata and file branches above. This used to
@@ -154,6 +175,19 @@ class DisplayItem {
   }
 
   Widget? getSubText({AppLocalizations? l}) {
+    // The offline landing's status row carries its counts as a code.
+    if (type == 'offlineHeader' && l != null && subtext != null) {
+      final m = RegExp(r'^offlineFiles:(\d+):(\d+)$').firstMatch(subtext!);
+      if (m != null) {
+        return Text(
+          l.offlineHeaderStatus(
+              int.parse(m.group(1)!), formatBytes(int.parse(m.group(2)!))),
+          style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      }
+    }
     // An explicitly-set subtext wins over the derived artist line. Search rows
     // rely on this to keep their match context — a lyric snippet, a file's
     // folder — visible even though the full metadata block (which carries the
@@ -217,11 +251,12 @@ class DisplayItem {
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext);
 
-  // Re-evaluates whether this file exists under [dir] — the server's already-
-  // resolved download base, so the full path is <dir>/media/<localname>/... —
-  // and updates [downloadProgress] (100 = present, 0 = not). [dir] null means
-  // the location is currently unavailable (SD card out / folder deleted) and is
-  // treated as "no local copy". Also CLEARS a stale badge, so after a server's
+  // Re-evaluates whether a local copy of this file exists — under [dir], the
+  // server's already-resolved download base (<dir>/media/<localname>/...), or
+  // in the server's mirror root — and updates [downloadProgress] (100 =
+  // present, 0 = not). [dir] null means the download location is currently
+  // unavailable (SD card out / folder deleted); only the mirror root is
+  // checked then. Also CLEARS a stale badge, so after a server's
   // download location changes a row that no longer has a copy stops claiming
   // one. A row that's mid-download (1–99%) is left alone.
   //
@@ -233,9 +268,11 @@ class DisplayItem {
     if (type != 'file' || server == null || data == null) return;
     if (downloadProgress > 0 && downloadProgress < 100) return;
     bool present = false;
-    if (dir != null) {
-      present =
-          await File('${dir.path}/media/${server!.localname}${data!}').exists();
+    for (final c in localCopyCandidates(server!, dir, data!)) {
+      if (await File(c).exists()) {
+        present = true;
+        break;
+      }
     }
     downloadProgress = present ? 100 : 0;
   }

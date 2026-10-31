@@ -2616,6 +2616,138 @@ abstract class AppLocalizations {
   /// **'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.'**
   String get storageHelpSdCard;
 
+  /// No description provided for @mirrorRootLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Local copy folder (optional)'**
+  String get mirrorRootLabel;
+
+  /// No description provided for @mirrorRootHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.'**
+  String get mirrorRootHelp;
+
+  /// No description provided for @libraryCopyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Library copy'**
+  String get libraryCopyTitle;
+
+  /// No description provided for @libraryCopyKeepSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep a full copy on this device'**
+  String get libraryCopyKeepSection;
+
+  /// No description provided for @libraryCopyKeepHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Every track is downloaded in original quality and kept in sync: new files arrive, changed files are replaced, and files deleted on the server move to a trash folder for a while.'**
+  String get libraryCopyKeepHelp;
+
+  /// No description provided for @libraryCopyUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This server does not offer library sync. It needs mStream 6.27 or newer.'**
+  String get libraryCopyUnsupported;
+
+  /// No description provided for @libraryCopyNoLibraries.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries reported yet — open the server once, then come back.'**
+  String get libraryCopyNoLibraries;
+
+  /// No description provided for @libraryCopyNeverSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet'**
+  String get libraryCopyNeverSynced;
+
+  /// No description provided for @libraryCopyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {when} · {files} files · {size}'**
+  String libraryCopyStatus(String when, int files, String size);
+
+  /// No description provided for @libraryCopySyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing… {done} of {total}'**
+  String libraryCopySyncing(int done, int total);
+
+  /// No description provided for @libraryCopyPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the server…'**
+  String get libraryCopyPreparing;
+
+  /// No description provided for @libraryCopySyncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get libraryCopySyncNow;
+
+  /// No description provided for @libraryCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} files failed'**
+  String libraryCopyFailed(int n);
+
+  /// No description provided for @libraryCopyFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed files'**
+  String get libraryCopyFailedTitle;
+
+  /// No description provided for @libraryCopyLastRunError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync failed: {error}'**
+  String libraryCopyLastRunError(String error);
+
+  /// No description provided for @libraryCopyRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep deleted files for'**
+  String get libraryCopyRetention;
+
+  /// No description provided for @libraryCopyRetentionDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days'**
+  String libraryCopyRetentionDays(int n);
+
+  /// No description provided for @libraryCopyRetentionForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Forever'**
+  String get libraryCopyRetentionForever;
+
+  /// No description provided for @libraryCopyWifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi only'**
+  String get libraryCopyWifiOnly;
+
+  /// No description provided for @libraryCopyDesktopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncs while the app is open.'**
+  String get libraryCopyDesktopNote;
+
+  /// No description provided for @offlineBrowseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No library index yet — sync once while the server is reachable.'**
+  String get offlineBrowseUnavailable;
+
+  /// No description provided for @offlineChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline copy'**
+  String get offlineChip;
+
   /// No description provided for @storageChooseFolder.
   ///
   /// In en, this message translates to:
@@ -8829,6 +8961,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share playlist'**
   String get queueSharePlaylist;
+
+  /// No description provided for @keepOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep offline'**
+  String get keepOffline;
+
+  /// No description provided for @keepOfflineOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept offline'**
+  String get keepOfflineOn;
+
+  /// No description provided for @keepOfflineHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded and kept in sync on this device.'**
+  String get keepOfflineHelp;
+
+  /// No description provided for @keepRatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep rated songs offline'**
+  String get keepRatedTitle;
+
+  /// No description provided for @keepRatedStars.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} stars and up'**
+  String keepRatedStars(int n);
+
+  /// No description provided for @keepRatedFiveStars.
+  ///
+  /// In en, this message translates to:
+  /// **'5 stars'**
+  String get keepRatedFiveStars;
+
+  /// No description provided for @keptOfflineSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Also kept offline'**
+  String get keptOfflineSection;
+
+  /// No description provided for @keptOfflineNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet. \"Keep offline\" lives on albums, artists, playlists and folders.'**
+  String get keptOfflineNone;
+
+  /// No description provided for @keepQualityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality of kept items'**
+  String get keepQualityTitle;
+
+  /// No description provided for @keepQualityHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
+  String get keepQualityHelp;
+
+  /// No description provided for @keepQualityOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original files'**
+  String get keepQualityOriginal;
+
+  /// No description provided for @keepQualityTier.
+  ///
+  /// In en, this message translates to:
+  /// **'{codec} · {kbps} kbps'**
+  String keepQualityTier(String codec, int kbps);
+
+  /// No description provided for @browserSectionOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get browserSectionOffline;
+
+  /// No description provided for @browserBrowseOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse offline'**
+  String get browserBrowseOffline;
+
+  /// No description provided for @browserBackOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back online'**
+  String get browserBackOnline;
+
+  /// No description provided for @browserOfflineReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Local copy'**
+  String get browserOfflineReady;
+
+  /// No description provided for @browserOfflineNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No copy yet'**
+  String get browserOfflineNone;
+
+  /// No description provided for @browserOfflineOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Using the local copy'**
+  String get browserOfflineOn;
+
+  /// No description provided for @browserOfflineAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unreachable'**
+  String get browserOfflineAuto;
+
+  /// No description provided for @offlineHeaderStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{files} files · {size}'**
+  String offlineHeaderStatus(int files, String size);
+
+  /// No description provided for @keepFolderHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder and everything in it, kept in sync on this device.'**
+  String get keepFolderHelp;
 }
 
 class _AppLocalizationsDelegate

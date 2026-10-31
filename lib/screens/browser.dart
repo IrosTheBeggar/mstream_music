@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/server_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
@@ -20,6 +22,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
+import '../singletons/mirror_manager.dart';
 import '../singletons/track_capture.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
@@ -41,6 +44,9 @@ import 'discovery/discovery_widgets.dart';
 import 'discovery/keep_copy_ui.dart';
 import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
+import '../singletons/library_index.dart';
+import '../objects/server.dart';
+import 'library_copy_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -140,8 +146,24 @@ class _BrowserState extends State<Browser> {
     }
 
     if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'localFiles') {
-      FileExplorer().getPathForServer(browserList[index].server!);
+        browserList[index].data == 'libraryCopy') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => LibraryCopyScreen(server: s)));
+      }
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'browseOffline') {
+      final s = browserList[index].server;
+      if (s != null) _openOffline(s, context);
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'backOnline') {
+      final s = browserList[index].server;
+      if (s != null) _leaveOffline(s);
       return;
     }
 
@@ -447,6 +469,7 @@ class _BrowserState extends State<Browser> {
                 onSelected: (v) {
                   if (v == 'rename') _renamePlaylist(c, b[i]);
                   if (v == 'delete') _deletePlaylist(c, b[i]);
+                  if (v == 'keep') _togglePlaylistKeep(b[i]);
                 },
                 itemBuilder: (_) => [
                   // Rename is 5.16.0; delete predates the support floor. On an
@@ -456,6 +479,25 @@ class _BrowserState extends State<Browser> {
                   if (!playlistRenameKnownUnsupported(
                       ServerVersion.tryParse(b[i].server?.serverVersion)))
                     PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                  // "Keep offline" (A6b): a playlist rule for the library
+                  // copy, drawn as a toggle so the state reads at a glance.
+                  if (b[i].server != null &&
+                      MirrorManager().canKeep(b[i].server!))
+                    PopupMenuItem(
+                      value: 'keep',
+                      child: Row(children: [
+                        Icon(
+                            _playlistKept(b[i])
+                                ? Icons.offline_pin
+                                : Icons.offline_pin_outlined,
+                            size: 20,
+                            color: _playlistKept(b[i])
+                                ? VelvetColors.primary
+                                : VelvetColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Text(l.keepOffline),
+                      ]),
+                    ),
                   PopupMenuItem(
                     value: 'delete',
                     child: Text(l.delete,
@@ -526,6 +568,18 @@ class _BrowserState extends State<Browser> {
   // Name-entry dialog shared by create + rename. Returns the trimmed name, or
   // null if cancelled. The controller lives inside PlaylistNameDialog (a
   // StatefulWidget) so it's disposed safely after the dialog closes.
+  bool _playlistKept(DisplayItem item) =>
+      item.server != null &&
+      MirrorManager()
+          .keepsRule(item.server!, RuleKind.playlist, item.data ?? item.name);
+
+  void _togglePlaylistKeep(DisplayItem item) {
+    final srv = item.server;
+    if (srv == null) return;
+    MirrorManager().setRule(
+        srv, RuleKind.playlist, item.data ?? item.name, !_playlistKept(item));
+  }
+
   Future<String?> _playlistNameDialog(BuildContext context,
       {required String title, required String action, String? initial}) {
     return PlaylistNameDialog.show(context,
@@ -794,9 +848,105 @@ class _BrowserState extends State<Browser> {
             leading: b[i].getImage(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
+            // An artist row's only action so far: "Keep offline" (A6a).
+            onLongPress: b[i].type == 'artist'
+                ? () => _showArtistActions(b[i], c)
+                : null,
             onTap: () {
               handleTap(b, i, c);
             }));
+  }
+
+  /// The Offline card: switch to the library copy on this device for as
+  /// long as the offline landing is open, and open it.
+  void _openOffline(Server s, BuildContext context) {
+    if (!s.browseOffline) {
+      final rows = LibraryIndexManager().index?.remoteCount(s.localname) ?? 0;
+      if (rows == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(AppLocalizations.of(context).offlineBrowseUnavailable)));
+        return;
+      }
+      s.browseOffline = true;
+      s.offlineAuto = false;
+      ServerManager().notifyServerChanged();
+    }
+    BrowserManager().goToOfflineScreen(s);
+  }
+
+  /// The landing's last row: back to the server, home.
+  void _leaveOffline(Server s) {
+    ServerManager().leaveOffline(s);
+    BrowserManager().goToNavScreen();
+  }
+
+  /// Long-press on an artist: "Keep offline" — an artist rule for the
+  /// library copy (every track by them, plus the albums credited to them).
+  /// Nothing to offer on a server without library sync.
+  void _showArtistActions(DisplayItem item, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    final srv = item.server;
+    final name = item.data ?? item.name;
+    if (srv == null || !MirrorManager().canKeep(srv)) return;
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Row(children: [
+                Icon(Icons.library_music,
+                    color: VelvetColors.textSecondary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary),
+                  ),
+                ),
+              ]),
+            ),
+            Divider(color: VelvetColors.border, height: 17),
+            StreamBuilder<Map<String, MirrorStatus>>(
+              stream: MirrorManager().statusStream,
+              initialData: MirrorManager().current,
+              builder: (context, _) {
+                final on = MirrorManager().keepsRule(srv, RuleKind.artist, name);
+                return SwitchListTile(
+                  secondary: Icon(
+                      on ? Icons.offline_pin : Icons.offline_pin_outlined,
+                      color: on
+                          ? VelvetColors.primary
+                          : VelvetColors.textSecondary),
+                  title: Text(l.keepOffline,
+                      style: TextStyle(color: VelvetColors.textPrimary)),
+                  subtitle: Text(l.keepOfflineHelp,
+                      style: TextStyle(
+                          color: VelvetColors.textTertiary, fontSize: 12)),
+                  value: on,
+                  activeThumbColor: VelvetColors.primary,
+                  onChanged: (v) =>
+                      MirrorManager().setRule(srv, RuleKind.artist, name, v),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Default browser landing: section shortcuts as a card grid ──
@@ -1091,6 +1241,35 @@ class _BrowserState extends State<Browser> {
               ]),
             ),
             Divider(color: VelvetColors.border, height: 17),
+            // "Keep offline" (a folder rule): this folder and everything
+            // under it, kept in sync — the same switch the artist sheet has.
+            if (item.server != null && MirrorManager().canKeep(item.server!))
+              StreamBuilder<Map<String, MirrorStatus>>(
+                stream: MirrorManager().statusStream,
+                initialData: MirrorManager().current,
+                builder: (context, _) {
+                  final srv = item.server!;
+                  final key = folderRuleKey(item.data ?? item.name);
+                  final on =
+                      MirrorManager().keepsRule(srv, RuleKind.folder, key);
+                  return SwitchListTile(
+                    secondary: Icon(
+                        on ? Icons.offline_pin : Icons.offline_pin_outlined,
+                        color: on
+                            ? VelvetColors.primary
+                            : VelvetColors.textSecondary),
+                    title: Text(l.keepOffline,
+                        style: TextStyle(color: VelvetColors.textPrimary)),
+                    subtitle: Text(l.keepFolderHelp,
+                        style: TextStyle(
+                            color: VelvetColors.textTertiary, fontSize: 12)),
+                    value: on,
+                    activeThumbColor: VelvetColors.primary,
+                    onChanged: (v) =>
+                        MirrorManager().setRule(srv, RuleKind.folder, key, v),
+                  );
+                },
+              ),
             ListTile(
               leading: Icon(Icons.library_add, color: VelvetColors.primary),
               title: Text(l.addAll,
@@ -1387,7 +1566,9 @@ class _BrowserState extends State<Browser> {
       builder: (context, _) {
         final term = BrowserManager().currentSearchTerm;
         if (term != null) {
-          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term));
+          final offline = ServerManager().currentServer?.browseOffline == true;
+          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term),
+              badge: offline ? l.offlineChip : null);
         }
         final path = BrowserManager().currentPath;
         if (path != null) {
@@ -1444,7 +1625,8 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  Widget _subheaderStrip(IconData icon, String text, {bool mono = false}) {
+  Widget _subheaderStrip(IconData icon, String text,
+      {bool mono = false, String? badge}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
@@ -1468,6 +1650,23 @@ class _BrowserState extends State<Browser> {
               ),
             ),
           ),
+          // Results from the library copy on this device (A5): the same pill
+          // the app bar wears while the server is browsed offline.
+          if (badge != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: VelvetColors.warning.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              ),
+              child: Text(badge,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: VelvetColors.warning,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
         ],
       ),
     );

@@ -3,7 +3,7 @@
 ///
 /// This is the servers.json pattern (ServerManager's write chain), extracted
 /// so the other persistence files — settings.json, auto_dj.json,
-/// playlists.json, queue.json, auto_downloads.json — get the same guarantee.
+/// playlists.json, queue.json — get the same guarantee.
 /// Their loads all swallow a corrupt file (by design: startup must not block),
 /// which makes silent interleaved-write corruption a silent settings/data
 /// reset; serializing the writes removes the hazard at the source.

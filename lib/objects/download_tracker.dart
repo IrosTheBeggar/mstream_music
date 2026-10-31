@@ -27,8 +27,8 @@ class DownloadTracker {
   // the re-enqueue so a repeatedly-rotating tunnel / dead source can't loop.
   int reResolves = 0;
   // True when the keep-queue-offline sweep started this download (not a user
-  // tap). Only auto-downloads are recorded in the AutoDownloadLedger and are
-  // eligible for cap eviction; manual downloads are never evicted.
+  // tap). Only auto-downloads are recorded as `auto` in the library index
+  // and are eligible for cap eviction; manual downloads are never evicted.
   bool auto = false;
 
   DownloadTracker(this.serverUrl, this.filePath);
