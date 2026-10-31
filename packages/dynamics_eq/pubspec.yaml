@@ -1,0 +1,24 @@
+name: dynamics_eq
+description: >-
+  In-repo Android DynamicsProcessing bridge: a ten-band equalizer on the
+  player's audio session for Android 9+, where just_audio only offers the
+  fixed five-band Equalizer effect. A path plugin (not a MainActivity
+  channel) so it auto-registers on every FlutterEngine, including the
+  headless one Android Auto / media-resumption cold-binds boot.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: music.mstream.dynamics_eq
+        pluginClass: DynamicsEqPlugin

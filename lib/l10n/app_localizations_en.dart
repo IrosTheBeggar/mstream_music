@@ -118,7 +118,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Start a song to configure the EQ.\n\nAndroid\'s native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.';
+      'This phone\'s equalizer reports its bands only once audio is playing. Your saved preset is applied the moment they appear.';
 
   @override
   String eqInitFailed(String error) {
@@ -128,6 +128,181 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get eqNoBands =>
       'No EQ bands reported by this device\'s audio driver.';
+
+  @override
+  String get eqPresetFlat => 'Flat';
+
+  @override
+  String get eqPresetNormal => 'Normal';
+
+  @override
+  String get eqPresetClassical => 'Classical';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy Metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip Hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
+  String get eqPresetCustom => 'Custom';
+
+  @override
+  String get eqSaveAsPreset => 'Save as preset';
+
+  @override
+  String get eqSavePresetTitle => 'Save preset';
+
+  @override
+  String get eqRenamePresetTitle => 'Rename preset';
+
+  @override
+  String get eqPresetNameLabel => 'Name';
+
+  @override
+  String get eqSavePresetHint =>
+      'Saved on this phone, after the built-in presets. Long-press its chip later to rename or delete it.';
+
+  @override
+  String get eqReplacePreset => 'Replace';
+
+  @override
+  String get eqPresetNameTaken => 'Another saved preset already has this name.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Hold to compare';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Hold to hear the sound without the equalizer.';
+
+  @override
+  String get eqOptionsTitle => 'Equalizer options';
+
+  @override
+  String get eqPreventClipping => 'Prevent clipping';
+
+  @override
+  String get eqPreventClippingHint => 'Limits peaks when bands are boosted.';
+
+  @override
+  String get eqShowValues => 'Always show band values';
+
+  @override
+  String get eqShowValuesHint =>
+      'A number over every band, not only while dragging.';
+
+  @override
+  String get eqOutputsTitle => 'Outputs';
+
+  @override
+  String get eqOutputsRowOff => 'Off — one curve for every output';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name now';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Switch automatically';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.';
+
+  @override
+  String get eqOutputsRemembered => 'Remembered outputs';
+
+  @override
+  String get eqOutputSpeaker => 'Phone speaker';
+
+  @override
+  String get eqOutputWired => 'Wired headphones';
+
+  @override
+  String get eqOutputUsb => 'USB audio';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Other output';
+
+  @override
+  String get eqOutputPlayingNow => 'playing now';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'last used $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => 'Outputs appear here as you listen on them.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Forget “$name”? It comes back as a new output the next time it connects.';
+  }
+
+  @override
+  String get eqOutputForget => 'Forget';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset for $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tap an output to pick its preset. Swipe one away to forget it.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'On — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Now';
+
+  @override
+  String get eqNeedsPlaybackTitle => 'Start a song to set up the bands';
+
+  @override
+  String get eqPlayQueue => 'Play the queue';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count songs',
+      one: '1 song',
+    );
+    return 'Resumes where you left off · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';

@@ -120,7 +120,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Rozpocznij odtwarzanie utworu, aby skonfigurować korektor.\n\nNatywny korektor Androida inicjuje się wraz z sesją audio, dlatego do odczytania układu pasm potrzebne jest aktywne odtwarzanie.';
+      'Korektor tego telefonu zgłasza swoje pasma dopiero podczas odtwarzania dźwięku. Zapisany preset zostanie zastosowany, gdy tylko się pojawią.';
 
   @override
   String eqInitFailed(String error) {
@@ -130,6 +130,186 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get eqNoBands =>
       'Sterownik audio tego urządzenia nie zgłasza żadnych pasm korektora.';
+
+  @override
+  String get eqPresetFlat => 'Płaski';
+
+  @override
+  String get eqPresetNormal => 'Normalny';
+
+  @override
+  String get eqPresetClassical => 'Klasyczna';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
+  String get eqPresetCustom => 'Własne';
+
+  @override
+  String get eqSaveAsPreset => 'Zapisz jako preset';
+
+  @override
+  String get eqSavePresetTitle => 'Zapisz preset';
+
+  @override
+  String get eqRenamePresetTitle => 'Zmień nazwę presetu';
+
+  @override
+  String get eqPresetNameLabel => 'Nazwa';
+
+  @override
+  String get eqSavePresetHint =>
+      'Zapisany na tym telefonie, za wbudowanymi presetami. Przytrzymaj później jego chip, aby zmienić nazwę lub go usunąć.';
+
+  @override
+  String get eqReplacePreset => 'Zastąp';
+
+  @override
+  String get eqPresetNameTaken => 'Inny zapisany preset ma już tę nazwę.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Usunąć „$name”?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Przytrzymaj, aby porównać';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Przytrzymaj, aby usłyszeć dźwięk bez korektora.';
+
+  @override
+  String get eqOptionsTitle => 'Opcje korektora';
+
+  @override
+  String get eqPreventClipping => 'Zapobiegaj przesterowaniu';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Ogranicza szczyty, gdy pasma są podbite.';
+
+  @override
+  String get eqShowValues => 'Zawsze pokazuj wartości pasm';
+
+  @override
+  String get eqShowValuesHint =>
+      'Liczba nad każdym pasmem, nie tylko podczas przeciągania.';
+
+  @override
+  String get eqOutputsTitle => 'Wyjścia';
+
+  @override
+  String get eqOutputsRowOff => 'Wyłączone — jedna krzywa dla wszystkich wyjść';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Teraz: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Przełączaj automatycznie';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Gdy zmieni się wyjście, zastosowana zostanie jego krzywa. Przeciąganie na stronie korektora edytuje wyjście, które teraz gra.';
+
+  @override
+  String get eqOutputsRemembered => 'Zapamiętane wyjścia';
+
+  @override
+  String get eqOutputSpeaker => 'Głośnik telefonu';
+
+  @override
+  String get eqOutputWired => 'Słuchawki przewodowe';
+
+  @override
+  String get eqOutputUsb => 'Dźwięk USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Inne wyjście';
+
+  @override
+  String get eqOutputPlayingNow => 'teraz gra';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'ostatnio $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Wyjścia pojawiają się tutaj, gdy przez nie słuchasz.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Zapomnieć „$name”? Przy następnym połączeniu pojawi się jako nowe wyjście.';
+  }
+
+  @override
+  String get eqOutputForget => 'Zapomnij';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset dla $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Dotknij wyjścia, aby wybrać jego preset. Przesuń je, aby zapomnieć.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Włączony — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Teraz';
+
+  @override
+  String get eqNeedsPlaybackTitle =>
+      'Rozpocznij utwór, aby skonfigurować pasma';
+
+  @override
+  String get eqPlayQueue => 'Odtwórz kolejkę';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+    );
+    return 'Wznawia tam, gdzie skończyłeś · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Włącz korektor, aby dostosować pasma.';

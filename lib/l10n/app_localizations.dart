@@ -303,7 +303,7 @@ abstract class AppLocalizations {
   /// Shown when the EQ band layout can't be read because nothing is playing.
   ///
   /// In en, this message translates to:
-  /// **'Start a song to configure the EQ.\n\nAndroid\'s native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.'**
+  /// **'This phone\'s equalizer reports its bands only once audio is playing. Your saved preset is applied the moment they appear.'**
   String get eqNeedsPlayback;
 
   /// Shown when the native equalizer throws while initializing.
@@ -317,6 +317,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No EQ bands reported by this device\'s audio driver.'**
   String get eqNoBands;
+
+  /// EQ preset chip: every band at 0 dB (what Reset applies).
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get eqPresetFlat;
+
+  /// EQ preset chip: Android's default curve, a touch of bass and treble.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get eqPresetNormal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Classical'**
+  String get eqPresetClassical;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Dance'**
+  String get eqPresetDance;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Folk'**
+  String get eqPresetFolk;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy Metal'**
+  String get eqPresetHeavyMetal;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Hip Hop'**
+  String get eqPresetHipHop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Jazz'**
+  String get eqPresetJazz;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Pop'**
+  String get eqPresetPop;
+
+  /// EQ preset chip (genre curve).
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get eqPresetRock;
+
+  /// EQ preset chip shown first when the gains match no preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get eqPresetCustom;
+
+  /// Button under the EQ bands that saves the current curve as a user preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as preset'**
+  String get eqSaveAsPreset;
+
+  /// Title of the sheet that names a new EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save preset'**
+  String get eqSavePresetTitle;
+
+  /// Title of the sheet that renames a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename preset'**
+  String get eqRenamePresetTitle;
+
+  /// Label of the preset name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get eqPresetNameLabel;
+
+  /// Helper text under the preset name field when saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this phone, after the built-in presets. Long-press its chip later to rename or delete it.'**
+  String get eqSavePresetHint;
+
+  /// Save-sheet button when a saved preset of that name exists and will be overwritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get eqReplacePreset;
+
+  /// Helper text when renaming to a name another saved preset has.
+  ///
+  /// In en, this message translates to:
+  /// **'Another saved preset already has this name.'**
+  String get eqPresetNameTaken;
+
+  /// Confirmation when deleting a saved EQ preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String eqDeletePresetConfirm(String name);
+
+  /// Button under the EQ bands: while held, the equalizer is bypassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to compare'**
+  String get eqHoldToCompare;
+
+  /// Accessibility hint for the Hold to compare button.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to hear the sound without the equalizer.'**
+  String get eqHoldToCompareHint;
+
+  /// Title of the EQ options sheet and tooltip of the app-bar button that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer options'**
+  String get eqOptionsTitle;
+
+  /// Options switch: the ten-band engine's limiter.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevent clipping'**
+  String get eqPreventClipping;
+
+  /// Subtitle of the Prevent clipping switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits peaks when bands are boosted.'**
+  String get eqPreventClippingHint;
+
+  /// Options switch: a dB readout over every band.
+  ///
+  /// In en, this message translates to:
+  /// **'Always show band values'**
+  String get eqShowValues;
+
+  /// Subtitle of the Always show band values switch.
+  ///
+  /// In en, this message translates to:
+  /// **'A number over every band, not only while dragging.'**
+  String get eqShowValuesHint;
+
+  /// Title of the Outputs page and of the options-sheet row that opens it.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs'**
+  String get eqOutputsTitle;
+
+  /// Options-sheet row subtitle while per-output curves are off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — one curve for every output'**
+  String get eqOutputsRowOff;
+
+  /// Options-sheet row subtitle naming the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} now'**
+  String eqOutputsNow(String name);
+
+  /// Outputs page: the switch that makes the EQ follow the output.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch automatically'**
+  String get eqOutputsSwitch;
+
+  /// Subtitle of that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'When the output changes, its curve is applied. Dragging on the Equalizer page edits the output playing now.'**
+  String get eqOutputsSwitchHint;
+
+  /// Section label over the remembered outputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Remembered outputs'**
+  String get eqOutputsRemembered;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone speaker'**
+  String get eqOutputSpeaker;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Wired headphones'**
+  String get eqOutputWired;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'USB audio'**
+  String get eqOutputUsb;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'HDMI'**
+  String get eqOutputHdmi;
+
+  /// Output kind (Bluetooth devices are shown by their own name; this word is the kind).
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get eqOutputBluetooth;
+
+  /// Output kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Other output'**
+  String get eqOutputOther;
+
+  /// Row subtitle part for the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'playing now'**
+  String get eqOutputPlayingNow;
+
+  /// Row subtitle part with a short date.
+  ///
+  /// In en, this message translates to:
+  /// **'last used {date}'**
+  String eqOutputLastUsed(String date);
+
+  /// Outputs page when nothing is remembered yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs appear here as you listen on them.'**
+  String get eqOutputsEmpty;
+
+  /// Confirmation when swiping an output away.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget “{name}”? It comes back as a new output the next time it connects.'**
+  String eqOutputForgetConfirm(String name);
+
+  /// Confirm button of that dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get eqOutputForget;
+
+  /// Title of the preset picker for one output.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset for {name}'**
+  String eqOutputPickPreset(String name);
+
+  /// Footer hint on the Outputs page.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an output to pick its preset. Swipe one away to forget it.'**
+  String get eqOutputsHint;
+
+  /// EQ enable switch subtitle when on and the curve follows the named output.
+  ///
+  /// In en, this message translates to:
+  /// **'On — {name}'**
+  String eqEnabledOnOutput(String name);
+
+  /// Small pill on the output in use.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get eqOutputNowPill;
+
+  /// Heading of the EQ state that waits for playback (five-band engine).
+  ///
+  /// In en, this message translates to:
+  /// **'Start a song to set up the bands'**
+  String get eqNeedsPlaybackTitle;
+
+  /// Button in that state that plays the restored queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the queue'**
+  String get eqPlayQueue;
+
+  /// Caption under that button, with the queue length.
+  ///
+  /// In en, this message translates to:
+  /// **'Resumes where you left off · {count, plural, =1{1 song} other{{count} songs}}'**
+  String eqPlayQueueHint(int count);
 
   /// No description provided for @eqDisabledHint.
   ///

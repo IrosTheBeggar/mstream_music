@@ -120,7 +120,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Запустите трек, чтобы настроить эквалайзер.\n\nНативный эквалайзер Android инициализируется вместе с аудиосессией, поэтому для считывания раскладки полос необходимо активное воспроизведение.';
+      'Эквалайзер этого телефона сообщает о своих полосах только во время воспроизведения. Сохранённый пресет применится, как только они появятся.';
 
   @override
   String eqInitFailed(String error) {
@@ -130,6 +130,185 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get eqNoBands =>
       'Аудиодрайвер этого устройства не сообщает о полосах эквалайзера.';
+
+  @override
+  String get eqPresetFlat => 'Ровный';
+
+  @override
+  String get eqPresetNormal => 'Обычный';
+
+  @override
+  String get eqPresetClassical => 'Классика';
+
+  @override
+  String get eqPresetDance => 'Танцевальная';
+
+  @override
+  String get eqPresetFolk => 'Фолк';
+
+  @override
+  String get eqPresetHeavyMetal => 'Хеви-метал';
+
+  @override
+  String get eqPresetHipHop => 'Хип-хоп';
+
+  @override
+  String get eqPresetJazz => 'Джаз';
+
+  @override
+  String get eqPresetPop => 'Поп';
+
+  @override
+  String get eqPresetRock => 'Рок';
+
+  @override
+  String get eqPresetCustom => 'Своя';
+
+  @override
+  String get eqSaveAsPreset => 'Сохранить как пресет';
+
+  @override
+  String get eqSavePresetTitle => 'Сохранить пресет';
+
+  @override
+  String get eqRenamePresetTitle => 'Переименовать пресет';
+
+  @override
+  String get eqPresetNameLabel => 'Название';
+
+  @override
+  String get eqSavePresetHint =>
+      'Сохраняется на этом телефоне, после встроенных пресетов. Позже удерживайте его чип, чтобы переименовать или удалить.';
+
+  @override
+  String get eqReplacePreset => 'Заменить';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Другой сохранённый пресет уже носит это название.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Удерживайте для сравнения';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Удерживайте, чтобы услышать звук без эквалайзера.';
+
+  @override
+  String get eqOptionsTitle => 'Параметры эквалайзера';
+
+  @override
+  String get eqPreventClipping => 'Предотвращать клиппинг';
+
+  @override
+  String get eqPreventClippingHint => 'Ограничивает пики при усилении полос.';
+
+  @override
+  String get eqShowValues => 'Всегда показывать значения полос';
+
+  @override
+  String get eqShowValuesHint =>
+      'Число над каждой полосой, а не только при перетаскивании.';
+
+  @override
+  String get eqOutputsTitle => 'Выходы';
+
+  @override
+  String get eqOutputsRowOff => 'Выключено — одна кривая для всех выходов';
+
+  @override
+  String eqOutputsNow(String name) {
+    return 'Сейчас: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Переключать автоматически';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Когда выход меняется, применяется его кривая. Перетаскивание на странице эквалайзера меняет выход, который играет сейчас.';
+
+  @override
+  String get eqOutputsRemembered => 'Запомненные выходы';
+
+  @override
+  String get eqOutputSpeaker => 'Динамик телефона';
+
+  @override
+  String get eqOutputWired => 'Проводные наушники';
+
+  @override
+  String get eqOutputUsb => 'USB-аудио';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Другой выход';
+
+  @override
+  String get eqOutputPlayingNow => 'играет сейчас';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'последний раз $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Выходы появятся здесь, когда вы будете через них слушать.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Забыть «$name»? При следующем подключении он появится как новый выход.';
+  }
+
+  @override
+  String get eqOutputForget => 'Забыть';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Пресет для $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Нажмите на выход, чтобы выбрать его пресет. Смахните, чтобы забыть.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Вкл. — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Сейчас';
+
+  @override
+  String get eqNeedsPlaybackTitle => 'Запустите трек, чтобы настроить полосы';
+
+  @override
+  String get eqPlayQueue => 'Воспроизвести очередь';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count треков',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return 'Продолжит с того места, где вы остановились · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';

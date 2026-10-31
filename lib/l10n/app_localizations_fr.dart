@@ -118,7 +118,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Lancez un morceau pour configurer l\'égaliseur.\n\nL\'égaliseur natif d\'Android s\'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.';
+      'L\'égaliseur de ce téléphone n\'indique ses bandes qu\'une fois l\'audio en lecture. Votre préréglage enregistré s\'applique dès qu\'elles apparaissent.';
 
   @override
   String eqInitFailed(String error) {
@@ -128,6 +128,186 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get eqNoBands =>
       'Aucune bande d\'égaliseur signalée par le pilote audio de cet appareil.';
+
+  @override
+  String get eqPresetFlat => 'Plat';
+
+  @override
+  String get eqPresetNormal => 'Normal';
+
+  @override
+  String get eqPresetClassical => 'Classique';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip-hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
+  String get eqPresetCustom => 'Personnalisé';
+
+  @override
+  String get eqSaveAsPreset => 'Enregistrer comme préréglage';
+
+  @override
+  String get eqSavePresetTitle => 'Enregistrer le préréglage';
+
+  @override
+  String get eqRenamePresetTitle => 'Renommer le préréglage';
+
+  @override
+  String get eqPresetNameLabel => 'Nom';
+
+  @override
+  String get eqSavePresetHint =>
+      'Enregistré sur ce téléphone, après les préréglages intégrés. Appuyez longuement sur sa puce plus tard pour le renommer ou le supprimer.';
+
+  @override
+  String get eqReplacePreset => 'Remplacer';
+
+  @override
+  String get eqPresetNameTaken =>
+      'Un autre préréglage enregistré porte déjà ce nom.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Supprimer « $name » ?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Maintenir pour comparer';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Maintenez appuyé pour entendre le son sans l\'égaliseur.';
+
+  @override
+  String get eqOptionsTitle => 'Options de l\'égaliseur';
+
+  @override
+  String get eqPreventClipping => 'Éviter la saturation';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Limite les crêtes quand des bandes sont amplifiées.';
+
+  @override
+  String get eqShowValues => 'Toujours afficher les valeurs des bandes';
+
+  @override
+  String get eqShowValuesHint =>
+      'Un nombre au-dessus de chaque bande, pas seulement pendant le glissement.';
+
+  @override
+  String get eqOutputsTitle => 'Sorties';
+
+  @override
+  String get eqOutputsRowOff =>
+      'Désactivé — une courbe pour toutes les sorties';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name en ce moment';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Changer automatiquement';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Quand la sortie change, sa courbe est appliquée. Glisser sur la page Égaliseur modifie la sortie en cours de lecture.';
+
+  @override
+  String get eqOutputsRemembered => 'Sorties mémorisées';
+
+  @override
+  String get eqOutputSpeaker => 'Haut-parleur du téléphone';
+
+  @override
+  String get eqOutputWired => 'Casque filaire';
+
+  @override
+  String get eqOutputUsb => 'Audio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Autre sortie';
+
+  @override
+  String get eqOutputPlayingNow => 'en cours de lecture';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'dernière utilisation $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Les sorties apparaissent ici au fil de vos écoutes.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Oublier « $name » ? Elle réapparaîtra comme nouvelle sortie à sa prochaine connexion.';
+  }
+
+  @override
+  String get eqOutputForget => 'Oublier';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Préréglage pour $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Touchez une sortie pour choisir son préréglage. Balayez-la pour l\'oublier.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Activé — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Maintenant';
+
+  @override
+  String get eqNeedsPlaybackTitle =>
+      'Lancez un morceau pour configurer les bandes';
+
+  @override
+  String get eqPlayQueue => 'Lire la file d\'attente';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count morceaux',
+      one: '$count morceau',
+    );
+    return 'Reprend là où vous en étiez · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Activez l\'égaliseur pour régler les bandes.';

@@ -77,6 +77,11 @@ dependencies:
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
   wifi_lock_shim:
     path: packages/wifi_lock_shim
+  # In-repo Android DynamicsProcessing bridge: the ten-band equalizer on
+  # Android 9+ (just_audio only offers the fixed five-band Equalizer). A path
+  # plugin for the same reason as wifi_lock_shim.
+  dynamics_eq:
+    path: packages/dynamics_eq
   # In-repo Android home-screen widget (Now Playing + transport). A path
   # plugin for the same reason as wifi_lock_shim: it must register on the
   # headless engine too, or the widget goes stale after a Bluetooth-key or

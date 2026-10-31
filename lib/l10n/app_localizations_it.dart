@@ -118,7 +118,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Avvia un brano per configurare l’equalizzatore.\n\nL’equalizzatore nativo di Android si inizializza con la sessione audio, quindi la riproduzione deve essere attiva prima di poter leggere la disposizione delle bande.';
+      'L\'equalizzatore di questo telefono comunica le sue bande solo quando l\'audio è in riproduzione. Il preset salvato viene applicato appena compaiono.';
 
   @override
   String eqInitFailed(String error) {
@@ -128,6 +128,183 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get eqNoBands =>
       'Il driver audio di questo dispositivo non segnala bande di equalizzazione.';
+
+  @override
+  String get eqPresetFlat => 'Piatto';
+
+  @override
+  String get eqPresetNormal => 'Normale';
+
+  @override
+  String get eqPresetClassical => 'Classica';
+
+  @override
+  String get eqPresetDance => 'Dance';
+
+  @override
+  String get eqPresetFolk => 'Folk';
+
+  @override
+  String get eqPresetHeavyMetal => 'Heavy metal';
+
+  @override
+  String get eqPresetHipHop => 'Hip hop';
+
+  @override
+  String get eqPresetJazz => 'Jazz';
+
+  @override
+  String get eqPresetPop => 'Pop';
+
+  @override
+  String get eqPresetRock => 'Rock';
+
+  @override
+  String get eqPresetCustom => 'Personalizzato';
+
+  @override
+  String get eqSaveAsPreset => 'Salva come preset';
+
+  @override
+  String get eqSavePresetTitle => 'Salva preset';
+
+  @override
+  String get eqRenamePresetTitle => 'Rinomina preset';
+
+  @override
+  String get eqPresetNameLabel => 'Nome';
+
+  @override
+  String get eqSavePresetHint =>
+      'Salvato su questo telefono, dopo i preset integrati. Tieni premuto il suo chip in seguito per rinominarlo o eliminarlo.';
+
+  @override
+  String get eqReplacePreset => 'Sostituisci';
+
+  @override
+  String get eqPresetNameTaken => 'Un altro preset salvato ha già questo nome.';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return 'Eliminare “$name”?';
+  }
+
+  @override
+  String get eqHoldToCompare => 'Tieni premuto per confrontare';
+
+  @override
+  String get eqHoldToCompareHint =>
+      'Tieni premuto per sentire il suono senza l\'equalizzatore.';
+
+  @override
+  String get eqOptionsTitle => 'Opzioni dell\'equalizzatore';
+
+  @override
+  String get eqPreventClipping => 'Evita la distorsione';
+
+  @override
+  String get eqPreventClippingHint =>
+      'Limita i picchi quando le bande vengono alzate.';
+
+  @override
+  String get eqShowValues => 'Mostra sempre i valori delle bande';
+
+  @override
+  String get eqShowValuesHint =>
+      'Un numero sopra ogni banda, non solo durante il trascinamento.';
+
+  @override
+  String get eqOutputsTitle => 'Uscite';
+
+  @override
+  String get eqOutputsRowOff => 'Disattivato: una curva per tutte le uscite';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '$name adesso';
+  }
+
+  @override
+  String get eqOutputsSwitch => 'Cambia automaticamente';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      'Quando cambia l\'uscita, viene applicata la sua curva. Trascinare nella pagina dell\'equalizzatore modifica l\'uscita in riproduzione.';
+
+  @override
+  String get eqOutputsRemembered => 'Uscite memorizzate';
+
+  @override
+  String get eqOutputSpeaker => 'Altoparlante del telefono';
+
+  @override
+  String get eqOutputWired => 'Cuffie con filo';
+
+  @override
+  String get eqOutputUsb => 'Audio USB';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'Altra uscita';
+
+  @override
+  String get eqOutputPlayingNow => 'in riproduzione';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return 'ultimo uso $date';
+  }
+
+  @override
+  String get eqOutputsEmpty =>
+      'Le uscite compaiono qui man mano che le usi per ascoltare.';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return 'Dimenticare “$name”? Tornerà come nuova uscita alla prossima connessione.';
+  }
+
+  @override
+  String get eqOutputForget => 'Dimentica';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return 'Preset per $name';
+  }
+
+  @override
+  String get eqOutputsHint =>
+      'Tocca un\'uscita per scegliere il suo preset. Scorrila via per dimenticarla.';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'Attivo — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => 'Adesso';
+
+  @override
+  String get eqNeedsPlaybackTitle => 'Avvia un brano per impostare le bande';
+
+  @override
+  String get eqPlayQueue => 'Riproduci la coda';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count brani',
+      one: '1 brano',
+    );
+    return 'Riprende da dove eri rimasto · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'Attiva l’equalizzatore per regolare le bande.';

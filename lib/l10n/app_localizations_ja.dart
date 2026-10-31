@@ -116,7 +116,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      '曲を再生してからイコライザーを設定してください。\n\nAndroid のネイティブイコライザーはオーディオセッションとともに初期化されるため、バンド構成を読み取るには再生が有効になっている必要があります。';
+      'この端末のイコライザーは、音声の再生中にのみバンドを報告します。保存したプリセットは、バンドが表示され次第適用されます。';
 
   @override
   String eqInitFailed(String error) {
@@ -125,6 +125,177 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eqNoBands => 'この端末のオーディオドライバーは EQ バンドを報告していません。';
+
+  @override
+  String get eqPresetFlat => 'フラット';
+
+  @override
+  String get eqPresetNormal => 'ノーマル';
+
+  @override
+  String get eqPresetClassical => 'クラシック';
+
+  @override
+  String get eqPresetDance => 'ダンス';
+
+  @override
+  String get eqPresetFolk => 'フォーク';
+
+  @override
+  String get eqPresetHeavyMetal => 'ヘビーメタル';
+
+  @override
+  String get eqPresetHipHop => 'ヒップホップ';
+
+  @override
+  String get eqPresetJazz => 'ジャズ';
+
+  @override
+  String get eqPresetPop => 'ポップ';
+
+  @override
+  String get eqPresetRock => 'ロック';
+
+  @override
+  String get eqPresetCustom => 'カスタム';
+
+  @override
+  String get eqSaveAsPreset => 'プリセットとして保存';
+
+  @override
+  String get eqSavePresetTitle => 'プリセットを保存';
+
+  @override
+  String get eqRenamePresetTitle => 'プリセット名を変更';
+
+  @override
+  String get eqPresetNameLabel => '名前';
+
+  @override
+  String get eqSavePresetHint =>
+      'この端末に保存され、内蔵プリセットの後ろに並びます。あとでチップを長押しすると名前の変更や削除ができます。';
+
+  @override
+  String get eqReplacePreset => '置き換える';
+
+  @override
+  String get eqPresetNameTaken => '同じ名前の保存済みプリセットがすでにあります。';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get eqHoldToCompare => '長押しで比較';
+
+  @override
+  String get eqHoldToCompareHint => '長押しすると、イコライザーなしの音を聞けます。';
+
+  @override
+  String get eqOptionsTitle => 'イコライザーのオプション';
+
+  @override
+  String get eqPreventClipping => 'クリッピングを防ぐ';
+
+  @override
+  String get eqPreventClippingHint => 'バンドをブーストしたときのピークを抑えます。';
+
+  @override
+  String get eqShowValues => 'バンドの値を常に表示';
+
+  @override
+  String get eqShowValuesHint => 'ドラッグ中だけでなく、各バンドの上に数値を表示します。';
+
+  @override
+  String get eqOutputsTitle => '出力先';
+
+  @override
+  String get eqOutputsRowOff => 'オフ — すべての出力先で同じカーブ';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '現在: $name';
+  }
+
+  @override
+  String get eqOutputsSwitch => '自動で切り替える';
+
+  @override
+  String get eqOutputsSwitchHint =>
+      '出力先が変わると、そのカーブが適用されます。イコライザー画面でのドラッグは、再生中の出力先を編集します。';
+
+  @override
+  String get eqOutputsRemembered => '記憶した出力先';
+
+  @override
+  String get eqOutputSpeaker => '本体スピーカー';
+
+  @override
+  String get eqOutputWired => '有線ヘッドホン';
+
+  @override
+  String get eqOutputUsb => 'USBオーディオ';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get eqOutputOther => 'その他の出力先';
+
+  @override
+  String get eqOutputPlayingNow => '再生中';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return '最終使用 $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => '出力先は、それで聴くとここに表示されます。';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '「$name」を忘れますか？ 次に接続したときに新しい出力先として表示されます。';
+  }
+
+  @override
+  String get eqOutputForget => '忘れる';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return '$name のプリセット';
+  }
+
+  @override
+  String get eqOutputsHint => '出力先をタップしてプリセットを選びます。スワイプすると忘れます。';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return 'オン — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => '現在';
+
+  @override
+  String get eqNeedsPlaybackTitle => '曲を再生するとバンドを設定できます';
+
+  @override
+  String get eqPlayQueue => 'キューを再生';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '前回の続きから再生 · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => 'バンドを調整するにはイコライザーをオンにしてください。';

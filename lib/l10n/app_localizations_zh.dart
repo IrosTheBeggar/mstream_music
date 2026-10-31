@@ -114,8 +114,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqOnlyAndroid => '均衡器仅在 Android 上可用。';
 
   @override
-  String get eqNeedsPlayback =>
-      '请先播放一首歌曲以配置均衡器。\n\nAndroid 的原生均衡器会随音频会话一起初始化，因此需要正在播放时才能读取频段布局。';
+  String get eqNeedsPlayback => '本机的均衡器只有在播放音频时才会报告频段。频段出现后，会立即应用你保存的预设。';
 
   @override
   String eqInitFailed(String error) {
@@ -124,6 +123,175 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eqNoBands => '此设备的音频驱动未报告任何均衡器频段。';
+
+  @override
+  String get eqPresetFlat => '平坦';
+
+  @override
+  String get eqPresetNormal => '普通';
+
+  @override
+  String get eqPresetClassical => '古典';
+
+  @override
+  String get eqPresetDance => '舞曲';
+
+  @override
+  String get eqPresetFolk => '民谣';
+
+  @override
+  String get eqPresetHeavyMetal => '重金属';
+
+  @override
+  String get eqPresetHipHop => '嘻哈';
+
+  @override
+  String get eqPresetJazz => '爵士';
+
+  @override
+  String get eqPresetPop => '流行';
+
+  @override
+  String get eqPresetRock => '摇滚';
+
+  @override
+  String get eqPresetCustom => '自定义';
+
+  @override
+  String get eqSaveAsPreset => '保存为预设';
+
+  @override
+  String get eqSavePresetTitle => '保存预设';
+
+  @override
+  String get eqRenamePresetTitle => '重命名预设';
+
+  @override
+  String get eqPresetNameLabel => '名称';
+
+  @override
+  String get eqSavePresetHint => '保存在本机上，排在内置预设之后。之后长按它的标签即可重命名或删除。';
+
+  @override
+  String get eqReplacePreset => '替换';
+
+  @override
+  String get eqPresetNameTaken => '另一个已保存的预设已使用此名称。';
+
+  @override
+  String eqDeletePresetConfirm(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
+  String get eqHoldToCompare => '按住对比';
+
+  @override
+  String get eqHoldToCompareHint => '按住即可聆听不经均衡器处理的声音。';
+
+  @override
+  String get eqOptionsTitle => '均衡器选项';
+
+  @override
+  String get eqPreventClipping => '防止削波';
+
+  @override
+  String get eqPreventClippingHint => '在频段被提升时限制峰值。';
+
+  @override
+  String get eqShowValues => '始终显示频段数值';
+
+  @override
+  String get eqShowValuesHint => '在每个频段上方显示数值，而不只是拖动时。';
+
+  @override
+  String get eqOutputsTitle => '输出设备';
+
+  @override
+  String get eqOutputsRowOff => '已关闭 — 所有输出设备共用一条曲线';
+
+  @override
+  String eqOutputsNow(String name) {
+    return '当前：$name';
+  }
+
+  @override
+  String get eqOutputsSwitch => '自动切换';
+
+  @override
+  String get eqOutputsSwitchHint => '输出设备变化时，会应用它的曲线。在均衡器页面拖动，编辑的是正在播放的输出设备。';
+
+  @override
+  String get eqOutputsRemembered => '已记住的输出设备';
+
+  @override
+  String get eqOutputSpeaker => '手机扬声器';
+
+  @override
+  String get eqOutputWired => '有线耳机';
+
+  @override
+  String get eqOutputUsb => 'USB 音频';
+
+  @override
+  String get eqOutputHdmi => 'HDMI';
+
+  @override
+  String get eqOutputBluetooth => '蓝牙';
+
+  @override
+  String get eqOutputOther => '其他输出设备';
+
+  @override
+  String get eqOutputPlayingNow => '正在播放';
+
+  @override
+  String eqOutputLastUsed(String date) {
+    return '上次使用 $date';
+  }
+
+  @override
+  String get eqOutputsEmpty => '用某个输出设备听过后，它会出现在这里。';
+
+  @override
+  String eqOutputForgetConfirm(String name) {
+    return '忘记“$name”？下次连接时它会作为新设备再次出现。';
+  }
+
+  @override
+  String get eqOutputForget => '忘记';
+
+  @override
+  String eqOutputPickPreset(String name) {
+    return '$name 的预设';
+  }
+
+  @override
+  String get eqOutputsHint => '点按输出设备可选择其预设。向左滑动可忘记它。';
+
+  @override
+  String eqEnabledOnOutput(String name) {
+    return '已开启 — $name';
+  }
+
+  @override
+  String get eqOutputNowPill => '当前';
+
+  @override
+  String get eqNeedsPlaybackTitle => '播放一首歌曲即可设置频段';
+
+  @override
+  String get eqPlayQueue => '播放队列';
+
+  @override
+  String eqPlayQueueHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '从上次停下的地方继续 · $_temp0';
+  }
 
   @override
   String get eqDisabledHint => '开启均衡器以调整频段。';

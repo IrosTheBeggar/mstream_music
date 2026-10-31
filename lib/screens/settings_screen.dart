@@ -20,7 +20,7 @@ import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
 import '../widgets/home_widget_sheet.dart';
-import 'eq_screen.dart';
+import 'eq/eq_screen.dart';
 import 'imported_shaders_screen.dart';
 
 class SettingsScreen extends StatefulWidget {

@@ -66,6 +66,8 @@ import 'l10n/localizations_delegates.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
+import 'package:dynamics_eq/dynamics_eq.dart';
+import 'media/dynamics_equalizer.dart';
 
 void main() {
   // Run the app inside a Zone whose print() handler tees every log line into
@@ -122,6 +124,14 @@ Future<void> _startApp() async {
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
   await SettingsManager().load();
+  // Which equalizer engine this device gets: the ten-band DynamicsProcessing
+  // effect (Android 9+, probed once natively) or just_audio's fixed
+  // five-band Equalizer. Decided here, before the handler builds the player,
+  // because the engine fixes how the player is constructed and toggled.
+  // `--dart-define=EQ_FIVE_BAND=true` forces the fallback for testing it on
+  // a modern device.
+  DynamicsEqualizer.supported = !const bool.fromEnvironment('EQ_FIVE_BAND') &&
+      await DynamicsEq.isSupported();
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();
