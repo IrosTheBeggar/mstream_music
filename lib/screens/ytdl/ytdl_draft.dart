@@ -883,7 +883,9 @@ class YtdlDraft extends ChangeNotifier {
   /// 6.30+ refuses it after the download: "Add anyway", outlined.
   bool get addAnyway => clash && owner.tier == YtdlServerTier.full;
 
-  bool get _mayNotMkdir => owner.server.noMkdir == true || owner.mkdirRefused;
+  /// The account may not make folders: noMkdir, or a mkdir refused this
+  /// session (spec §8 mkdir off).
+  bool get mayNotMkdir => owner.server.noMkdir == true || owner.mkdirRefused;
 
   /// The folder sheet's "Right here": the folder the explorer is showing,
   /// sent unchanged with no mkdir (spec §7).
@@ -895,7 +897,7 @@ class YtdlDraft extends ChangeNotifier {
   /// unchecked folder for this account — save the folder sheet's "Right
   /// here", the explorer's own folder, which needs none made.
   bool get mkdirBlocked =>
-      _mayNotMkdir &&
+      mayNotMkdir &&
       !_rightHere &&
       (_newSegments.isNotEmpty || checkUnknown);
 
@@ -1165,7 +1167,7 @@ class YtdlDraft extends ChangeNotifier {
     // ran (the other surface's): this one's own job isn't held yet.
     if (block != YtdlBlock.none ||
         alreadyAdding ||
-        (!checked && !rightHere && _mayNotMkdir)) {
+        (!checked && !rightHere && mayNotMkdir)) {
       _addPhase = YtdlAddPhase.idle;
       _afterChange();
       return false;
@@ -1174,7 +1176,7 @@ class YtdlDraft extends ChangeNotifier {
     final t = target;
     final codec = format;
     final makeFolder = !rightHere &&
-        !_mayNotMkdir &&
+        !mayNotMkdir &&
         (_newSegments.isNotEmpty || checkUnknown || !checked);
     final firstNew = _newSegments.isEmpty
         ? null

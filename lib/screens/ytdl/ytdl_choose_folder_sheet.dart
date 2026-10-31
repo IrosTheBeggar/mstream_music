@@ -12,8 +12,9 @@ import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart';
 
 /// "Choose a folder" for an account that can't make folders (spec §8
-/// mkdir off, the NoMkdir board's frame 2): browse the folders that exist
-/// on the draft's server and pick one, for this song only. It opens at
+/// mkdir off, the NoMkdir board's frame 2) or after a folder couldn't be
+/// made (§8 mkdir failed): browse the folders that exist on the draft's
+/// server and pick one, for this song only. It opens at
 /// [startAt] when given, else at the deepest folder on the song's path
 /// that listed ([YtdlDraft.deepestExisting]: "Music › Daft Punk", with
 /// "Music" to go up, as the board draws it), else at the draft's folder or
@@ -194,17 +195,22 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
         children: [
           const DestGrabHandle(),
           _header(l),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            child: Text(
-              l.ytdlChooseSub,
-              style: TextStyle(
-                color: VelvetColors.textSecondary,
-                fontSize: 13,
-                height: 18 / 13,
+          // Why only folders that are there — for an account that can't
+          // make folders (the NoMkdir board). After a folder that couldn't
+          // be made the error already said why, and the account may.
+          if (widget.draft.mayNotMkdir)
+            Padding(
+              key: const ValueKey('ytdl-choose-sub'),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Text(
+                l.ytdlChooseSub,
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 13,
+                  height: 18 / 13,
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 8),
           _crumbRow(l),
           Flexible(child: body),

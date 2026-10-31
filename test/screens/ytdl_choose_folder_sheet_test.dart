@@ -107,6 +107,31 @@ void main() {
     expect(find.text('\u2068Music\u2069'), findsOneWidget);
   });
 
+  testWidgets('after a folder that couldn\'t be made, for an account that '
+      'may make folders: no "can\'t make folders" line (spec \u00a78 mkdir '
+      'failed)', (tester) async {
+    s.noMkdir = false;
+    await open(tester);
+    expect(key('ytdl-choose-sheet'), findsOneWidget);
+    expect(key('ytdl-choose-sub'), findsNothing);
+    expect(find.text(h.l.ytdlChooseSub), findsNothing);
+    expect(key('ytdl-choose-folder-Daft Punk'), findsOneWidget);
+  });
+
+  testWidgets('\u2026 and with it once a mkdir was refused this session (a stale '
+      'noMkdir)', (tester) async {
+    s.noMkdir = false;
+    h.fake.mkdirRefusal = (403, 'Create Folder Disabled');
+    await tester.runAsync(() async {
+      await h.hub.stateFor(s).start(h.request(
+          directory: '/Music/New/', mkdir: '/Music/New/', inline: () => true));
+      await ytdlSettle();
+    });
+    expect(h.hub.stateFor(s).mkdirRefused, isTrue);
+    await open(tester);
+    expect(find.text(h.l.ytdlChooseSub), findsOneWidget);
+  });
+
   testWidgets('called as the card calls it (no folder given), it opens at '
       'the deepest folder that listed', (tester) async {
     // One More Time: Music › Daft Punk lists, Discovery isn't there.
