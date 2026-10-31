@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../media/audio_stuff.dart' show AudioPlayerHandler, FanOutSitOut;
+import '../objects/genre_source.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -1101,13 +1102,31 @@ class _RatingSheetState extends State<RatingSheet> {
 
 // ── Genres ─────────────────────────────────────────────────────────────
 
+bool _genreKindKnownUnsupported(Server s) => paramKnownUnsupported(
+    ServerVersion.tryParse(s.serverVersion), ServerParam.genreSource);
+
+/// The kind of genre link [s]'s Auto DJ filter is narrowed to as sent: all
+/// of them on a server known to predate random-songs' `genreSource`, whose
+/// key is stripped before it goes, whatever is stored.
+GenreSource genreKindSent(Server s) => _genreKindKnownUnsupported(s)
+    ? GenreSource.both
+    : s.autoDJGenreSource;
+
+/// Whether the Genres sheet offers Generated | Tags | Mixed for [s]: it has
+/// genres of both kinds ([sources], what it said it has, null until it
+/// answers) and isn't known too old to be asked for one.
+bool genreKindOffered(Server s, GenreSources? sources) =>
+    (sources?.offersChoice ?? false) && !_genreKindKnownUnsupported(s);
+
 class _GenreDraft {
-  _GenreDraft(this.mode, this.genres);
+  _GenreDraft(this.mode, this.genres, this.source);
   String mode; // 'whitelist' | 'blacklist'
   final List<String> genres;
+  GenreSource source;
 }
 
-/// Only or Skip, and which genres — per server, from that server's own list.
+/// Only or Skip, which kind of genre (Generated, Tags or Mixed) and which
+/// genres — per server, from that server's own list.
 class GenresSheet extends StatefulWidget {
   const GenresSheet({super.key, required this.servers, required this.initial});
 
@@ -1125,20 +1144,35 @@ class _GenresSheetState extends State<GenresSheet> {
   String _query = '';
   late final Map<String, _GenreDraft> _drafts = {
     for (final s in widget.servers)
-      s.localname: _GenreDraft(s.autoDJGenreMode,
-          s.autoDJGenreEnabled ? List.of(s.autoDJGenres) : <String>[]),
+      s.localname: _GenreDraft(
+          s.autoDJGenreMode,
+          s.autoDJGenreEnabled ? List.of(s.autoDJGenres) : <String>[],
+          s.autoDJGenreSource),
   };
   // Only servers the user touched are written back: a server whose filter
   // was switched off keeps its stored list unless it is edited here.
   final Set<String> _touched = {};
+  // Lists by server and kind (_listKey); what each server says it has.
   final Map<String, List<String>> _available = {};
-  // What each server had chosen when its list was first shown: those lead the
-  // list, and ticking more doesn't reorder it under the finger.
+  final Map<String, GenreSources?> _sources = {};
+  // What each server had chosen when its list was first shown, and when its
+  // kind changed: those lead the list, so ticking more doesn't reorder it
+  // under the finger and a genre ticked under another kind stays in view.
   final Map<String, List<String>> _pinned = {};
   final Map<String, bool> _failed = {};
   final Set<String> _loading = {};
 
   _GenreDraft get _draft => _drafts[_target.localname]!;
+
+  static String _listKey(Server s, GenreSource source) =>
+      '${s.localname}|${source.name}';
+
+  bool _offersSource(Server s) => genreKindOffered(s, _sources[s.localname]);
+
+  /// The kind [s]'s list shows: the draft's, or all of them where there is
+  /// no choice — or until the server has said whether there is one.
+  GenreSource _listed(Server s) =>
+      _offersSource(s) ? _drafts[s.localname]!.source : GenreSource.both;
 
   final _sheet = DraggableScrollableController();
   final _searchFocus = FocusNode();
@@ -1164,30 +1198,35 @@ class _GenresSheetState extends State<GenresSheet> {
     super.dispose();
   }
 
+  /// Loads the list [s] shows now. Its first answer says what kinds the
+  /// server has, which can change that: a stored Generated or Tags then
+  /// loads its own list.
   Future<void> _load(Server s) async {
-    if (_available.containsKey(s.localname) || _loading.contains(s.localname)) {
-      return;
-    }
+    final source = _listed(s);
+    final key = _listKey(s, source);
+    if (_available.containsKey(key) || _loading.contains(key)) return;
     setState(() {
-      _loading.add(s.localname);
-      _failed.remove(s.localname);
+      _loading.add(key);
+      _failed.remove(key);
     });
     try {
-      final genres = await ApiManager().getGenres(useThisServer: s);
+      final r = await ApiManager().getGenres(useThisServer: s, source: source);
       if (!mounted) return;
       setState(() {
-        _available[s.localname] = genres
+        _available[key] = r.genres
             .map((g) => (g['name'] ?? '').toString())
             .where((g) => g.isNotEmpty)
             .toList()
           ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-        _loading.remove(s.localname);
+        _sources[s.localname] = r.sources;
+        _loading.remove(key);
       });
+      if (_listed(s) != source) unawaited(_load(s));
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _failed[s.localname] = true;
-        _loading.remove(s.localname);
+        _failed[key] = true;
+        _loading.remove(key);
       });
     }
   }
@@ -1198,14 +1237,25 @@ class _GenresSheetState extends State<GenresSheet> {
       });
 
   void _done() {
+    var changed = false;
     for (final s in widget.servers) {
-      if (!_touched.contains(s.localname)) continue;
       final d = _drafts[s.localname]!;
-      s.autoDJGenres = List.of(d.genres);
-      s.autoDJGenreMode = d.mode;
-      s.autoDJGenreEnabled = d.genres.isNotEmpty;
+      // What the list showed is what the filter matches: the chosen kind
+      // where the server offers the choice, every kind where it doesn't — so
+      // a Generated or Tags left from when it did can't go on narrowing picks
+      // with no switch to show it. A server that never answered keeps its own.
+      final kind = _sources.containsKey(s.localname) ? _listed(s) : d.source;
+      if (_touched.contains(s.localname)) {
+        s.autoDJGenres = List.of(d.genres);
+        s.autoDJGenreMode = d.mode;
+        s.autoDJGenreEnabled = d.genres.isNotEmpty;
+      } else if (kind == s.autoDJGenreSource) {
+        continue;
+      }
+      s.autoDJGenreSource = kind;
+      changed = true;
     }
-    if (_touched.isNotEmpty) {
+    if (changed) {
       ServerManager().callAfterEditServer();
       MediaManager().audioHandler.customAction('forceAutoDJRefresh');
     }
@@ -1225,7 +1275,8 @@ class _GenresSheetState extends State<GenresSheet> {
 
   Widget _list(AppLocalizations l) {
     final key = _target.localname;
-    if (_loading.contains(key)) {
+    final listKey = _listKey(_target, _listed(_target));
+    if (_loading.contains(listKey)) {
       return SliverFillRemaining(
         hasScrollBody: false,
         child: Center(
@@ -1233,14 +1284,15 @@ class _GenresSheetState extends State<GenresSheet> {
       );
     }
     final chosen = _draft.genres;
-    final available = _available[key] ?? const <String>[];
+    final available = _available[listKey] ?? const <String>[];
     // Chosen first — including ones the server no longer reports, so they
     // can still be let go — as of when the list was first shown, so ticking
     // doesn't move rows under the finger, and unticking the last one doesn't
     // take the rows away.
     final pinned = _pinned.putIfAbsent(key, () => List.of(chosen));
+    final failed = _failed[listKey] == true;
     if (pinned.isEmpty && chosen.isEmpty) {
-      if (_failed[key] == true) {
+      if (failed) {
         return _message(l.autoDjGenreLoadError, color: VelvetColors.error);
       }
       if (available.isEmpty) return _message(l.autoDjGenresNone);
@@ -1253,9 +1305,13 @@ class _GenresSheetState extends State<GenresSheet> {
       ...pinned.where(matches),
       ...available.where((g) => !pinnedSet.contains(g) && matches(g)),
     ];
-    if (rows.isEmpty) return _message(l.autoDjNoMatches);
+    if (rows.isEmpty) {
+      return failed
+          ? _message(l.autoDjGenreLoadError, color: VelvetColors.error)
+          : _message(l.autoDjNoMatches);
+    }
     final full = chosen.length >= AutoDJManager.maxGenres;
-    return SliverPadding(
+    final list = SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList.separated(
         itemCount: rows.length,
@@ -1285,6 +1341,54 @@ class _GenresSheetState extends State<GenresSheet> {
                     }),
           );
         },
+      ),
+    );
+    if (!failed) return list;
+    // The pinned rows stay, so they can still be let go, under why the rest
+    // of the list is missing.
+    return SliverMainAxisGroup(slivers: [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Text(l.autoDjGenreLoadError,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: VelvetColors.error)),
+        ),
+      ),
+      list,
+    ]);
+  }
+
+  /// Generated | Tags | Mixed: which of the server's genre links the list
+  /// shows and the filter matches. The chosen genres stay ticked, and in
+  /// view: the new kind's list need not hold them.
+  Widget _sourceSwitch(AppLocalizations l) {
+    // One line each, shrunk rather than broken mid-word where a translation
+    // is long ("Сгенерированные" on a narrow phone).
+    Widget label(String text) =>
+        FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1));
+    return Semantics(
+      label: l.genreSourceLabel,
+      child: SegmentedButton<GenreSource>(
+        key: const ValueKey('auto-dj-genre-source'),
+        segments: [
+          ButtonSegment(
+              value: GenreSource.model, label: label(l.genreSourceGenerated)),
+          ButtonSegment(value: GenreSource.tag, label: label(l.genreSourceTags)),
+          ButtonSegment(
+              value: GenreSource.both, label: label(l.genreSourceMixed)),
+        ],
+        selected: {_draft.source},
+        showSelectedIcon: false,
+        onSelectionChanged: (set) {
+          _edit((d) {
+            d.source = set.first;
+            final pinned = _pinned.putIfAbsent(_target.localname, () => []);
+            pinned.addAll(d.genres.where((g) => !pinned.contains(g)));
+          });
+          _load(_target);
+        },
+        style: autoDjSegmentStyle(),
       ),
     );
   }
@@ -1349,6 +1453,10 @@ class _GenresSheetState extends State<GenresSheet> {
                               _edit((d) => d.mode = set.first),
                           style: autoDjSegmentStyle(),
                         ),
+                        if (_offersSource(_target)) ...[
+                          const SizedBox(height: 10),
+                          _sourceSwitch(l),
+                        ],
                         const SizedBox(height: 10),
                         TextField(
                           key: const ValueKey('auto-dj-genre-search'),

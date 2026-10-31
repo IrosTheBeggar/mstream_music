@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/genre_source.dart';
 import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/auto_dj_manager.dart';
@@ -141,6 +142,19 @@ void main() {
         genreEnabled: true, genreMode: 'blacklist', genres: const ['jazz']));
     expect(on['genres'], ['jazz']);
     expect(on['genreMode'], 'blacklist');
+    expect(on, isNot(contains('genreSource')),
+        reason: 'Mixed matches both kinds: the pre-source wire shape');
+  });
+
+  test("a single kind of genre rides along with the genre list, never "
+      "without it", () {
+    final generated = serverWith(genreEnabled: true, genres: const ['jazz'])
+      ..autoDJGenreSource = GenreSource.model;
+    expect(mgr.libraryFilters(generated)['genreSource'], 'model');
+    generated.autoDJGenreSource = GenreSource.tag;
+    expect(mgr.libraryFilters(generated)['genreSource'], 'tag');
+    generated.autoDJGenreEnabled = false;
+    expect(mgr.libraryFilters(generated), isNot(contains('genreSource')));
   });
 
   group('track length', () {

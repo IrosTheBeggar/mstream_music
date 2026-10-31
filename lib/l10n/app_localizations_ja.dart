@@ -842,10 +842,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjHarmonicTitle => 'ハーモニックミキシング';
 
   @override
+  String get autoDjHarmonicHint => '次は相性の良いキーの曲';
+
+  @override
   String get autoDjDurationRange => '長さ';
 
   @override
-  String get autoDjMoodTitle => 'ムード';
+  String get autoDjMoodTitle => 'スマートフィルター';
 
   @override
   String get autoDjGenreLoadError => 'ジャンルを読み込めませんでした';
@@ -1014,6 +1017,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get genreSourceBoth => '両方';
+
+  @override
+  String get genreSourceMixed => 'ミックス';
 
   @override
   String get genreSourceLabel => 'ジャンルの取得元';
@@ -5165,7 +5171,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjIncludeUnknown => '不明も含める';
 
   @override
-  String get autoDjTempo => 'テンポ';
+  String get autoDjTempo => 'ビートマッチング';
 
   @override
   String get autoDjSkipWords => '除外ワード';

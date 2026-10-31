@@ -138,6 +138,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             FedCard(children: [
               if (showPlayFrom) _playFromRow(l),
               _firstSongRow(l),
+              _batchRow(l),
             ]),
             _header(l.autoDjMustMatch),
             FedCard(children: [
@@ -153,8 +154,6 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               _harmonicRow(l),
               _skipWordsRow(l),
             ]),
-            const SizedBox(height: 16),
-            FedCard(children: [_batchRow(l)]),
           ],
         ),
       ),
@@ -413,7 +412,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     }
     final servers = _editServers;
     final values = servers.map((s) => _genreValue(l, s)).toList();
-    final value = allSame(values) ? values.firstOrNull : l.autoDjVaries;
+    // Servers agree on what they are sent, the kind of genre too, though the
+    // value doesn't name it.
+    final sent = [
+      for (final (i, s) in servers.indexed)
+        values[i] == null ? null : (values[i], genreKindSent(s)),
+    ];
+    final value = allSame(sent) ? values.firstOrNull : l.autoDjVaries;
     return _ValueRow(
       key: key,
       title: l.autoDjGenres,
@@ -512,8 +517,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           value: _needs(l, ServerParam.musicalKeys));
     }
     final mgr = AutoDJManager();
-    // The one switch on the screen: a plain yes or no with nothing to tune.
-    // One node for screen readers: the title, then on or off.
+    // The one switch on the screen: a plain yes or no with nothing to tune,
+    // so a line under the title says what it does. One node for screen
+    // readers: the title and that line, then on or off.
     return MergeSemantics(
       key: key,
       child: Semantics(
@@ -524,16 +530,28 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 52),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 8, 0),
+              padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
               child: Row(children: [
                 Expanded(
-                  child: Text(l.autoDjHarmonicTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: VelvetColors.textPrimary)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.autoDjHarmonicTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: VelvetColors.textPrimary)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(l.autoDjHarmonicHint,
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: VelvetColors.textSecondary)),
+                      ),
+                    ],
+                  ),
                 ),
                 ExcludeSemantics(
                   child: Switch(

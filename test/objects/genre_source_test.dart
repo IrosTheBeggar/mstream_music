@@ -21,6 +21,10 @@ void main() {
       expect(genreSourceFromName('both'), GenreSource.both);
       expect(genreSourceFromName(null), GenreSource.tag);
       expect(genreSourceFromName('guess'), GenreSource.tag);
+      expect(genreSourceFromName('guess', fallback: GenreSource.both),
+          GenreSource.both, reason: "the Auto DJ's own default");
+      expect(genreSourceFromName('tag', fallback: GenreSource.both),
+          GenreSource.tag);
     });
   });
 

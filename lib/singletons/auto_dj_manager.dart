@@ -562,6 +562,8 @@ class AutoDJManager {
     if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {
       out['genres'] = server.autoDJGenres;
       out['genreMode'] = server.autoDJGenreMode;
+      final source = server.autoDJGenreSource.apiValue;
+      if (source != null) out['genreSource'] = source;
     }
     final bounds = activeDurationBounds;
     if (bounds != null) {

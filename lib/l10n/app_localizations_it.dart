@@ -867,10 +867,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Mixaggio armonico';
 
   @override
+  String get autoDjHarmonicHint =>
+      'Brano successivo in una tonalità compatibile';
+
+  @override
   String get autoDjDurationRange => 'Durata';
 
   @override
-  String get autoDjMoodTitle => 'Atmosfera';
+  String get autoDjMoodTitle => 'Filtri intelligenti';
 
   @override
   String get autoDjGenreLoadError => 'Impossibile caricare i generi';
@@ -1045,6 +1049,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get genreSourceBoth => 'Entrambi';
+
+  @override
+  String get genreSourceMixed => 'Misto';
 
   @override
   String get genreSourceLabel => 'Origine dei generi';
@@ -5402,7 +5409,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Includi sconosciute';
 
   @override
-  String get autoDjTempo => 'Tempo';
+  String get autoDjTempo => 'Beatmatching';
 
   @override
   String get autoDjSkipWords => 'Parole escluse';

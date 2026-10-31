@@ -734,13 +734,17 @@
   "@autoDjHarmonicTitle": {
     "description": "Harmonic mixing row."
   },
+  "autoDjHarmonicHint": "Next song in a key that mixes well",
+  "@autoDjHarmonicHint": {
+    "description": "Line under the Harmonic mixing switch: what turning it on does."
+  },
   "autoDjDurationRange": "Length",
   "@autoDjDurationRange": {
     "description": "Label beside the length range slider."
   },
-  "autoDjMoodTitle": "Mood",
+  "autoDjMoodTitle": "Smart filters",
   "@autoDjMoodTitle": {
-    "description": "Auto DJ mood filter switch title."
+    "description": "Auto DJ smart filters row (the mood filter) and its sheet's title."
   },
   "autoDjGenreLoadError": "Could not load genres",
   "download": "Download",
@@ -888,6 +892,10 @@
   "genreSourceBoth": "Both",
   "@genreSourceBoth": {
     "description": "Genre list switch: tag and generated genres together."
+  },
+  "genreSourceMixed": "Mixed",
+  "@genreSourceMixed": {
+    "description": "Auto DJ genre filter's source switch: tag and generated genres together."
   },
   "genreSourceLabel": "Genre source",
   "@genreSourceLabel": {
@@ -5873,7 +5881,7 @@
     "placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}
   },
   "autoDjIncludeUnknown": "Include unknown",
-  "autoDjTempo": "Tempo",
+  "autoDjTempo": "Beat matching",
   "autoDjSkipWords": "Skip words",
   "autoDjBatch": "Batch",
   "autoDjVaries": "Varies",

@@ -874,10 +874,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Miksowanie harmoniczne';
 
   @override
+  String get autoDjHarmonicHint => 'Następny utwór w pasującej tonacji';
+
+  @override
   String get autoDjDurationRange => 'Długość';
 
   @override
-  String get autoDjMoodTitle => 'Nastrój';
+  String get autoDjMoodTitle => 'Inteligentne filtry';
 
   @override
   String get autoDjGenreLoadError => 'Nie można wczytać gatunków';
@@ -1056,6 +1059,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get genreSourceBoth => 'Oba';
+
+  @override
+  String get genreSourceMixed => 'Mieszane';
 
   @override
   String get genreSourceLabel => 'Źródło gatunków';
@@ -5531,7 +5537,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Uwzględnij nieznane';
 
   @override
-  String get autoDjTempo => 'Tempo';
+  String get autoDjTempo => 'Beatmatching';
 
   @override
   String get autoDjSkipWords => 'Pomijane słowa';

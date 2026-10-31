@@ -22,6 +22,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/media/audio_stuff.dart' show FanOutSitOut;
+import 'package:mstream_music/objects/genre_source.dart';
 import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/auto_dj_sheets.dart';
@@ -85,8 +86,10 @@ void main() {
   });
 
   /// A page whose button opens [sheet] in the Auto DJ chrome.
-  Future<void> open(WidgetTester tester, WidgetBuilder sheet) async {
+  Future<void> open(WidgetTester tester, WidgetBuilder sheet,
+      {Locale? locale}) async {
     await tester.pumpWidget(MaterialApp(
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: appSupportedLocales,
       navigatorObservers: [pops],
@@ -278,10 +281,10 @@ void main() {
     testWidgets('off: the switch in the title row, "Off", the slider '
         'resting', (tester) async {
       await open(tester, (_) => const TempoSheet());
-      expect(find.text('Tempo'), findsOneWidget);
+      expect(find.text('Beat matching'), findsOneWidget);
       expect(tester.widget<Switch>(toggle).value, isFalse);
-      expect(sameRow(tester, toggle, find.text('Tempo')), isTrue);
-      expect(sameRow(tester, _sheetValue, find.text('Tempo')), isTrue);
+      expect(sameRow(tester, toggle, find.text('Beat matching')), isTrue);
+      expect(sameRow(tester, _sheetValue, find.text('Beat matching')), isTrue);
       expect(value(tester), 'Off');
       expect(sliderOn(tester), isFalse);
       expect(find.text('Off'), findsOneWidget,
@@ -346,7 +349,7 @@ void main() {
       await tester.pumpAndSettle();
       await tapAndSave(tester, _done);
       expect(mgr.bpmContinuityEnabled, isTrue, reason: 'applied in memory');
-      expect(find.text('Tempo'), findsNothing, reason: 'closed all the same');
+      expect(find.text('Beat matching'), findsNothing, reason: 'closed all the same');
     });
 
     testWidgets('closing discards the draft', (tester) async {
@@ -356,7 +359,7 @@ void main() {
       await tester.drag(slider, const Offset(2000, 0));
       await tester.pumpAndSettle();
       await close(tester);
-      expect(find.text('Tempo'), findsNothing);
+      expect(find.text('Beat matching'), findsNothing);
       expect(mgr.bpmContinuityEnabled, isFalse);
       expect(mgr.bpmTolerance, 8);
     });
@@ -922,11 +925,14 @@ void main() {
   group('GenresSheet', () {
     // getGenres runs on ApiManager's pooled client; resetDirectClient()
     // inside http.runWithClient makes that pool the mock.
-    late Map<String, http.Response Function()> answers;
+    late Map<String, http.Response Function(String? source)> answers;
     late List<String> asked;
+    // The `source` each genre list was asked for, null for both kinds.
+    late List<String?> kinds;
 
     setUp(() {
       asked = [];
+      kinds = [];
       answers = {};
       http.runWithClient(
           () => ApiManager().resetDirectClient(),
@@ -936,17 +942,34 @@ void main() {
                 if (answer == null || req.url.path != '/api/v1/db/genres') {
                   return http.Response('not found', 404);
                 }
-                return answer();
+                final source =
+                    (jsonDecode(req.body) as Map)['source'] as String?;
+                kinds.add(source);
+                return answer(source);
               }));
     });
     tearDown(() => ApiManager().resetDirectClient());
 
-    http.Response genres(List<String> names) => http.Response(
-        jsonEncode({
-          'genres': [for (final n in names) {'name': n, 'track_count': 1}]
-        }),
-        200,
-        headers: {'content-type': 'application/json'});
+    http.Response genres(List<String> names, {Map<String, int>? sources}) =>
+        http.Response(
+            jsonEncode({
+              'genres': [for (final n in names) {'name': n, 'track_count': 1}],
+              'sources': ?sources,
+            }),
+            200,
+            headers: {'content-type': 'application/json'});
+
+    // A server that tells its genres apart (mStream #716): each kind's own
+    // list, and how many genres each kind has whatever was asked for.
+    http.Response Function(String?) byKind(
+            {required List<String> tag, required List<String> model}) =>
+        (source) => genres(
+            switch (source) {
+              'tag' => tag,
+              'model' => model,
+              _ => {...tag, ...model}.toList(),
+            },
+            sources: {'tag': tag.length, 'model': model.length});
 
     Server server(String name,
             {bool enabled = false,
@@ -960,8 +983,10 @@ void main() {
     Finder row(String g) => find.byKey(ValueKey('auto-dj-genre-$g'));
     bool on(WidgetTester tester, String g) =>
         tester.widget<FedCheckRow>(row(g)).value;
+    // Every row built, the ones scrolled under the header too.
     List<String> order(WidgetTester tester) => [
-          for (final e in find.byType(FedCheckRow).evaluate())
+          for (final e
+              in find.byType(FedCheckRow, skipOffstage: false).evaluate())
             ((e.widget as FedCheckRow).key as ValueKey<String>)
                 .value
                 .replaceFirst('auto-dj-genre-', ''),
@@ -973,7 +998,7 @@ void main() {
 
     testWidgets('ticking does not reorder the list under the finger',
         (tester) async {
-      answers['home.example.com'] = () => genres(['Ambient', 'Blues', 'jazz']);
+      answers['home.example.com'] = (_) => genres(['Ambient', 'Blues', 'jazz']);
       final s = server('home', enabled: true, list: []);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       expect(order(tester), ['Ambient', 'Blues', 'jazz']);
@@ -987,7 +1012,7 @@ void main() {
     testWidgets("the server's list, sorted, the chosen first; search narrows "
         'it', (tester) async {
       answers['home.example.com'] =
-          () => genres(['rock', 'Ambient', '', 'jazz', 'Blues']);
+          (_) => genres(['rock', 'Ambient', '', 'jazz', 'Blues']);
       final s = server('home', enabled: true, list: ['rock']);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       expect(find.text('Genres'), findsOneWidget);
@@ -1012,7 +1037,7 @@ void main() {
 
     testWidgets('ticks, Only | Skip and Clear edit the draft; closing '
         'discards it', (tester) async {
-      answers['home.example.com'] = () => genres(['Ambient', 'jazz', 'rock']);
+      answers['home.example.com'] = (_) => genres(['Ambient', 'jazz', 'rock']);
       final s = server('home', enabled: true, list: ['rock']);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       await tester.tap(row('jazz'));
@@ -1036,7 +1061,7 @@ void main() {
 
     testWidgets('a list switched off opens with nothing chosen',
         (tester) async {
-      answers['home.example.com'] = () => genres(['jazz', 'rock']);
+      answers['home.example.com'] = (_) => genres(['jazz', 'rock']);
       final s = server('home', enabled: false, list: ['rock']);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       expect(on(tester, 'rock'), isFalse);
@@ -1046,7 +1071,7 @@ void main() {
 
     testWidgets('a chosen genre the server no longer reports can still be '
         'let go', (tester) async {
-      answers['home.example.com'] = () => genres(['jazz']);
+      answers['home.example.com'] = (_) => genres(['jazz']);
       final s = server('home', enabled: true, list: ['polka']);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       expect(order(tester), ['polka', 'jazz']);
@@ -1054,20 +1079,20 @@ void main() {
     });
 
     testWidgets('no genres, and a failed load', (tester) async {
-      answers['home.example.com'] = () => genres(const []);
+      answers['home.example.com'] = (_) => genres(const []);
       final s = server('home');
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       expect(find.text('No genres'), findsOneWidget);
       await close(tester);
 
-      answers['home.example.com'] = () => http.Response('boom', 500);
+      answers['home.example.com'] = (_) => http.Response('boom', 500);
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
       expect(find.text('Could not load genres'), findsOneWidget);
     });
 
     testWidgets('Done with nothing touched just closes', (tester) async {
-      answers['home.example.com'] = () => genres(['jazz', 'rock']);
+      answers['home.example.com'] = (_) => genres(['jazz', 'rock']);
       final s = server('home', enabled: true, list: ['rock']);
       await open(tester, (_) => GenresSheet(servers: [s], initial: s));
       await tester.tap(_done);
@@ -1079,7 +1104,7 @@ void main() {
 
     testWidgets('at the cap: the value says so and an unchosen genre rests',
         (tester) async {
-      answers['home.example.com'] = () => genres(['jazz']);
+      answers['home.example.com'] = (_) => genres(['jazz']);
       final s = server('home', enabled: true, list: [
         for (var i = 0; i < AutoDJManager.maxGenres; i++) 'g$i'
       ]);
@@ -1099,8 +1124,8 @@ void main() {
 
     testWidgets("two servers: chips switch whose list, each fetched from its "
         'own server once', (tester) async {
-      answers['home.example.com'] = () => genres(['jazz', 'rock']);
-      answers['office.example.com'] = () => genres(['Ambient', 'house']);
+      answers['home.example.com'] = (_) => genres(['jazz', 'rock']);
+      answers['office.example.com'] = (_) => genres(['Ambient', 'house']);
       final a = server('home', enabled: true, list: ['rock']);
       final b = server('office', mode: 'blacklist');
       await open(tester, (_) => GenresSheet(servers: [a, b], initial: a));
@@ -1115,6 +1140,172 @@ void main() {
       await tester.pumpAndSettle();
       expect(order(tester), ['rock', 'jazz']);
       expect(asked, ['home.example.com', 'office.example.com']);
+    });
+
+    // ── Generated | Tags | Mixed ──
+
+    final sourceSwitch = find.byKey(const ValueKey('auto-dj-genre-source'));
+    Set<GenreSource> kind(WidgetTester tester) =>
+        tester.widget<SegmentedButton<GenreSource>>(sourceSwitch).selected;
+
+    testWidgets('Generated | Tags | Mixed: Mixed lists both kinds',
+        (tester) async {
+      answers['home.example.com'] =
+          byKind(tag: ['jazz', 'rock'], model: ['Ambient', 'jazz']);
+      final s = server('home');
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s));
+      expect(sourceSwitch, findsOneWidget);
+      expect(kind(tester), {GenreSource.both});
+      expect(
+          [for (final t in ['Generated', 'Tags', 'Mixed']) find.text(t)],
+          everyElement(findsOneWidget));
+      expect(order(tester), ['Ambient', 'jazz', 'rock']);
+      expect(kinds, [null]);
+    });
+
+    testWidgets('a kind re-lists from the server; the ticked genres stay, '
+        'and closing keeps the stored kind', (tester) async {
+      answers['home.example.com'] =
+          byKind(tag: ['jazz', 'rock'], model: ['Ambient', 'house']);
+      final s = server('home', enabled: true, list: ['rock']);
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s));
+      await tester.tap(find.text('Generated'));
+      await tester.pumpAndSettle();
+      expect(kind(tester), {GenreSource.model});
+      expect(order(tester), ['rock', 'Ambient', 'house'],
+          reason: 'a chosen tag genre can still be let go');
+      expect(on(tester, 'rock'), isTrue);
+
+      await tester.tap(find.text('Tags'));
+      await tester.pumpAndSettle();
+      expect(order(tester), ['rock', 'jazz']);
+      await tester.tap(find.text('Mixed'));
+      await tester.pumpAndSettle();
+      expect(order(tester), ['rock', 'Ambient', 'house', 'jazz']);
+      expect(kinds, [null, 'model', 'tag'], reason: 'each kind fetched once');
+
+      await close(tester);
+      expect(s.autoDJGenreSource, GenreSource.both);
+    });
+
+    testWidgets('a stored kind opens on its own list', (tester) async {
+      answers['home.example.com'] =
+          byKind(tag: ['jazz'], model: ['Ambient', 'house']);
+      final s = server('home', enabled: true, list: ['house'])
+        ..autoDJGenreSource = GenreSource.model;
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s));
+      expect(kind(tester), {GenreSource.model});
+      expect(order(tester), ['house', 'Ambient']);
+      expect(kinds, [null, 'model'],
+          reason: 'what the server has comes back with the first list');
+    });
+
+    testWidgets('no switch where there is no choice, or the server is too '
+        'old to filter by kind', (tester) async {
+      // A server that can't tell its genres apart lists them all, whatever
+      // is stored.
+      answers['home.example.com'] = (_) => genres(['jazz', 'Ambient']);
+      final old = server('home')..autoDJGenreSource = GenreSource.model;
+      await open(tester, (_) => GenresSheet(servers: [old], initial: old));
+      expect(sourceSwitch, findsNothing);
+      expect(order(tester), ['Ambient', 'jazz']);
+      expect(kinds, [null]);
+      await close(tester);
+
+      // Only tag genres here: nothing to choose between.
+      answers['home.example.com'] = byKind(tag: ['jazz'], model: []);
+      final tagsOnly = server('home');
+      await open(
+          tester, (_) => GenresSheet(servers: [tagsOnly], initial: tagsOnly));
+      expect(sourceSwitch, findsNothing);
+      await close(tester);
+
+      // Both kinds, but random-songs there predates `genreSource`.
+      answers['home.example.com'] = byKind(tag: ['jazz'], model: ['Ambient']);
+      final before = server('home')..serverVersion = '6.32.1';
+      await open(
+          tester, (_) => GenresSheet(servers: [before], initial: before));
+      expect(sourceSwitch, findsNothing);
+    });
+
+    testWidgets('a genre ticked under one kind stays in view, ticked, under '
+        'the next', (tester) async {
+      answers['home.example.com'] =
+          byKind(tag: ['acid', 'rock'], model: ['Ambient', 'house']);
+      final s = server('home');
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s));
+      await tester.tap(row('acid'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Generated'));
+      await tester.pumpAndSettle();
+      expect(order(tester), ['acid', 'Ambient', 'house']);
+      expect(on(tester, 'acid'), isTrue);
+      await tester.tap(row('acid'));
+      await tester.pumpAndSettle();
+      expect(order(tester), ['acid', 'Ambient', 'house'],
+          reason: 'let go, it keeps its place');
+      expect(on(tester, 'acid'), isFalse);
+    });
+
+    testWidgets("a kind whose list fails says so above the genres still "
+        "pinned", (tester) async {
+      final kinds = byKind(tag: ['rock'], model: ['Ambient']);
+      answers['home.example.com'] = (source) =>
+          source == 'tag' ? http.Response('boom', 500) : kinds(source);
+      final s = server('home');
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s));
+      await tester.tap(row('Ambient'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Generated'));
+      await tester.pumpAndSettle();
+      await tester.tap(_clear);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tags'));
+      await tester.pumpAndSettle();
+      expect(find.text('Could not load genres'), findsOneWidget);
+      expect(order(tester), ['Ambient'], reason: 'still there to tick again');
+      expect(on(tester, 'Ambient'), isFalse);
+    });
+
+    testWidgets('a long translation shrinks to one line on a narrow phone',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      answers['home.example.com'] = byKind(tag: ['jazz'], model: ['Ambient']);
+      final s = server('home');
+      await open(tester, (_) => GenresSheet(servers: [s], initial: s),
+          locale: const Locale('ru'));
+      expect(find.text('Сгенерированные'), findsOneWidget);
+      expect(
+          tester.getSize(sourceSwitch).height,
+          tester
+              .getSize(find.byKey(const ValueKey('auto-dj-genre-mode')))
+              .height,
+          reason: 'as tall as Only | Skip: no label broke onto a second line');
+    });
+  });
+
+  group('genre kind rules', () {
+    Server at(String? version, [GenreSource kind = GenreSource.model]) =>
+        Server('https://h.example.com', 'u', 'p', 'JWT', 'h')
+          ..serverVersion = version
+          ..autoDJGenreSource = kind;
+
+    test('offered where the server has both kinds and can be asked for one',
+        () {
+      expect(genreKindOffered(at('6.33.0'), const GenreSources(3, 5)), isTrue);
+      expect(genreKindOffered(at(null), const GenreSources(3, 5)), isTrue,
+          reason: 'an unknown version is sent the key and learns');
+      expect(genreKindOffered(at('6.33.0'), const GenreSources(3, 0)), isFalse);
+      expect(genreKindOffered(at('6.33.0'), null), isFalse,
+          reason: 'not before the server says what it has');
+      expect(genreKindOffered(at('6.32.1'), const GenreSources(3, 5)), isFalse);
+    });
+
+    test('sent: the stored kind, or every kind where the key is stripped', () {
+      expect(genreKindSent(at('6.33.0')), GenreSource.model);
+      expect(genreKindSent(at(null, GenreSource.tag)), GenreSource.tag);
+      expect(genreKindSent(at('6.32.1')), GenreSource.both);
     });
   });
 }

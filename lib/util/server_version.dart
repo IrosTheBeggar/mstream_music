@@ -176,6 +176,11 @@ enum ServerParam {
   /// random-songs: which way `genres` applies.
   genreMode,
 
+  /// random-songs: which genre links `genres` matches — the files' tags or
+  /// the discovery model's (mStream's V79 `track_genres.source`).
+  /// Stripped, the list matches both, as before.
+  genreSource,
+
   /// random-songs: BPM-continuity windows and their relaxation step.
   bpmRanges,
   bpmRangesWide,
@@ -265,6 +270,11 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   // vector seed — and move with the two lines above if it is numbered
   // differently.
   ServerParam.limit: ServerVersion(6, 26, 0, '6.26.0'),
+  // random-songs' `genreSource` merged after the 6.32.1 tag (2026-10-31), so
+  // the floor is the next minor, an expected release like the 6.26.0 lines
+  // above; change it if that release is numbered differently. Erring high
+  // only sends the genre list against both kinds of link.
+  ServerParam.genreSource: ServerVersion(6, 33, 0, '6.33.0'),
   // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),

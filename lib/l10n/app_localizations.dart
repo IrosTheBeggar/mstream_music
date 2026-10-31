@@ -1584,16 +1584,22 @@ abstract class AppLocalizations {
   /// **'Harmonic mixing'**
   String get autoDjHarmonicTitle;
 
+  /// Line under the Harmonic mixing switch: what turning it on does.
+  ///
+  /// In en, this message translates to:
+  /// **'Next song in a key that mixes well'**
+  String get autoDjHarmonicHint;
+
   /// Label beside the length range slider.
   ///
   /// In en, this message translates to:
   /// **'Length'**
   String get autoDjDurationRange;
 
-  /// Auto DJ mood filter switch title.
+  /// Auto DJ smart filters row (the mood filter) and its sheet's title.
   ///
   /// In en, this message translates to:
-  /// **'Mood'**
+  /// **'Smart filters'**
   String get autoDjMoodTitle;
 
   /// No description provided for @autoDjGenreLoadError.
@@ -1871,6 +1877,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Both'**
   String get genreSourceBoth;
+
+  /// Auto DJ genre filter's source switch: tag and generated genres together.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed'**
+  String get genreSourceMixed;
 
   /// Accessibility label for the genre list's Tags / Generated / Both switch.
   ///
@@ -8551,7 +8563,7 @@ abstract class AppLocalizations {
   /// No description provided for @autoDjTempo.
   ///
   /// In en, this message translates to:
-  /// **'Tempo'**
+  /// **'Beat matching'**
   String get autoDjTempo;
 
   /// No description provided for @autoDjSkipWords.

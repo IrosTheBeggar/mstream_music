@@ -22,12 +22,14 @@ enum GenreSource {
       apiValue == null ? <String, dynamic>{} : {'source': apiValue};
 }
 
-/// A stored setting name back to the kind; tags for anything unknown.
-GenreSource genreSourceFromName(Object? name) {
+/// A stored setting name back to the kind; [fallback] (tags) for anything
+/// unknown.
+GenreSource genreSourceFromName(Object? name,
+    {GenreSource fallback = GenreSource.tag}) {
   for (final s in GenreSource.values) {
     if (s.name == name) return s;
   }
-  return GenreSource.tag;
+  return fallback;
 }
 
 /// How many genres each kind has on a server (its `sources` block).

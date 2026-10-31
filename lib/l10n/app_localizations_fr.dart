@@ -870,10 +870,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Mixage harmonique';
 
   @override
+  String get autoDjHarmonicHint =>
+      'Morceau suivant dans une tonalité compatible';
+
+  @override
   String get autoDjDurationRange => 'Durée';
 
   @override
-  String get autoDjMoodTitle => 'Ambiance';
+  String get autoDjMoodTitle => 'Filtres intelligents';
 
   @override
   String get autoDjGenreLoadError => 'Impossible de charger les genres';
@@ -1049,6 +1053,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get genreSourceBoth => 'Les deux';
+
+  @override
+  String get genreSourceMixed => 'Mixte';
 
   @override
   String get genreSourceLabel => 'Origine des genres';
@@ -5424,7 +5431,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Inclure les inconnues';
 
   @override
-  String get autoDjTempo => 'Tempo';
+  String get autoDjTempo => 'Beatmatching';
 
   @override
   String get autoDjSkipWords => 'Mots exclus';

@@ -827,10 +827,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjHarmonicTitle => '和声混音';
 
   @override
+  String get autoDjHarmonicHint => '下一首选调性相合的歌曲';
+
+  @override
   String get autoDjDurationRange => '时长';
 
   @override
-  String get autoDjMoodTitle => '氛围';
+  String get autoDjMoodTitle => '智能筛选';
 
   @override
   String get autoDjGenreLoadError => '无法加载流派';
@@ -998,6 +1001,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get genreSourceBoth => '全部';
+
+  @override
+  String get genreSourceMixed => '混合';
 
   @override
   String get genreSourceLabel => '流派来源';
@@ -5082,7 +5088,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjIncludeUnknown => '包括未知';
 
   @override
-  String get autoDjTempo => '速度';
+  String get autoDjTempo => '节拍匹配';
 
   @override
   String get autoDjSkipWords => '排除词';

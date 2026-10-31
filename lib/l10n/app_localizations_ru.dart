@@ -879,10 +879,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjHarmonicTitle => 'Гармоническое сведение';
 
   @override
+  String get autoDjHarmonicHint => 'Следующий трек в совместимой тональности';
+
+  @override
   String get autoDjDurationRange => 'Длительность';
 
   @override
-  String get autoDjMoodTitle => 'Настроение';
+  String get autoDjMoodTitle => 'Умные фильтры';
 
   @override
   String get autoDjGenreLoadError => 'Не удалось загрузить жанры';
@@ -1061,6 +1064,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get genreSourceBoth => 'Оба';
+
+  @override
+  String get genreSourceMixed => 'Смешанные';
 
   @override
   String get genreSourceLabel => 'Источник жанров';
@@ -5541,7 +5547,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjIncludeUnknown => 'Включая неизвестные';
 
   @override
-  String get autoDjTempo => 'Темп';
+  String get autoDjTempo => 'Битматчинг';
 
   @override
   String get autoDjSkipWords => 'Стоп-слова';
