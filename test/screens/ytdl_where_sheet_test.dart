@@ -8,15 +8,20 @@
 // own folder check (an answer for a path left behind dropped), the file
 // note, the missing and always-empty notes, the bracket warnings and their
 // links (sheet closed, the choice kept for this song, Album or Year asked
-// to focus), read out 800 ms after it settles — the Custom editor (chips
+// to focus), read out 800 ms after it settles through one live region that
+// never carries a refusal over a path or back — the Custom editor (chips
 // insert at the caret and tick, the YouTube check's three refusals, both
-// buttons off and the preview amber), the noMkdir note, Save (remembered,
-// toasted) and Use for this song (this song only), ✕ dropping changes, the
-// sheet closing itself when the feature goes away, and 360 dp at 200% text
-// without overflow.
+// buttons off and the preview amber, the preview pinned over the form with
+// the keyboard up when there is room, the field keeping its focus), the
+// noMkdir note, Save (remembered, toasted; on with a just-this-song choice
+// in force) and Use for this song (this song only; the remembered layout
+// drops the one-off instead), ✕ dropping changes, the sheet closing itself
+// when the feature goes away, and 360 dp at 200% text without overflow,
+// keyboard up included, a "new" tag scaled once.
 
 import 'dart:async';
 
+import 'package:flutter/semantics.dart' show SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
@@ -134,6 +139,9 @@ void main() {
           )
           .first)
       .label;
+
+  bool customFocused(WidgetTester tester) =>
+      tester.widget<TextField>(key('ytdl-where-custom')).focusNode!.hasFocus;
 
   void expectChosen(WidgetTester tester, String kind, [bool on = true]) =>
       expect(tester.getSemantics(key('ytdl-where-layout-$kind')),
@@ -367,6 +375,63 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets('one live region whether or not the layout is refused, '
+        'never carrying the other state\'s words', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final d = await ready(tester);
+      await open(tester, d);
+      await tap(tester, 'ytdl-where-layout-custom');
+      await elapse(tester, const Duration(seconds: 1));
+      final fix = h.l.discoverDestFixLayout;
+      final landsAt = h.l.ytdlWhereLandsAt('One More Time');
+
+      /// Every live region on screen, as (node, words).
+      List<(int, String)> live() {
+        final out = <(int, String)>[];
+        void walk(SemanticsNode n) {
+          final data = n.getSemanticsData();
+          if (data.flagsCollection.isLiveRegion) {
+            out.add((n.id, data.label));
+          }
+          n.visitChildren((c) {
+            walk(c);
+            return true;
+          });
+        }
+
+        walk(tester.binding.renderViews.first.owner!.semanticsOwner!
+            .rootSemanticsNode!);
+        return out;
+      }
+
+      final voice = live().single;
+      expect(voice.$2, startsWith(landsAt));
+
+      // A token half typed: drawn at once, read only once it has settled.
+      await tester.enterText(key('ytdl-where-custom'), '{{ARTIST');
+      await pumps(tester);
+      expect(find.text(fix), findsOneWidget);
+      expect(live().single.$1, voice.$1);
+      expect(live().single.$2, isNot(contains(fix)));
+      expect(live().single.$2, isNot(startsWith(landsAt)));
+      await elapse(tester, const Duration(milliseconds: 800));
+      expect(live().single, (voice.$1, fix));
+
+      // Whole again: the path is drawn at once and the refusal is not read
+      // over it, before or after its own check.
+      await tester.enterText(key('ytdl-where-custom'), '{{ARTIST}}/Singles');
+      await pumps(tester);
+      expect(find.text(fix), findsNothing);
+      for (var i = 0; i < 4; i++) {
+        expect(live().single.$1, voice.$1);
+        expect(live().single.$2, isNot(contains(fix)));
+        await elapse(tester, const Duration(milliseconds: 400));
+      }
+      expect(live().single.$2, startsWith(landsAt));
+      expect(live().single.$2, contains('then Singles, a new folder'));
+      semantics.dispose();
+    });
+
     testWidgets('noMkdir: only folders that exist work', (tester) async {
       s.noMkdir = true;
       final d = await ready(tester);
@@ -417,6 +482,28 @@ void main() {
       await closed;
       expect(d.justThisSong?.kind, 'library');
       expect(d.takeFocusRequest(), YtdlField.year);
+    });
+  });
+
+  group('bracket traps on the remembered layout', () {
+    testWidgets('the link drops a just-this-song one instead of repeating '
+        'the remembered layout as one', (tester) async {
+      presets();
+      h.fake.folder('/Music/Gorillaz/');
+      final d = await ready(tester, kFeelGood);
+      await tester.runAsync(() => st().rememberDestination(
+          library: 'Music', layout: kLibraryLayout, kind: 'library'));
+      d.useForThisSong(const YtdlChoice(
+          library: 'Music', layout: kYtdlLayoutArtist, kind: 'artist'));
+      await open(tester, d);
+      expectChosen(tester, 'artist');
+      await tap(tester, 'ytdl-where-layout-library');
+      await tap(tester, 'ytdl-where-trap-link');
+      await closed;
+      expect(d.justThisSong, isNull);
+      expect(d.choice.kind, 'library');
+      expect(d.tagsOpen, isTrue);
+      expect(d.takeFocusRequest(), YtdlField.album);
     });
   });
 
@@ -487,6 +574,36 @@ void main() {
         expectEnabled(tester, 'ytdl-where-save', false);
       });
     }
+
+    testWidgets('the keyboard up with room: the preview pinned over the form, '
+        'the subtitle gone', (tester) async {
+      final d = await ready(tester);
+      await open(tester, d);
+      await tap(tester, 'ytdl-where-layout-custom');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await pumps(tester);
+      expect(tester.takeException(), isNull);
+      expect(key('ytdl-where-preview'), findsOneWidget);
+      expect(
+        find.descendant(
+            of: key('ytdl-where-form'), matching: key('ytdl-where-preview')),
+        findsNothing,
+      );
+      expect(find.text(h.l.ytdlWhereSub(s.displayName)), findsNothing);
+      expect(
+        tester.getRect(key('ytdl-where-preview')).bottom,
+        lessThanOrEqualTo(tester.getRect(key('ytdl-where-form')).top),
+      );
+      // The field kept its focus as the layout changed under it, and is
+      // brought into view.
+      expect(customFocused(tester), isTrue);
+      expect(
+        tester
+            .getRect(key('ytdl-where-form'))
+            .overlaps(tester.getRect(key('ytdl-where-custom'))),
+        isTrue,
+      );
+    });
   });
 
   group('Save, Use for this song, closing', () {
@@ -521,6 +638,49 @@ void main() {
       expect(d.target.directory, '/Music/');
       expect(s.ytdlLayoutKind, isNull);
       expect(h.toasts, isEmpty);
+    });
+
+    testWidgets('back to the remembered layout from a just-this-song one: '
+        'both on, and Use drops the one-off', (tester) async {
+      final d = await ready(tester);
+      d.useForThisSong(const YtdlChoice(
+          library: 'Music', layout: kYtdlLayoutArtist, kind: 'artist'));
+      await open(tester, d);
+      await tap(tester, 'ytdl-where-layout-artistAlbum');
+      expectEnabled(tester, 'ytdl-where-use', true);
+      expectEnabled(tester, 'ytdl-where-save', true);
+      await tap(tester, 'ytdl-where-use');
+      await closed;
+      // No "Just this song · Undo" for the layout that is remembered anyway.
+      expect(d.justThisSong, isNull);
+      expect(d.choice, st().rememberedChoice);
+      expect(s.ytdlLayoutKind, isNull);
+    });
+
+    testWidgets('a folder in force: Save makes the remembered layout stick '
+        'and drops the folder', (tester) async {
+      final d = await ready(tester);
+      d.useFolder('/Music/Daft Punk/');
+      await open(tester, d);
+      expectChosen(tester, 'artistAlbum');
+      expectEnabled(tester, 'ytdl-where-use', true);
+      expectEnabled(tester, 'ytdl-where-save', true);
+      await tap(tester, 'ytdl-where-save');
+      await closed;
+      expect(d.justThisSong, isNull);
+      expect(s.ytdlLayoutKind, 'artistAlbum');
+      expect(d.target.directory, '/Music/Daft Punk/Discovery/');
+    });
+
+    testWidgets('a folder in force: Use for this song with the remembered '
+        'layout drops the folder', (tester) async {
+      final d = await ready(tester);
+      d.useFolder('/Music/Daft Punk/');
+      await open(tester, d);
+      await tap(tester, 'ytdl-where-use');
+      await closed;
+      expect(d.justThisSong, isNull);
+      expect(s.ytdlLayoutKind, isNull);
     });
 
     testWidgets('✕ drops what changed', (tester) async {
@@ -573,6 +733,37 @@ void main() {
         await pumps(tester);
         expect(key('ytdl-where-trap-link'), findsOneWidget);
       });
+    });
+
+    testWidgets('a new folder with the keyboard up: its tag scaled once, the '
+        'path kept to two lines, nothing cut, the field in view',
+        (tester) async {
+      // One More Time: "Discovery" is new.
+      final d = await ready(tester);
+      await open(tester, d, size: const Size(360, 800), textScale: 2);
+      expect(find.text(h.l.ytdlNewTag), findsOneWidget);
+      // As drawn: 16 px of line at 200%, not twice that again.
+      expect(tester.getRect(find.text(h.l.ytdlNewTag)).height,
+          moreOrLessEquals(32, epsilon: 1));
+      await tap(tester, 'ytdl-where-layout-custom');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await pumps(tester);
+      expect(tester.takeException(), isNull);
+      // Two 40 px lines at most (a tag's baseline may add a little).
+      expect(tester.getRect(key('ytdl-where-path')).height,
+          lessThanOrEqualTo(84));
+      // Nothing pinned can leave the field room here: the preview scrolls
+      // with the form, which keeps the field in view.
+      expect(
+        find.descendant(
+            of: key('ytdl-where-form'), matching: key('ytdl-where-preview')),
+        findsOneWidget,
+      );
+      expect(find.text(h.l.ytdlWhereSub(s.displayName)), findsNothing);
+      final form = tester.getRect(key('ytdl-where-form'));
+      expect(form.height, greaterThanOrEqualTo(48));
+      expect(form.overlaps(tester.getRect(key('ytdl-where-custom'))), isTrue);
+      expect(customFocused(tester), isTrue);
     });
 
     testWidgets('Custom with a refusal', (tester) async {

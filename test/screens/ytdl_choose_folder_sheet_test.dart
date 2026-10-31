@@ -1,13 +1,16 @@
 // "Choose a folder" (screens/ytdl/ytdl_choose_folder_sheet.dart), for an
 // account that can't make folders, over the scripted server's folder tree:
-// it opens at the draft's library (or the folder it is given), lists the
+// it opens at the folder it is given, else at the deepest folder on the
+// song's path that listed, else at the draft's library; it lists the
 // subfolders in name order as 56 px rows, opens one on a tap and goes back
 // up by a crumb ("Up to Music"), says "No folders here." in an empty one,
 // shows the still rows while a folder lists (read as "Loading folders") and
 // a failed listing with Try again; an answer for a folder since left is
 // dropped. "Use this folder" returns the folder on screen once it has
 // listed ('/Music/Daft Punk/Homework/', which the caller hands to
-// useFolder), Cancel and ✕ return nothing; and 360 dp at 200% text fits.
+// useFolder), Cancel and ✕ return nothing, the feature going away closes
+// it with nothing; the crumb row keeps one height; and 360 dp at 200% text
+// fits.
 
 import 'dart:async';
 
@@ -102,6 +105,50 @@ void main() {
     expect(key('ytdl-choose-folder-Gorillaz'), findsOneWidget);
     expect(key('ytdl-choose-here'), findsOneWidget);
     expect(find.text('\u2068Music\u2069'), findsOneWidget);
+  });
+
+  testWidgets('called as the card calls it (no folder given), it opens at '
+      'the deepest folder that listed', (tester) async {
+    // One More Time: Music › Daft Punk lists, Discovery isn't there.
+    final d = draft();
+    await tester.runAsync(() async {
+      d.link.text = kOneMoreTime;
+      await h.timers.elapse(YtdlDraft.kLookupDebounce);
+      await h.timers.elapse(YtdlDraft.kCheckAfter);
+    });
+    expect(d.mkdirBlocked, isTrue);
+    expect(d.deepestExisting, '/Music/Daft Punk/');
+    await open(tester);
+    expect(listed().last, '/Music/Daft Punk/');
+    expect(find.text('\u2068Daft Punk\u2069'), findsOneWidget);
+    // "Music" goes back up; Daft Punk's albums are the rows.
+    expect(key('ytdl-choose-up-0'), findsOneWidget);
+    expect(key('ytdl-choose-folder-Homework'), findsOneWidget);
+    expect(key('ytdl-choose-folder-Gorillaz'), findsNothing);
+  });
+
+  testWidgets('the crumb row keeps one height at the library and below it',
+      (tester) async {
+    await open(tester);
+    final atLibrary = tester.getSize(key('ytdl-choose-crumbs')).height;
+    // The 48 px hit band of a crumb that goes up, and the 1 px rule.
+    expect(atLibrary, 49);
+    await tap(tester, 'ytdl-choose-folder-Daft Punk');
+    await answer(tester);
+    expect(key('ytdl-choose-up-0'), findsOneWidget);
+    expect(tester.getSize(key('ytdl-choose-crumbs')).height, atLibrary);
+  });
+
+  testWidgets('the feature going away closes it with nothing picked',
+      (tester) async {
+    await open(tester);
+    // A re-ping found audio conversion off; the state tells its drafts.
+    s.transcodeAvailable = false;
+    await tester.runAsync(() => h.hub.stateFor(s).rememberFormat('mp3'));
+    await pumps(tester);
+    expect(h.hub.stateFor(s).entryAllowed, isFalse);
+    expect(key('ytdl-choose-sheet'), findsNothing);
+    expect(await picked, isNull);
   });
 
   testWidgets('a folder it is given: its subfolders in name order, files '

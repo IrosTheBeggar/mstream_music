@@ -81,6 +81,29 @@ void main() {
     );
   });
 
+  testWidgets('at 200% text the new tag is scaled once, with the path',
+      (tester) async {
+    Future<double> tagHeight(double scale) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+          child: Scaffold(
+            body: YtdlCrumbs(
+                crumbs: const ['Music', 'Daft Punk', 'Discovery'],
+                newAt: const {2}),
+          ),
+        ),
+      ));
+      // As drawn on screen: the paragraph's own scaling included.
+      return tester.getRect(find.text('new')).height;
+    }
+
+    final at100 = await tagHeight(1);
+    expect(await tagHeight(2), moreOrLessEquals(at100 * 2, epsilon: 1));
+  });
+
   testWidgets('a one-line path never overflows at 360 dp and 200% text',
       (tester) async {
     tester.view.physicalSize = const Size(360 * 3, 800 * 3);

@@ -13,10 +13,13 @@ import 'ytdl_draft.dart';
 
 /// "Choose a folder" for an account that can't make folders (spec §8
 /// mkdir off, the NoMkdir board's frame 2): browse the folders that exist
-/// on the draft's server and pick one, for this song only. It opens at the
-/// draft's library ([startAt] — the deepest folder that listed, say — when
-/// given) and returns the folder ('/Music/Daft Punk/'), or null when
-/// cancelled; the caller applies it with [YtdlDraft.useFolder].
+/// on the draft's server and pick one, for this song only. It opens at
+/// [startAt] when given, else at the deepest folder on the song's path
+/// that listed ([YtdlDraft.deepestExisting]: "Music › Daft Punk", with
+/// "Music" to go up, as the board draws it), else at the draft's folder or
+/// library ([ytdlChooseFolderStart]); it returns the folder
+/// ('/Music/Daft Punk/'), or null when cancelled or when the feature goes
+/// away while it is open; the caller applies it with [YtdlDraft.useFolder].
 ///
 /// Each folder is listed as it is opened (`POST /file-explorer`, its
 /// subfolders only); a crumb goes back up. "Use this folder" takes the
@@ -38,9 +41,19 @@ Future<String?> showYtdlChooseFolderSheet(
       ),
       builder: (_) => YtdlChooseFolderSheet(
         draft: draft,
-        startAt: startAt ?? '/${draft.choice.library}/',
+        startAt: startAt ?? ytdlChooseFolderStart(draft),
       ),
     );
+
+/// Where "Choose a folder" opens for [draft] when the caller names no
+/// folder: the deepest folder on the song's path that listed, else the
+/// folder the choice in force names, else its library.
+String ytdlChooseFolderStart(YtdlDraft draft) {
+  final deepest = draft.deepestExisting;
+  if (deepest != null) return deepest;
+  final c = draft.choice;
+  return c.isFolder ? c.folderPath : '/${c.library}/';
+}
 
 /// [crumbs] as a directory: '/Music/Daft Punk/'.
 String _dirOf(List<String> crumbs) => '/${crumbs.join('/')}/';
@@ -83,12 +96,23 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
     _crumbs = pathCrumbs(widget.startAt);
     unawaited(_list());
     _showDeepest();
+    widget.draft.addListener(_onDraft);
   }
 
   @override
   void dispose() {
+    widget.draft.removeListener(_onDraft);
     _crumbScroll.dispose();
     super.dispose();
+  }
+
+  /// A re-ping turned the feature off (the draft passes on its state's
+  /// news): the sheet goes with nothing picked, before the screen under it
+  /// closes itself.
+  void _onDraft() {
+    if (!mounted || widget.draft.owner.entryAllowed) return;
+    final route = ModalRoute.of(context);
+    if (route != null && route.isCurrent) Navigator.of(context).pop();
   }
 
   Future<void> _list() async {
@@ -274,6 +298,7 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
             ));
     }
     return Container(
+      key: const ValueKey('ytdl-choose-crumbs'),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: VelvetColors.border)),
       ),
@@ -282,25 +307,30 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
         label: l.ytdlA11yFolderPath,
         container: true,
         explicitChildNodes: true,
-        child: Row(
-          children: [
-            Icon(
-              Icons.folder_outlined,
-              size: 18,
-              color: VelvetColors.textSecondary,
-            ),
-            const SizedBox(width: 2),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _crumbScroll,
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: parts,
+        // As tall as a crumb's hit band wherever the sheet is: the folder
+        // on screen alone (at the library) would shrink it to its words.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              Icon(
+                Icons.folder_outlined,
+                size: 18,
+                color: VelvetColors.textSecondary,
+              ),
+              const SizedBox(width: 2),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _crumbScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: parts,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

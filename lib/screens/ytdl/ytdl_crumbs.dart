@@ -114,9 +114,12 @@ class YtdlCrumbs extends StatelessWidget {
       spans.add(TextSpan(text: ytdlIsolate(_hold(c)), style: s));
       if (newAt.contains(i)) {
         spans.add(const TextSpan(text: '\u00A0'));
+        // The paragraph scales a widget span by the text scale itself: the
+        // tag's own words are laid out unscaled, or they would be scaled
+        // twice.
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: YtdlNewTag(),
+          child: MediaQuery.withNoTextScaling(child: YtdlNewTag()),
         ));
       }
     }

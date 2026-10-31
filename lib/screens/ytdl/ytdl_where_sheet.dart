@@ -60,6 +60,10 @@ List<String> _folders(String layout) => layout
 /// (spec §9: a polite live region, after 800 ms without typing).
 const Duration _kSpeakAfter = Duration(milliseconds: 800);
 
+/// The least of the form a pinned preview leaves while typing: Custom's
+/// field and a line of what is around it.
+const double _kFormRoom = 64;
+
 /// The sheet's body ([showYtdlWhereSheet] opens it) for the screen's
 /// [draft]: what it edits is applied only by Save or Use for this song.
 class YtdlWhereSheet extends StatefulWidget {
@@ -102,6 +106,10 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   String? _spoken;
   String? _spokenNext;
   Timer? _speakTimer;
+
+  /// The state [_spoken] belongs to: the refusal's words, or null for a
+  /// path. The read-out never carries one state's words over the other.
+  String? _spokenFor;
 
   YtdlDraft get draft => widget.draft;
   YtdlServerState get st => draft.owner;
@@ -228,10 +236,15 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   bool _valid(YtdlTarget t) =>
       !_customEmpty && (_customCheck?.valid ?? true) && t.valid;
 
-  /// Saved here is a change from what this server remembers; used for this
-  /// song, a change from what the card has now.
+  /// Saved here is a change from what this server remembers — or, with a
+  /// just-this-song choice in force (a layout, or a folder from "Save to …
+  /// instead" / "Choose a folder…"), making the form's choice stick and
+  /// dropping the one-off; used for this song, a change from what the card
+  /// has now (the WhereSheet board's canSave / canUse).
   bool _canSave(YtdlTarget t) =>
-      _valid(t) && !_saving && _choice != st.rememberedChoice;
+      _valid(t) &&
+      !_saving &&
+      (_choice != st.rememberedChoice || draft.justThisSong != null);
   bool _canUse(YtdlTarget t) =>
       _valid(t) && !_saving && _choice != draft.choice;
 
@@ -340,7 +353,19 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   void _useForThisSong() {
     final c = _choice;
     _close();
-    draft.useForThisSong(c);
+    _applyForThisSong(c);
+  }
+
+  /// [c] for the song on the card: the remembered choice is no one-off —
+  /// the one in force is dropped instead, so the card doesn't say "Just
+  /// this song · Undo" over the layout every song gets (the board's
+  /// useOnce).
+  void _applyForThisSong(YtdlChoice c) {
+    if (c == st.rememberedChoice) {
+      draft.undoJustThisSong();
+    } else if (c != draft.choice) {
+      draft.useForThisSong(c);
+    }
   }
 
   /// A bracket warning's link: the sheet closes, the choice holds for this
@@ -348,7 +373,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   void _fillTag(YtdlField field) {
     final c = _choice;
     _close();
-    if (c != draft.choice) draft.useForThisSong(c);
+    _applyForThisSong(c);
     draft.openTags(focus: field);
   }
 
@@ -385,10 +410,21 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
         }
       }
     }
-    final words = _model(AppLocalizations.of(context)).spoken;
+    final m = _model(AppLocalizations.of(context));
+    final words = m.spoken;
     if (_spoken == null) {
       _spoken = _spokenNext = words;
-    } else if (words != _spokenNext) {
+      _spokenFor = m.blocked;
+      return;
+    }
+    if (m.blocked != _spokenFor) {
+      // The card turned from a path to a refusal or back: what was read
+      // no longer describes it. Nothing is read until the new words have
+      // settled, like any others.
+      _spoken = '';
+      _spokenFor = m.blocked;
+    }
+    if (words != _spokenNext) {
       _spokenNext = words;
       _speakTimer?.cancel();
       _speakTimer = st.hub.timer(_kSpeakAfter, () {
@@ -539,19 +575,40 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
           children: [
             const DestGrabHandle(),
             _header(l),
-            if (typing)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: preview,
-              ),
             Flexible(
-              child: LayoutBuilder(
-                builder: (context, box) => _form(
-                  l,
-                  typing ? null : preview,
-                  destReveal(context, box.maxHeight),
-                ),
-              ),
+              child: LayoutBuilder(builder: (context, box) {
+                // Pinned only while what is left between the header and the
+                // footer still gives the form room for the field being
+                // typed in; on a short screen at large text (or in a long
+                // language) the preview scrolls with the form instead, at
+                // its top, rather than squeezing the field out of sight.
+                final pin = typing &&
+                    box.maxHeight - _pinnedMost(context) >= _kFormRoom;
+                // The form keeps its place in the tree either way: rebuilt
+                // elsewhere as the keyboard rises, Custom's field would lose
+                // its focus and the keyboard would go again.
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (pin)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: preview,
+                      ),
+                    Flexible(
+                      child: LayoutBuilder(
+                        builder: (context, rest) => _form(
+                          l,
+                          pin ? null : preview,
+                          destReveal(context, rest.maxHeight),
+                          subtitle: !typing,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ),
             _footer(l, t),
           ],
@@ -559,6 +616,12 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
       ),
     );
   }
+
+  /// The pinned preview at its tallest: the card's padding and edge, two
+  /// lines of path (or of a refusal), a little for a "new" tag's baseline,
+  /// and the gap under it.
+  static double _pinnedMost(BuildContext context) =>
+      20 + 2 + 2 * MediaQuery.textScalerOf(context).scale(20) + 4 + 12;
 
   Widget _header(AppLocalizations l) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
@@ -608,113 +671,116 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
         height: 16 / 12,
       );
 
-  /// The preview card: where the song lands, or why it can't say.
+  /// The preview card: where the song lands, or why it can't say (the
+  /// destination pieces' preview card, drawn here so both states share it).
+  /// One live region either way, at the same place in the tree: a live
+  /// region that appears is read at once, so swapping one for another as a
+  /// token is half typed would read the refusal mid-word. Its words are
+  /// [_spoken], read 800 ms after the card settles; the trap's link stays a
+  /// button of its own beside it.
   Widget _preview(AppLocalizations l, _Preview m, {required bool compact}) {
     final blocked = m.blocked;
+    final warn = blocked != null && m.warn;
+    final trap = m.trap;
+    final Widget shown;
     if (blocked != null) {
-      final warn = m.warn;
-      final tone = keepTone(VelvetColors.warning);
-      return Container(
-        key: const ValueKey('ytdl-where-preview'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: warn
-              ? VelvetColors.warning.withValues(alpha: 0.08)
-              : VelvetColors.raised,
-          border: warn
-              ? Border.all(color: VelvetColors.warning.withValues(alpha: 0.45))
-              : null,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Semantics(
-          liveRegion: true,
-          container: true,
-          child: Row(
-            children: [
-              Icon(
-                warn ? Icons.warning_amber_rounded : Icons.folder_outlined,
-                size: 18,
-                color: warn ? tone : VelvetColors.textSecondary,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  blocked,
-                  key: const ValueKey('ytdl-where-preview-blocked'),
-                  style: TextStyle(
-                    color: warn
-                        ? VelvetColors.textPrimary
-                        : VelvetColors.textSecondary,
-                    fontSize: 14,
-                    height: 20 / 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
+      shown = Text(
+        blocked,
+        key: const ValueKey('ytdl-where-preview-blocked'),
+        // Pinned while typing: two lines, as the path (read whole).
+        maxLines: compact ? 2 : null,
+        overflow: compact ? TextOverflow.ellipsis : null,
+        style: TextStyle(
+          color: warn ? VelvetColors.textPrimary : VelvetColors.textSecondary,
+          fontSize: 14,
+          height: 20 / 14,
         ),
       );
-    }
-    final trap = m.trap;
-    return DestPreviewShell(
-      key: const ValueKey('ytdl-where-preview'),
-      compact: compact,
-      margin: EdgeInsets.zero,
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 12 : 14,
-        vertical: compact ? 10 : 12,
-      ),
-      icon: Icon(
-        Icons.folder_outlined,
-        size: 18,
-        color: VelvetColors.textSecondary,
-      ),
-      content: Column(
+    } else {
+      shown = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Read once, after the preview settles; drawn at once.
-          Semantics(
-            container: true,
-            liveRegion: true,
-            label: _spoken ?? m.spoken,
-            excludeSemantics: true,
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                m.label,
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 13,
+                  height: 18 / 13,
+                ),
+              ),
+            ),
+          _PreviewPath(
+            key: const ValueKey('ytdl-where-path'),
+            crumbs: m.crumbs,
+            slots: m.slots,
+            newAt: m.newAt,
+            trapAt: m.trapAt,
+            file: m.file,
+            maxLines: compact ? 2 : null,
+          ),
+          if (!compact)
+            for (final (words, key) in m.notes)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(words, key: key, style: _note),
+              ),
+        ],
+      );
+    }
+    final wide = blocked == null && !compact;
+    return Container(
+      key: const ValueKey('ytdl-where-preview'),
+      padding: EdgeInsets.symmetric(
+        horizontal: wide ? 14 : 12,
+        vertical: wide ? 12 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: warn
+            ? VelvetColors.warning.withValues(alpha: 0.08)
+            : VelvetColors.raised,
+        border: warn
+            ? Border.all(color: VelvetColors.warning.withValues(alpha: 0.45))
+            : null,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: blocked != null
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: blocked != null ? 0 : 2),
+            child: Icon(
+              warn ? Icons.warning_amber_rounded : Icons.folder_outlined,
+              size: 18,
+              color: warn
+                  ? keepTone(VelvetColors.warning)
+                  : VelvetColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (!compact)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      m.label,
-                      style: TextStyle(
-                        color: VelvetColors.textSecondary,
-                        fontSize: 13,
-                        height: 18 / 13,
-                      ),
-                    ),
-                  ),
-                _PreviewPath(
-                  key: const ValueKey('ytdl-where-path'),
-                  crumbs: m.crumbs,
-                  slots: m.slots,
-                  newAt: m.newAt,
-                  trapAt: m.trapAt,
-                  file: m.file,
-                  maxLines: compact ? 2 : null,
+                // Drawn at once; read once it has settled.
+                Semantics(
+                  container: true,
+                  liveRegion: true,
+                  label: _spoken ?? m.spoken,
+                  excludeSemantics: true,
+                  child: shown,
                 ),
-                if (!compact)
-                  for (final (words, key) in m.notes)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(words, key: key, style: _note),
-                    ),
+                if (!compact && trap != null)
+                  _trapPanel(l, m.trapWords!, trap),
               ],
             ),
           ),
-          if (!compact && trap != null)
-            _trapPanel(l, m.trapWords!, trap),
         ],
       ),
     );
@@ -790,7 +856,14 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
     );
   }
 
-  Widget _form(AppLocalizations l, Widget? preview, EdgeInsets reveal) {
+  /// The scrolling form, with [preview] at its top unless it is pinned
+  /// over it, under the [subtitle] unless the keyboard is up.
+  Widget _form(
+    AppLocalizations l,
+    Widget? preview,
+    EdgeInsets reveal, {
+    bool subtitle = true,
+  }) {
     final libraries = st.server.autoDJPaths.keys.toList();
     final discover = _discover;
     final template = _template;
@@ -802,17 +875,18 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (preview != null) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                l.ytdlWhereSub(st.server.displayName),
-                style: TextStyle(
-                  color: VelvetColors.textSecondary,
-                  fontSize: 13,
-                  height: 18 / 13,
+            if (subtitle)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Text(
+                  l.ytdlWhereSub(st.server.displayName),
+                  style: TextStyle(
+                    color: VelvetColors.textSecondary,
+                    fontSize: 13,
+                    height: 18 / 13,
+                  ),
                 ),
               ),
-            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: preview,
@@ -1218,18 +1292,23 @@ class _PreviewPath extends StatelessWidget {
         final text = ytdlIsolate(destHold(crumbs[i]));
         if (newAt.contains(i)) {
           // The folder and its tag as one piece: a line never breaks
-          // between them.
+          // between them. The paragraph scales a widget span by the text
+          // scale itself, so the words inside it are laid out unscaled —
+          // scaled twice, they would break mid-word and the tag would
+          // double.
           spans.add(WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(child: Text(text, style: style)),
-                const SizedBox(width: 5),
-                const _NewTag(),
-              ],
+            child: MediaQuery.withNoTextScaling(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(child: Text(text, style: style)),
+                  const SizedBox(width: 5),
+                  const _NewTag(),
+                ],
+              ),
             ),
           ));
         } else {
