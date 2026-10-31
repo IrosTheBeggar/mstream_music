@@ -106,6 +106,10 @@ class YtdlJob {
   int? bytes;
   int? trackId;
 
+  /// The download record's id this job settled with: a record answers for
+  /// one job only, across restarts too.
+  int? recordId;
+
   YtdlJob({
     required this.id,
     required this.url,
@@ -127,6 +131,7 @@ class YtdlJob {
     this.filepath,
     this.bytes,
     this.trackId,
+    this.recordId,
   });
 
   /// Polled, and counted as "Adding" (see [YtdlJobState.open]).
@@ -153,6 +158,7 @@ class YtdlJob {
         'filepath': filepath,
         'bytes': bytes,
         'trackId': trackId,
+        'recordId': recordId,
       };
 
   /// Reads what [toJson] wrote. Throws [FormatException] for an entry with
@@ -200,6 +206,7 @@ class YtdlJob {
       filepath: _str(json['filepath']),
       bytes: _int(json['bytes']),
       trackId: _int(json['trackId']),
+      recordId: _int(json['recordId']),
     );
   }
 

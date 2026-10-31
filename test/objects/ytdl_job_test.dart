@@ -49,7 +49,8 @@ void main() {
       ..seen = true
       ..filepath = 'Music/Daft Punk/Discovery/One_More_Time.mp3'
       ..bytes = 8400000
-      ..trackId = 991;
+      ..trackId = 991
+      ..recordId = 57;
     final back = roundTrip(j);
     expect(back.id, 'j-1');
     expect(back.url, j.url);
@@ -69,6 +70,7 @@ void main() {
     expect(back.filepath, j.filepath);
     expect(back.bytes, 8400000);
     expect(back.trackId, 991);
+    expect(back.recordId, 57);
   });
 
   test("a start failure keeps its reason and the server's words", () {

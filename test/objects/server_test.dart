@@ -261,7 +261,8 @@ void main() {
       ]) {
         expect(s.noMkdir, isNull);
         expect(s.supportedAudioFormats, isNull);
-        expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlFormat], everyElement(isNull));
+        expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlLayoutKind, s.ytdlFormat],
+            everyElement(isNull));
         expect(s.ytdlJobs, isEmpty);
       }
     });
@@ -272,6 +273,7 @@ void main() {
         ..supportedAudioFormats = ['flac', 'mp3', 'opus']
         ..ytdlLibrary = 'Music'
         ..ytdlLayout = '{{ALBUMARTIST}}/{{ALBUM}}'
+        ..ytdlLayoutKind = 'artistAlbum'
         ..ytdlFormat = 'opus'
         ..ytdlJobs = [
           {
@@ -288,6 +290,7 @@ void main() {
       expect(reparsed.supportedAudioFormats, ['flac', 'mp3', 'opus']);
       expect(reparsed.ytdlLibrary, 'Music');
       expect(reparsed.ytdlLayout, '{{ALBUMARTIST}}/{{ALBUM}}');
+      expect(reparsed.ytdlLayoutKind, 'artistAlbum');
       expect(reparsed.ytdlFormat, 'opus');
       expect(reparsed.ytdlJobs, original.ytdlJobs);
       expect(identical(reparsed.ytdlJobs.single, original.ytdlJobs.single),
@@ -311,6 +314,7 @@ void main() {
         ..['supportedAudioFormats'] = ['mp3', 7, null, 'flac']
         ..['ytdlLibrary'] = 3
         ..['ytdlLayout'] = false
+        ..['ytdlLayoutKind'] = 7
         ..['ytdlFormat'] = ['mp3']
         ..['ytdlJobs'] = [
           'junk',
@@ -320,7 +324,8 @@ void main() {
       final s = Server.fromJson(j);
       expect(s.noMkdir, isNull);
       expect(s.supportedAudioFormats, ['mp3', 'flac']);
-      expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlFormat], everyElement(isNull));
+      expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlLayoutKind, s.ytdlFormat],
+          everyElement(isNull));
       expect(s.ytdlJobs, [
         {'id': 'j-2'}
       ]);

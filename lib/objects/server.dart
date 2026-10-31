@@ -346,11 +346,16 @@ class Server {
   // Add from YouTube, remembered per server. The destination the screen
   // last saved to — a library (vpath) and a layout under it ('' = the
   // library's top folder) — and the format; null = never chosen (first
-  // use). The hub's jobs ride along as raw json (objects/ytdl_job.dart is
-  // the typed copy the hub keeps), so a row survives the app closing while
-  // the server works.
+  // use). [ytdlLayoutKind] is which choice of "Where new songs land" made
+  // the layout ('artistAlbum', 'top', 'discover', 'library', 'custom' …):
+  // "Same as Discover" and "Library layout" follow their preset while it
+  // is known, and the layout is the copy kept for when it is not. The
+  // hub's jobs ride along as raw json (objects/ytdl_job.dart is the typed
+  // copy the hub keeps), so a row survives the app closing while the
+  // server works.
   String? ytdlLibrary;
   String? ytdlLayout;
+  String? ytdlLayoutKind;
   String? ytdlFormat;
   List<Map<String, dynamic>> ytdlJobs = [];
 
@@ -497,6 +502,8 @@ class Server {
             : null,
         ytdlLibrary = json['ytdlLibrary'] is String ? json['ytdlLibrary'] : null,
         ytdlLayout = json['ytdlLayout'] is String ? json['ytdlLayout'] : null,
+        ytdlLayoutKind =
+            json['ytdlLayoutKind'] is String ? json['ytdlLayoutKind'] : null,
         ytdlFormat = json['ytdlFormat'] is String ? json['ytdlFormat'] : null,
         ytdlJobs = json['ytdlJobs'] is List
             ? [
@@ -563,6 +570,7 @@ class Server {
         'supportedAudioFormats': supportedAudioFormats,
         'ytdlLibrary': ytdlLibrary,
         'ytdlLayout': ytdlLayout,
+        'ytdlLayoutKind': ytdlLayoutKind,
         'ytdlFormat': ytdlFormat,
         'ytdlJobs': ytdlJobs,
         'statsVersion': statsVersion,
