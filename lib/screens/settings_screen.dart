@@ -20,7 +20,6 @@ import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
 import '../widgets/home_widget_sheet.dart';
-import 'eq/eq_screen.dart';
 import 'imported_shaders_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -338,24 +337,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
-          // The EQ, visualizer, imported-shaders and cast-quality tiles
-          // are Android-only features (AndroidEqualizer, projectM/EGL
-          // visualizer, Chromecast/DLNA casting).
+          // The visualizer, imported-shaders and cast-quality tiles are
+          // Android-only features (projectM/EGL visualizer, Chromecast/DLNA
+          // casting). The equalizer has its own drawer entry.
           if (Platform.isAndroid) ...[
-            ListTile(
-              leading: Icon(Icons.equalizer, color: VelvetColors.textSecondary),
-              title: Text(l.eqTitle),
-              subtitle: Text(
-                l.settingsEqSubtitle,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => EqScreen()),
-                );
-              },
-            ),
             // No engine picker: the drawer opens each visualizer by name.
             ListTile(
               title: Text(l.settingsVisualizerSource),

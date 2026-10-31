@@ -110,7 +110,6 @@
   "tapSubtitleAddToQueue": "Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.",
   "tapSubtitlePlayFromHere": "Dotknięcie utworu zastępuje kolejkę utworami z bieżącego widoku i rozpoczyna odtwarzanie od dotkniętego utworu.",
   "tapSubtitleAppendAndJump": "Dotknięcie utworu dodaje go do kolejki i przeskakuje do niego odtwarzanie, przerywając to, co było odtwarzane.",
-  "settingsEqSubtitle": "Dostrój basy, średnie i wysokie tony. Tylko na Androidzie.",
   "settingsVisualizerSource": "Źródło dźwięku wizualizatora",
   "visualizerSourceSubtitleSynthesized": "Domyślnie. Wizualizator reaguje tylko na taktowanie odtwarzania — nie wymaga uprawnienia do mikrofonu.",
   "visualizerSourceSubtitleReal": "Wizualizator reaguje na rzeczywiste wyjście dźwięku. Wymaga uprawnienia RECORD_AUDIO na Androidzie.",

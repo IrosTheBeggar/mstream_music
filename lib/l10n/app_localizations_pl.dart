@@ -411,10 +411,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Dotknięcie utworu dodaje go do kolejki i przeskakuje do niego odtwarzanie, przerywając to, co było odtwarzane.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Dostrój basy, średnie i wysokie tony. Tylko na Androidzie.';
-
-  @override
   String get settingsVisualizerSource => 'Źródło dźwięku wizualizatora';
 
   @override

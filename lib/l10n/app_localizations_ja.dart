@@ -396,9 +396,6 @@ class AppLocalizationsJa extends AppLocalizations {
       '曲をタップするとキューに追加し、再生中の曲を中断してその曲へ再生を移します。';
 
   @override
-  String get settingsEqSubtitle => '低音・中音・高音を調整します。Android のみ。';
-
-  @override
   String get settingsVisualizerSource => 'ビジュアライザーの音声ソース';
 
   @override

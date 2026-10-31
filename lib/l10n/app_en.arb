@@ -399,10 +399,6 @@
   "@settingsTapBehavior": {
     "description": "Tap-behavior picker row label + per-mode subtitles."
   },
-  "settingsEqSubtitle": "Tune bass, mids, and treble. Android only.",
-  "@settingsEqSubtitle": {
-    "description": "Subtitle on the Equalizer row in Settings."
-  },
   "settingsVisualizerSource": "Visualizer audio source",
   "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
   "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",

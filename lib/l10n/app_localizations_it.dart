@@ -406,10 +406,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Toccando un brano lo aggiungi alla coda e la riproduzione passa a esso, interrompendo ciò che era in riproduzione.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Regola bassi, medi e alti. Solo su Android.';
-
-  @override
   String get settingsVisualizerSource => 'Sorgente audio del visualizzatore';
 
   @override

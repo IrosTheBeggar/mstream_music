@@ -407,10 +407,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Tocar em uma música a adiciona à fila e pula a reprodução para ela, interrompendo o que estava tocando.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Ajuste graves, médios e agudos. Apenas no Android.';
-
-  @override
   String get settingsVisualizerSource => 'Fonte de áudio do visualizador';
 
   @override

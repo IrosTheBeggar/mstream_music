@@ -408,10 +408,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Al tocar una canción se añade a la cola y la reproducción salta a ella, interrumpiendo lo que se estuviera reproduciendo.';
 
   @override
-  String get settingsEqSubtitle =>
-      'Ajusta graves, medios y agudos. Solo en Android.';
-
-  @override
   String get settingsVisualizerSource => 'Fuente de audio del visualizador';
 
   @override
