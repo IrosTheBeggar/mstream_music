@@ -281,7 +281,8 @@ void main() {
     h.fake.listFails.clear();
     await tap(tester, 'ytdl-choose-retry');
     await answer(tester);
-    expect(listed(), ['/Music/', '/Music/']);
+    // The dropped listing went out once more on its own, then Try again.
+    expect(listed(), ['/Music/', '/Music/', '/Music/']);
     expect(key('ytdl-choose-folder-Daft Punk'), findsOneWidget);
     semantics.dispose();
   });
