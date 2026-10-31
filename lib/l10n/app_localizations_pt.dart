@@ -978,6 +978,16 @@ class AppLocalizationsPt extends AppLocalizations {
       'Faixas cuja duração seu servidor não leu são ignoradas caso contrário';
 
   @override
+  String get autoDjMoodTitle => 'Clima';
+
+  @override
+  String get autoDjMoodSubtitle =>
+      'Escolher só faixas que combinem com um clima';
+
+  @override
+  String get autoDjMoodChoose => 'Escolha um clima';
+
+  @override
   String get autoDjStatusOn => 'O Auto DJ está ligado';
 
   @override

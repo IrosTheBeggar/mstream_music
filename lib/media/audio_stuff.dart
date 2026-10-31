@@ -26,6 +26,7 @@ import 'cast_target.dart';
 import '../native/iroh_tunnel.dart';
 import '../objects/server.dart';
 import '../objects/metadata.dart';
+import '../objects/mood_filter.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/app_messenger.dart';
@@ -440,10 +441,18 @@ class AudioPlayerHandler extends BaseAudioHandler
     ServerManager().djFanOutServers = _djFanOutServers;
     AutoDJManager().changeStream.listen((_) {
       final on = AutoDJManager().multiServerEnabled;
-      if (on == _fanOutWasOn) return;
-      _fanOutWasOn = on;
-      unawaited(ServerManager()
-          .ensureTunnels(reason: on ? 'dj-fanout' : 'dj-fanout-off'));
+      final moodSet = AutoDJManager().activeMoodFilter != null;
+      if (on != _fanOutWasOn) {
+        _fanOutWasOn = on;
+        _fanOutMoodWasSet = moodSet;
+        unawaited(ServerManager()
+            .ensureTunnels(reason: on ? 'dj-fanout' : 'dj-fanout-off'));
+      } else if (on && moodSet != _fanOutMoodWasSet) {
+        // A mood narrows who may answer (canJoinMultiServer), so setting or
+        // clearing one moves the targets too.
+        _fanOutMoodWasSet = moodSet;
+        unawaited(ServerManager().ensureTunnels(reason: 'dj-mood'));
+      }
     });
     // The iroh supervisor re-dials a dropped tunnel forever on the same
     // loopback port, so a dead server coming back flips this status to
@@ -3833,6 +3842,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   // The last multi-server setting the tunnel reconcile was told about, so
   // only its edges cost a reconcile (AutoDJManager notifies on every change).
   bool _fanOutWasOn = false;
+  bool _fanOutMoodWasSet = false;
 
   /// What the multi-server session may ask right now, for the tunnel
   /// manager: nothing unless the DJ is armed with the mode on. Servers whose
@@ -3845,7 +3855,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     return ServerManager().serverList.where((s) => canJoinMultiServer(
         s, _multiServerExcluded,
-        allowUnknownDiscovery: true));
+        allowUnknownDiscovery: true,
+        moodSet: AutoDJManager().activeMoodFilter != null));
   }
 
   /// Re-evaluate the tunnel targets after something changed what the session
@@ -3869,9 +3880,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Public so the Auto DJ screen can show who is taking part without
   /// duplicating the rules.
   List<Server> multiServerCandidates() {
+    final moodSet = AutoDJManager().activeMoodFilter != null;
     return ServerManager()
         .serverList
-        .where((s) => canJoinMultiServer(s, _multiServerExcluded))
+        .where((s) =>
+            canJoinMultiServer(s, _multiServerExcluded, moodSet: moodSet))
         .toList();
   }
 
@@ -3887,16 +3900,23 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// sits out. One that has never reported passes only with
   /// [allowUnknownDiscovery] (the tunnel targets, where reaching it is what
   /// fills the flags in) — or when it is a peer, whose federation/health
-  /// answer the model handshake reads before anything is sent. Pure;
-  /// unit-tested.
+  /// answer the model handshake reads before anything is sent. While a mood
+  /// is set ([moodSet]) it must also be able to filter by it
+  /// (Server.moodFiltersAvailable, pinned off for a peer): any other server
+  /// would answer from outside the mood. Pure; unit-tested.
   static bool canJoinMultiServer(Server s, Set<String> excluded,
-      {bool allowUnknownDiscovery = false}) {
+      {bool allowUnknownDiscovery = false, bool moodSet = false}) {
     if (excluded.contains(s.localname)) return false;
     if (!s.isSelectable) return false;
     final on = s.discoveryOn;
     if (on == false) return false;
     if (s.discoveryReady == false) return false;
     if (on == null && !s.isFederated && !allowUnknownDiscovery) return false;
+    if (moodSet) {
+      final mood = s.moodFiltersAvailable;
+      if (mood == false) return false;
+      if (mood == null && !allowUnknownDiscovery) return false;
+    }
     return !crossServerSeedKnownUnsupported(
         ServerVersion.tryParse(s.serverVersion));
   }
@@ -4035,7 +4055,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     final candidates = multiServerCandidates();
     if (candidates.length < 2) {
       return _fanOutDecline('${candidates.length} eligible server(s) — the '
-          'others lack discovery or a new enough version');
+          'others lack discovery'
+          '${AutoDJManager().activeMoodFilter != null ? ', mood filtering' : ''}'
+          ' or a new enough version');
     }
 
     // A candidate whose tunnel is dialing right now — the session's targets
@@ -4123,6 +4145,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
 
     final mgr = AutoDJManager();
+    // The mood every server below is asked under (libraryFilters sends it to
+    // each, as candidates are only servers that can filter by it).
+    final mood = mgr.activeMoodFilter;
 
     // What no server may answer with: the playing track and the recent
     // anchors, keyed "<localname>|<path>" because a path only names a row on
@@ -4232,6 +4257,15 @@ class AudioPlayerHandler extends BaseAudioHandler
           final decoded = jsonDecode(res.body) as Map<String, dynamic>;
           final offered = scoredSongs(decoded);
           if (offered.isEmpty) return null;
+          // An answer that does not echo the mood was picked from outside it
+          // (the server lost its scores since it said it could filter, or
+          // refused the key): it does not compete, however close it is. The
+          // webapp's rule for a cross-server pick (mStream #1096).
+          if (mood != null && !moodEchoFits(decoded['moods'], mood)) {
+            verboseLog('[dj] ${server.localname} answered without the mood '
+                '— passed over');
+            return null;
+          }
           // Whatever this answer's fate, the server has now seen its own
           // picks: its list is what a repeated round sends it.
           if (decoded['ignoreList'] is List) {

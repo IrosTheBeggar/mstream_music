@@ -980,6 +980,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les morceaux dont votre serveur n\'a pas lu la durée sont sinon ignorés';
 
   @override
+  String get autoDjMoodTitle => 'Ambiance';
+
+  @override
+  String get autoDjMoodSubtitle =>
+      'Ne choisir que des morceaux qui collent à une ambiance';
+
+  @override
+  String get autoDjMoodChoose => 'Choisir une ambiance';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ activé';
 
   @override

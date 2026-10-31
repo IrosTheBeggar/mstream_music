@@ -984,6 +984,15 @@ class AppLocalizationsPl extends AppLocalizations {
       'Utwory, których długości serwer nie odczytał, są w przeciwnym razie pomijane';
 
   @override
+  String get autoDjMoodTitle => 'Nastrój';
+
+  @override
+  String get autoDjMoodSubtitle => 'Wybieraj tylko utwory pasujące do nastroju';
+
+  @override
+  String get autoDjMoodChoose => 'Wybierz nastrój';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ jest włączony';
 
   @override
