@@ -302,6 +302,9 @@ class FakeYtdlServer {
   /// 6.26–6.28.0: a missing folder lists as 500 "Server Error".
   bool missingIs500 = false;
 
+  /// Hold every folder listing until the test completes it.
+  Completer<void>? listGate;
+
   YtdlRefusal? mkdirRefusal;
   Object? mkdirThrows;
   Completer<void>? mkdirGate;
@@ -352,6 +355,9 @@ class FakeYtdlServer {
   int nextRecordId = 100;
   Object? recordsThrows;
   YtdlRefusal? recordsRefusal;
+
+  /// Hold every record read until the test completes it.
+  Completer<void>? recordsGate;
 
   Map<String, dynamic> addRecord({
     String plugin = 'ytdl',
@@ -485,6 +491,8 @@ class FakeYtdlServer {
       return _json({});
     }
     if (req.method == 'POST' && path.endsWith('/api/v1/file-explorer')) {
+      final gate = listGate;
+      if (gate != null) await gate.future;
       final dir = norm((jsonDecode(req.body) as Map)['directory'] as String);
       if (listFails.contains(dir)) {
         throw http.ClientException('Connection closed before full header was received');
@@ -504,6 +512,8 @@ class FakeYtdlServer {
     }
     if (req.method == 'GET' && path.endsWith('/api/v1/discovery/downloads')) {
       if (!hasRecords) return _refused((404, null));
+      final gate = recordsGate;
+      if (gate != null) await gate.future;
       final t = recordsThrows;
       if (t != null) throw t;
       final r = recordsRefusal;

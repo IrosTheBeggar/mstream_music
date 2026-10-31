@@ -826,6 +826,261 @@ void main() {
     });
   });
 
+  group('the add posts only into a path it checked', () {
+    test('the target moving during the pre-start check is checked again, and made', () async {
+      h.fake.holdLookups = true;
+      final d = await found();
+      d.enterManually();
+      expect(d.target.directory, '/Music/');
+      h.fake.listGate = Completer<void>();
+      final pending = d.add();
+      await ytdlSettle();
+      // The lookup answers while /Music/ is still being listed.
+      h.fake.heldLookups.single.complete();
+      await ytdlSettle();
+      expect(d.target.directory, target);
+      h.fake.listGate!.complete();
+      h.fake.listGate = null;
+      expect(await pending, isTrue);
+      expect(h.fake.bodies('POST', '/api/v1/ytdl/').single['directory'], target);
+      expect(h.fake.bodies('POST', '/file-explorer/mkdir').single['directory'], target);
+    });
+
+    test('… and under noMkdir a new folder found then is refused, never posted into', () async {
+      s.noMkdir = true;
+      h.fake.holdLookups = true;
+      final d = await found();
+      d.enterManually();
+      h.fake.listGate = Completer<void>();
+      final pending = d.add();
+      await ytdlSettle();
+      h.fake.heldLookups.single.complete();
+      await ytdlSettle();
+      h.fake.listGate!.complete();
+      h.fake.listGate = null;
+      expect(await pending, isFalse);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+      expect(d.block, YtdlBlock.mkdirBlocked);
+      expect(d.addPhase, YtdlAddPhase.idle);
+    });
+
+    test('a change on the owner that moves the target checks the new path', () async {
+      s = ytdlServer(libraries: const ['Music', 'Podcasts'])..discoveryPluginsAvailable = true;
+      h.fake
+        ..folder('/Podcasts/')
+        ..folder(target);
+      final d = await ready();
+      expect(d.check, YtdlCheckState.known);
+      expect(d.newSegments, isEmpty);
+      // Discover's destination answers late (the first read failed).
+      h.fake.discoverAt('Podcasts');
+      await st().loadPresets();
+      expect(d.target.directory, '/Podcasts/Daft Punk/Discovery/');
+      expect(d.check, YtdlCheckState.checking);
+      await h.timers.elapse(YtdlDraft.kCheckAfter);
+      expect(d.newSegments, {0, 1});
+      expect(await d.add(), isTrue);
+      expect(h.fake.bodies('POST', '/file-explorer/mkdir').single['directory'],
+          '/Podcasts/Daft Punk/Discovery/');
+    });
+
+    test('Add here under noMkdir: the explorer\'s own folder needs no check', () async {
+      s.noMkdir = true;
+      h.fake
+        ..folder('/Music/Daft Punk/')
+        ..listFails.add('/Music/Daft Punk/');
+      final d = st().folderDraft('/Music/Daft Punk/');
+      await ready(kOneMoreTime, d);
+      expect(d.check, YtdlCheckState.unknown);
+      expect(d.mkdirBlocked, isFalse);
+      expect(d.block, YtdlBlock.none);
+      expect(await d.add(), isTrue);
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), 0);
+      // Subfolders still need the check.
+      final sub = st().folderDraft('/Music/Daft Punk/');
+      await ready(kFeelGood, sub);
+      sub.setSubLayout(kYtdlLayoutAlbum);
+      await h.timers.elapse(YtdlDraft.kCheckAfter);
+      expect(sub.mkdirBlocked, isTrue);
+    });
+  });
+
+  group('failure routing by link', () {
+    test('a failure for a link the card no longer shows is a row, not the new card\'s', () async {
+      final d = await ready();
+      d.attach();
+      h.fake
+        ..addGate = Completer<void>()
+        ..addRefusal = (500, 'Server Error');
+      final pending = d.add();
+      await ytdlSettle();
+      type(d, kFeelGood);
+      h.fake.addGate!.complete();
+      expect(await pending, isFalse);
+      expect(d.addPhase, YtdlAddPhase.idle);
+      expect(d.addFailure, isNull);
+      expect(d.link.text, kFeelGood);
+      final row = st().jobs.single;
+      expect(row.url, kOneMoreTime);
+      expect(row.state, YtdlJobState.startFailed);
+      expect(h.toastTexts, ['Couldn\'t add “One More Time”']);
+    });
+
+    test('✕ during Starting… then a failure: a row and a toast, the card empty', () async {
+      final d = await ready();
+      d.attach();
+      h.fake
+        ..addGate = Completer<void>()
+        ..addRefusal = (500, 'Server Error');
+      final pending = d.add();
+      await ytdlSettle();
+      d.clear();
+      h.fake.addGate!.complete();
+      expect(await pending, isFalse);
+      expect(d.addFailure, isNull);
+      expect(st().jobs.single.state, YtdlJobState.startFailed);
+      expect(h.toasts, hasLength(1));
+    });
+
+    test('a folder that could not be made reads as that, with its name', () async {
+      h.fake
+        ..folder('/Music/Daft Punk/')
+        ..mkdirRefusal = (500, 'Server Error');
+      final d = await ready();
+      expect(d.newSegments, {1});
+      d.attach();
+      expect(await d.add(), isFalse);
+      expect(d.addPhase, YtdlAddPhase.failed);
+      expect(d.addFailure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Discovery'));
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+    });
+
+    test('a failure cleared by a change takes "Try again" with it', () async {
+      s.ytdlFormat = 'opus';
+      h.fake.addRefusal = (400, '"outputCodec" must be one of [mp3, m4a, flac]');
+      final d = await ready();
+      d.attach();
+      await d.add();
+      expect(d.addPhase, YtdlAddPhase.failed);
+      await d.setFormat('flac');
+      expect(d.addFailure, isNull);
+      expect(d.addPhase, YtdlAddPhase.idle);
+
+      h.fake.addRefusal = (404, "Library 'Music' not found");
+      await d.add();
+      expect(d.addPhase, YtdlAddPhase.failed);
+      d.useForThisSong(const YtdlChoice(library: 'Music', layout: '', kind: 'top'));
+      expect(d.addPhase, YtdlAddPhase.idle);
+      await h.timers.elapse(YtdlDraft.kCheckAfter);
+      await d.add();
+      expect(d.addPhase, YtdlAddPhase.failed);
+      final sheet = st().folderDraft('/Music/');
+      await ready(kFeelGood, sheet);
+      sheet.attach();
+      await sheet.add();
+      expect(sheet.addPhase, YtdlAddPhase.failed);
+      sheet.setSubLayout(kYtdlLayoutAlbum);
+      expect(sheet.addPhase, YtdlAddPhase.idle);
+    });
+
+    test('a re-ping that turns conversion off takes the button away, and is heard', () async {
+      h.hub.reping = (srv) async {
+        await Future<void>.delayed(Duration.zero);
+        srv.transcodeAvailable = false;
+      };
+      h.fake.addRefusal = (500, 'FFmpeg is not available yet');
+      final d = await ready();
+      d.attach();
+      var heard = 0;
+      d.addListener(() => heard++);
+      await d.add();
+      heard = 0;
+      await ytdlSettle();
+      expect(heard, greaterThan(0));
+      expect(d.block, YtdlBlock.convertOff);
+      expect(st().entryAllowed, isFalse);
+    });
+  });
+
+  group('the path note and one-off paths', () {
+    test('no tags, but a folder below the library: no "top folder" note', () async {
+      h.fake.lookupRefusal = (500, 'Server Error');
+      final sheet = st().folderDraft('/Music/Daft Punk/');
+      await found(kOneMoreTime, sheet);
+      expect(sheet.lookup, YtdlLookupState.failed);
+      expect(sheet.target.directory, '/Music/Daft Punk/');
+      expect(sheet.lookupBlank, isFalse);
+
+      final d = await found();
+      expect(d.lookupBlank, isTrue);
+      d.useForThisSong(const YtdlChoice(library: 'Music', layout: 'Singles/{{ARTIST}}', kind: 'custom'));
+      expect(d.target.directory, '/Music/Singles/');
+      expect(d.lookupBlank, isFalse);
+    });
+
+    test('a just-this-song path goes when another video replaces its song', () async {
+      final d = await ready();
+      d.useForThisSong(const YtdlChoice(library: 'Music', layout: '', kind: 'top'));
+      type(d, kFeelGood);
+      expect(d.justThisSong, isNull);
+      expect(d.choice.kind, 'artistAlbum');
+      // The same link typed again keeps it.
+      d.useForThisSong(const YtdlChoice(library: 'Music', layout: '', kind: 'top'));
+      type(d, '');
+      type(d, kFeelGood);
+      expect(d.justThisSong?.kind, 'top');
+    });
+
+    test('one chosen before any link is the first video\'s', () async {
+      final d = draft();
+      d.useForThisSong(const YtdlChoice(library: 'Music', layout: '', kind: 'top'));
+      await found(kOneMoreTime, d);
+      expect(d.justThisSong?.kind, 'top');
+      type(d, kFeelGood);
+      expect(d.justThisSong, isNull);
+    });
+  });
+
+  group('previews and coming back online', () {
+    test('checkTarget checks a choice not applied, leaving the draft\'s check alone', () async {
+      h.fake.folder('/Music/Daft Punk/');
+      final d = st().folderDraft('/Music/Daft Punk/');
+      await ready(kOneMoreTime, d);
+      expect(d.check, YtdlCheckState.known);
+      final pending = d.targetFor(YtdlChoice.folder('/Music/Daft Punk/', layout: kYtdlLayoutAlbum));
+      expect(pending.directory, target);
+      final c = await d.checkTarget(pending);
+      expect(c.state, YtdlCheckState.known);
+      expect(c.newSegments, {1});
+      expect([for (final i in c.newSegments) pending.segments[i]], ['Discovery']);
+      expect(c.deepest, '/Music/Daft Punk/');
+      expect(d.subLayout, kYtdlLayoutTop);
+      expect(d.target.directory, '/Music/Daft Punk/');
+      expect(d.newSegments, isEmpty);
+    });
+
+    test('an offline lookup runs again when the connection comes back', () async {
+      h.fake.lookupThrows = const SocketException('Network is unreachable');
+      final d = await found();
+      expect(d.lookup, YtdlLookupState.offline);
+      h.fake.lookupThrows = null;
+      h.hub.connectivityRestored();
+      await ytdlSettle();
+      expect(d.lookup, YtdlLookupState.found);
+    });
+
+    test('… or when the same link is pasted again', () async {
+      h.fake.lookupThrows = const SocketException('Network is unreachable');
+      final d = await found();
+      h.fake.lookupThrows = null;
+      h.clipboard = kOneMoreTime;
+      await d.pasteFromClipboard();
+      await ytdlSettle();
+      expect(lookups(), 2);
+      expect(d.lookup, YtdlLookupState.found);
+    });
+  });
+
   group('failure words', () {
     test('a lost library\'s name, from the words or the folder', () {
       expect(ytdlGoneLibrary(const YtdlFailure(YtdlProblem.libraryGone, 'Podcasts'), target), 'Podcasts');

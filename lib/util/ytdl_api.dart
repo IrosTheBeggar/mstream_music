@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 
@@ -228,6 +229,38 @@ class YtdlRecord {
   }
 }
 
+/// One page of the download record ([YtdlApi.recordsPage]): its ytdl rows,
+/// and what the whole page held — the route's `limit` counts every
+/// plug-in's rows, so a page of Discover downloads or federation copies has
+/// no ytdl row and is still not the end. Page on [oldestId], end on [end].
+class YtdlRecordPage {
+  /// The page's [kYtdlRecordPlugin] rows, newest first.
+  final List<YtdlRecord> rows;
+
+  /// Every plug-in's rows on the page (with an id).
+  final int count;
+
+  /// The smallest and largest id on the page, any plug-in: the next
+  /// page's `before`, and the newest record the server holds (a first
+  /// page). Null on an empty page.
+  final int? oldestId;
+  final int? newestId;
+
+  /// The page's earliest `downloadedAt` (ms, server clock), any plug-in.
+  final int? oldestAt;
+
+  const YtdlRecordPage({
+    this.rows = const [],
+    this.count = 0,
+    this.oldestId,
+    this.newestId,
+    this.oldestAt,
+  });
+
+  /// The page held no row at all: nothing older is left.
+  bool get end => count == 0;
+}
+
 /// The record's plug-in name for a POST /ytdl add.
 const String kYtdlRecordPlugin = 'ytdl';
 
@@ -349,7 +382,13 @@ class YtdlApi {
   /// `{error}` — which marks a server before 6.30 (the release that brought
   /// the record, the staging folder and the caps). Anything else that fails
   /// throws, a 404 that carries the server's words included.
-  Future<List<YtdlRecord>?> records({int limit = 20, int? before}) async {
+  Future<List<YtdlRecord>?> records({int limit = 20, int? before}) async =>
+      (await recordsPage(limit: limit, before: before))?.rows;
+
+  /// [records] with what the whole page held ([YtdlRecordPage]): page with
+  /// `before` = its [YtdlRecordPage.oldestId], and only an empty page is the
+  /// end. Null on a server before 6.30, as [records].
+  Future<YtdlRecordPage?> recordsPage({int limit = 20, int? before}) async {
     final q = {
       'limit': '${limit.clamp(1, 500)}',
       if (before != null) 'before': '$before',
@@ -363,12 +402,34 @@ class YtdlApi {
       rethrow;
     }
     final list = _map(body)['downloads'];
-    return [
-      if (list is List)
-        for (final e in list)
-          if (e is Map && e['plugin'] == kYtdlRecordPlugin)
-            ?YtdlRecord.fromServerMap(e),
-    ];
+    final rows = <YtdlRecord>[];
+    var count = 0;
+    int? oldestId, newestId, oldestAt;
+    if (list is List) {
+      for (final e in list) {
+        if (e is! Map) continue;
+        final id = _int(e['id']);
+        if (id == null) continue;
+        count++;
+        oldestId = oldestId == null ? id : math.min(oldestId, id);
+        newestId = newestId == null ? id : math.max(newestId, id);
+        final at = _int(e['downloadedAt']);
+        if (at != null) {
+          oldestAt = oldestAt == null ? at : math.min(oldestAt, at);
+        }
+        if (e['plugin'] == kYtdlRecordPlugin) {
+          final r = YtdlRecord.fromServerMap(e);
+          if (r != null) rows.add(r);
+        }
+      }
+    }
+    return YtdlRecordPage(
+      rows: rows,
+      count: count,
+      oldestId: oldestId,
+      newestId: newestId,
+      oldestAt: oldestAt,
+    );
   }
 
   // ── transport ───────────────────────────────────────────────────────

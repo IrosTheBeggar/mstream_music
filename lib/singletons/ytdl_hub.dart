@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io' show SocketException;
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -85,9 +84,19 @@ class YtdlAddedRow {
 
   /// The song on the server as the download record names it:
   /// `<vpath>/<rel>`, NO leading slash (a browser file row's `data` has
-  /// one). Null when the phone cannot name the file.
+  /// one). For one of this phone's jobs with no record, the predicted name
+  /// as the folder listed it. Null when the phone cannot name the file (no
+  /// tap-to-play then).
   final String? filepath;
   final int? recordId;
+
+  /// The video's thumbnail URL from this phone's lookup (its jobs only;
+  /// a record has none).
+  final String? cover;
+
+  /// The library's track id (the record's, or the job's from it): album
+  /// art for the row's 48 px cover.
+  final int? trackId;
 
   const YtdlAddedRow({
     required this.title,
@@ -98,6 +107,8 @@ class YtdlAddedRow {
     this.present = true,
     this.filepath,
     this.recordId,
+    this.cover,
+    this.trackId,
   });
 
   @override
@@ -125,6 +136,10 @@ class YtdlStartRequest {
   /// could not be checked; null = it is there.
   final String? mkdir;
 
+  /// The folder "Couldn't make the folder “…”" names when [mkdir] fails:
+  /// the first new one. Null = [mkdir]'s last folder.
+  final String? mkdirFolder;
+
   /// `screen` | `folder:<currentPath>` — which surface sent it.
   final String? origin;
 
@@ -144,6 +159,7 @@ class YtdlStartRequest {
     this.cover,
     required this.predictedName,
     this.mkdir,
+    this.mkdirFolder,
     this.origin,
     this.inline,
   });
@@ -152,7 +168,9 @@ class YtdlStartRequest {
 /// What a start, an Add again or a retry came to. [ok]: the server took
 /// it (200). [timedOut]: the POST went out and no answer came — the job is
 /// `startUnsure` and the hub looks for it. Otherwise [failure] says why
-/// nothing started.
+/// nothing started; a folder that could not be made reads
+/// [YtdlProblem.mkdirFailed] with the folder's name (a 403 there is
+/// [YtdlProblem.mkdirOff]).
 class YtdlStartOutcome {
   final bool ok;
   final bool timedOut;
@@ -398,6 +416,17 @@ class YtdlHub with WidgetsBindingObserver {
       s._foregroundChanged(fg);
     }
   }
+
+  /// The device has a usable network again (main.dart's connectivity
+  /// listener): rows "Waiting for connection" poll at once, and a lookup
+  /// that found no connection runs again — "the lookup runs when you're
+  /// back" (spec §8 Offline) also while the screen stays in front.
+  void connectivityRestored() {
+    if (!_foreground) return;
+    for (final s in _states.values) {
+      s._foregroundChanged(true);
+    }
+  }
 }
 
 /// Add from YouTube on one own server: its jobs and their polling, the
@@ -424,14 +453,24 @@ class YtdlServerState extends ChangeNotifier {
   /// "Added {n}" on the home card lasts this long.
   static const Duration kAddedNews = Duration(hours: 1);
 
-  /// The download record is paged at most this deep for one job.
+  /// The download record is paged at most this deep for one job (and for
+  /// one read of ADDED that finds no ytdl row).
   static const int kRecordPages = 5;
   static const int kRecordPage = 20;
+
+  /// How long an add waits, before its POST, for the record's newest id
+  /// ([YtdlJob.recordFloor]); past it the last one read stands in.
+  static const Duration kFloorWait = Duration(seconds: 5);
 
   final List<YtdlJob> _jobs = [];
   final Map<String, DateTime> _sentAt = {};
   final Map<String, String> _origins = {};
   final Set<String> _busy = {};
+
+  /// Jobs whose entry read `error` while the folder (or the tier) could not
+  /// say whether it was a name clash: asked again each poll, and settled
+  /// failed once the entry is gone (this session only).
+  final Set<String> _sawError = {};
 
   /// Pids of rows dismissed this session: a new job never claims one.
   final Set<int> _retiredPids = {};
@@ -448,6 +487,14 @@ class YtdlServerState extends ChangeNotifier {
   bool _addedLoading = false;
   bool _canShowEarlier = false;
   Future<void>? _refreshingAdded;
+
+  /// The smallest record id ADDED has read past (any plug-in): "Show
+  /// earlier" asks before it.
+  int? _addedCursor;
+
+  /// The newest record id (any plug-in) a first page showed; 0 = the
+  /// record was empty, null = never read.
+  int? _newestRecordId;
 
   CollectionDestination? _discover;
   Map<String, String> _templates = const {};
@@ -481,6 +528,13 @@ class YtdlServerState extends ChangeNotifier {
   /// The last poll got no answer at all: open rows read "Waiting for
   /// connection" (spec §8).
   bool get offline => _offline;
+
+  /// [YtdlHub.entryAllowed] for this server as its flags stand now. A
+  /// re-ping after a 403 or "FFmpeg is not available yet" can turn it off
+  /// (this state notifies when a re-ping lands): the home card hides, and
+  /// an open screen or folder sheet should close (spec §8 "Audio
+  /// conversion not ready", "Uploads off").
+  bool get entryAllowed => YtdlHub.entryAllowed(server);
 
   /// Every job this phone knows on this server, newest first (tests and
   /// the rows' actions).
@@ -518,15 +572,27 @@ class YtdlServerState extends ChangeNotifier {
 
   /// ADDED: on 6.30+ the account's download record (paged) with any of
   /// this phone's finished jobs no record answered for; on older servers
-  /// (and until the tier is known) this phone's finished jobs.
+  /// (and until the tier is known) this phone's finished jobs. A job that
+  /// settled before its record could be read takes it once a page holds it
+  /// ([_attribute]), and a job naming the same file as a loaded record is
+  /// left to the record's row: one row per song.
   List<YtdlAddedRow> get added {
+    final full = _tier == YtdlServerTier.full;
+    final recorded = full
+        ? {
+            for (final r in _records)
+              if (r.filepath.isNotEmpty) r.filepath.toLowerCase()
+          }
+        : const <String>{};
     final mine = [
       for (final j in _jobs)
         if (j.state == YtdlJobState.added &&
-            (_tier != YtdlServerTier.full || j.recordId == null))
+            (!full ||
+                (j.recordId == null &&
+                    !recorded.contains(j.filepath?.toLowerCase()))))
           _rowOfJob(j),
     ];
-    if (_tier != YtdlServerTier.full) return mine;
+    if (!full) return mine;
     final rows = [...mine, for (final r in _records) _rowOfRecord(r)];
     rows.sort((a, b) => (b.when?.millisecondsSinceEpoch ?? 0)
         .compareTo(a.when?.millisecondsSinceEpoch ?? 0));
@@ -554,14 +620,14 @@ class YtdlServerState extends ChangeNotifier {
       present: r.present,
       filepath: r.filepath.isEmpty ? null : r.filepath,
       recordId: r.id,
+      trackId: r.trackId,
     );
   }
 
+  /// [j]'s file only as its record or its folder's listing named it — a
+  /// predicted name the folder never showed is no file to play.
   static YtdlAddedRow _rowOfJob(YtdlJob j) {
-    final named = j.filepath ??
-        (j.predictedName.isEmpty
-            ? null
-            : '${_bare(j.directory)}/${j.predictedName}');
+    final named = j.filepath;
     return YtdlAddedRow(
       title: j.title,
       directory: j.directory,
@@ -570,6 +636,8 @@ class YtdlServerState extends ChangeNotifier {
       when: j.endedAt,
       filepath: named,
       recordId: j.recordId,
+      cover: j.cover,
+      trackId: j.trackId,
     );
   }
 
@@ -812,19 +880,48 @@ class YtdlServerState extends ChangeNotifier {
 
   Future<void> _probe() async {
     try {
-      final rows = await api.records(limit: kRecordPage);
+      final read = await _readAdded();
       if (_disposed) return;
-      if (rows == null) {
+      if (read == null) {
         _tier = YtdlServerTier.older;
       } else {
         _tier = YtdlServerTier.full;
-        _records = rows;
-        _canShowEarlier = rows.isNotEmpty;
+        _records = read.rows;
+        _addedCursor = read.cursor;
+        _canShowEarlier = !read.end;
+        _attribute();
       }
       _notify();
     } catch (_) {
       // Unknown still: the older rules, and the next ask probes again.
     }
+  }
+
+  /// One read of ADDED, newest first from [before] (null = the newest):
+  /// pages until one holds a ytdl row or the record ends, at most
+  /// [kRecordPages] — a page counts every plug-in's rows, so a page of
+  /// Discover downloads holds none and is not the end. [cursor] is the
+  /// smallest id read (the next `before`); [end]: an empty page came back.
+  /// Null on a server before 6.30; throws when the record can't be read.
+  Future<({List<YtdlRecord> rows, int? cursor, bool end})?> _readAdded(
+      {int? before}) async {
+    final rows = <YtdlRecord>[];
+    var cursor = before;
+    for (var i = 0; i < kRecordPages; i++) {
+      final page = await api.recordsPage(limit: kRecordPage, before: cursor);
+      if (page == null) return null;
+      if (cursor == null) _noteNewest(page.newestId ?? 0);
+      if (page.end) return (rows: rows, cursor: cursor, end: true);
+      rows.addAll(page.rows);
+      cursor = page.oldestId;
+      if (rows.isNotEmpty) break;
+    }
+    return (rows: rows, cursor: cursor, end: false);
+  }
+
+  void _noteNewest(int id) {
+    final had = _newestRecordId;
+    if (had == null || id > had) _newestRecordId = id;
   }
 
   Future<void> _knowTier() async {
@@ -853,17 +950,32 @@ class YtdlServerState extends ChangeNotifier {
         _refreshAdded().whenComplete(() => _refreshingAdded = null);
   }
 
+  /// The newest rows replace the top of the list; pages "Show earlier"
+  /// already brought stay below them.
   Future<void> _refreshAdded() async {
     _addedLoading = true;
     _notify();
     try {
-      final rows = await api.records(limit: kRecordPage);
+      final read = await _readAdded();
       if (_disposed) return;
-      if (rows == null) {
+      if (read == null) {
         _tier = YtdlServerTier.older;
       } else {
-        _records = rows;
-        _canShowEarlier = rows.isNotEmpty;
+        final cut = read.cursor;
+        final older = _addedCursor;
+        if (!read.end && cut != null && older != null && older < cut) {
+          final fresh = {for (final r in read.rows) r.id};
+          _records = [
+            ...read.rows,
+            for (final r in _records)
+              if (r.id < cut && !fresh.contains(r.id)) r,
+          ];
+        } else {
+          _records = read.rows;
+          _addedCursor = cut;
+          _canShowEarlier = !read.end;
+        }
+        _attribute();
       }
     } catch (_) {
       // The list keeps what it had.
@@ -873,22 +985,27 @@ class YtdlServerState extends ChangeNotifier {
     }
   }
 
-  /// "Show earlier": the page before the oldest row shown.
+  /// "Show earlier": the rows before the oldest one read (paging past
+  /// pages that hold only other plug-ins' rows); an empty page ends it.
   Future<void> showEarlier() async {
-    if (!canShowEarlier || _addedLoading || _records.isEmpty) return;
+    final before = _addedCursor;
+    if (!canShowEarlier || _addedLoading || before == null) return;
     _addedLoading = true;
     _notify();
     try {
-      final before = _records.map((r) => r.id).reduce(math.min);
-      final rows = await api.records(limit: kRecordPage, before: before);
+      final read = await _readAdded(before: before);
       if (_disposed) return;
-      if (rows == null) {
+      if (read == null) {
         _tier = YtdlServerTier.older;
-      } else if (rows.isEmpty) {
-        _canShowEarlier = false;
       } else {
         final have = {for (final r in _records) r.id};
-        _records = [..._records, ...rows.where((r) => !have.contains(r.id))];
+        _records = [
+          ..._records,
+          ...read.rows.where((r) => !have.contains(r.id)),
+        ];
+        _addedCursor = read.cursor ?? before;
+        if (read.end) _canShowEarlier = false;
+        _attribute();
       }
     } catch (_) {
       // Tap again.
@@ -896,6 +1013,56 @@ class YtdlServerState extends ChangeNotifier {
       _addedLoading = false;
       _notify();
     }
+  }
+
+  /// Added jobs that settled before their record could be read (a read
+  /// that failed, the tier not known yet) take it once a loaded page holds
+  /// it — by [_answers], bounded by the job's start, a record answering for
+  /// one job only — so ADDED shows the song once and a later add can't
+  /// take it.
+  void _attribute() {
+    final taken = {for (final j in _jobs) ?j.recordId};
+    var changed = false;
+    for (final j in _jobs) {
+      if (j.state != YtdlJobState.added || j.recordId != null) continue;
+      final r = _records
+          .where((r) => !taken.contains(r.id) && _answers(j, r, bounded: true))
+          .firstOrNull;
+      if (r == null) continue;
+      _takeRecord(j, r);
+      taken.add(r.id);
+      changed = true;
+    }
+    if (changed) _changed();
+  }
+
+  static void _takeRecord(YtdlJob job, YtdlRecord record) {
+    job
+      ..filepath = record.filepath
+      ..bytes = record.bytes
+      ..trackId = record.trackId
+      ..recordId = record.id;
+  }
+
+  /// [r] is [job]'s download record: its link as `origin`, in its folder
+  /// (compared without slashes, ignoring case — the record keeps the
+  /// on-disk case), and not older than the job — written at or after the
+  /// claimed entry's start ([YtdlJob.serverStart], both the server's
+  /// clock) and newer than the record's newest row before the POST
+  /// ([YtdlJob.recordFloor]). With neither bound known (a job saved by an
+  /// older build, a floor that could not be read) any match counts, as the
+  /// folder's predicted name does — unless [bounded].
+  static bool _answers(YtdlJob job, YtdlRecord r, {bool bounded = false}) {
+    if (r.origin != job.url) return false;
+    if (_folderOf(r.filepath).toLowerCase() !=
+        _bare(job.directory).toLowerCase()) {
+      return false;
+    }
+    final start = job.serverStart;
+    final floor = job.recordFloor;
+    if (start != null && r.downloadedAt < start) return false;
+    if (floor != null && r.id <= floor) return false;
+    return !bounded || start != null || floor != null;
   }
 
   // ── jobs (spec §6) ──────────────────────────────────────────────────────
@@ -917,6 +1084,7 @@ class YtdlServerState extends ChangeNotifier {
       title: request.title,
       cover: request.cover,
       predictedName: request.predictedName,
+      mkdir: request.mkdir,
       createdAt: _now,
     );
     final origin = request.origin;
@@ -924,7 +1092,10 @@ class YtdlServerState extends ChangeNotifier {
     _jobs.insert(0, job);
     _prune();
     _changed();
-    return _run(job, mkdir: request.mkdir, inline: request.inline);
+    return _run(job,
+        mkdir: request.mkdir,
+        mkdirFolder: request.mkdirFolder,
+        inline: request.inline);
   }
 
   int _seq = 0;
@@ -950,8 +1121,9 @@ class YtdlServerState extends ChangeNotifier {
 
   /// "Try again" (a failed row, a start failure) or "Change format and
   /// retry" (a name clash, with [codec]): a new add of the same song in
-  /// place of [job]'s row. A start failure makes its folder again first
-  /// (unless the account may not make folders) — it may have failed there.
+  /// place of [job]'s row. A start failure whose add made a folder makes it
+  /// again first (unless the account may not make folders) — it may have
+  /// failed there; one that never needed a folder never asks for one.
   Future<YtdlStartOutcome> retry(YtdlJob job, {String? codec}) async {
     if (!_jobs.contains(job) || job.open) return YtdlStartOutcome(job: job);
     final c = codec ?? job.codec;
@@ -964,6 +1136,7 @@ class YtdlServerState extends ChangeNotifier {
       title: job.title,
       cover: job.cover,
       predictedName: _renamed(job.predictedName, c),
+      mkdir: job.mkdir,
       createdAt: _now,
     );
     final origin = _origins[job.id];
@@ -973,11 +1146,16 @@ class YtdlServerState extends ChangeNotifier {
     _jobs.removeAt(i);
     _jobs.insert(0, next);
     _changed();
-    final remake =
-        job.state == YtdlJobState.startFailed && !_mayNotMkdir;
+    final remake = job.state == YtdlJobState.startFailed &&
+        job.mkdir != null &&
+        !_mayNotMkdir;
     _busy.add(next.id);
     try {
-      return await _run(next, mkdir: remake ? job.directory : null);
+      return await _run(next,
+          mkdir: remake ? job.mkdir : null,
+          mkdirFolder: job.problem == YtdlProblem.mkdirFailed.name
+              ? job.problemDetail
+              : null);
     } finally {
       _busy.remove(next.id);
       _notify();
@@ -1020,6 +1198,7 @@ class YtdlServerState extends ChangeNotifier {
     final pid = job.pid;
     if (pid != null) _retiredPids.add(pid);
     _sentAt.remove(job.id);
+    _sawError.remove(job.id);
   }
 
   void _restart(YtdlJob job) {
@@ -1027,10 +1206,12 @@ class YtdlServerState extends ChangeNotifier {
       ..state = YtdlJobState.starting
       ..pid = null
       ..serverStart = null
+      ..recordFloor = null
       ..endedAt = null
       ..seen = false
       ..problem = null
       ..problemDetail = null;
+    _sawError.remove(job.id);
     _changed();
   }
 
@@ -1041,17 +1222,32 @@ class YtdlServerState extends ChangeNotifier {
   bool get mkdirRefused => _mkdirRefused;
 
   /// One add's sends. [inline] decides a start failure's routing.
+  ///
+  /// On 6.30+ the record's newest id is read alongside the mkdir and kept
+  /// as [YtdlJob.recordFloor] before the POST, so no record older than this
+  /// add can ever settle it (bounded by [kFloorWait]; the last id read
+  /// stands in when it can't be had).
   Future<YtdlStartOutcome> _run(YtdlJob job,
-      {String? mkdir, bool Function()? inline}) async {
+      {String? mkdir, String? mkdirFolder, bool Function()? inline}) async {
     final api = this.api;
+    final floor =
+        _tier == YtdlServerTier.older ? null : _readFloor(api);
     if (mkdir != null) {
       try {
         await api.mkdir(mkdir);
       } catch (e) {
-        final f = classifyYtdlMkdir(e);
-        if (f.problem == YtdlProblem.mkdirOff) {
-          _mkdirRefused = true;
-          unawaited(_reping());
+        var f = classifyYtdlMkdir(e);
+        switch (f.problem) {
+          case YtdlProblem.mkdirOff:
+            _mkdirRefused = true;
+            unawaited(_reping());
+          case YtdlProblem.offline:
+          case YtdlProblem.libraryGone:
+            break;
+          default:
+            // Spec §8 "mkdir failed": the folder is named, not the status.
+            f = YtdlFailure(YtdlProblem.mkdirFailed,
+                mkdirFolder ?? _lastFolder(mkdir));
         }
         return _startFailed(job, f, inline);
       }
@@ -1059,6 +1255,11 @@ class YtdlServerState extends ChangeNotifier {
     if (server.isIrohTransport && !await hub.awaitTunnel(server)) {
       return _startFailed(job, const YtdlFailure(YtdlProblem.offline), inline);
     }
+    if (floor != null) {
+      job.recordFloor =
+          await _bounded<int?>(floor, kFloorWait) ?? _newestRecordId;
+    }
+    if (_disposed) return YtdlStartOutcome(job: job);
     _sentAt[job.id] = _now;
     try {
       await api.add(
@@ -1096,10 +1297,55 @@ class YtdlServerState extends ChangeNotifier {
     return YtdlStartOutcome(ok: true, job: job);
   }
 
+  /// The re-ping's flags reach every listener: a draft's Add block, the
+  /// format list, [entryAllowed].
   Future<void> _reping() async {
     try {
       await hub.reping(server);
     } catch (_) {}
+    _notify();
+  }
+
+  /// The record's newest id now (any plug-in): one row asked for, or the
+  /// tier's probe when it is not known yet. Null when it can't be read or
+  /// the server has no record.
+  Future<int?> _readFloor(YtdlApi api) async {
+    try {
+      if (_tier == YtdlServerTier.unknown) {
+        await probeTier();
+        return _tier == YtdlServerTier.full ? _newestRecordId : null;
+      }
+      if (_tier != YtdlServerTier.full) return null;
+      final page = await api.recordsPage(limit: 1);
+      if (page == null) return null;
+      final id = page.newestId ?? 0;
+      _noteNewest(id);
+      return id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// [future]'s value, or null when it fails or takes longer than [limit]
+  /// (on the hub's timer).
+  Future<T?> _bounded<T>(Future<T> future, Duration limit) {
+    final done = Completer<T?>();
+    final t = hub.timer(limit, () {
+      if (!done.isCompleted) done.complete(null);
+    });
+    future.then((v) {
+      t.cancel();
+      if (!done.isCompleted) done.complete(v);
+    }, onError: (Object _) {
+      t.cancel();
+      if (!done.isCompleted) done.complete(null);
+    });
+    return done.future;
+  }
+
+  static String _lastFolder(String directory) {
+    final crumbs = pathCrumbs(directory);
+    return crumbs.isEmpty ? '' : crumbs.last;
   }
 
   /// A POST with no answer that may have reached the server: a timeout,
@@ -1151,7 +1397,10 @@ class YtdlServerState extends ChangeNotifier {
 
   /// "Not sure it started" → Check again: the server's job list, the
   /// download record (6.30+) and the folder, for this link and folder.
-  /// Found → ADDING or ADDED; else "Not found on the server".
+  /// Found → ADDING or ADDED; "Not found on the server" (and its Add
+  /// again) only once every one of them answered — a list, record or
+  /// folder that could not be read leaves the row as it was, to check
+  /// again.
   Future<void> checkAgain(YtdlJob job) async {
     if (!_jobs.contains(job) || job.open || _busy.contains(job.id)) return;
     _busy.add(job.id);
@@ -1163,7 +1412,7 @@ class YtdlServerState extends ChangeNotifier {
       } catch (_) {
         return;
       }
-      if (_disposed || !_jobs.contains(job)) return;
+      if (_gone(job)) return;
       final entry = _unclaimedFor(job, entries, _claimedPids());
       if (entry != null) {
         job
@@ -1176,19 +1425,28 @@ class YtdlServerState extends ChangeNotifier {
         return;
       }
       await _knowTier();
+      if (_gone(job)) return;
+      var unread = _tier == YtdlServerTier.unknown;
       if (_tier == YtdlServerTier.full) {
-        YtdlRecord? r;
         try {
-          r = await _findRecord(job);
-        } catch (_) {}
-        if (r != null) {
-          _settle(job, YtdlJobState.added, record: r);
-          return;
+          final r = await _findRecord(job);
+          if (_gone(job)) return;
+          if (r != null) {
+            _settle(job, YtdlJobState.added, record: r);
+            return;
+          }
+        } catch (_) {
+          unread = true;
         }
       }
-      final present = await _nameInFolder(job) == true;
-      if (_disposed || !_jobs.contains(job)) return;
-      _settle(job, present ? YtdlJobState.added : YtdlJobState.notFound);
+      final name = await _nameInFolder(job);
+      if (_gone(job)) return;
+      if (name != null && name.isNotEmpty) {
+        _settle(job, YtdlJobState.added, filepath: _pathIn(job, name));
+        return;
+      }
+      if (name == null || unread) return;
+      _settle(job, YtdlJobState.notFound);
     } finally {
       _busy.remove(job.id);
       _notify();
@@ -1322,30 +1580,56 @@ class YtdlServerState extends ChangeNotifier {
         try {
           record = await _findRecord(job);
         } catch (_) {
-          // No record to name the file: still added, crumbs from the folder.
+          // Still added; the record joins the row once a page holds it.
         }
       }
+      String? listed;
+      if (record == null) {
+        // No record to name the file: the folder does, when it shows the
+        // predicted name (older servers, a record not written or not read).
+        final name = await _nameInFolder(job);
+        if (name != null && name.isNotEmpty) listed = _pathIn(job, name);
+      }
       if (_jobs.contains(job) && job.open) {
-        _settle(job, YtdlJobState.added, record: record);
+        _settle(job, YtdlJobState.added, record: record, filepath: listed);
       }
     } else if (entry.failed) {
-      await _knowTier();
-      final present = await _nameInFolder(job);
-      if (!_jobs.contains(job) || !job.open) return;
-      // Only 6.30+ refuses a name clash; an older server re-tags instead.
-      _settle(
-          job,
-          present == true && _tier == YtdlServerTier.full
-              ? YtdlJobState.failedClash
-              : YtdlJobState.failed);
+      await _erred(job);
     }
+  }
+
+  /// [job]'s entry ended in `error`. Only 6.30+ refuses a name clash (an
+  /// older server re-tags instead): there the predicted name in the folder
+  /// → failedClash, else failed. While the folder won't list (or the tier
+  /// is not known) the job stays adding and the next poll asks again — a
+  /// clash read as a plain failure would offer a Try again that fails the
+  /// same way. Once the entry is gone ([gone]) it settles on what is known,
+  /// failed when that is nothing.
+  Future<void> _erred(YtdlJob job, {bool gone = false}) async {
+    _sawError.add(job.id);
+    await _knowTier();
+    String? name;
+    if (_tier != YtdlServerTier.older) name = await _nameInFolder(job);
+    if (!_jobs.contains(job) || !job.open) return;
+    final full = _tier == YtdlServerTier.full;
+    if (!gone && _tier != YtdlServerTier.older && (!full || name == null)) {
+      return;
+    }
+    _sawError.remove(job.id);
+    _settle(
+        job,
+        full && name != null && name.isNotEmpty
+            ? YtdlJobState.failedClash
+            : YtdlJobState.failed);
   }
 
   /// A job whose entry is gone without this phone seeing it end (away past
   /// the tracker's 30 s, a restart, or never seen at all): the download
   /// record (6.30+) or the folder (older) says added; else "Not sure it
-  /// finished". A lookup that fails leaves it for the next poll.
+  /// finished". A lookup that fails leaves it for the next poll. One seen
+  /// in `error` settles as a failure ([_erred]).
   Future<void> _vanished(YtdlJob job) async {
+    if (_sawError.contains(job.id)) return _erred(job, gone: true);
     await _knowTier();
     if (_tier == YtdlServerTier.full) {
       final YtdlRecord? r;
@@ -1363,71 +1647,87 @@ class YtdlServerState extends ChangeNotifier {
         return;
       }
     }
-    final present = await _nameInFolder(job);
-    if (present == null || !_jobs.contains(job) || !job.open) return;
-    _settle(job, present ? YtdlJobState.added : YtdlJobState.notSureFinished);
+    final name = await _nameInFolder(job);
+    if (name == null || !_jobs.contains(job) || !job.open) return;
+    final there = name.isNotEmpty;
+    _settle(job, there ? YtdlJobState.added : YtdlJobState.notSureFinished,
+        filepath: there ? _pathIn(job, name) : null);
   }
 
-  /// [job]'s download record: the newest row with its link as `origin` in
-  /// its folder (compared without slashes, ignoring case — the record keeps
-  /// the on-disk case) that no other job holds. Paged back until a row is
-  /// older than the claimed entry's start (both the server's clock), at
-  /// most [kRecordPages] pages. Null when there is none, or the route is
-  /// missing (the tier turns older). Throws when the record cannot be read.
+  /// [job]'s download record: the newest row [_answers] says is its (its
+  /// link, its folder, not older than the job) that no other job holds.
+  /// Paged on every plug-in's ids (a page of other plug-ins' rows is not
+  /// the end) until an empty page, a page that reaches back past the job's
+  /// start or floor, or [kRecordPages] pages. Null when there is none, or
+  /// the route is missing (the tier turns older). Throws when the record
+  /// cannot be read.
   Future<YtdlRecord?> _findRecord(YtdlJob job) async {
     final taken = {
       for (final j in _jobs)
         if (!identical(j, job)) ?j.recordId,
     };
-    final folder = _bare(job.directory).toLowerCase();
     final start = job.serverStart;
+    final floor = job.recordFloor;
     int? before;
-    for (var page = 0; page < kRecordPages; page++) {
-      final rows = await api.records(limit: kRecordPage, before: before);
-      if (rows == null) {
+    for (var i = 0; i < kRecordPages; i++) {
+      final page = await api.recordsPage(limit: kRecordPage, before: before);
+      if (page == null) {
         _tier = YtdlServerTier.older;
         _notify();
         return null;
       }
-      if (rows.isEmpty) return null;
-      for (final r in rows) {
-        if (taken.contains(r.id) || r.origin != job.url) continue;
-        if (_folderOf(r.filepath).toLowerCase() == folder) return r;
+      if (before == null) _noteNewest(page.newestId ?? 0);
+      for (final r in page.rows) {
+        if (!taken.contains(r.id) && _answers(job, r)) return r;
       }
-      if (start != null && rows.any((r) => r.downloadedAt < start)) {
-        return null;
-      }
-      before = rows.map((r) => r.id).reduce(math.min);
+      if (page.end) return null;
+      final oldestAt = page.oldestAt;
+      final oldestId = page.oldestId;
+      if (start != null && oldestAt != null && oldestAt < start) return null;
+      if (floor != null && oldestId != null && oldestId <= floor) return null;
+      before = oldestId;
     }
     return null;
   }
 
-  /// Whether [job]'s predicted file is in its folder (ignoring case); null
-  /// when the folder did not list.
-  Future<bool?> _nameInFolder(YtdlJob job) async {
+  /// [job]'s predicted file in its folder (ignoring case): the name as the
+  /// folder lists it (the on-disk case), '' when the folder listed without
+  /// it, null when the folder did not list.
+  Future<String?> _nameInFolder(YtdlJob job) async {
     final name = job.predictedName.toLowerCase();
     try {
       final listing = await api.list(job.directory);
-      return name.isNotEmpty &&
-          listing.files.any((f) => f.toLowerCase() == name);
+      if (name.isEmpty) return '';
+      return listing.files
+              .where((f) => f.toLowerCase() == name)
+              .firstOrNull ??
+          '';
     } catch (_) {
       return null;
     }
   }
 
-  /// [job] reached [state]: kept, toasted, told on [settled].
-  void _settle(YtdlJob job, YtdlJobState state, {YtdlRecord? record}) {
-    if (_disposed) return;
+  /// `<vpath>/<rel>/<name>`: [name] in [job]'s folder as a record names it.
+  static String _pathIn(YtdlJob job, String name) =>
+      '${_bare(job.directory)}/$name';
+
+  /// The hub no longer holds [job] (dismissed while a read was out).
+  bool _gone(YtdlJob job) => _disposed || !_jobs.contains(job);
+
+  /// [job] reached [state]: kept, toasted, told on [settled]. [record]
+  /// names its file; else [filepath] (the folder's listing). Nothing for a
+  /// job the hub no longer holds.
+  void _settle(YtdlJob job, YtdlJobState state,
+      {YtdlRecord? record, String? filepath}) {
+    if (_gone(job)) return;
     job
       ..state = state
       ..endedAt = _now
       ..seen = _screenShowing;
     if (record != null) {
-      job
-        ..filepath = record.filepath
-        ..bytes = record.bytes
-        ..trackId = record.trackId
-        ..recordId = record.id;
+      _takeRecord(job, record);
+    } else if (filepath != null) {
+      job.filepath = filepath;
     }
     _changed();
     _toastFor(job);

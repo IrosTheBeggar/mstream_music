@@ -418,6 +418,42 @@ void main() {
       expect(rows.last.bytes, isNull);
     });
 
+    test('a page tells what it held of every plug-in: page on its ids, end on empty',
+        () async {
+      handler = (_) async => json({
+            'downloads': [
+              {...row(9, 'youtube'), 'downloadedAt': 1793450300000},
+              {...row(8, 'federation-copy'), 'downloadedAt': 1793450200000},
+              row(7, 'ytdl'),
+              {'plugin': 'ytdl'},
+            ]
+          });
+      final page = (await api().recordsPage(limit: 3, before: 12))!;
+      expect(seen.last.url.queryParameters, {'limit': '3', 'before': '12'});
+      expect(page.rows.map((r) => r.id), [7]);
+      expect(page.count, 3, reason: 'a row with no id is not counted');
+      expect(page.oldestId, 7);
+      expect(page.newestId, 9);
+      expect(page.oldestAt, 1793450100000);
+      expect(page.end, isFalse);
+
+      handler = (_) async => json({
+            'downloads': [row(5, 'youtube'), row(4, 'youtube')]
+          });
+      final others = (await api().recordsPage())!;
+      expect(others.rows, isEmpty);
+      expect(others.end, isFalse, reason: 'other plug-ins\' rows: older pages may hold ytdl rows');
+      expect(others.oldestId, 4);
+
+      handler = (_) async => json({'downloads': []});
+      final empty = (await api().recordsPage())!;
+      expect(empty.end, isTrue);
+      expect([empty.oldestId, empty.newestId, empty.oldestAt], everyElement(isNull));
+
+      handler = (_) async => html404();
+      expect(await api().recordsPage(), isNull);
+    });
+
     test("Express's HTML 404 is a server before 6.30: null, not an error",
         () async {
       handler = (_) async => html404();

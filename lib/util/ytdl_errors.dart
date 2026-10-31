@@ -23,6 +23,13 @@ enum YtdlProblem {
   /// mkdir's 403 ("Create Folder Disabled").
   mkdirOff,
 
+  /// The folder an add needed could not be made — any mkdir failure but a
+  /// 403, a lost library or no connection (spec §8 "mkdir failed": "Couldn't
+  /// make the folder “Discovery”." with Try again and Choose a folder…).
+  /// Set by the hub, never by a classifier; [YtdlFailure.detail] is the
+  /// folder's name.
+  mkdirFailed,
+
   /// A 404 with the server's words: the library named in the folder is gone,
   /// or this account lost it ("Library 'X' not found" / "User does not have
   /// access to path X"). [YtdlFailure.detail] is the library's name when the
@@ -66,7 +73,8 @@ enum YtdlProblem {
 /// sent none; null only for something that was not an answer at all (a
 /// thrown error that is not a [YtdlApiException]). For
 /// [YtdlProblem.libraryGone] it is the library's name when the server's
-/// words carry it; null for every other problem.
+/// words carry it; for [YtdlProblem.mkdirFailed] the folder's name; null
+/// for every other problem.
 class YtdlFailure {
   final YtdlProblem problem;
   final String? detail;

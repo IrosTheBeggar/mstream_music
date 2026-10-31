@@ -38,7 +38,10 @@ enum YtdlAddPhase { idle, starting, failed }
 
 /// Why Add is disabled ([none] = enabled). [offline]: the lookup found no
 /// connection. [ytdlpMissing]: the server has no downloader — an add would
-/// be refused the same way.
+/// be refused the same way. [convertOff]: the server's audio conversion is
+/// off (a re-ping after "FFmpeg is not available yet" said so) — spec §8:
+/// the button goes, and [YtdlServerState.entryAllowed] is false, so the
+/// home card hides and the screen or sheet should close.
 enum YtdlBlock {
   none,
   lookingUp,
@@ -51,6 +54,29 @@ enum YtdlBlock {
   invalidLayout,
   offline,
   ytdlpMissing,
+  convertOff,
+}
+
+/// What a new-folder check found ([YtdlDraft.checkTarget]): [state] known
+/// or unknown; [newSegments] the indexes into the target's segments that
+/// will be made ("new"; "1 new folder will be made: Discovery"); [deepest]
+/// the deepest folder that listed; [files] the target's own listing (the
+/// name check), null unless the target listed.
+class YtdlFolderCheck {
+  final YtdlCheckState state;
+  final Set<int> newSegments;
+  final String? deepest;
+  final List<String>? files;
+
+  const YtdlFolderCheck({
+    required this.state,
+    this.newSegments = const {},
+    this.deepest,
+    this.files,
+  });
+
+  @override
+  String toString() => 'YtdlFolderCheck(${state.name}, new $newSegments)';
 }
 
 /// Where a tag field's value came from, for its helper line.
@@ -145,8 +171,13 @@ final RegExp _fourDigits = RegExp(r'^\d{4}$');
 /// session ([YtdlServerState.screenDraft] / [YtdlServerState.folderDraft]):
 /// leaving early loses nothing, and a lookup still running fills it. The ✕
 /// ([clear]) discards it.
+///
+/// It listens to its [owner] and passes its changes on: the remembered
+/// destination, the presets, the libraries and a re-ping's flags move
+/// [target] and [block], and the new-folder check follows.
 class YtdlDraft extends ChangeNotifier {
   YtdlDraft(this.owner, {this.folder}) {
+    owner.addListener(_ownerChanged);
     link.addListener(_onLinkText);
     for (final f in YtdlField.values) {
       final c = TextEditingController();
@@ -208,6 +239,10 @@ class YtdlDraft extends ChangeNotifier {
 
   // destination
   YtdlChoice? _justThisSong;
+
+  /// The video [_justThisSong] belongs to; null = set before any link, so
+  /// the next one's.
+  String? _justFor;
   String _subLayout = kYtdlLayoutTop;
 
   // new-folder + name check
@@ -307,9 +342,9 @@ class YtdlDraft extends ChangeNotifier {
     _cardUrl = null;
     _resetCard();
     _justThisSong = null;
+    _justFor = null;
     _subLayout = kYtdlLayoutTop;
-    _addFailure = null;
-    if (_addPhase != YtdlAddPhase.starting) _addPhase = YtdlAddPhase.idle;
+    _dropFailure();
     _afterChange();
   }
 
@@ -324,6 +359,16 @@ class YtdlDraft extends ChangeNotifier {
       // Another video (or none): the card starts again.
       _resetCard();
       _cardUrl = url;
+      // A just-this-song path is its song's (spec §4): another video drops
+      // it; one set before any link is the first video's.
+      if (_justThisSong != null && url != null) {
+        if (_justFor == null) {
+          _justFor = url;
+        } else if (_justFor != url) {
+          _justThisSong = null;
+          _justFor = null;
+        }
+      }
       if (url != null) {
         if (immediate) {
           _startLookup();
@@ -331,7 +376,11 @@ class YtdlDraft extends ChangeNotifier {
           _lookupTimer = _hub.timer(kLookupDebounce, _startLookup);
         }
       }
-    } else if (immediate && url != null && _lookupTimer != null) {
+    } else if (immediate &&
+        url != null &&
+        (_lookupTimer != null || _lookup == YtdlLookupState.offline)) {
+      // A paste looks up at once — and pasting the link of a lookup that
+      // found no connection asks again.
       _startLookup();
     }
     _afterChange();
@@ -680,16 +729,19 @@ class YtdlDraft extends ChangeNotifier {
   YtdlChoice? get justThisSong => _justThisSong;
 
   /// "Use for this song": SAVES TO shows "Just this song" · Undo; the
-  /// remembered choice comes back once the song is sent or cleared.
+  /// remembered choice comes back once the song is sent or cleared, or
+  /// another video replaces it.
   void useForThisSong(YtdlChoice c) {
     _justThisSong = c;
-    _addFailure = null;
+    _justFor = _cardUrl;
+    _dropFailure();
     _afterChange();
   }
 
   void undoJustThisSong() {
     if (_justThisSong == null) return;
     _justThisSong = null;
+    _justFor = null;
     _afterChange();
   }
 
@@ -700,7 +752,8 @@ class YtdlDraft extends ChangeNotifier {
         library: c.library, layout: c.layout, kind: c.kind, base: c.base);
     if (_disposed) return;
     _justThisSong = null;
-    _addFailure = null;
+    _justFor = null;
+    _dropFailure();
     _afterChange();
     final l = _hub.l10n();
     if (l != null) {
@@ -715,13 +768,18 @@ class YtdlDraft extends ChangeNotifier {
   void setSubLayout(String layout) {
     if (layout == _subLayout) return;
     _subLayout = layout;
-    _addFailure = null;
+    _dropFailure();
     _afterChange();
   }
 
   /// Where the song lands, from the current tags and [choice].
-  YtdlTarget get target {
-    final c = choice;
+  YtdlTarget get target => targetFor(choice);
+
+  /// Where the song would land under [c] with the current tags — a choice
+  /// not applied yet: the Where sheet's preview, the folder sheet's
+  /// "Sort into subfolders" page (`YtdlChoice.folder(folder!, layout: …)`).
+  /// Check it with [checkTarget].
+  YtdlTarget targetFor(YtdlChoice c) {
     if (c.isFolder) {
       return ytdlFolderTarget(
           currentPath: c.folderPath, layout: c.layout, tags: tags);
@@ -734,9 +792,11 @@ class YtdlDraft extends ChangeNotifier {
     );
   }
 
-  /// No tags to build folders from (a lookup that failed, nothing typed):
-  /// the path reads "Music › file" with "No tags yet, so it goes into the
-  /// library's top folder." (spec §8).
+  /// No tags to build folders from (a lookup that failed, nothing typed)
+  /// and so nothing below the library: the path reads "Music › file" with
+  /// "No tags yet, so it goes into the library's top folder." (spec §8).
+  /// False when the song still goes into a folder (the sheet's folder, a
+  /// layout's literal or Discover's base folders): show [target]'s crumbs.
   bool get lookupBlank {
     if (_lookup == YtdlLookupState.idle ||
         _lookup == YtdlLookupState.loading ||
@@ -744,7 +804,11 @@ class YtdlDraft extends ChangeNotifier {
       return false;
     }
     final t = tags;
-    return t.artist.isEmpty && t.album.isEmpty && t.year.isEmpty;
+    if (t.artist.isNotEmpty || t.album.isNotEmpty || t.year.isNotEmpty) {
+      return false;
+    }
+    final at = target;
+    return at.valid && at.segments.isEmpty;
   }
 
   // ── new-folder + name check (BUILD NOTES) ───────────────────────────────
@@ -779,11 +843,19 @@ class YtdlDraft extends ChangeNotifier {
 
   bool get _mayNotMkdir => owner.server.noMkdir == true || owner.mkdirRefused;
 
+  /// The folder sheet's "Right here": the folder the explorer is showing,
+  /// sent unchanged with no mkdir (spec §7).
+  bool get _rightHere =>
+      isFolderSheet && _justThisSong == null && _subLayout == kYtdlLayoutTop;
+
   /// The account may not make folders and one is new or unchecked: the
   /// three choices instead (spec §8 mkdir off). Never posts into an
-  /// unchecked folder for this account.
+  /// unchecked folder for this account — save the folder sheet's "Right
+  /// here", the explorer's own folder, which needs none made.
   bool get mkdirBlocked =>
-      _mayNotMkdir && (_newSegments.isNotEmpty || checkUnknown);
+      _mayNotMkdir &&
+      !_rightHere &&
+      (_newSegments.isNotEmpty || checkUnknown);
 
   /// "Save to Music › Daft Punk instead · Just this song".
   void saveToDeepestInstead() {
@@ -807,6 +879,11 @@ class YtdlDraft extends ChangeNotifier {
     _scheduleCheck();
     _notify();
   }
+
+  /// The owner changed (presets loaded, the remembered choice saved, a
+  /// re-ping's flags, a job moved): a path it moved is checked again, and
+  /// listeners hear.
+  void _ownerChanged() => _afterChange();
 
   void _scheduleCheck() {
     final t = target;
@@ -841,12 +918,58 @@ class YtdlDraft extends ChangeNotifier {
     return _checking = _runCheck(_checkRid, t);
   }
 
+  /// The check answered for [directory] (not for a path the target has
+  /// since left).
+  bool _checkedFor(String directory) =>
+      _checkDir == directory &&
+      (_check == YtdlCheckState.known || _check == YtdlCheckState.unknown);
+
+  /// Wait until the check has answered for the target as it is now — a
+  /// lookup answer or a tag typed during "Starting…" moves it, and the
+  /// add must never post into a path it did not check. False when it
+  /// kept moving.
+  Future<bool> _awaitCheck() async {
+    for (var i = 0; i < 4; i++) {
+      final t = target;
+      if (!t.valid) return false;
+      if (_checkedFor(t.directory)) return true;
+      if (_checkDir != t.directory) _scheduleCheck();
+      await _checkNow();
+      if (_disposed) return false;
+    }
+    final t = target;
+    return t.valid && _checkedFor(t.directory);
+  }
+
+  Future<void> _runCheck(int rid, YtdlTarget t) async {
+    final found = await _walk(t, () => _disposed || rid != _checkRid);
+    if (found == null) return;
+    _check = found.state;
+    _newSegments = found.newSegments;
+    _deepest = found.deepest;
+    _files = found.files;
+    _notify();
+  }
+
+  /// The new-folder check for [t] without touching this draft's own
+  /// ([check], [newSegments] …): for a choice not applied yet ([targetFor])
+  /// — the "Sort into subfolders" page's "1 new folder will be made:
+  /// Discovery", the Where sheet's "new" tags under "Same as Discover".
+  /// The caller drops an answer for a path it has since left. Unknown for
+  /// a target that isn't valid.
+  Future<YtdlFolderCheck> checkTarget(YtdlTarget t) async {
+    if (!t.valid) return const YtdlFolderCheck(state: YtdlCheckState.unknown);
+    return await _walk(t, () => _disposed) ??
+        const YtdlFolderCheck(state: YtdlCheckState.unknown);
+  }
+
   /// List the target; on any error walk up until a listing works. The
   /// folder below the one that listed is new when that listing has no
   /// folder of its name (ignoring case) — and every folder after it too; a
   /// file of that name, or a folder that would not list, or no listing at
-  /// all, is unknown. The target's own listing feeds the name check.
-  Future<void> _runCheck(int rid, YtdlTarget t) async {
+  /// all, is unknown. The target's own listing feeds the name check. Null
+  /// once [stale] says the answer is no longer wanted.
+  Future<YtdlFolderCheck?> _walk(YtdlTarget t, bool Function() stale) async {
     final segments = t.segments;
     for (var depth = segments.length; depth >= 0; depth--) {
       final dir = _dirOf(t.library, segments.take(depth));
@@ -854,33 +977,27 @@ class YtdlDraft extends ChangeNotifier {
       try {
         listing = await owner.api.list(dir);
       } catch (_) {
-        if (_disposed || rid != _checkRid) return;
+        if (stale()) return null;
         continue;
       }
-      if (_disposed || rid != _checkRid) return;
-      _deepest = dir;
+      if (stale()) return null;
       if (depth == segments.length) {
-        _check = YtdlCheckState.known;
-        _newSegments = const {};
-        _files = listing.files;
-      } else {
-        final next = segments[depth].toLowerCase();
-        final there = listing.directories.any((d) => d.toLowerCase() == next) ||
-            listing.files.any((f) => f.toLowerCase() == next);
-        _check = there ? YtdlCheckState.unknown : YtdlCheckState.known;
-        _newSegments = there
-            ? const {}
-            : {for (var i = depth; i < segments.length; i++) i};
-        _files = null;
+        return YtdlFolderCheck(
+            state: YtdlCheckState.known, deepest: dir, files: listing.files);
       }
-      _notify();
-      return;
+      final next = segments[depth].toLowerCase();
+      final there = listing.directories.any((d) => d.toLowerCase() == next) ||
+          listing.files.any((f) => f.toLowerCase() == next);
+      return YtdlFolderCheck(
+        state: there ? YtdlCheckState.unknown : YtdlCheckState.known,
+        newSegments: there
+            ? const {}
+            : {for (var i = depth; i < segments.length; i++) i},
+        deepest: dir,
+      );
     }
-    if (_disposed || rid != _checkRid) return;
-    _check = YtdlCheckState.unknown;
-    _newSegments = const {};
-    _files = null;
-    _notify();
+    if (stale()) return null;
+    return const YtdlFolderCheck(state: YtdlCheckState.unknown);
   }
 
   static String _dirOf(String library, Iterable<String> segments) =>
@@ -908,18 +1025,27 @@ class YtdlDraft extends ChangeNotifier {
 
   /// Remembered for the server.
   Future<void> setFormat(String codec) async {
-    _addFailure = null;
+    _dropFailure();
     await owner.rememberFormat(codec);
     _afterChange();
   }
 
   // ── add (spec §6) ───────────────────────────────────────────────────────
 
+  /// [YtdlAddPhase.failed] exactly while [addFailure] is set.
   YtdlAddPhase get addPhase => _addPhase;
 
   /// The failure the screen or sheet shows inline (it was showing when it
-  /// arrived). A lost library's name: [ytdlGoneLibrary].
+  /// arrived, with this link on the card). A lost library's name:
+  /// [ytdlGoneLibrary]. [YtdlProblem.mkdirFailed]: "Couldn't make the
+  /// folder “{detail}”." with Try again and Choose a folder… (spec §8).
   YtdlFailure? get addFailure => _addFailure;
+
+  /// No failure shows any more; the button is back from "Try again".
+  void _dropFailure() {
+    _addFailure = null;
+    if (_addPhase == YtdlAddPhase.failed) _addPhase = YtdlAddPhase.idle;
+  }
 
   /// The format the failed add asked for ("This server doesn't save Opus
   /// any more"); the remembered one has already reset.
@@ -934,6 +1060,7 @@ class YtdlDraft extends ChangeNotifier {
 
   YtdlBlock get block {
     if (parsed.kind != YtdlLinkKind.video) return YtdlBlock.noLink;
+    if (owner.server.transcodeAvailable == false) return YtdlBlock.convertOff;
     if (_lookup == YtdlLookupState.offline) return YtdlBlock.offline;
     if (_lookup == YtdlLookupState.ytdlpMissing) return YtdlBlock.ytdlpMissing;
     if (!_manual &&
@@ -959,6 +1086,14 @@ class YtdlDraft extends ChangeNotifier {
   /// the server took it (or may have: a timed-out POST is looked for) —
   /// the draft resets: field cleared, tags closed, lookup idle,
   /// just-this-song dropped, focus gone; the remembered choice stays.
+  ///
+  /// The add posts only into the path its check answered for: when the
+  /// target moves while it waits (the lookup answers, a tag is typed), the
+  /// new path is checked first; one that never settles is treated as
+  /// unchecked — made first when the account may, refused under noMkdir.
+  /// A failure shows inline only while this surface shows the same link;
+  /// otherwise (another link pasted, ✕, the screen gone) it is a
+  /// "Couldn't add" row and toast.
   Future<bool> add() async {
     if (_addPhase == YtdlAddPhase.starting || block != YtdlBlock.none) {
       return false;
@@ -966,24 +1101,23 @@ class YtdlDraft extends ChangeNotifier {
     _addPhase = YtdlAddPhase.starting;
     _addFailure = null;
     _notify();
-    if (_check != YtdlCheckState.known && _check != YtdlCheckState.unknown) {
-      await _checkNow();
-      if (_disposed) return false;
-    }
-    if (block != YtdlBlock.none) {
+    final checked = await _awaitCheck();
+    if (_disposed) return false;
+    final rightHere = _rightHere;
+    if (block != YtdlBlock.none || (!checked && !rightHere && _mayNotMkdir)) {
       _addPhase = YtdlAddPhase.idle;
-      _notify();
+      _afterChange();
       return false;
     }
     final url = _cardUrl!;
     final t = target;
     final codec = format;
-    final rightHere = isFolderSheet &&
-        _justThisSong == null &&
-        _subLayout == kYtdlLayoutTop;
     final makeFolder = !rightHere &&
         !_mayNotMkdir &&
-        (_newSegments.isNotEmpty || checkUnknown);
+        (_newSegments.isNotEmpty || checkUnknown || !checked);
+    final firstNew = _newSegments.isEmpty
+        ? null
+        : _newSegments.reduce((a, b) => a < b ? a : b);
     final outcome = await owner.start(YtdlStartRequest(
       url: url,
       directory: t.directory,
@@ -993,8 +1127,12 @@ class YtdlDraft extends ChangeNotifier {
       cover: _meta?.thumbnail,
       predictedName: predictedName,
       mkdir: makeFolder ? t.directory : null,
+      mkdirFolder:
+          makeFolder && firstNew != null && firstNew < t.segments.length
+              ? t.segments[firstNew]
+              : null,
       origin: isFolderSheet ? 'folder:$folder' : 'screen',
-      inline: () => _attached && !_disposed,
+      inline: () => _attached && !_disposed && _cardUrl == url,
     ));
     if (_disposed) return outcome.ok || outcome.timedOut;
     if (outcome.ok || outcome.timedOut) {
@@ -1003,19 +1141,26 @@ class YtdlDraft extends ChangeNotifier {
         _resetAfterSend();
       } else {
         _addPhase = YtdlAddPhase.idle;
-        _notify();
+        if (_justFor == url) {
+          _justThisSong = null;
+          _justFor = null;
+        }
+        _afterChange();
       }
       return true;
     }
     final failure = outcome.failure;
-    if (outcome.job?.state == YtdlJobState.startFailed || failure == null) {
-      // Routed to a row and a toast: the surface was gone.
+    if (failure?.problem == YtdlProblem.uploadsOff) _uploadsRefused = true;
+    if (outcome.job?.state == YtdlJobState.startFailed ||
+        failure == null ||
+        _cardUrl != url) {
+      // Routed to a row and a toast: the surface was gone, or shows
+      // another link now.
       _addPhase = YtdlAddPhase.idle;
     } else {
       _addPhase = YtdlAddPhase.failed;
       _addFailure = failure;
       _failedCodec = codec;
-      if (failure.problem == YtdlProblem.uploadsOff) _uploadsRefused = true;
     }
     _afterChange();
     return false;
@@ -1029,6 +1174,7 @@ class YtdlDraft extends ChangeNotifier {
     _cardUrl = null;
     _resetCard();
     _justThisSong = null;
+    _justFor = null;
     _subLayout = kYtdlLayoutTop;
     _addPhase = YtdlAddPhase.idle;
     _addFailure = null;
@@ -1061,8 +1207,7 @@ class YtdlDraft extends ChangeNotifier {
       _fill(f, '');
     }
     _edited.clear();
-    if (_addPhase == YtdlAddPhase.failed) _addPhase = YtdlAddPhase.idle;
-    _addFailure = null;
+    _dropFailure();
   }
 
   // ── plumbing ────────────────────────────────────────────────────────────
@@ -1075,6 +1220,7 @@ class YtdlDraft extends ChangeNotifier {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    owner.removeListener(_ownerChanged);
     _lookupTimer?.cancel();
     _slowTimer?.cancel();
     _checkTimer?.cancel();

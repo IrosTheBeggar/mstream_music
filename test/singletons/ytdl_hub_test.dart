@@ -185,11 +185,42 @@ void main() {
           lessThan(h.fake.requests.map((r) => r.url.path).toList().indexOf('/api/v1/ytdl/')));
     });
 
-    test('a mkdir failure is the mkdir\'s: nothing is POSTed', () async {
+    test('a mkdir failure is the mkdir\'s: nothing is POSTed, the folder is named', () async {
       h.fake.mkdirRefusal = (500, 'Server Error');
       final out = await state().start(h.request(mkdir: dir, inline: () => true));
-      expect(out.failure, const YtdlFailure(YtdlProblem.serverError));
+      // Spec §8 "mkdir failed": "Couldn't make the folder “Discovery”." —
+      // told apart from an add's own bare 500.
+      expect(out.failure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Discovery'));
       expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+    });
+
+    test('mkdir failures: the first new folder named; a row keeps it; offline stays offline', () async {
+      h.fake.mkdirThrows = TimeoutException('slow');
+      final named = await state().start(YtdlStartRequest(
+        url: kOneMoreTime,
+        directory: dir,
+        codec: 'mp3',
+        title: 'One More Time',
+        predictedName: 'One_More_Time.mp3',
+        mkdir: dir,
+        mkdirFolder: 'Daft Punk',
+        inline: () => false,
+      ));
+      expect(named.failure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Daft Punk'));
+      expect(named.job!.state, YtdlJobState.startFailed);
+      expect(named.job!.problem, 'mkdirFailed');
+      expect(named.job!.problemDetail, 'Daft Punk');
+      expect(named.job!.mkdir, dir);
+
+      h.fake.mkdirThrows = const SocketException('Network is unreachable');
+      final off = await state().start(h.request(url: kFeelGood, mkdir: dir, inline: () => true));
+      expect(off.failure, const YtdlFailure(YtdlProblem.offline));
+
+      // Try again on the row makes the folder again and names it the same.
+      h.fake.mkdirThrows = null;
+      h.fake.mkdirRefusal = (500, 'Server Error');
+      final again = await state().retry(named.job!);
+      expect(again.failure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Daft Punk'));
     });
 
     test('mkdir 403 → mkdirOff, a re-ping, and the account treated as noMkdir', () async {
@@ -432,10 +463,12 @@ void main() {
       await h.timers.elapse(beat);
       expect(again.state, YtdlJobState.added);
       expect(again.recordId, isNull);
-      expect(again.filepath, isNull);
+      // No record to name it: the folder's listing does.
+      expect(again.filepath, 'Music/Daft Punk/Discovery/One_More_Time.mp3');
       final after = h.fake.count('GET', '/discovery/downloads');
-      // Each settle reads ADDED again once after it.
-      expect(mid - before, 5 + 1);
+      // Each settle reads ADDED again once after it; the second add read
+      // the record's newest id once before its POST.
+      expect(mid - before, 5 + 1 + 1);
       expect(after - mid, 5 + 1);
     });
 
@@ -465,13 +498,27 @@ void main() {
       expect(a.recordId, isNot(b.recordId));
     });
 
-    test('complete with no record → still added, named after the folder', () async {
+    test('complete with no record → still added, named by the folder\'s listing', () async {
       final job = await started();
-      h.fake.finish(job.pid!, record: false);
+      h.fake.finish(job.pid!, record: false, fileName: 'one_more_time.MP3');
       await h.timers.elapse(beat);
       expect(job.state, YtdlJobState.added);
-      expect(job.filepath, isNull);
-      expect(state().added.single.filepath, 'Music/Daft Punk/Discovery/One_More_Time.mp3');
+      expect(job.recordId, isNull);
+      expect(job.filepath, 'Music/Daft Punk/Discovery/one_more_time.MP3', reason: 'as listed');
+      expect(state().added.single.filepath, 'Music/Daft Punk/Discovery/one_more_time.MP3');
+    });
+
+    test('a file the folder does not show is never offered as certain', () async {
+      h.fake.hasRecords = false;
+      final job = await started();
+      // yt-dlp named it otherwise than predicted.
+      h.fake.finish(job.pid!, fileName: 'Real_Name.mp3');
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.added);
+      final row = state().added.single;
+      expect(row.filepath, isNull, reason: 'no tap-to-play on a guess');
+      expect(row.ext, 'mp3');
+      expect(row.directory, dir);
     });
 
     test('an older server: complete → added, the record never asked again', () async {
@@ -623,6 +670,64 @@ void main() {
       h.fake.jobsThrows = const SocketException('Network is unreachable');
       await state().checkAgain(job);
       expect(job.state, YtdlJobState.notSureStarted);
+    });
+
+    test('a record or folder that could not be read offers no Add again', () async {
+      final job = await notSure();
+      h.fake
+        ..recordsRefusal = (500, 'Server Error')
+        ..listFails.add(dir);
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notSureStarted);
+      expect(state().busy(job), isFalse);
+      // The record unread, the folder listed without the song.
+      h.fake.listFails.clear();
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notSureStarted);
+      // The record read (nothing), the folder unread.
+      h.fake
+        ..recordsRefusal = null
+        ..listFails.add(dir);
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notSureStarted);
+      // Every source answered: now it is not found.
+      h.fake.listFails.clear();
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notFound);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+    });
+
+    test('a row dismissed while Check again reads the record is not settled', () async {
+      final job = await notSure();
+      h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      final settled = <YtdlJob>[];
+      final sub = state().settled.listen(settled.add);
+      h.fake.recordsGate = Completer<void>();
+      final pending = state().checkAgain(job);
+      await ytdlSettle();
+      state().dismiss(job);
+      h.fake.recordsGate!.complete();
+      await pending;
+      expect(state().jobs, isEmpty);
+      expect(job.state, YtdlJobState.notSureStarted);
+      expect(h.toasts, isEmpty);
+      expect(settled, isEmpty);
+      await sub.cancel();
+    });
+
+    test('an earlier add\'s record (at or below the floor) is not this add', () async {
+      h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3'); // 100
+      final job = await notSure();
+      expect(job.recordFloor, 100);
+      expect(job.serverStart, isNull, reason: 'it never claimed an entry');
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notFound);
+      expect(job.recordId, isNull);
+      // Its own record, written after the POST, answers.
+      final own = h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.added);
+      expect(job.recordId, own['id']);
     });
   });
 
@@ -1063,6 +1168,267 @@ void main() {
       await state().loadPresets();
       expect(h.fake.count('GET', '/torrent/path-templates'), 1);
       expect(state().presetsLoaded, isTrue);
+    });
+  });
+
+  group('the record bound (BUILD NOTES: no row older than the job)', () {
+    test('a record older than the claimed entry never settles a vanished job', () async {
+      // An earlier add of the same link into the same folder that no job
+      // here holds (the web app's, or a dismissed row's).
+      h.fake.file(dir, 'One_More_Time.mp3');
+      final r0 = h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      final job = await started();
+      expect(job.serverStart, greaterThan(r0['downloadedAt'] as int));
+      // A job saved before floors existed: only its start bounds it.
+      job.recordFloor = null;
+      // It failed while the app was away; the entry left the tracker unseen.
+      h.fake.forget(job.pid!);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.notSureFinished);
+      expect(job.recordId, isNull);
+      expect(h.toasts, isEmpty);
+    });
+
+    test('complete with no new record does not take an older one', () async {
+      h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      final job = await started();
+      job.recordFloor = null;
+      h.fake.finish(job.pid!, record: false);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.added);
+      expect(job.recordId, isNull);
+    });
+
+    test('the record\'s newest id is read before the POST and kept on the job', () async {
+      h.fake.addRecord(plugin: 'youtube', relativePath: 'x.mp3', origin: 'x'); // 100
+      await state().probeTier();
+      h.fake.addRecord(plugin: 'youtube', relativePath: 'y.mp3', origin: 'y'); // 101
+      final job = await started();
+      expect(job.recordFloor, 101);
+      final paths = h.fake.requests.map((r) => r.url.path).toList();
+      expect(paths.lastIndexOf('/api/v1/discovery/downloads'), lessThan(paths.indexOf('/api/v1/ytdl/')));
+      expect(h.fake.calls('GET', '/discovery/downloads').last.url.queryParameters['limit'], '1');
+    });
+
+    test('… the last id read stands in when it cannot be had in time', () async {
+      h.fake.addRecord(relativePath: 'Old.mp3'); // 100
+      await state().probeTier();
+      h.fake.recordsGate = Completer<void>();
+      final pending = state().start(h.request());
+      await ytdlSettle();
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0, reason: 'waiting for the floor');
+      await h.timers.elapse(YtdlServerState.kFloorWait);
+      final out = await pending;
+      expect(out.ok, isTrue);
+      expect(out.job!.recordFloor, 100);
+      h.fake.recordsGate!.complete();
+      await ytdlSettle();
+
+      h.fake.recordsThrows = const SocketException('Network is unreachable');
+      final failed = await state().start(h.request(url: kFeelGood));
+      expect(failed.job!.recordFloor, 100);
+    });
+  });
+
+  group('record pages count every plug-in (a page with no ytdl row is not the end)', () {
+    void discoverRows(int n) {
+      for (var i = 0; i < n; i++) {
+        h.fake.addRecord(plugin: 'youtube', relativePath: 'Discover/$i.mp3', origin: 'x');
+      }
+    }
+
+    test('ADDED reads past a page of Discover downloads', () async {
+      h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3', title: 'One More Time');
+      discoverRows(20);
+      await state().probeTier();
+      expect(state().tier, YtdlServerTier.full);
+      expect(state().added.single.title, 'One More Time');
+      expect(state().canShowEarlier, isTrue);
+    });
+
+    test('Show earlier pages past them too, on every plug-in\'s ids', () async {
+      for (var i = 0; i < 5; i++) {
+        h.fake.addRecord(relativePath: 'A/$i.mp3'); // 100–104
+      }
+      discoverRows(20); // 105–124
+      for (var i = 0; i < 20; i++) {
+        h.fake.addRecord(relativePath: 'B/$i.mp3'); // 125–144
+      }
+      await state().probeTier();
+      expect(state().added, hasLength(20));
+      await state().showEarlier();
+      expect(state().added, hasLength(25));
+      expect(state().canShowEarlier, isTrue);
+      await state().showEarlier();
+      expect(state().canShowEarlier, isFalse);
+      final asked = h.fake.calls('GET', '/discovery/downloads').map((r) => r.url.queryParameters['before']);
+      expect(asked, [null, '125', '105', '100']);
+    });
+
+    test('a vanished job finds its record under a page of Discover downloads', () async {
+      final job = await started();
+      h.fake
+        ..forget(job.pid!)
+        ..addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      discoverRows(20);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.added);
+      expect(job.recordId, isNotNull);
+    });
+
+    test('a refresh keeps the pages Show earlier brought', () async {
+      for (var i = 0; i < 25; i++) {
+        h.fake.addRecord(relativePath: 'A/$i.mp3');
+      }
+      await state().probeTier();
+      await state().showEarlier();
+      expect(state().added, hasLength(25));
+      h.fake.addRecord(relativePath: 'New.mp3');
+      await state().refreshAdded();
+      expect(state().added, hasLength(26));
+      expect(state().added.first.title, 'New');
+    });
+  });
+
+  group('ADDED rows', () {
+    test('a job settled before its record could be read takes it: one row', () async {
+      await state().probeTier();
+      final job = await started();
+      h.fake
+        ..finish(job.pid!)
+        ..recordsRefusal = (500, 'Server Error');
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.added);
+      expect(job.recordId, isNull);
+      h.fake.recordsRefusal = null;
+      await state().refreshAdded();
+      expect(job.recordId, h.fake.records.first['id']);
+      expect(state().added, hasLength(1));
+      expect(state().added.single.recordId, job.recordId);
+      expect(s.ytdlJobs.single['recordId'], job.recordId, reason: 'persisted');
+    });
+
+    test('… also when the tier was not known yet as it settled', () async {
+      h.fake.recordsRefusal = (500, 'Server Error');
+      final job = await started();
+      h.fake.finish(job.pid!);
+      await h.timers.elapse(beat);
+      expect(state().tier, YtdlServerTier.unknown);
+      expect(job.state, YtdlJobState.added);
+      h.fake.recordsRefusal = null;
+      await state().onScreenOpened();
+      expect(state().tier, YtdlServerTier.full);
+      expect(job.recordId, h.fake.records.first['id']);
+      expect(state().added, hasLength(1));
+    });
+
+    test('a job row and a record naming the same file show once', () async {
+      // The job could not attribute it (unbounded: saved by an older build).
+      final job = await started();
+      job
+        ..recordFloor = null
+        ..serverStart = null;
+      h.fake.finish(job.pid!, record: false);
+      await h.timers.elapse(beat);
+      expect(job.filepath, 'Music/Daft Punk/Discovery/One_More_Time.mp3');
+      h.fake.addRecord(relativePath: 'Daft Punk/Discovery/One_More_Time.mp3');
+      await state().refreshAdded();
+      expect(state().added.single.recordId, isNotNull);
+    });
+
+    test('rows carry the cover (a job\'s) and the track id', () async {
+      h.fake.hasRecords = false;
+      final job = await started(
+          request: const YtdlStartRequest(
+              url: kOneMoreTime,
+              directory: dir,
+              codec: 'mp3',
+              title: 'One More Time',
+              cover: 'https://i.ytimg.com/vi/FGBhQbmPwH8/hq.jpg',
+              predictedName: 'One_More_Time.mp3'));
+      h.fake.finish(job.pid!);
+      await h.timers.elapse(beat);
+      expect(state().added.single.cover, 'https://i.ytimg.com/vi/FGBhQbmPwH8/hq.jpg');
+
+      h.unwire();
+      h = YtdlHarness()..wire();
+      s = ytdlServer();
+      final r = h.fake.addRecord(relativePath: 'One_More_Time.mp3', trackId: 4242);
+      await state().probeTier();
+      expect(state().added.single.trackId, 4242);
+      expect(state().added.single.recordId, r['id']);
+    });
+  });
+
+  group('failures: the clash read, Try again, re-pings', () {
+    test('an error entry whose folder won\'t list waits: a clash is not read as a plain failure', () async {
+      final job = await started();
+      h.fake
+        ..file(dir, 'One_More_Time.mp3')
+        ..fail(job.pid!)
+        ..listFails.add(dir);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.adding);
+      h.fake.listFails.clear();
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.failedClash);
+    });
+
+    test('… and settles failed once the entry is gone and the folder still won\'t list', () async {
+      final job = await started();
+      h.fake
+        ..fail(job.pid!)
+        ..listFails.add(dir);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.adding);
+      h.fake.forget(job.pid!);
+      await h.timers.elapse(beat);
+      expect(job.state, YtdlJobState.failed);
+    });
+
+    test('Try again on a start failure that needed no folder makes none', () async {
+      h.fake.addRefusal = (500, 'FFmpeg is not available yet');
+      final job = (await state().start(h.request(inline: () => false))).job!;
+      expect(job.state, YtdlJobState.startFailed);
+      expect(job.mkdir, isNull);
+      h.fake
+        ..addRefusal = null
+        ..mkdirRefusal = (403, 'Create Folder Disabled');
+      h.toasts.clear();
+      final out = await state().retry(job);
+      expect(out.ok, isTrue);
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), 0);
+      expect(state().mkdirRefused, isFalse);
+      expect(h.toasts, isEmpty);
+    });
+
+    test('a re-ping is heard; a converter it turned off closes the entry', () async {
+      h.hub.reping = (srv) async {
+        await Future<void>.delayed(Duration.zero);
+        srv.transcodeAvailable = false;
+      };
+      var heardOff = 0;
+      state().addListener(() {
+        if (s.transcodeAvailable == false) heardOff++;
+      });
+      h.fake.addRefusal = (500, 'FFmpeg is not available yet');
+      await state().start(h.request(inline: () => true));
+      await ytdlSettle();
+      expect(heardOff, greaterThan(0));
+      expect(state().entryAllowed, isFalse);
+    });
+
+    test('a connection back polls the waiting rows at once', () async {
+      await started();
+      h.fake.jobsThrows = const SocketException('Network is unreachable');
+      await h.timers.elapse(beat);
+      expect(state().offline, isTrue);
+      h.fake.jobsThrows = null;
+      final polls = h.fake.count('GET', '/ytdl/downloads');
+      h.hub.connectivityRestored();
+      await ytdlSettle();
+      expect(h.fake.count('GET', '/ytdl/downloads'), polls + 1);
+      expect(state().offline, isFalse);
     });
   });
 

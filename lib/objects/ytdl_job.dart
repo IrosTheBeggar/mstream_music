@@ -78,6 +78,11 @@ class YtdlJob {
   /// yt-dlp will give the file, for the clash check and the highlight.
   final String predictedName;
 
+  /// The folder made (recursively) before the POST because one on the path
+  /// was new or could not be checked; null when the add needed none. A
+  /// "Try again" on a start failure makes it again only then.
+  final String? mkdir;
+
   final DateTime createdAt;
 
   YtdlJobState state;
@@ -110,6 +115,12 @@ class YtdlJob {
   /// one job only, across restarts too.
   int? recordId;
 
+  /// The newest download-record id (any plug-in) just before the POST: a
+  /// record at or below it predates this add, so it can never answer for
+  /// it — the bound for a job that never claimed a tracker entry (no
+  /// [serverStart]). Null when it could not be read.
+  int? recordFloor;
+
   YtdlJob({
     required this.id,
     required this.url,
@@ -119,6 +130,7 @@ class YtdlJob {
     required this.title,
     this.cover,
     required this.predictedName,
+    this.mkdir,
     required this.createdAt,
     this.state = YtdlJobState.starting,
     this.pid,
@@ -132,6 +144,7 @@ class YtdlJob {
     this.bytes,
     this.trackId,
     this.recordId,
+    this.recordFloor,
   });
 
   /// Polled, and counted as "Adding" (see [YtdlJobState.open]).
@@ -146,6 +159,7 @@ class YtdlJob {
         'title': title,
         'cover': cover,
         'predictedName': predictedName,
+        'mkdir': mkdir,
         'createdAt': createdAt.millisecondsSinceEpoch,
         'state': state.name,
         'pid': pid,
@@ -159,6 +173,7 @@ class YtdlJob {
         'bytes': bytes,
         'trackId': trackId,
         'recordId': recordId,
+        'recordFloor': recordFloor,
       };
 
   /// Reads what [toJson] wrote. Throws [FormatException] for an entry with
@@ -193,6 +208,7 @@ class YtdlJob {
       title: str('title'),
       cover: _str(json['cover']),
       predictedName: str('predictedName'),
+      mkdir: _str(json['mkdir']),
       createdAt: _time(json['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0),
       state: YtdlJobState.parse(json['state']) ??
           (pid != null ? YtdlJobState.notSureFinished : YtdlJobState.notSureStarted),
@@ -207,6 +223,7 @@ class YtdlJob {
       bytes: _int(json['bytes']),
       trackId: _int(json['trackId']),
       recordId: _int(json['recordId']),
+      recordFloor: _int(json['recordFloor']),
     );
   }
 
