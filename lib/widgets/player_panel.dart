@@ -1186,17 +1186,18 @@ class _MiniPlayer extends StatelessWidget {
                 ),
               ),
               // Transport row. Pared back to what a mini player is for: get it
-              // going, skip forward, arm the DJ.
-              // Previous, shuffle, repeat and the overflow all live in the full
-              // player a swipe away — duplicating them here bought a crowded
-              // strip of identical grey glyphs where the one control people
-              // actually reach for was indistinguishable from the rest.
+              // going, skip back or forward, arm the DJ.
+              // Shuffle, repeat and the overflow all live in the full player a
+              // swipe away — duplicating them here bought a crowded strip of
+              // identical grey glyphs where the one control people actually
+              // reach for was indistinguishable from the rest.
               Padding(
                 padding: const EdgeInsets.fromLTRB(6, 2, 6, 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(mainAxisSize: MainAxisSize.min, children: [
+                      _btn(Icons.skip_previous, handler.skipToPrevious),
                       // Accent-coloured, not a filled circle: it stays the same
                       // flat glyph as its neighbours and just carries the theme
                       // colour, so it reads as the primary action without
