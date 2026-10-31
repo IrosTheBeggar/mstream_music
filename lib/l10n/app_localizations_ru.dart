@@ -6299,4 +6299,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String ytdlSummary(String details, String source, String path) {
     return '$details. $source. Saves to $path.';
   }
+
+  @override
+  String get ytdlErrAddOffline =>
+      'You\'re offline — try again when you\'re back.';
 }

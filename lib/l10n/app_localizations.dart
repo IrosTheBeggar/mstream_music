@@ -9681,6 +9681,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{details}. {source}. Saves to {path}.'**
   String ytdlSummary(String details, String source, String path);
+
+  /// Line above the add button of Add from YouTube when the add could not reach the server because the phone has no connection (nothing was sent, so nothing started).
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline — try again when you\'re back.'**
+  String get ytdlErrAddOffline;
 }
 
 class _AppLocalizationsDelegate
