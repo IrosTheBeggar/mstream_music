@@ -5472,6 +5472,16 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String ytdlHomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count failed',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get ytdlPasteHint => 'Paste a YouTube link';
 
   @override

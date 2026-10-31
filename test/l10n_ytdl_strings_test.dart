@@ -143,6 +143,7 @@ void main() {
     test('counts', () {
       expect(en.ytdlHomeAdding(1), 'Adding 1');
       expect(en.ytdlHomeAdded(2), 'Added 2');
+      expect(en.ytdlHomeFailed(1), '1 failed');
       expect(en.ytdlRowAdding(2, 'MP3'), 'Adding · 2 min · MP3');
       expect(en.ytdlStripAddingCount(1), 'Adding 1 video…');
       expect(en.ytdlStripAddingCount(2), 'Adding 2 videos…');
@@ -254,6 +255,7 @@ void main() {
       for (final f in <String Function(int)>[
         t.ytdlHomeAdding,
         t.ytdlHomeAdded,
+        t.ytdlHomeFailed,
         t.ytdlStripAddingCount,
         (n) => t.ytdlSubfoldersNew(n, 'Discovery'),
         (n) => t.ytdlRowAdding(n, 'MP3'),

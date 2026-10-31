@@ -8626,6 +8626,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, other{Added {count}}}'**
   String ytdlHomeAdded(int count);
 
+  /// Second line of the Add from YouTube home card while songs failed and the screen hasn't been opened since; {count} is how many songs (not copies — translate with the agreement songs need). Must fit about 81 px at 360 dp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} failed}}'**
+  String ytdlHomeFailed(int count);
+
   /// Placeholder in the link field at the top of the Add from YouTube screen and of the folder sheet.
   ///
   /// In en, this message translates to:
@@ -9508,7 +9514,7 @@ abstract class AppLocalizations {
   /// **'Details'**
   String get ytdlStripDetails;
 
-  /// Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery'.
+  /// Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery', or the library's own name (like 'Music') when the song went into the library's top folder.
   ///
   /// In en, this message translates to:
   /// **'Added “{title}” to {path}'**

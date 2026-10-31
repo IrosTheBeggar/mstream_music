@@ -5970,6 +5970,15 @@
       }
     }
   },
+  "ytdlHomeFailed": "{count, plural, other{{count} failed}}",
+  "@ytdlHomeFailed": {
+    "description": "Second line of the Add from YouTube home card while songs failed and the screen hasn't been opened since; {count} is how many songs (not copies — translate with the agreement songs need). Must fit about 81 px at 360 dp.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ytdlPasteHint": "Paste a YouTube link",
   "@ytdlPasteHint": {
     "description": "Placeholder in the link field at the top of the Add from YouTube screen and of the folder sheet."
@@ -6734,7 +6743,7 @@
   },
   "ytdlToastAdded": "Added “{title}” to {path}",
   "@ytdlToastAdded": {
-    "description": "Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery'.",
+    "description": "Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery', or the library's own name (like 'Music') when the song went into the library's top folder.",
     "placeholders": {
       "title": {
         "type": "String"
