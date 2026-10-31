@@ -75,8 +75,18 @@ process runs again.
   iroh) scheduled, so keepalive runs and holds the path warm — desirable, and
   dwarfed by the audio stream itself.
 - **Idle / backgrounded without a foreground service**, Doze suspends the runtime,
-  so keepalive stops and there is ~no background drain. Recovery on the next resume
-  rides `network_change()` + verify-rebuild, not a held-open connection.
+  so keepalive stops and there is ~no background drain. On Android 15+ the
+  background firewall chain goes further: 5 s after the app leaves the foreground
+  the OS destroys its sockets and blocks its UDP (`InetDiagMessage: Destroyed live
+  tcp sockets`), so the relay link and the direct path die together and the
+  connection closes within the 30 s idle timeout; the cached-app freezer then
+  stops the process (~70 s), parking the supervisor mid-attempt. Recovery on the
+  next resume rides `network_change()` + verify-rebuild, not a held-open
+  connection: a tunnel still `reconnecting` after at least
+  `TunnelTiming.backgroundNetworkCut` (30 s) away is torn down and re-dialed on a
+  fresh endpoint at once (`NetworkChangeRemedy.rebuild`) — on a Galaxy S25 the
+  thawed supervisor's re-dial on the stale endpoint sat 30 s+ while a fresh one
+  connected in 0.7 s (2026-10-31).
 
 ## If we ever do want a knob
 

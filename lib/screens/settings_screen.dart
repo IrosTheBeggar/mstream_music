@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show StreamSubscription, unawaited;
 import 'dart:io' show Platform;
 
 import 'package:material_ui/material_ui.dart';
@@ -8,20 +8,26 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/language_names.dart';
 import '../native/torrent_channel.dart';
+import '../native/user_shaders.dart';
 import '../objects/player_layout.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/play_history.dart';
+import '../singletons/play_sync.dart';
 import '../widgets/federation_widgets.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
+import '../widgets/choice_sheet.dart';
 import '../widgets/home_widget_sheet.dart';
 import 'imported_shaders_screen.dart';
 
+/// One page, every row one line: a row shows its current value (or a switch),
+/// never a description. Choices open a picker sheet; the few facts that matter
+/// before a change (deletion, permissions) live in the dialogs where they bite.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -36,654 +42,596 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // call, which used to run on every tick of a drag.
   int? _letterStripDrag;
 
+  // Live listening-history figures: plays waiting to be sent and the size on
+  // disk. Both move while the page is open (a track ends, a drain lands).
+  int _unsynced = PlayHistory().outboxCount;
+  int? _historyBytes;
+  StreamSubscription<void>? _historySub;
+  StreamSubscription<void>? _syncSub;
+
+  // Files in the imported-shaders folder (Android); null until scanned.
+  int? _shaderCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshHistory();
+    _historySub = PlayHistory().changes.listen((_) => _refreshHistory());
+    _syncSub = PlaySync().changes.listen((_) => _refreshHistory());
+    if (Platform.isAndroid) _countShaders();
+  }
+
+  @override
+  void dispose() {
+    _historySub?.cancel();
+    _syncSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshHistory() async {
+    final bytes = await PlayHistory().sizeBytes();
+    if (!mounted) return;
+    setState(() {
+      _unsynced = PlayHistory().outboxCount;
+      _historyBytes = bytes;
+    });
+  }
+
+  Future<void> _countShaders() async {
+    final n = (await UserShaders().list()).length;
+    if (mounted) setState(() => _shaderCount = n);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final s = SettingsManager();
+    final threshold = _letterStripDrag ?? s.letterStripThreshold;
+    final bytes = _historyBytes;
+    final historyEmpty = bytes == 0 && _unsynced == 0;
     return Scaffold(
       appBar: AppBar(title: Text(l.settingsTitle)),
       body: SafeArea(
         top: false,
         child: ListView(
-        children: [
-          _sectionHeader(l.settingsSectionAppearance),
-          ListTile(
-            title: Text(l.settingsTheme),
-            subtitle: Text(
-              _themeSubtitle(l, SettingsManager().appTheme),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<AppTheme>(
-              value: SettingsManager().appTheme,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: AppTheme.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label(l)),
-                      ))
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                setState(() {});
-                await SettingsManager().setAppTheme(v);
-                setState(() {});
-              },
-            ),
-          ),
-          ListTile(
-            title: Text(l.settingsAccentColor),
-            subtitle: Text(
-              l.settingsAccentColorSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: VelvetColors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: VelvetColors.border),
-              ),
-            ),
-            onTap: () => showModalBottomSheet(
-              context: context,
-              backgroundColor: VelvetColors.surface,
-              isScrollControlled: true,
-              builder: (_) => const AccentColorSheet(),
-            ),
-          ),
-          ListTile(
-            title: Text(l.settingsPlayerLayout),
-            subtitle: Text(
-              _playerLayoutSubtitle(l, SettingsManager().playerLayout),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<PlayerLayout>(
-              value: SettingsManager().playerLayout,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: PlayerLayout.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(_playerLayoutLabel(l, p)),
-                      ))
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                setState(() {});
-                await SettingsManager().setPlayerLayout(v);
-                setState(() {});
-              },
-            ),
-          ),
-          // The home-screen widget: Android places it from here (the
-          // launcher's pin request, one of five sizes); iOS has no such
-          // API, so the row only says where the gallery is.
-          if (Platform.isAndroid || Platform.isIOS)
-            ListTile(
-              title: Text(l.settingsHomeWidget),
-              subtitle: Text(
-                Platform.isAndroid
-                    ? l.settingsHomeWidgetSubtitle
-                    : l.settingsHomeWidgetSubtitleIos,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              onTap: Platform.isAndroid
-                  ? () => showModalBottomSheet(
-                        context: context,
-                        backgroundColor: VelvetColors.surface,
-                        builder: (_) => const HomeWidgetSheet(),
-                      )
-                  : null,
-            ),
-          ListTile(
-            title: Text(l.settingsLanguage),
-            subtitle: Text(
-              l.settingsLanguageSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<String?>(
-              value: SettingsManager().language,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              // "System default" (null) first, then one entry per
-              // supported locale — derived from the generated
-              // supportedLocales so new ARB files appear automatically.
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(l.languageSystemDefault),
+          padding: const EdgeInsets.only(bottom: 32),
+          children: [
+            _Section(
+              header: l.settingsSectionAppearance,
+              children: [
+                _ValueRow(
+                  title: l.settingsTheme,
+                  value: s.appTheme.label(l),
+                  onTap: _pickTheme,
                 ),
-                ...AppLocalizations.supportedLocales.map(
-                  (loc) => DropdownMenuItem<String?>(
-                    value: loc.languageCode,
-                    child: Text(
-                        kLanguageEndonyms[loc.languageCode] ?? loc.languageCode),
+                _ValueRow(
+                  title: l.settingsAccentColor,
+                  trailing: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: VelvetColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: VelvetColors.border),
+                    ),
+                  ),
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    backgroundColor: VelvetColors.surface,
+                    isScrollControlled: true,
+                    builder: (_) => const AccentColorSheet(),
                   ),
                 ),
+                _ValueRow(
+                  title: l.settingsPlayerLayout,
+                  value: _playerLayoutLabel(l, s.playerLayout),
+                  onTap: _pickPlayerLayout,
+                ),
+                // The one leading icon on the page: someone stuck in a
+                // language they can't read can still find this row.
+                _ValueRow(
+                  leading: Icon(Icons.language, color: VelvetColors.textSecondary),
+                  title: l.settingsLanguage,
+                  value: _languageLabel(l, s.language),
+                  onTap: _pickLanguage,
+                ),
+                // The home-screen widget: Android places it from the sheet
+                // (the launcher's pin request, one of five sizes); iOS has no
+                // such API, so its sheet says where the gallery is.
+                if (Platform.isAndroid || Platform.isIOS)
+                  _ValueRow(
+                    title: l.settingsHomeWidget,
+                    chevron: true,
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      backgroundColor: VelvetColors.surface,
+                      builder: (_) => const HomeWidgetSheet(),
+                    ),
+                  ),
               ],
-              // null is a valid choice here (follow device), so unlike the
-              // theme picker we don't early-return on null.
-              onChanged: (v) async {
-                setState(() {});
-                await SettingsManager().setLanguage(v);
-                setState(() {});
-              },
             ),
-          ),
-          ListTile(
-            title: Text(l.settingsStartupPage),
-            subtitle: Text(
-              l.settingsStartupPageSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<StartupView>(
-              value: SettingsManager().startupView,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: StartupView.values
-                  .map((v) => DropdownMenuItem(
-                        value: v,
-                        child: Text(v.label(l)),
-                      ))
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                await SettingsManager().setStartupView(v);
-                setState(() {});
-              },
-            ),
-          ),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.settingsSectionPlayback),
-          SwitchListTile(
-            title: Text(l.settingsResumeQueue),
-            subtitle: Text(
-              l.settingsResumeQueueSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().resumeQueue,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setResumeQueue(v);
-              // Apply immediately: persist the current queue when turning on,
-              // or delete the stored queue when turning off.
-              await QueueStore().saveNow();
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          SwitchListTile(
-            title: Text(l.settingsOfflineQueue),
-            subtitle: Text(
-              l.settingsOfflineQueueSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().offlineQueue,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setOfflineQueue(v);
-              if (v) {
-                // Act now, not on the next queue edit: sweep the current
-                // queue (also clears the once-per-session attempt guard so
-                // earlier failures get a fresh chance).
-                unawaited(DownloadManager().sweepQueueNow());
-              } else {
-                // Wi-Fi-held tasks would otherwise sit in WorkManager
-                // indefinitely (they survive restarts) and fire long after
-                // the user said stop. Running transfers finish normally.
-                unawaited(DownloadManager().cancelWifiHeld());
-              }
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          SwitchListTile(
-            title: Text(l.settingsOfflineQueueWifiOnly),
-            subtitle: Text(
-              l.settingsOfflineQueueWifiOnlySubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().offlineQueueWifiOnly,
-            // Only meaningful while keep-queue-offline is on (existing
-            // transfers keep the constraint they were enqueued with).
-            onChanged: !SettingsManager().offlineQueue
-                ? null
-                : (v) async {
-                    setState(() {});
-                    await SettingsManager().setOfflineQueueWifiOnly(v);
-                    setState(() {});
-                  },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          ListTile(
-            enabled: SettingsManager().offlineQueue,
-            title: Text(l.settingsAutoDownloadCap),
-            subtitle: Text(
-              _autoDownloadCapSubtitle(l, SettingsManager().autoDownloadCap),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: Text(
-              SettingsManager().autoDownloadCap <= 0
-                  ? l.settingsAutoDownloadCapUnlimited
-                  : '${SettingsManager().autoDownloadCap}',
-              style: TextStyle(
-                  color: SettingsManager().offlineQueue
-                      ? VelvetColors.primary
-                      : VelvetColors.textTertiary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600),
-            ),
-            onTap: !SettingsManager().offlineQueue
-                ? null
-                : () => _editAutoDownloadCap(),
-          ),
-          SwitchListTile(
-            title: Text(l.settingsRatingHalf),
-            subtitle: Text(
-              l.settingsRatingHalfSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().ratingAllowHalf,
-            onChanged: (v) async {
-              // setState first so the switch flips immediately (the manager
-              // updates its in-memory value synchronously; the await only
-              // persists). Mirrors the Resume-queue toggle above.
-              setState(() {});
-              await SettingsManager().setRatingAllowHalf(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          ListTile(
-            title: Text(l.settingsTapBehavior),
-            subtitle: Text(
-              _tapBehaviorSubtitle(l, SettingsManager().tapBehavior),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<TapBehavior>(
-              value: SettingsManager().tapBehavior,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: TapBehavior.values
-                  .map((b) => DropdownMenuItem(
-                        value: b,
-                        child: Text(b.label(l)),
-                      ))
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                setState(() {});
-                await SettingsManager().setTapBehavior(v);
-                setState(() {});
-              },
-            ),
-          ),
-          // The visualizer, imported-shaders and cast-quality tiles are
-          // Android-only features (projectM/EGL visualizer, Chromecast/DLNA
-          // casting). The equalizer has its own drawer entry.
-          if (Platform.isAndroid) ...[
-            // No engine picker: the drawer opens each visualizer by name.
-            ListTile(
-              title: Text(l.settingsVisualizerSource),
-              subtitle: Text(
-                _visualizerSourceSubtitle(
-                    l, SettingsManager().visualizerAudioSource),
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              trailing: DropdownButton<VisualizerAudioSource>(
-                value: SettingsManager().visualizerAudioSource,
-                underline: SizedBox.shrink(),
-                dropdownColor: VelvetColors.surface,
-                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-                items: VisualizerAudioSource.values
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s.label(l)),
-                        ))
-                    .toList(),
-                onChanged: (v) => _onVisualizerSourceChanged(v),
-              ),
-            ),
-            SwitchListTile(
-              title: Text(l.settingsVisualizerKnobs),
-              subtitle: Text(
-                l.settingsVisualizerKnobsSubtitle,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              value: SettingsManager().showVisualizerKnobs,
-              onChanged: (v) async {
-                setState(() {});
-                await SettingsManager().setShowVisualizerKnobs(v);
-                setState(() {});
-              },
-              activeThumbColor: VelvetColors.primary,
-            ),
-            ListTile(
-              leading:
-                  Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-              title: Text(l.importedShadersTitle),
-              subtitle: Text(
-                l.importedShadersSettingsSubtitle,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ImportedShadersScreen()),
-                );
-              },
-            ),
-            ListTile(
-              title: Text(l.settingsCastQuality),
-              subtitle: Text(
-                _castQualitySubtitle(l, SettingsManager().castVisualizerQuality),
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              trailing: DropdownButton<CastVisualizerQuality>(
-                value: SettingsManager().castVisualizerQuality,
-                underline: SizedBox.shrink(),
-                dropdownColor: VelvetColors.surface,
-                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-                items: CastVisualizerQuality.values
-                    .map((q) => DropdownMenuItem(
-                          value: q,
-                          child: Text(q.label),
-                        ))
-                    .toList(),
-                onChanged: (v) async {
-                  if (v == null) return;
-                  await SettingsManager().setCastVisualizerQuality(v);
-                  if (mounted) setState(() {});
-                },
-              ),
-            ),
-          ],
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.settingsSectionBrowse),
-          SwitchListTile(
-            title: Text(l.settingsAlbumGrid),
-            subtitle: Text(
-              l.settingsAlbumGridSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().albumGrid,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setAlbumGrid(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          SwitchListTile(
-            title: Text(l.settingsFileMetadata),
-            subtitle: Text(
-              l.settingsFileMetadataSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().fileExplorerMetadata,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setFileExplorerMetadata(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            _Section(
+              header: l.settingsSectionPlayback,
+              footer: s.offlineQueue ? l.settingsOfflineQueueFooter : null,
               children: [
-                Row(
+                _ValueRow(
+                  title: l.settingsTapBehavior,
+                  value: s.tapBehavior.label(l),
+                  onTap: _pickTapBehavior,
+                ),
+                _SwitchRow(
+                  title: l.settingsResumeQueue,
+                  value: s.resumeQueue,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setResumeQueue(v);
+                    // Apply immediately: persist the current queue when
+                    // turning on, or delete the stored queue when turning off.
+                    await QueueStore().saveNow();
+                    if (mounted) setState(() {});
+                  },
+                ),
+                _SwitchRow(
+                  title: l.settingsOfflineQueue,
+                  value: s.offlineQueue,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setOfflineQueue(v);
+                    if (v) {
+                      // Act now, not on the next queue edit: sweep the current
+                      // queue (also clears the once-per-session attempt guard
+                      // so earlier failures get a fresh chance).
+                      unawaited(DownloadManager().sweepQueueNow());
+                    } else {
+                      // Wi-Fi-held tasks would otherwise sit in WorkManager
+                      // indefinitely (they survive restarts) and fire long
+                      // after the user said stop.
+                      unawaited(DownloadManager().cancelWifiHeld());
+                    }
+                    if (mounted) setState(() {});
+                  },
+                ),
+                // Only meaningful while the queue downloads (existing
+                // transfers keep the constraint they were enqueued with).
+                _Nested(
+                  visible: s.offlineQueue,
                   children: [
-                    Expanded(
-                      child: Text(
-                        l.settingsLetterStrip,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: VelvetColors.textPrimary,
+                    _SwitchRow(
+                      title: l.settingsOfflineQueueWifiOnly,
+                      value: s.offlineQueueWifiOnly,
+                      onChanged: (v) async {
+                        setState(() {});
+                        await s.setOfflineQueueWifiOnly(v);
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                    _ValueRow(
+                      title: l.settingsAutoDownloadCap,
+                      value: s.autoDownloadCap <= 0
+                          ? l.settingsAutoDownloadCapUnlimited
+                          : l.settingsAutoDownloadCapValue(s.autoDownloadCap),
+                      onTap: _editAutoDownloadCap,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            _Section(
+              header: l.settingsSectionBrowse,
+              children: [
+                _ValueRow(
+                  title: l.settingsStartupPage,
+                  value: s.startupView.label(l),
+                  onTap: _pickStartupView,
+                ),
+                _SwitchRow(
+                  title: l.settingsAlbumGrid,
+                  value: s.albumGrid,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setAlbumGrid(v);
+                    if (mounted) setState(() {});
+                  },
+                ),
+                _SwitchRow(
+                  title: l.settingsFileMetadata,
+                  value: s.fileExplorerMetadata,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setFileExplorerMetadata(v);
+                    if (mounted) setState(() {});
+                  },
+                ),
+                // The how-to line matters only once half stars are on.
+                _SwitchRow(
+                  title: l.settingsRatingHalf,
+                  subtitle: s.ratingAllowHalf ? l.settingsRatingHalfSubtitle : null,
+                  value: s.ratingAllowHalf,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setRatingAllowHalf(v);
+                    if (mounted) setState(() {});
+                  },
+                ),
+                _ValueRow(
+                  title: l.settingsLetterStrip,
+                  value: l.settingsLetterStripValue(threshold),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: VelvetColors.primary,
+                      thumbColor: VelvetColors.primary,
+                      overlayColor: VelvetColors.primaryDim,
+                    ),
+                    child: Slider(
+                      value: threshold.toDouble().clamp(0.0, 100.0),
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      semanticFormatterCallback: (v) =>
+                          '${l.settingsLetterStrip}: ${l.settingsLetterStripValue(v.round())}',
+                      // Local during the drag; committed once on release — the
+                      // setter rewrites settings.json and re-emits the entire
+                      // browser list, so it must not run per tick.
+                      onChanged: (v) =>
+                          setState(() => _letterStripDrag = v.round()),
+                      onChangeEnd: (v) async {
+                        await s.setLetterStripThreshold(v.round());
+                        if (mounted) setState(() => _letterStripDrag = null);
+                      },
+                    ),
+                  ),
+                ),
+                // The same number decides whether long names wrap — the one
+                // coupling the row's value can't say.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    l.settingsLetterStripHint,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 12),
+                  ),
+                ),
+                _Nested(
+                  visible: true,
+                  children: [
+                    // Title above the buttons, not beside them: at a large
+                    // text size two long labels (Izquierda / Derecha) would
+                    // leave the title no room on its line.
+                    ListTile(
+                      title: Text(l.settingsLetterStripSide),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: SegmentedButton<LetterStripSide>(
+                            segments: [
+                              ButtonSegment(
+                                  value: LetterStripSide.left,
+                                  label: Text(l.settingsLetterStripLeft)),
+                              ButtonSegment(
+                                  value: LetterStripSide.right,
+                                  label: Text(l.settingsLetterStripRight)),
+                            ],
+                            selected: {s.letterStripSide},
+                            onSelectionChanged: (set) async {
+                              if (set.isEmpty) return;
+                              await s.setLetterStripSide(set.first);
+                              if (mounted) setState(() {});
+                            },
+                            showSelectedIcon: false,
+                            style: SegmentedButton.styleFrom(
+                              selectedBackgroundColor: VelvetColors.primary,
+                              selectedForegroundColor: VelvetColors.onPrimary,
+                              foregroundColor: VelvetColors.textPrimary,
+                              side: BorderSide(color: VelvetColors.border2),
+                              visualDensity: VisualDensity.compact,
+                              textStyle: const TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    Text(
-                      '${_letterStripDrag ?? SettingsManager().letterStripThreshold}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: VelvetColors.primary,
-                      ),
-                    ),
                   ],
                 ),
-                SizedBox(height: 4),
-                Text(
-                  l.settingsLetterStripSubtitle,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 12),
-                ),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: VelvetColors.primary,
-                    thumbColor: VelvetColors.primary,
-                    overlayColor: VelvetColors.primaryDim,
-                  ),
-                  child: Slider(
-                    value:
-                        (_letterStripDrag ?? SettingsManager().letterStripThreshold)
-                            .toDouble()
-                            .clamp(0.0, 100.0),
-                    min: 0,
-                    max: 100,
-                    divisions: 20,
-                    // Local during the drag; committed once on release — the
-                    // setter rewrites settings.json and re-emits the entire
-                    // browser list, so it must not run per tick.
-                    onChanged: (v) =>
-                        setState(() => _letterStripDrag = v.round()),
-                    onChangeEnd: (v) async {
-                      await SettingsManager().setLetterStripThreshold(v.round());
-                      if (mounted) setState(() => _letterStripDrag = null);
+                // Android-only: nothing else can be opened *with* a torrent,
+                // so on other platforms these rows would control nothing.
+                if (TorrentChannel.isSupported) ...[
+                  // Stored as "skip", shown as "ask" — the sheet's own
+                  // checkbox is what sets it, and this is the only way back
+                  // from that box.
+                  _SwitchRow(
+                    title: l.settingsTorrentAskTitle,
+                    value: !s.torrentSkipChooser,
+                    onChanged: (v) async {
+                      setState(() {});
+                      await s.setTorrentSkipChooser(!v);
+                      if (mounted) setState(() {});
                     },
                   ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  l.settingsLetterStripSide,
-                  style: TextStyle(
-                      fontSize: 16, color: VelvetColors.textPrimary),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  l.settingsLetterStripSideSubtitle,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 12),
-                ),
-                SizedBox(height: 8),
-                SegmentedButton<LetterStripSide>(
-                  segments: [
-                    ButtonSegment(
-                        value: LetterStripSide.left,
-                        label: Text(l.settingsLetterStripLeft)),
-                    ButtonSegment(
-                        value: LetterStripSide.right,
-                        label: Text(l.settingsLetterStripRight)),
-                  ],
-                  selected: {SettingsManager().letterStripSide},
-                  onSelectionChanged: (set) async {
-                    if (set.isEmpty) return;
-                    await SettingsManager().setLetterStripSide(set.first);
-                    setState(() {});
-                  },
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    textStyle:
-                        WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+                  // Paired with the switch above: that one decides what
+                  // mStream does with a torrent it receives, this one whether
+                  // it receives them at all. Also the only in-app way back
+                  // from having made some other app the default.
+                  _ValueRow(
+                    title: l.settingsTorrentDefaultTitle,
+                    trailing: Icon(Icons.open_in_new,
+                        size: 20,
+                        color: VelvetColors.textSecondary,
+                        semanticLabel: l.settingsTorrentDefaultSub),
+                    onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final failed = !await TorrentChannel.openDefaultSettings();
+                      if (failed && context.mounted) {
+                        messenger.showSnackBar(SnackBar(
+                            content: Text(AppLocalizations.of(context)
+                                .settingsTorrentDefaultFailed)));
+                      }
+                    },
                   ),
+                ],
+              ],
+            ),
+            // The visualizer rows are Android-only features (the projectM/EGL
+            // visualizer's tuning, imported shaders); iOS decodes the stream
+            // itself and has nothing to set. Cast resolution lives in the cast
+            // picker, under the checkbox it depends on.
+            if (Platform.isAndroid)
+              _Section(
+                header: l.settingsSectionVisualizer,
+                children: [
+                  _ValueRow(
+                    title: l.settingsVisualizerSource,
+                    value: s.visualizerAudioSource.label(l),
+                    onTap: _pickVisualizerSource,
+                  ),
+                  _SwitchRow(
+                    title: l.settingsVisualizerKnobs,
+                    subtitle: l.settingsVisualizerKnobsSubtitle,
+                    value: s.showVisualizerKnobs,
+                    onChanged: (v) async {
+                      setState(() {});
+                      await s.setShowVisualizerKnobs(v);
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  _ValueRow(
+                    title: l.importedShadersTitle,
+                    value: (_shaderCount ?? 0) > 0 ? '$_shaderCount' : null,
+                    chevron: true,
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => ImportedShadersScreen()),
+                      );
+                      _countShaders();
+                    },
+                  ),
+                ],
+              ),
+            _Section(
+              header: l.listeningTitle,
+              footer: l.settingsHistoryFooter,
+              children: [
+                _SwitchRow(
+                  title: l.settingsHistoryEnabled,
+                  value: s.historyEnabled,
+                  onChanged: _setHistoryEnabled,
+                ),
+                // Independent of recording: a server's stats can include this
+                // phone while it keeps no record of its own.
+                _SwitchRow(
+                  title: l.settingsHistorySend,
+                  subtitle: s.historySendToServer && _unsynced > 0
+                      ? l.listeningUnsynced(_unsynced)
+                      : null,
+                  value: s.historySendToServer,
+                  onChanged: (v) async {
+                    setState(() {});
+                    await s.setHistorySendToServer(v);
+                    if (mounted) setState(() {});
+                  },
+                ),
+                _ValueRow(
+                  title: l.settingsHistoryClear,
+                  value: bytes == null
+                      ? null
+                      : historyEmpty
+                          ? l.settingsHistoryEmpty
+                          : _fmtBytes(bytes),
+                  enabled: !historyEmpty,
+                  onTap: _clearHistory,
                 ),
               ],
             ),
-          ),
-          // Android-only: nothing else can be opened *with* a torrent, so on
-          // other platforms this switch would control nothing.
-          if (TorrentChannel.isSupported)
-            SwitchListTile(
-              title: Text(l.settingsTorrentAskTitle),
-              subtitle: Text(
-                l.settingsTorrentAskSub,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              // Stored as "skip", shown as "ask" — the sheet's own checkbox is
-              // what sets it, and this is the only way back from that box.
-              value: !SettingsManager().torrentSkipChooser,
-              onChanged: (v) async {
-                setState(() {});
-                await SettingsManager().setTorrentSkipChooser(!v);
-                setState(() {});
-              },
-              activeThumbColor: VelvetColors.primary,
+            _Section(
+              children: [
+                _ValueRow(
+                  title: l.settingsReset,
+                  titleColor: VelvetColors.error,
+                  onTap: _reset,
+                ),
+              ],
             ),
-          // Paired with the switch above: that one decides what mStream does
-          // with a torrent it receives, this one decides whether it receives
-          // them at all. Also the only in-app way back from having made some
-          // other app the default, which is otherwise a silent dead end.
-          if (TorrentChannel.isSupported)
-            ListTile(
-              leading: Icon(Icons.open_in_browser),
-              title: Text(l.settingsTorrentDefaultTitle),
-              subtitle: Text(
-                l.settingsTorrentDefaultSub,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              onTap: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                final failed = !await TorrentChannel.openDefaultSettings();
-                if (failed && context.mounted) {
-                  messenger.showSnackBar(SnackBar(
-                      content: Text(AppLocalizations.of(context)
-                          .settingsTorrentDefaultFailed)));
-                }
-              },
-            ),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.settingsSectionListening),
-          SwitchListTile(
-            title: Text(l.settingsHistoryEnabled),
-            subtitle: Text(l.settingsHistoryEnabledSubtitle,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12)),
-            value: SettingsManager().historyEnabled,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setHistoryEnabled(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          SwitchListTile(
-            title: Text(l.settingsHistorySend),
-            subtitle: Text(
-                '${l.settingsHistorySendSubtitle}\n${l.settingsHistoryUnsynced(PlayHistory().outboxCount)}',
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12)),
-            value: SettingsManager().historySendToServer,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setHistorySendToServer(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          ListTile(
-            leading: Icon(Icons.delete_outline, color: VelvetColors.textSecondary),
-            title: Text(l.settingsHistoryClear),
-            subtitle: FutureBuilder<int>(
-              future: PlayHistory().sizeBytes(),
-              builder: (context, snap) => Text(
-                l.settingsHistoryClearSubtitle(_fmtBytes(snap.data ?? 0)),
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-            ),
-            onTap: () async {
-              final ok = await fedConfirm(context,
-                  message: l.settingsHistoryClearConfirm,
-                  confirmLabel: l.settingsHistoryClear,
-                  danger: true);
-              if (!ok) return;
-              await PlayHistory().clear();
-              if (!mounted) return;
-              setState(() {});
-              showGlobalSnack(l.settingsHistoryCleared);
-            },
-          ),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.settingsSectionAbout),
-          ListTile(
-            leading: Icon(Icons.tune),
-            title: Text(l.settingsReset),
-            subtitle: Text(
-              l.settingsResetSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            onTap: () async {
-              // resetAll flips eqEnabled by direct field write; the pipelined
-              // player would keep coloring audio while the EQ screen says
-              // Off. Route the audible half through the handler (rebuilds to
-              // a plain player) — only when EQ was actually on.
-              final eqWasOn = SettingsManager().eqEnabled;
-              await SettingsManager().resetAll();
-              if (eqWasOn) {
-                unawaited(MediaManager().audioHandler.setEqEnabled(false));
-              }
-              if (mounted) setState(() {});
-              // App-wide messenger so the toast doesn't depend on this screen's
-              // context surviving the await.
-              showGlobalSnack(l.settingsResetDone);
-            },
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 
-  String _themeSubtitle(AppLocalizations l, AppTheme t) {
-    switch (t) {
-      case AppTheme.velvet:
-        return l.themeSubtitleVelvet;
-      case AppTheme.dark:
-        return l.themeSubtitleDark;
-      case AppTheme.light:
-        return l.themeSubtitleLight;
-    }
+  // A picker sheet for a value row; applies the pick and rebuilds. A pick
+  // of the current value (or a dismissal) changes nothing.
+  Future<void> _choose<T>(String title, T selected,
+      List<ChoiceOption<T>> options, Future<void> Function(T) apply) async {
+    final picked = await showChoiceSheet<T>(context,
+        title: title, options: options, selected: selected);
+    if (picked == null || picked.value == selected) return;
+    await apply(picked.value);
+    if (mounted) setState(() {});
   }
+
+  Future<void> _pickTheme() {
+    final l = AppLocalizations.of(context);
+    return _choose<AppTheme>(
+      l.settingsTheme,
+      SettingsManager().appTheme,
+      [
+        for (final t in AppTheme.values)
+          ChoiceOption(t, t.label(l), preview: _ThemeSwatch(t)),
+      ],
+      SettingsManager().setAppTheme,
+    );
+  }
+
+  Future<void> _pickPlayerLayout() {
+    final l = AppLocalizations.of(context);
+    return _choose<PlayerLayout>(
+      l.settingsPlayerLayout,
+      SettingsManager().playerLayout,
+      [
+        for (final p in PlayerLayout.values)
+          ChoiceOption(p, _playerLayoutLabel(l, p),
+              preview: _LayoutThumb(p)),
+      ],
+      SettingsManager().setPlayerLayout,
+    );
+  }
+
+  Future<void> _pickLanguage() {
+    final l = AppLocalizations.of(context);
+    // "System default" (null) first, then one entry per supported locale by
+    // name — derived from the generated supportedLocales so new ARB files
+    // appear automatically.
+    final codes = [
+      for (final loc in AppLocalizations.supportedLocales) loc.languageCode,
+    ]..sort((a, b) => (kLanguageEndonyms[a] ?? a)
+        .compareTo(kLanguageEndonyms[b] ?? b));
+    return _choose<String?>(
+      l.settingsLanguage,
+      SettingsManager().language,
+      [
+        ChoiceOption<String?>(null, l.languageSystemDefault),
+        for (final code in codes)
+          ChoiceOption<String?>(code, kLanguageEndonyms[code] ?? code,
+              locale: Locale(code)),
+      ],
+      SettingsManager().setLanguage,
+    );
+  }
+
+  Future<void> _pickTapBehavior() {
+    final l = AppLocalizations.of(context);
+    return _choose<TapBehavior>(
+      l.settingsTapBehavior,
+      SettingsManager().tapBehavior,
+      [
+        for (final b in TapBehavior.values)
+          ChoiceOption(b, b.label(l), hint: _tapBehaviorHint(l, b)),
+      ],
+      SettingsManager().setTapBehavior,
+    );
+  }
+
+  Future<void> _pickStartupView() {
+    final l = AppLocalizations.of(context);
+    return _choose<StartupView>(
+      l.settingsStartupPage,
+      SettingsManager().startupView,
+      [
+        // "Recent" is the home tile's name for recently ADDED — say so here,
+        // where it could be read as recently played.
+        for (final v in StartupView.values)
+          ChoiceOption(v, v.label(l),
+              hint: v == StartupView.recent ? l.settingsStartupRecentHint : null),
+      ],
+      SettingsManager().setStartupView,
+    );
+  }
+
+  Future<void> _pickVisualizerSource() {
+    final l = AppLocalizations.of(context);
+    return _choose<VisualizerAudioSource>(
+      l.settingsVisualizerSource,
+      SettingsManager().visualizerAudioSource,
+      [
+        for (final s in VisualizerAudioSource.values)
+          ChoiceOption(s, s.label(l), hint: _visualizerSourceHint(l, s)),
+      ],
+      _setVisualizerSource,
+    );
+  }
+
+  // Switching to "real" walks the user through the microphone permission
+  // with an up-front explanation of why a music app asks for it — unless
+  // Android already granted it. On a refusal the setting stays as it was.
+  Future<void> _setVisualizerSource(VisualizerAudioSource v) async {
+    if (v == VisualizerAudioSource.real) {
+      // Shared with the drawer's visualizer launcher — see
+      // util/real_audio_permission.
+      final ok = await confirmRealAudioPermission(context);
+      if (!ok) return;
+    }
+    await SettingsManager().setVisualizerAudioSource(v);
+  }
+
+  // Turning recording off deletes this phone's record — unsent plays
+  // included — so it asks first; turning it on is instant.
+  Future<void> _setHistoryEnabled(bool v) async {
+    if (!v) {
+      final l = AppLocalizations.of(context);
+      final ok = await fedConfirm(context,
+          title: l.settingsHistoryOffTitle,
+          message: l.settingsHistoryOffBody(PlayHistory().outboxCount),
+          confirmLabel: l.settingsHistoryOffConfirm,
+          danger: true);
+      if (!ok || !mounted) return;
+    }
+    setState(() {});
+    await SettingsManager().setHistoryEnabled(v);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _clearHistory() async {
+    final l = AppLocalizations.of(context);
+    final ok = await fedConfirm(context,
+        title: l.settingsHistoryClearTitle,
+        message: l.settingsHistoryClearConfirm(
+            _fmtBytes(_historyBytes ?? 0), PlayHistory().outboxCount),
+        confirmLabel: l.clear,
+        danger: true);
+    if (!ok) return;
+    await PlayHistory().clear();
+    showGlobalSnack(l.settingsHistoryCleared);
+  }
+
+  Future<void> _reset() async {
+    final l = AppLocalizations.of(context);
+    // The equalizer is Android-only, so only Android's copy names it.
+    final ok = await fedConfirm(context,
+        title: l.settingsResetTitle,
+        message: Platform.isAndroid ? l.settingsResetBody : l.settingsResetBodyIos,
+        confirmLabel: l.reset,
+        danger: true);
+    if (!ok) return;
+    final eqWasOn = SettingsManager().eqEnabled;
+    await SettingsManager().resetAll();
+    // Reset turns the queue downloads off: drop the transfers held for
+    // Wi-Fi, as the switch does.
+    unawaited(DownloadManager().cancelWifiHeld());
+    // resetAll writes the EQ fields directly; the live engine keeps its
+    // curve (and the five-band player its pipeline) until told.
+    unawaited(MediaManager().audioHandler.resetEqualizer(wasOn: eqWasOn));
+    if (mounted) setState(() {});
+    // App-wide messenger so the toast doesn't depend on this screen's
+    // context surviving the await.
+    showGlobalSnack(l.settingsResetDone);
+  }
+
+  String _languageLabel(AppLocalizations l, String? code) => code == null
+      ? l.languageSystemDefault
+      : (kLanguageEndonyms[code] ?? code);
 
   String _playerLayoutLabel(AppLocalizations l, PlayerLayout p) {
     switch (p) {
@@ -698,31 +646,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _playerLayoutSubtitle(AppLocalizations l, PlayerLayout p) {
-    switch (p) {
-      case PlayerLayout.small:
-        return l.playerLayoutSmallDesc;
-      case PlayerLayout.medium:
-        return l.playerLayoutMediumDesc;
-      case PlayerLayout.large:
-        return l.playerLayoutLargeDesc;
-      case PlayerLayout.xl:
-        return l.playerLayoutXlDesc;
-    }
-  }
-
-  String _castQualitySubtitle(AppLocalizations l, CastVisualizerQuality q) {
-    switch (q) {
-      case CastVisualizerQuality.hd720:
-        return l.settingsCastQualitySubtitle720;
-      case CastVisualizerQuality.fhd1080:
-        return l.settingsCastQualitySubtitle1080;
-      case CastVisualizerQuality.uhd2160:
-        return l.settingsCastQualitySubtitle4k;
-    }
-  }
-
-  String _visualizerSourceSubtitle(AppLocalizations l, VisualizerAudioSource s) {
+  String _visualizerSourceHint(AppLocalizations l, VisualizerAudioSource s) {
     switch (s) {
       case VisualizerAudioSource.synthesized:
         return l.visualizerSourceSubtitleSynthesized;
@@ -731,27 +655,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // Dropdown handler for the visualizer source. Switching to "real"
-  // walks the user through the RECORD_AUDIO permission flow with an
-  // up-front explanation of *why* a music app is asking for the
-  // microphone permission. If the user denies (or cancels), we revert
-  // the setting so the dropdown stays honest.
-  Future<void> _onVisualizerSourceChanged(VisualizerAudioSource? v) async {
-    if (v == null) return;
-    final current = SettingsManager().visualizerAudioSource;
-    if (v == current) return;
-
-    if (v == VisualizerAudioSource.real) {
-      // Shared with the first-run setup flow — see util/real_audio_permission.
-      final ok = await confirmRealAudioPermission(context);
-      if (!ok) return;
-    }
-
-    await SettingsManager().setVisualizerAudioSource(v);
-    if (mounted) setState(() {});
-  }
-
-  String _tapBehaviorSubtitle(AppLocalizations l, TapBehavior b) {
+  String _tapBehaviorHint(AppLocalizations l, TapBehavior b) {
     switch (b) {
       case TapBehavior.addToQueue:
         return l.tapSubtitleAddToQueue;
@@ -761,9 +665,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.tapSubtitleAppendAndJump;
     }
   }
-
-  String _autoDownloadCapSubtitle(AppLocalizations l, int cap) =>
-      cap <= 0 ? l.settingsAutoDownloadCapSubtitleUnlimited : l.settingsAutoDownloadCapSubtitle;
 
   // Prompt for the auto-download retention limit. 0 (or empty) = unlimited.
   // Applying a lower value evicts down to it immediately — a deliberate,
@@ -788,18 +689,320 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (n < 1024 * 1024) return '${(n / 1024).toStringAsFixed(0)} KB';
     return '${(n / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
+}
 
-  Widget _sectionHeader(String label) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: VelvetColors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.6,
+/// A group on the page: an upper-cased accent header, a card of rows, and an
+/// optional grey footer — the one place a group explains itself. No header
+/// leaves a plain gap (Reset, alone at the end).
+class _Section extends StatelessWidget {
+  final String? header;
+  final String? footer;
+  final List<Widget> children;
+
+  const _Section({this.header, this.footer, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final header = this.header;
+    final footer = this.footer;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (header != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Semantics(
+              header: true,
+              child: Text(
+                header.toUpperCase(),
+                style: TextStyle(
+                  color: VelvetColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.6,
+                ),
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Material(
+            color: VelvetColors.card,
+            borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
         ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.topCenter,
+          child: footer == null
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Text(
+                    footer,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A row that shows its current value (or a swatch, an icon) at the trailing
+/// edge, with an optional chevron when it opens a page.
+class _ValueRow extends StatelessWidget {
+  final String title;
+  final String? value;
+  final Widget? leading;
+  final Widget? trailing;
+  final bool chevron;
+  final bool enabled;
+  final Color? titleColor;
+  final VoidCallback? onTap;
+
+  const _ValueRow({
+    required this.title,
+    this.value,
+    this.leading,
+    this.trailing,
+    this.chevron = false,
+    this.enabled = true,
+    this.titleColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = this.value;
+    final trailing = this.trailing;
+    final ends = <Widget>[
+      if (value != null)
+        // Long values (a German label, a long endonym) ellipsize rather than
+        // squeeze the title to nothing.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+                color: enabled
+                    ? VelvetColors.textSecondary
+                    : VelvetColors.textTertiary,
+                fontSize: 14),
+          ),
+        ),
+      ?trailing,
+      if (chevron)
+        Icon(Icons.chevron_right, color: VelvetColors.textSecondary, size: 20),
+    ];
+    return ListTile(
+      leading: leading,
+      title: Text(title,
+          style: titleColor == null ? null : TextStyle(color: titleColor)),
+      trailing: ends.isEmpty
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: ends,
+            ),
+      enabled: enabled,
+      onTap: onTap,
+    );
+  }
+}
+
+class _SwitchRow extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  const _SwitchRow({
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = this.subtitle;
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: subtitle == null
+          ? null
+          : Text(subtitle,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
+      value: value,
+      onChanged: onChanged,
+      activeThumbColor: VelvetColors.primary,
+    );
+  }
+}
+
+/// Rows that belong to the row above: indented behind a rule, and folded
+/// away while that row is off, so the page says the dependency instead of a
+/// sentence.
+class _Nested extends StatelessWidget {
+  final bool visible;
+  final List<Widget> children;
+
+  const _Nested({required this.visible, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      alignment: Alignment.topCenter,
+      child: visible
+          ? Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 0, 8),
+              decoration: BoxDecoration(
+                border: Border(
+                    left: BorderSide(color: VelvetColors.border, width: 2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            )
+          : const SizedBox(width: double.infinity),
+    );
+  }
+}
+
+/// A theme's palette in a chip: its background, a card, and the accent —
+/// a custom accent replaces every theme's own, so the chip shows that one.
+class _ThemeSwatch extends StatelessWidget {
+  final AppTheme theme;
+
+  const _ThemeSwatch(this.theme);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = paletteFor(theme);
+    final custom = SettingsManager().accentColor;
+    final accent = custom == null ? p.primary : Color(custom);
+    return Container(
+      width: 44,
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: p.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: p.border),
+      ),
+      child: Row(
+        spacing: 4,
+        children: [
+          Expanded(
+            child: Container(
+              height: 12,
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A Now Playing layout drawn small: the slim bar, the banner, centred art,
+/// hero art — each above the queue it leaves room for.
+class _LayoutThumb extends StatelessWidget {
+  final PlayerLayout layout;
+
+  const _LayoutThumb(this.layout);
+
+  @override
+  Widget build(BuildContext context) {
+    Widget line({double? width, double height = 3, Color? color}) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: color ?? VelvetColors.border,
+            borderRadius: BorderRadius.circular(1),
+          ),
+        );
+    Widget art(double size) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: VelvetColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+    final title = VelvetColors.textTertiary;
+    final children = switch (layout) {
+      PlayerLayout.small => [
+          line(height: 8, color: VelvetColors.border2),
+          for (var i = 0; i < 7; i++) line(),
+        ],
+      PlayerLayout.medium => [
+          Row(
+            spacing: 3,
+            children: [
+              art(14),
+              Expanded(
+                child: Column(
+                  spacing: 3,
+                  children: [line(color: title), line(color: title)],
+                ),
+              ),
+            ],
+          ),
+          for (var i = 0; i < 5; i++) line(),
+        ],
+      PlayerLayout.large => [
+          art(20),
+          line(width: 24, color: title),
+          for (var i = 0; i < 4; i++) line(),
+        ],
+      PlayerLayout.xl => [
+          art(30),
+          line(width: 24, color: title),
+          for (var i = 0; i < 2; i++) line(),
+        ],
+    };
+    return Container(
+      width: 40,
+      height: 64,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: VelvetColors.bg,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: VelvetColors.border),
+      ),
+      child: Column(
+        spacing: 3,
+        crossAxisAlignment: layout == PlayerLayout.large ||
+                layout == PlayerLayout.xl
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
@@ -851,6 +1054,7 @@ class _AutoDownloadCapDialogState extends State<_AutoDownloadCapDialog> {
             decoration: InputDecoration(
               labelText: l.settingsAutoDownloadCapField,
               hintText: l.settingsAutoDownloadCapUnlimited,
+              helperText: l.settingsAutoDownloadCapHint,
             ),
           ),
         ],

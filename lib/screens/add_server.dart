@@ -1330,9 +1330,23 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohTestedCode = code;
       final port = await IrohTunnel.instance.start(code, code);
       final lt = IrohTunnel.instance.localTokenOf(code) ?? '';
-      final resp = await http
-          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
-          .timeout(Duration(seconds: 10));
+      final http.Response resp;
+      try {
+        resp = await http
+            .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
+            .timeout(Duration(seconds: 10));
+      } catch (e) {
+        if (e is TimeoutException) rethrow; // "did not respond in time"
+        // The tunnel is up — the handshake passed — yet the server closed
+        // the request unanswered. Its tunnel bridges every stream to
+        // 127.0.0.1:<port>, which a server bound to one interface, or on
+        // another port, refuses (mStream#1101): name that instead of the
+        // raw "Connection closed before full header was received".
+        appLog('[add-server] tunnel up but GET /api/ through it failed: $e');
+        _stopTestTunnel();
+        _showIrohResult(false, l.irohTunnelNoAnswer);
+        return;
+      }
       String? version;
       if (resp.statusCode == 200) {
         try {
@@ -1660,9 +1674,19 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohTestedCode = code;
       final port = await IrohTunnel.instance.start(code, code);
       final lt = IrohTunnel.instance.localTokenOf(code) ?? '';
-      await http
-          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
-          .timeout(Duration(seconds: 10));
+      try {
+        await http
+            .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
+            .timeout(Duration(seconds: 10));
+      } catch (e) {
+        if (e is TimeoutException) rethrow; // "did not respond in time"
+        // Same case as the pasted-code test: tunnel up, server closing the
+        // request unanswered — its bridge cannot reach its own web port.
+        appLog('[add-server] tunnel up but GET /api/ through it failed: $e');
+        _stopTestTunnel();
+        _showIrohResult(false, l.irohTunnelNoAnswer);
+        return;
+      }
       if (!mounted) {
         _stopTestTunnel();
         return;

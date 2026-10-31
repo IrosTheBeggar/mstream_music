@@ -12,6 +12,8 @@ NetworkChangeRemedy change({
   bool rejected = false,
   Duration? sinceOffline,
   bool userInitiated = false,
+  Duration? backgroundFor,
+  bool offlineNow = false,
 }) =>
     TunnelPolicy.onNetworkChange(
       native: native,
@@ -20,6 +22,8 @@ NetworkChangeRemedy change({
       rejected: rejected,
       sinceOffline: sinceOffline,
       userInitiated: userInitiated,
+      backgroundFor: backgroundFor,
+      offlineNow: offlineNow,
     );
 
 void main() {
@@ -38,6 +42,59 @@ void main() {
     test('reconnecting + the user tapped Retry → escalate', () {
       expect(change(native: IrohTunnelStatus.reconnecting, userInitiated: true),
           NetworkChangeRemedy.escalate);
+    });
+
+    // Android 15+ cuts a cached app's network 5 s after it leaves the
+    // foreground; a tunnel that is reconnecting when the app comes back after
+    // a stay past the QUIC idle timeout died while it was away, and the
+    // supervisor's re-dial on the stale endpoint is the slow path.
+    test('reconnecting on a resume after a long background stay → rebuild',
+        () {
+      expect(
+          change(
+              native: IrohTunnelStatus.reconnecting,
+              backgroundFor: TunnelTiming.backgroundNetworkCut),
+          NetworkChangeRemedy.rebuild);
+      expect(
+          change(
+              native: IrohTunnelStatus.connecting,
+              backgroundFor: const Duration(minutes: 8)),
+          NetworkChangeRemedy.rebuild);
+    });
+
+    test('a short background trip, or no network now → the supervisor', () {
+      expect(
+          change(
+              native: IrohTunnelStatus.reconnecting,
+              backgroundFor: const Duration(seconds: 29)),
+          NetworkChangeRemedy.leaveToSupervisor);
+      expect(
+          change(
+              native: IrohTunnelStatus.reconnecting,
+              backgroundFor: const Duration(minutes: 8),
+              offlineNow: true),
+          NetworkChangeRemedy.leaveToSupervisor);
+      // Not a resume at all: the stay is unknown.
+      expect(change(native: IrohTunnelStatus.reconnecting),
+          NetworkChangeRemedy.leaveToSupervisor);
+    });
+
+    test('a resume after a long stay changes nothing else', () {
+      // Connected: the probe decides (the connection may be a zombie).
+      expect(change(backgroundFor: const Duration(minutes: 8)),
+          NetworkChangeRemedy.probe);
+      // The user's Retry still escalates in place first.
+      expect(
+          change(
+              native: IrohTunnelStatus.reconnecting,
+              backgroundFor: const Duration(minutes: 8),
+              userInitiated: true),
+          NetworkChangeRemedy.escalate);
+      expect(
+          change(
+              native: IrohTunnelStatus.rejected,
+              backgroundFor: const Duration(minutes: 8)),
+          NetworkChangeRemedy.leaveRejected);
     });
 
     test('connected → probe (the iOS thaw case)', () {

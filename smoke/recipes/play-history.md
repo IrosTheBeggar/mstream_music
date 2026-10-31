@@ -46,12 +46,12 @@ server in `smoke/out/<run>/srv/` and kills it on exit.
 3. **Kill in the car.** Start an album over Android Auto or CarPlay, pull the
    key. Next launch: the cut session is on the Listening page as "Stopped
    at m:ss", and after a moment on the server.
-4. **Settings.** Settings › Listening history: turn "Send plays to your
-   servers" off — the "waiting to be sent" line drops to "Everything is
-   synced" and nothing reaches the server; back on — the next play syncs.
-   Turn "Keep listening history" off — the page empties and the files are
-   gone (Settings shows the size); the server keeps its record. "Clear
-   listening history" asks first.
+4. **Settings.** Settings › Listening stats: turn "Send plays to servers"
+   off — the "N plays not synced yet" line goes away and nothing reaches the
+   server; back on — the next play syncs. Turn "Record plays" off — it asks
+   first (naming the unsent plays), then the page empties and the files are
+   gone ("Clear history" reads Empty); the server keeps its record. "Clear
+   history" asks first too.
 5. **Song Info.** Long-press a played track › Info: "N plays on <server> ·
    last 3 min ago" and "N plays on this phone" both present and agreeing.
 6. **An old server** (6.26): Listening shows the phone's plays on it with the

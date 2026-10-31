@@ -40,10 +40,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get languageSystemDefault => 'Как в системе';
 
   @override
-  String get settingsLanguageSubtitle =>
-      'Язык интерфейса приложения. «Как в системе» повторяет язык устройства.';
-
-  @override
   String couldNotOpen(String url) {
     return 'Не удалось открыть $url';
   }
@@ -338,24 +334,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsSectionPlayback => 'Воспроизведение';
 
   @override
-  String get settingsSectionBrowse => 'Обзор';
-
-  @override
-  String get settingsSectionAbout => 'О приложении';
+  String get settingsSectionBrowse => 'Библиотека';
 
   @override
   String get settingsTheme => 'Тема';
-
-  @override
-  String get themeSubtitleVelvet =>
-      'Тёмно-синий и фиолетовый — фирменная тёмная тема.';
-
-  @override
-  String get themeSubtitleDark => 'Нейтральная тёмная с янтарными акцентами.';
-
-  @override
-  String get themeSubtitleLight =>
-      'Светлый фон с тёмной панелью приложения и янтарными акцентами — совпадает с прежней темой.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';
@@ -394,60 +376,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsStartupPage => 'Стартовый экран';
 
   @override
-  String get settingsStartupPageSubtitle =>
-      'Открывать приложение на этом разделе «Обзора»; «Назад» возвращает в «Обзор».';
-
-  @override
-  String get tapSubtitleAddToQueue =>
-      'Нажатие на трек добавляет его в очередь. Если очередь пуста, воспроизведение начнётся автоматически.';
+  String get tapSubtitleAddToQueue => 'Добавляет в конец очереди';
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Нажатие на трек заменяет очередь треками из текущего вида и начинает воспроизведение с выбранного трека.';
+      'Заменяет очередь и играет с этого трека';
 
   @override
   String get tapSubtitleAppendAndJump =>
-      'Нажатие на трек добавляет его в очередь и переключает воспроизведение на него, прерывая то, что играло.';
+      'Добавляет в конец очереди и сразу включает';
 
   @override
-  String get settingsVisualizerSource => 'Источник звука визуализации';
+  String get settingsVisualizerSource => 'Источник звука';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'По умолчанию. Визуализация реагирует только на тайминг воспроизведения — разрешение на микрофон не требуется.';
+  String get visualizerSourceSubtitleSynthesized => 'Разрешение не нужно';
 
   @override
   String get visualizerSourceSubtitleReal =>
-      'Визуализация реагирует на реальный аудиовыход. Требуется разрешение RECORD_AUDIO на Android.';
+      'Нужно разрешение на микрофон, но он не используется';
 
   @override
   String get settingsAlbumGrid => 'Альбомы сеткой';
 
   @override
-  String get settingsAlbumGridSubtitle =>
-      'Показывать альбомы сеткой карточек с обложками вместо обычного списка.';
+  String get settingsFileMetadata => 'Сведения о треках в проводнике файлов';
 
   @override
-  String get settingsFileMetadata =>
-      'Читать метаданные треков в проводнике файлов';
+  String get settingsLetterStrip => 'Полоса A–Z';
 
   @override
-  String get settingsFileMetadataSubtitle =>
-      'Получать название, исполнителя и обложку для каждого трека при просмотре файлов сервера. При выключении показываются исходные имена файлов (быстрее для больших папок).';
-
-  @override
-  String get settingsLetterStrip => 'Порог буквенной прокрутки';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      'Показывать полосу быстрой прокрутки A–Z, когда в списке столько элементов или больше. Ниже этого размера полоса скрывается, а длинные имена папок и файлов переносятся на несколько строк вместо обрезки. Установите 0, чтобы полоса показывалась всегда.';
-
-  @override
-  String get settingsLetterStripSide => 'Сторона полосы A–Z';
-
-  @override
-  String get settingsLetterStripSideSubtitle =>
-      'У какого края находится полоса A–Z.';
+  String get settingsLetterStripSide => 'Сторона';
 
   @override
   String get settingsLetterStripLeft => 'Слева';
@@ -456,15 +415,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLetterStripRight => 'Справа';
 
   @override
-  String get settingsReset => 'Сбросить к значениям по умолчанию';
+  String get settingsReset => 'Сбросить настройки';
 
   @override
-  String get settingsResetSubtitle =>
-      'Восстановить все настройки на этом экране к значениям по умолчанию. Серверы и загрузки не затрагиваются.';
-
-  @override
-  String get settingsResetDone =>
-      'Настройки восстановлены к значениям по умолчанию';
+  String get settingsResetDone => 'Настройки сброшены';
 
   @override
   String get realAudioDialogTitle => 'Использовать реальный звук?';
@@ -1166,11 +1120,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserWelcomeSubtitle => 'Нажмите здесь, чтобы добавить сервер';
 
   @override
-  String get settingsVisualizerKnobs => 'Регуляторы настройки визуализации';
+  String get settingsVisualizerKnobs => 'Ползунки настройки';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      'Показывать живые ползунки поверх визуализации, чтобы подстраивать реакцию каждого шейдера на звук. Только для визуализации ShaderToy.';
+  String get settingsVisualizerKnobsSubtitle => 'Только ShaderToy';
 
   @override
   String get visualizerTuningTitle => 'Настройка';
@@ -1236,19 +1189,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get commonOff => 'Выкл.';
 
   @override
-  String get settingsCastQuality => 'Качество визуализации при трансляции';
-
-  @override
-  String get settingsCastQualitySubtitle720 =>
-      'Разрешение, в котором визуализация транслируется на ТВ. 720p — наименьшая нагрузка на телефон.';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      'Разрешение, в котором визуализация транслируется на ТВ. 1080p — чётко на любом Chromecast (по умолчанию).';
-
-  @override
   String get settingsCastQualitySubtitle4k =>
-      'Разрешение, в котором визуализация транслируется на ТВ. 4K — нужен Chromecast с поддержкой 4K; гораздо большая нагрузка на телефон.';
+      'Нужен Chromecast 4K; больше всего нагружает телефон';
 
   @override
   String get eqCasting =>
@@ -1499,14 +1441,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get castVisualizer => 'Транслировать визуализацию';
 
   @override
-  String get castVisualizerSubtitle =>
-      'Транслировать визуализацию на ТВ · только Chromecast';
+  String get castVisualizerSubtitle => 'Только Chromecast';
 
   @override
   String get castThisDevice => 'Это устройство';
 
   @override
-  String get visualizerNoKnobs => 'Этот шейдер не предоставляет регуляторов.';
+  String get visualizerNoKnobs => 'У этого шейдера нет ползунков.';
 
   @override
   String get nowPlaying => 'Сейчас играет';
@@ -1527,19 +1468,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Тонкая панель — максимум очереди';
-
-  @override
-  String get playerLayoutMediumDesc =>
-      'Баннер — сбалансированный (по умолчанию)';
-
-  @override
-  String get playerLayoutLargeDesc => 'Компактный — обложка по центру';
-
-  @override
-  String get playerLayoutXlDesc => 'Крупный — полная обложка';
-
-  @override
   String get queueNothingToDownloadEmpty => 'Очередь пуста — нечего скачивать';
 
   @override
@@ -1548,10 +1476,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAccentColor => 'Акцентный цвет';
-
-  @override
-  String get settingsAccentColorSubtitle =>
-      'Цвет выделения, используемый во всём приложении.';
 
   @override
   String get accentThemeDefault => 'Из темы';
@@ -1589,43 +1513,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsResumeQueue => 'Восстанавливать очередь при запуске';
 
   @override
-  String get settingsResumeQueueSubtitle =>
-      'Сохранять очередь воспроизведения и позицию в ней и восстанавливать их при повторном открытии приложения.';
-
-  @override
-  String get settingsOfflineQueue => 'Держать очередь доступной офлайн';
+  String get settingsOfflineQueue => 'Скачивать очередь';
 
   @override
   String get settingsOfflineQueueSubtitle =>
-      'Автоматически загружает треки из очереди на это устройство, чтобы воспроизведение продолжалось при потере соединения.';
+      'Воспроизведение не прервётся при обрыве связи.';
 
   @override
-  String get settingsOfflineQueueWifiOnly => 'Загружать только по Wi-Fi';
+  String get settingsOfflineQueueWifiOnly => 'Только по Wi-Fi';
 
   @override
-  String get settingsOfflineQueueWifiOnlySubtitle =>
-      'Ожидает подключения к Wi-Fi перед загрузкой треков из очереди.';
-
-  @override
-  String get settingsAutoDownloadCap => 'Лимит автозагрузки';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      'Кэшировать столько треков начиная с текущего; пройденные удаляются по ходу.';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Кэшировать всю очередь (без ограничений).';
+  String get settingsAutoDownloadCap => 'Лимит загрузок';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Без ограничений';
 
   @override
-  String get settingsAutoDownloadCapField => 'Количество треков';
+  String get settingsAutoDownloadCapField => 'Треки';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Сколько треков очереди остаются загруженными, начиная с текущего. По мере воспроизведения пройденные удаляются. 0 — вся очередь.';
+      'Сколько треков хранить скачанными, считая с текущего. Старые сверх лимита удаляются по мере скачивания новых.';
 
   @override
   String get downloadWaitingWifi => 'Ожидание Wi-Fi';
@@ -1634,8 +1542,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRatingHalf => 'Оценки с шагом в ползвезды';
 
   @override
-  String get settingsRatingHalfSubtitle =>
-      'Оценивать треки с шагом в ползвезды (долгое нажатие на звезду).';
+  String get settingsRatingHalfSubtitle => 'Удерживайте звезду';
 
   @override
   String get ratingTitle => 'Оценить';
@@ -1692,10 +1599,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get importedShadersTitle => 'Импортированные шейдеры';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      'Добавьте свои файлы .glsl в ротацию визуализации ShaderToy.';
-
-  @override
   String get importedShadersRescan => 'Пересканировать папку';
 
   @override
@@ -1707,13 +1610,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию визуализации ShaderToy.';
+      'Доступна по USB. Удаляется вместе с mStream.';
 
   @override
   String get importedShadersRemove => 'Удалить';
 
   @override
-  String get importedShadersEmptyTitle => 'В папке пока нет шейдеров';
+  String get importedShadersEmptyTitle => 'Шейдеров пока нет';
 
   @override
   String get importedShadersEmptyBody =>
@@ -1721,7 +1624,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersInvalid =>
-      'Возможно, это нерабочий шейдер — нет точки входа mainImage/main.';
+      'Может не запуститься: нет mainImage или main';
 
   @override
   String get importedShadersImportDownloads =>
@@ -1729,7 +1632,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Импортировано шейдеров из «Загрузок»: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Импортировано $count шейдера',
+      many: 'Импортировано $count шейдеров',
+      few: 'Импортировано $count шейдера',
+      one: 'Импортирован $count шейдер',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1818,6 +1729,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get irohPathSuffixRelay => ' · через ретранслятор';
+
+  @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
 
   @override
   String get irohTunnelTimeout =>
@@ -2425,16 +2340,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTorrentAskTitle => 'Спрашивать, что делать с торрентами';
 
   @override
-  String get settingsTorrentAskSub =>
-      'При открытии торрента в mStream предлагать передать его другому приложению';
-
-  @override
   String get settingsTorrentDefaultTitle =>
       'Приложение по умолчанию для торрентов';
 
   @override
-  String get settingsTorrentDefaultSub =>
-      'Откроет настройки Android, где можно выбрать приложение для торрентов и magnet-ссылок';
+  String get settingsTorrentDefaultSub => 'Открывает настройки Android';
 
   @override
   String get settingsTorrentDefaultFailed =>
@@ -4156,50 +4066,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoRecentlyPlayed => 'Недавно прослушанные';
 
   @override
-  String get settingsSectionListening => 'История прослушиваний';
+  String get settingsHistoryEnabled => 'Записывать прослушивания';
 
   @override
-  String get settingsHistoryEnabled => 'Сохранять историю прослушиваний';
+  String get settingsHistorySend => 'Отправлять прослушивания на серверы';
 
   @override
-  String get settingsHistoryEnabledSubtitle =>
-      'Записывает, что воспроизводит этот телефон, — на каждом сервере и для локальных файлов. Хранится только на этом устройстве.';
+  String get settingsHistoryClear => 'Очистить историю';
 
   @override
-  String get settingsHistorySend => 'Отправлять прослушивания на ваши серверы';
-
-  @override
-  String get settingsHistorySendSubtitle =>
-      'Каждое прослушивание уходит на сервер, где лежит трек (трек пира — на его родительский сервер), чтобы ваша статистика включала этот телефон. Серверы передают данные в Last.fm, только если вы привязали там аккаунт.';
-
-  @override
-  String get settingsHistoryClear => 'Очистить историю прослушиваний';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return 'Удаляет запись на этом телефоне ($size). Серверы сохранят свою.';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm =>
-      'Удалить историю прослушиваний на этом телефоне? Прослушивания, уже отправленные на сервер, останутся там.';
-
-  @override
-  String get settingsHistoryCleared => 'История прослушиваний очищена';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count прослушивания ждут отправки',
-      many: '$count прослушиваний ждут отправки',
-      few: '$count прослушивания ждут отправки',
-      one: '$count прослушивание ждёт отправки',
-      zero: 'Всё синхронизировано',
+      other:
+          'Будет удалена история прослушиваний на этом телефоне ($size), включая $count ещё не синхронизированных прослушивания. На серверах всё останется.',
+      many:
+          'Будет удалена история прослушиваний на этом телефоне ($size), включая $count ещё не синхронизированных прослушиваний. На серверах всё останется.',
+      few:
+          'Будет удалена история прослушиваний на этом телефоне ($size), включая $count ещё не синхронизированных прослушивания. На серверах всё останется.',
+      one:
+          'Будет удалена история прослушиваний на этом телефоне ($size), включая $count ещё не синхронизированное прослушивание. На серверах всё останется.',
+      zero:
+          'Будет удалена история прослушиваний на этом телефоне ($size). На серверах всё останется.',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => 'История прослушиваний очищена';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4517,10 +4412,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => 'Виджет на главном экране';
-
-  @override
-  String get settingsHomeWidgetSubtitle =>
-      'Добавьте виджет «Сейчас играет» на главный экран в одном из пяти размеров.';
 
   @override
   String get settingsHomeWidgetSubtitleIos =>
@@ -5612,4 +5503,98 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Недавние';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
+
+  @override
+  String get settingsSectionVisualizer => 'Визуализация';
+
+  @override
+  String get settingsOfflineQueueFooter =>
+      'Только для очереди. Скачанные вами треки остаются всегда.';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count трека',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = без ограничений';
+
+  @override
+  String get settingsStartupRecentHint => 'Недавно добавленные';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'От $count элемента',
+      many: 'От $count элементов',
+      few: 'От $count элементов',
+      one: 'От $count элемента',
+      zero: 'Всегда',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint =>
+      'В списках A–Z. В коротких длинные названия переносятся.';
+
+  @override
+  String get settingsHistoryFooter =>
+      'Серверы скробблят в Last.fm, только если вы привязали к ним аккаунт.';
+
+  @override
+  String get settingsHistoryEmpty => 'Пусто';
+
+  @override
+  String get settingsHistoryOffTitle => 'Выключить запись прослушиваний?';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Будет удалена история прослушиваний на этом телефоне, включая $count ещё не синхронизированных прослушивания. На серверах всё останется.',
+      many:
+          'Будет удалена история прослушиваний на этом телефоне, включая $count ещё не синхронизированных прослушиваний. На серверах всё останется.',
+      few:
+          'Будет удалена история прослушиваний на этом телефоне, включая $count ещё не синхронизированных прослушивания. На серверах всё останется.',
+      one:
+          'Будет удалена история прослушиваний на этом телефоне, включая $count ещё не синхронизированное прослушивание. На серверах всё останется.',
+      zero:
+          'Будет удалена история прослушиваний на этом телефоне. На серверах всё останется.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => 'Выключить';
+
+  @override
+  String get settingsHistoryClearTitle => 'Очистить историю?';
+
+  @override
+  String get settingsResetTitle => 'Сбросить настройки?';
+
+  @override
+  String get settingsResetBody =>
+      'Также сбросятся эквалайзер, перекодирование и несколько параметров вне настроек. Серверы, загрузки, история прослушиваний и сохранённые пресеты останутся.';
+
+  @override
+  String get settingsResetBodyIos =>
+      'Также сбросятся перекодирование и несколько параметров вне настроек. Серверы, загрузки и история прослушиваний останутся.';
 }

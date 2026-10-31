@@ -329,6 +329,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         ServerManager().noteConnectivityLost();
         return;
       }
+      ServerManager().noteConnectivityRestored();
       _connectivityDebounce?.cancel();
       _connectivityDebounce = Timer(const Duration(milliseconds: 1500), () {
         _connectivityDebounce = null;
@@ -676,6 +677,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
+      // Android 15+ cuts the app's network 5 s from here unless something
+      // plays; the resume run reads how long we were away to tell a tunnel
+      // that died under it from a blip (TunnelTiming.backgroundNetworkCut).
+      ServerManager().noteBackgrounded();
       QueueStore().saveNow();
       PlayTracker().checkpointNow();
       unawaited(PlayHistory().flush());

@@ -39,9 +39,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageSystemDefault => '跟随系统';
 
   @override
-  String get settingsLanguageSubtitle => '应用的显示语言。“跟随系统”将跟随你的设备设置。';
-
-  @override
   String couldNotOpen(String url) {
     return '无法打开 $url';
   }
@@ -321,22 +318,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionPlayback => '播放';
 
   @override
-  String get settingsSectionBrowse => '浏览';
-
-  @override
-  String get settingsSectionAbout => '关于';
+  String get settingsSectionBrowse => '曲库';
 
   @override
   String get settingsTheme => '主题';
-
-  @override
-  String get themeSubtitleVelvet => '海军蓝与紫色 — 标志性的深色主题。';
-
-  @override
-  String get themeSubtitleDark => '中性深色，琥珀色点缀。';
-
-  @override
-  String get themeSubtitleLight => '浅色背景，深色应用栏与琥珀色点缀 — 与早期版本的主题一致。';
 
   @override
   String get settingsTranscode => '音频转码';
@@ -374,53 +359,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStartupPage => '启动页面';
 
   @override
-  String get settingsStartupPageSubtitle => '启动应用时打开此浏览视图；按返回键回到浏览页面。';
+  String get tapSubtitleAddToQueue => '添加到队列末尾';
 
   @override
-  String get tapSubtitleAddToQueue => '点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。';
+  String get tapSubtitlePlayFromHere => '替换队列并从这首歌开始播放';
 
   @override
-  String get tapSubtitlePlayFromHere => '点击歌曲会用当前视图中的歌曲替换队列，并从所点击的歌曲开始播放。';
+  String get tapSubtitleAppendAndJump => '添加到队列末尾并立即播放';
 
   @override
-  String get tapSubtitleAppendAndJump => '点击歌曲会将其添加到队列并跳转播放，打断当前正在播放的内容。';
+  String get settingsVisualizerSource => '音频来源';
 
   @override
-  String get settingsVisualizerSource => '可视化音频来源';
+  String get visualizerSourceSubtitleSynthesized => '无需权限';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      '默认。可视化效果仅根据播放时间作出反应 — 无需麦克风权限。';
+  String get visualizerSourceSubtitleReal => '需要麦克风权限，但绝不会使用麦克风';
 
   @override
-  String get visualizerSourceSubtitleReal =>
-      '可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。';
+  String get settingsAlbumGrid => '专辑网格';
 
   @override
-  String get settingsAlbumGrid => '专辑网格视图';
+  String get settingsFileMetadata => '文件浏览器中的歌曲信息';
 
   @override
-  String get settingsAlbumGridSubtitle => '以带封面的卡片网格显示专辑，而非普通列表。';
+  String get settingsLetterStrip => '字母滚动条';
 
   @override
-  String get settingsFileMetadata => '在文件浏览器中读取歌曲元数据';
-
-  @override
-  String get settingsFileMetadataSubtitle =>
-      '浏览服务器文件时获取每首歌曲的标题、艺术家和专辑封面。关闭时显示原始文件名（在超大文件夹中更快）。';
-
-  @override
-  String get settingsLetterStrip => '字母滚动条阈值';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      '当列表项达到此数量或更多时显示 A-Z 快速滚动条。低于此数量时隐藏滚动条，且较长的文件夹/文件名会换行显示而非截断。设为 0 可始终显示滚动条。';
-
-  @override
-  String get settingsLetterStripSide => '字母滚动条位置';
-
-  @override
-  String get settingsLetterStripSideSubtitle => 'A–Z 字母滚动条显示在哪一侧。';
+  String get settingsLetterStripSide => '位置';
 
   @override
   String get settingsLetterStripLeft => '左侧';
@@ -429,13 +395,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLetterStripRight => '右侧';
 
   @override
-  String get settingsReset => '恢复默认设置';
+  String get settingsReset => '重置设置';
 
   @override
-  String get settingsResetSubtitle => '将此屏幕上的所有设置恢复为默认值。服务器和下载不受影响。';
-
-  @override
-  String get settingsResetDone => '设置已恢复为默认值';
+  String get settingsResetDone => '设置已重置';
 
   @override
   String get realAudioDialogTitle => '使用真实音频？';
@@ -1100,11 +1063,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserWelcomeSubtitle => '点击这里添加服务器';
 
   @override
-  String get settingsVisualizerKnobs => '可视化调节旋钮';
+  String get settingsVisualizerKnobs => '调节滑块';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      '在可视化效果上方显示实时滑块，以调整每个着色器的音频反应强度。仅限 ShaderToy 可视化。';
+  String get settingsVisualizerKnobsSubtitle => '仅限 ShaderToy';
 
   @override
   String get visualizerTuningTitle => '调节';
@@ -1159,18 +1121,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonOff => '关闭';
 
   @override
-  String get settingsCastQuality => '投放可视化质量';
-
-  @override
-  String get settingsCastQualitySubtitle720 => '可视化效果投放到电视的分辨率。720p — 对手机负担最轻。';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      '可视化效果投放到电视的分辨率。1080p — 在任何 Chromecast 上都清晰（默认）。';
-
-  @override
-  String get settingsCastQualitySubtitle4k =>
-      '可视化效果投放到电视的分辨率。4K — 需要 4K Chromecast；对手机负担大得多。';
+  String get settingsCastQualitySubtitle4k => '需要 4K Chromecast；对手机负担最重';
 
   @override
   String get eqCasting => '均衡器调节的是本设备上的音频，因此投放期间不可用。请断开连接以使用它。';
@@ -1391,13 +1342,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get castVisualizer => '投放可视化';
 
   @override
-  String get castVisualizerSubtitle => '将可视化效果投放到电视 · 仅限 Chromecast';
+  String get castVisualizerSubtitle => '仅限 Chromecast';
 
   @override
   String get castThisDevice => '此设备';
 
   @override
-  String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
+  String get visualizerNoKnobs => '此着色器没有滑块。';
 
   @override
   String get nowPlaying => '正在播放';
@@ -1418,18 +1369,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => '细条 — 最大化队列';
-
-  @override
-  String get playerLayoutMediumDesc => '横幅 — 平衡（默认）';
-
-  @override
-  String get playerLayoutLargeDesc => '紧凑 — 居中封面';
-
-  @override
-  String get playerLayoutXlDesc => '大图 — 完整封面';
-
-  @override
   String get queueNothingToDownloadEmpty => '队列为空 — 没有可下载的内容';
 
   @override
@@ -1437,9 +1376,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAccentColor => '强调色';
-
-  @override
-  String get settingsAccentColorSubtitle => '整个应用中使用的高亮颜色。';
 
   @override
   String get accentThemeDefault => '主题默认';
@@ -1476,39 +1412,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResumeQueue => '启动时恢复播放队列';
 
   @override
-  String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
+  String get settingsOfflineQueue => '下载播放队列';
 
   @override
-  String get settingsOfflineQueue => '保持队列离线可用';
+  String get settingsOfflineQueueSubtitle => '断开连接时也能继续播放。';
 
   @override
-  String get settingsOfflineQueueSubtitle => '自动将队列中的曲目下载到此设备，即使断开连接也能继续播放。';
+  String get settingsOfflineQueueWifiOnly => '仅限 Wi-Fi';
 
   @override
-  String get settingsOfflineQueueWifiOnly => '仅在 Wi-Fi 下下载';
-
-  @override
-  String get settingsOfflineQueueWifiOnlySubtitle => '等待连接 Wi-Fi 后再下载队列中的曲目。';
-
-  @override
-  String get settingsAutoDownloadCap => '自动下载上限';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      '从正在播放的歌曲起，提前缓存此数量的歌曲；播放过的会随之删除。';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited => '缓存整个播放队列（无限制）。';
+  String get settingsAutoDownloadCap => '下载上限';
 
   @override
   String get settingsAutoDownloadCapUnlimited => '不限';
 
   @override
-  String get settingsAutoDownloadCapField => '歌曲数量';
+  String get settingsAutoDownloadCapField => '歌曲数';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      '从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 则缓存整个队列。';
+      '从正在播放的歌曲算起，保留多少首已下载的歌曲。有新歌曲下载时，超出范围的旧歌曲会被删除。';
 
   @override
   String get downloadWaitingWifi => '等待 Wi-Fi';
@@ -1517,7 +1440,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRatingHalf => '半星评分';
 
   @override
-  String get settingsRatingHalfSubtitle => '以半星为单位评分（长按星标）。';
+  String get settingsRatingHalfSubtitle => '长按星标';
 
   @override
   String get ratingTitle => '评分';
@@ -1571,10 +1494,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersTitle => '导入的着色器';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      '将你自己的 .glsl 文件加入 ShaderToy 可视化的轮换。';
-
-  @override
   String get importedShadersRescan => '重新扫描文件夹';
 
   @override
@@ -1584,28 +1503,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersCopyPath => '复制路径';
 
   @override
-  String get importedShadersReachableHint =>
-      '可通过 USB 或文件管理器访问（位于 Android/data 下）。导入的着色器会加入 ShaderToy 可视化的轮换。';
+  String get importedShadersReachableHint => '可通过 USB 访问。卸载 mStream 会删除此文件夹。';
 
   @override
-  String get importedShadersRemove => '移除';
+  String get importedShadersRemove => '删除';
 
   @override
-  String get importedShadersEmptyTitle => '文件夹中还没有着色器';
+  String get importedShadersEmptyTitle => '还没有着色器';
 
   @override
   String get importedShadersEmptyBody =>
       '将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。';
 
   @override
-  String get importedShadersInvalid => '可能不是有效的着色器 — 没有 mainImage/main 入口点。';
+  String get importedShadersInvalid => '可能无法运行：没有 mainImage 或 main';
 
   @override
   String get importedShadersImportDownloads => '从“下载”导入 .glsl';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return '已从“下载”导入 $count 个着色器';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已导入 $count 个着色器',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1684,6 +1607,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get irohPathSuffixRelay => ' · 经中继';
+
+  @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
 
   @override
   String get irohTunnelTimeout => '隧道已打开，但服务器未及时响应。';
@@ -2242,13 +2169,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTorrentAskTitle => '询问如何处理种子文件';
 
   @override
-  String get settingsTorrentAskSub => '使用 mStream 打开种子时，提供交给其他应用的选项';
-
-  @override
   String get settingsTorrentDefaultTitle => '种子文件的默认应用';
 
   @override
-  String get settingsTorrentDefaultSub => '打开 Android 设置，在其中选择由哪个应用处理种子文件和磁力链接';
+  String get settingsTorrentDefaultSub => '打开 Android 设置';
 
   @override
   String get settingsTorrentDefaultFailed => '无法打开 Android 设置';
@@ -3831,46 +3755,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoRecentlyPlayed => '最近播放';
 
   @override
-  String get settingsSectionListening => '收听记录';
+  String get settingsHistoryEnabled => '记录播放';
 
   @override
-  String get settingsHistoryEnabled => '保留收听记录';
+  String get settingsHistorySend => '将播放发送到服务器';
 
   @override
-  String get settingsHistoryEnabledSubtitle =>
-      '记录这部手机播放的内容，包括所有服务器和本地文件。仅保存在本机。';
+  String get settingsHistoryClear => '清除记录';
 
   @override
-  String get settingsHistorySend => '将播放发送到你的服务器';
-
-  @override
-  String get settingsHistorySendSubtitle =>
-      '每次播放都会发送到曲目所在的服务器（伙伴服务器的曲目发送到其上级服务器），这样你的统计就包含这部手机。只有在服务器上关联了 Last.fm 账号时才会转发。';
-
-  @override
-  String get settingsHistoryClear => '清除收听记录';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return '删除这部手机上的记录（$size）。服务器上的记录会保留。';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm => '删除这部手机的收听记录？已发送到服务器的播放会保留在那里。';
-
-  @override
-  String get settingsHistoryCleared => '收听记录已清除';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 次播放等待发送',
-      zero: '全部已同步',
+      other: '这将删除这部手机的收听记录（$size），包括 $count 次尚未同步的播放。服务器上的记录会保留。',
+      zero: '这将删除这部手机的收听记录（$size）。服务器上的记录会保留。',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => '收听记录已清除';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4160,9 +4065,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => '主屏幕小组件';
-
-  @override
-  String get settingsHomeWidgetSubtitle => '将“正在播放”小组件以五种尺寸之一添加到主屏幕。';
 
   @override
   String get settingsHomeWidgetSubtitleIos => '长按主屏幕，添加小组件并选择 mStream Music。';
@@ -5153,4 +5055,80 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => '最近播放';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
+
+  @override
+  String get settingsSectionVisualizer => '可视化';
+
+  @override
+  String get settingsOfflineQueueFooter => '仅针对播放队列的下载。你自己下载的歌曲始终保留。';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = 不限';
+
+  @override
+  String get settingsStartupRecentHint => '新加入曲库的歌曲';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count+ 项',
+      zero: '始终显示',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint => '用于 A–Z 列表。较短的列表则改为长名称换行。';
+
+  @override
+  String get settingsHistoryFooter => '只有在服务器上关联了账号，服务器才会向 Last.fm 提交播放。';
+
+  @override
+  String get settingsHistoryEmpty => '无记录';
+
+  @override
+  String get settingsHistoryOffTitle => '停止记录播放？';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这将删除这部手机的收听记录，包括 $count 次尚未同步的播放。服务器上的记录会保留。',
+      zero: '这将删除这部手机的收听记录。服务器上的记录会保留。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => '关闭';
+
+  @override
+  String get settingsHistoryClearTitle => '清除记录？';
+
+  @override
+  String get settingsResetTitle => '重置设置？';
+
+  @override
+  String get settingsResetBody =>
+      '同时会重置均衡器、转码，以及设置页面以外的少数选项。服务器、下载内容、收听记录和已保存的预设不受影响。';
+
+  @override
+  String get settingsResetBodyIos => '同时会重置转码，以及设置页面以外的少数选项。服务器、下载内容和收听记录不受影响。';
 }
