@@ -198,9 +198,10 @@ class YtdlActionBar extends StatelessWidget {
   }
 
   /// The line above the buttons: a refused add (the error tone), or why
-  /// the button waits ("Already adding to this folder", uploads off). The
-  /// card already says the rest (looking up, a clash, a folder the account
-  /// can't make, a bad year, the offline banner).
+  /// the button waits ("Already adding to this folder", uploads off) or is
+  /// gone (audio conversion off, spec §8). The card already says the rest
+  /// (looking up, a clash, a folder the account can't make, a bad year,
+  /// the offline banner).
   Widget? _message(BuildContext context, AppLocalizations l) {
     final err = keepTone(VelvetColors.error);
     Widget error(String text, {List<Widget> links = const []}) => Column(
@@ -282,6 +283,8 @@ class YtdlActionBar extends StatelessWidget {
         );
       case YtdlBlock.uploadsOff:
         return error(l.ytdlErrUploadsOff);
+      case YtdlBlock.convertOff:
+        return error(l.ytdlErrFfmpeg);
       default:
         return null;
     }

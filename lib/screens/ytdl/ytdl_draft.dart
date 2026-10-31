@@ -40,8 +40,8 @@ enum YtdlAddPhase { idle, starting, failed }
 /// connection. [ytdlpMissing]: the server has no downloader — an add would
 /// be refused the same way. [convertOff]: the server's audio conversion is
 /// off (a re-ping after "FFmpeg is not available yet" said so) — spec §8:
-/// the button goes, and [YtdlServerState.entryAllowed] is false, so the
-/// home card hides and the screen or sheet should close.
+/// the button goes and [YtdlServerState.entryAllowed] is false, so the
+/// home card hides; the screen or sheet stays, and the lookup still works.
 enum YtdlBlock {
   none,
   lookingUp,

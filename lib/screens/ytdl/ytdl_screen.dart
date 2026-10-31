@@ -25,6 +25,11 @@ import 'ytdl_result_card.dart';
 /// nothing. Under the card, ADDING, NEEDS A LOOK and ADDED ([YtdlLists]).
 /// Nothing autofocuses; after a 200 the field clears and focus drops, so
 /// the keyboard goes down and the new ADDING row shows.
+///
+/// A re-ping that turns the feature off (uploads off, audio conversion
+/// not ready) closes nothing (spec §8): the home card hides, but here the
+/// card stays, lookups keep working and the action bar says why Add is
+/// off or gone; the rows stay reachable.
 class YtdlScreen extends StatefulWidget {
   final Server server;
 
@@ -71,13 +76,11 @@ class _YtdlScreenState extends State<YtdlScreen> {
   final GlobalKey _needsLook = GlobalKey(debugLabel: 'ytdl-needs-look');
 
   late bool _revealNeedsLook = widget.openNeedsLook;
-  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
     _d.attach();
-    _st.addListener(_stateMoved);
     // After the first frame: opening marks outcomes seen, which notifies
     // the home card and the explorer strip — still mounted under this
     // route, and in the middle of a build right now.
@@ -88,26 +91,9 @@ class _YtdlScreenState extends State<YtdlScreen> {
 
   @override
   void dispose() {
-    _st.removeListener(_stateMoved);
     _d.detach();
     _scroll.dispose();
     super.dispose();
-  }
-
-  /// A re-ping turned the feature off for this server (conversion off,
-  /// uploads off): the screen goes, saying why (spec §8) — its own route,
-  /// with whatever is open over it (the format menu, a destination sheet);
-  /// popping the top route would close only that.
-  void _stateMoved() {
-    if (_closing || !mounted || _st.entryAllowed) return;
-    final route = ModalRoute.of(context);
-    final nav = route?.navigator;
-    if (route == null || nav == null || !route.isActive) return;
-    _closing = true;
-    final why = ytdlEntryOffReason(AppLocalizations.of(context), _st.server);
-    if (why != null) YtdlHub().showToast(why);
-    nav.popUntil((r) => r == route);
-    nav.pop();
   }
 
   /// "Details" from the strip: NEEDS A LOOK, once, after the first build.

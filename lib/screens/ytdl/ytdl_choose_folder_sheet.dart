@@ -19,8 +19,9 @@ import 'ytdl_draft.dart';
 /// that listed ([YtdlDraft.deepestExisting]: "Music › Daft Punk", with
 /// "Music" to go up, as the board draws it), else at the draft's folder or
 /// library ([ytdlChooseFolderStart]); it returns the folder
-/// ('/Music/Daft Punk/'), or null when cancelled or when the feature goes
-/// away while it is open; the caller applies it with [YtdlDraft.useFolder].
+/// ('/Music/Daft Punk/'), or null when cancelled; the caller applies it
+/// with [YtdlDraft.useFolder]. A re-ping that turns the feature off while
+/// it is open closes nothing (spec §8).
 ///
 /// Each folder is listed as it is opened (`POST /file-explorer`, its
 /// subfolders only); a crumb goes back up. "Use this folder" takes the
@@ -61,6 +62,10 @@ String _dirOf(List<String> crumbs) => '/${crumbs.join('/')}/';
 
 /// The sheet's body ([showYtdlChooseFolderSheet] opens it): pops with the
 /// folder picked, or nothing.
+///
+/// It reads [draft] and never listens to it: the draft tells its listeners
+/// as the screen under the picker goes and as the folder sheet comes back
+/// over it — both while this sheet may be on its way out, or mid-build.
 class YtdlChooseFolderSheet extends StatefulWidget {
   final YtdlDraft draft;
 
@@ -97,23 +102,12 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
     _crumbs = pathCrumbs(widget.startAt);
     unawaited(_list());
     _showDeepest();
-    widget.draft.addListener(_onDraft);
   }
 
   @override
   void dispose() {
-    widget.draft.removeListener(_onDraft);
     _crumbScroll.dispose();
     super.dispose();
-  }
-
-  /// A re-ping turned the feature off (the draft passes on its state's
-  /// news): the sheet goes with nothing picked, before the screen under it
-  /// closes itself.
-  void _onDraft() {
-    if (!mounted || widget.draft.owner.entryAllowed) return;
-    final route = ModalRoute.of(context);
-    if (route != null && route.isCurrent) Navigator.of(context).pop();
   }
 
   Future<void> _list() async {

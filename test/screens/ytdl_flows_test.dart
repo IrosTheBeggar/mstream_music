@@ -10,8 +10,9 @@
 // on NEEDS A LOOK; an account that can't make folders reaching a folder
 // through the real picker from the card, the folder sheet (stepped aside
 // and back) and a row; the feature turned off by a re-ping while a sheet,
-// menu or picker is open — everything closes, saying why, no stuck routes,
-// and a stale ⋮ item or the picker coming back opens nothing; the
+// menu or picker is open — nothing closes, the card says why Add is off or
+// gone and the lookup goes on, while a stale ⋮ item or the picker coming
+// back opens nothing and says why; the
 // app paused and resumed, the screen reopened over its kept draft, two
 // servers; the Where sheet's listeners across two screens and torn-down
 // routes; and the song just added never dropping out of every list while
@@ -683,7 +684,7 @@ void main() {
     String upOff() => f.h.l.ytdlErrUploadsOff;
 
     /// Another add (no surface: e.g. a retry from elsewhere) refused 403 →
-    /// re-ping; what closes, closes in ordinary frames.
+    /// re-ping → the feature is off for this account.
     Future<void> refusedElsewhere(WidgetTester t) async {
       f.h.fake.addRefusal = (403, 'Uploading Disabled');
       await t.runAsync(() async {
@@ -692,6 +693,7 @@ void main() {
       });
       await f.frames(t);
       await f.drain(t);
+      expect(st().entryAllowed, isFalse);
     }
 
     Future<void> openFromHome(WidgetTester t) async {
@@ -700,17 +702,24 @@ void main() {
       expect(find.byType(YtdlScreen), findsOneWidget);
     }
 
-    void noStuckRoutes(WidgetTester t) {
-      expect(find.byType(YtdlScreen), findsNothing);
-      expect(find.byType(YtdlWhereSheet), findsNothing);
-      expect(find.byType(YtdlChooseFolderSheet), findsNothing);
-      expect(find.byType(YtdlFolderSheet), findsNothing);
-      expect(byKey('ytdl-format-menu'), findsNothing);
-      expect(find.byType(ModalBarrier), findsOneWidget, reason: 'only the app\'s own route');
+    bool addEnabled(WidgetTester t) =>
+        t
+            .widget<InkWell>(find.descendant(
+                of: byKey('ytdl-add'), matching: find.byType(InkWell)))
+            .onTap !=
+        null;
+
+    /// Spec §8 "Uploads off": the card stays with Add disabled and the
+    /// line saying why; nothing toasted it.
+    void uploadsOffShown(WidgetTester t) {
+      expect(byKey('ytdl-card'), findsOneWidget);
+      expect(addEnabled(t), isFalse);
+      expect(shows(t, upOff()), isTrue);
+      expect(f.h.toastTexts, isNot(contains(upOff())));
     }
 
-    testWidgets('(5) screen + Where sheet open → both close, uploads-off toast',
-        (t) async {
+    testWidgets('(5) screen + Where sheet open → both stay; closed, the card '
+        'reads uploads off with Add disabled', (t) async {
       f.watchErrors();
       await f.pumpHome(t);
       await openFromHome(t);
@@ -719,17 +728,23 @@ void main() {
       await f.drain(t);
       expect(find.byType(YtdlWhereSheet), findsOneWidget);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts.where((m) => m == upOff()), hasLength(1));
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(find.byType(YtdlWhereSheet), findsOneWidget);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      await t.tap(byKey('ytdl-where-close'));
+      await f.drain(t);
+      expect(find.byType(YtdlWhereSheet), findsNothing);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      uploadsOffShown(t);
+      f.clean(t);
     });
 
-    testWidgets('(5) screen + Choose a folder (card) open → both close', (t) async {
+    testWidgets('(5) screen + Choose a folder (card) open → both stay; the pick '
+        'still lands on the card', (t) async {
       f.setUp(server: ytdlServer(noMkdir: true, formats: const ['mp3']));
       f.h.hub.reping = (s) async => s.noUpload = true;
       f.watchErrors();
       f.h.fake.folder(daftPunk);
+      f.h.fake.folder(homework);
       await f.pumpHome(t);
       await openFromHome(t);
       await f.typeLink(t, kOneMoreTime);
@@ -737,14 +752,22 @@ void main() {
       await f.drain(t);
       expect(find.byType(YtdlChooseFolderSheet), findsOneWidget);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts, contains(upOff()));
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(find.byType(YtdlChooseFolderSheet), findsOneWidget);
+      await t.tap(byKey('ytdl-choose-folder-Homework'));
+      await f.drain(t);
+      await t.tap(byKey('ytdl-choose-use'));
+      await f.drain(t);
+      expect(find.byType(YtdlChooseFolderSheet), findsNothing);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      final d = st().screenDraft;
+      expect(d.justThisSong, YtdlChoice.folder(homework));
+      expect(d.block, YtdlBlock.uploadsOff);
+      uploadsOffShown(t);
+      f.clean(t);
     });
 
-    testWidgets('(5) screen + a NEEDS A LOOK row\'s format menu open → closes',
-        (t) async {
+    testWidgets('(5) screen + a NEEDS A LOOK row\'s format menu open → it '
+        'stays, and so does the screen', (t) async {
       f.watchErrors();
       // A clash row with formats to change to.
       f.s.ytdlJobs = [
@@ -766,13 +789,17 @@ void main() {
       await f.drain(t, rounds: 1);
       expect(byKey('ytdl-row-format-m4a'), findsOneWidget);
       await refusedElsewhere(t);
+      expect(byKey('ytdl-row-format-m4a'), findsOneWidget);
+      await t.tapAt(const Offset(380, 60));
+      await f.drain(t);
       expect(byKey('ytdl-row-format-m4a'), findsNothing);
-      noStuckRoutes(t);
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      expect(byKey('ytdl-row-change-format-c1'), findsOneWidget);
+      f.clean(t);
     });
 
-    testWidgets('(5) screen + a NEEDS A LOOK row\'s picker open → closes', (t) async {
+    testWidgets('(5) screen + a NEEDS A LOOK row\'s picker open → it stays; '
+        'cancelled, the row is still there', (t) async {
       f.watchErrors();
       f.s.ytdlJobs = [
         {
@@ -796,27 +823,31 @@ void main() {
       await f.drain(t);
       expect(find.byType(YtdlChooseFolderSheet), findsOneWidget);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(find.byType(YtdlChooseFolderSheet), findsOneWidget);
+      await t.tap(byKey('ytdl-choose-cancel'));
+      await f.drain(t);
+      expect(find.byType(YtdlChooseFolderSheet), findsNothing);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      expect(byKey('ytdl-row-choose-folder-m1'), findsOneWidget);
+      f.clean(t);
     });
 
-    testWidgets('(5) folder sheet open (first page) → closes with the toast; the '
-        'toolbar entry goes', (t) async {
+    testWidgets('(5) folder sheet open (first page) → it stays with Add off and '
+        'the line, no toast; the toolbar entry goes', (t) async {
       f.watchErrors();
       await f.pumpExplorer(t, daftPunk, [f.folderRow(daftPunk, 'Homework')]);
       await t.tap(byKey('ytdl-explorer-button'));
       await f.drain(t);
       await f.typeLink(t, kOneMoreTime);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts, contains(upOff()));
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      uploadsOffShown(t);
       expect(byKey('ytdl-explorer-button'), findsNothing);
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      f.clean(t);
     });
 
-    testWidgets('(5) folder sheet on its subfolders page → closes', (t) async {
+    testWidgets('(5) folder sheet on its subfolders page → it stays on that page',
+        (t) async {
       f.watchErrors();
       await f.pumpExplorer(t, daftPunk, [f.folderRow(daftPunk, 'Homework')]);
       await t.tap(byKey('ytdl-explorer-button'));
@@ -826,13 +857,16 @@ void main() {
       await f.drain(t);
       expect(byKey('ytdl-subfolders'), findsOneWidget);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts, contains(upOff()));
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(byKey('ytdl-subfolders'), findsOneWidget);
+      expect(f.h.toastTexts, isNot(contains(upOff())));
+      await tapIn(t, byKey('ytdl-sub-back'));
+      await f.drain(t);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      uploadsOffShown(t);
+      f.clean(t);
     });
 
-    testWidgets('(5) folder sheet + its format menu open → both close', (t) async {
+    testWidgets('(5) folder sheet + its format menu open → both stay', (t) async {
       f.watchErrors();
       await f.pumpExplorer(t, daftPunk, [f.folderRow(daftPunk, 'Homework')]);
       await t.tap(byKey('ytdl-explorer-button'));
@@ -842,15 +876,18 @@ void main() {
       await f.drain(t, rounds: 1);
       expect(byKey('ytdl-format-menu'), findsOneWidget);
       await refusedElsewhere(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts, contains(upOff()));
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(byKey('ytdl-format-menu'), findsOneWidget);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      await t.tapAt(const Offset(380, 60));
+      await f.drain(t);
+      expect(byKey('ytdl-format-menu'), findsNothing);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      uploadsOffShown(t);
+      f.clean(t);
     });
 
-
     testWidgets('(5) the folder sheet\'s own add refused 403 → inline, re-ping → '
-        'closes with one toast, no row, no strip', (t) async {
+        'the sheet stays with Add off, no toast, no row, no strip', (t) async {
       f.watchErrors();
       f.h.fake.folder(homework, files: ['Da Funk.mp3']);
       await f.pumpExplorer(t, homework, [f.fileRow(homework, 'Da Funk.mp3')]);
@@ -862,13 +899,14 @@ void main() {
       f.h.fake.addRefusal = (403, 'Uploading Disabled');
       await tapIn(t, byKey('ytdl-add'));
       await f.drain(t);
-      noStuckRoutes(t);
-      expect(f.h.toastTexts, [upOff()]);
+      expect(st().entryAllowed, isFalse);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      uploadsOffShown(t);
+      expect(f.h.toastTexts, isEmpty);
       expect(st().jobs, isEmpty);
       expect(byKey('ytdl-strip'), findsNothing);
       expect(byKey('ytdl-strip-failed'), findsNothing);
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      f.clean(t);
     });
   });
 
@@ -1062,7 +1100,8 @@ void main() {
     });
 
     testWidgets('the card\'s own add refused 403: inline line, re-ping → the '
-        'screen closes with one uploads-off toast, no row', (t) async {
+        'screen stays with Add off, no toast, no row; a lookup still runs',
+        (t) async {
       f.watchErrors();
       f.h.hub.reping = (s) async => s.noUpload = true;
       await f.pumpHome(t);
@@ -1071,17 +1110,27 @@ void main() {
       f.h.fake.addRefusal = (403, 'Uploading Disabled');
       await tapIn(t, byKey('ytdl-add'));
       await f.drain(t);
-      expect(find.byType(YtdlScreen), findsNothing);
-      expect(f.h.toastTexts, [f.h.l.ytdlErrUploadsOff]);
+      expect(st().entryAllowed, isFalse);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      expect(byKey('ytdl-card'), findsOneWidget);
+      expect(
+          t
+              .widget<InkWell>(find.descendant(
+                  of: byKey('ytdl-add'), matching: find.byType(InkWell)))
+              .onTap,
+          isNull);
+      expect(shows(t, f.h.l.ytdlErrUploadsOff), isTrue);
+      expect(f.h.toastTexts, isEmpty);
       expect(st().jobs, isEmpty);
-      expect(find.text('Add from YouTube'), findsOneWidget,
-          reason: 'the home list is only refreshed by the real re-ping');
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      await f.typeLink(t, kFeelGood);
+      expect(st().screenDraft.lookup, YtdlLookupState.found);
+      expect(f.h.fake.count('GET', '/api/v1/ytdl/metadata'), 2);
+      f.clean(t);
     });
 
     testWidgets('the card\'s own add refused "FFmpeg is not available yet", '
-        're-ping says not ready → closes with the conversion toast', (t) async {
+        're-ping says not ready → the button goes, the line stays, the '
+        'screen and its lookup go on', (t) async {
       f.watchErrors();
       f.h.hub.reping = (s) async => s.transcodeAvailable = false;
       await f.pumpHome(t);
@@ -1090,10 +1139,17 @@ void main() {
       f.h.fake.addRefusal = (500, 'FFmpeg is not available yet');
       await tapIn(t, byKey('ytdl-add'));
       await f.drain(t);
-      expect(find.byType(YtdlScreen), findsNothing);
-      expect(f.h.toastTexts, [f.h.l.ytdlErrFfmpeg]);
-      expect(t.takeException(), isNull);
-      expect(f.errors, isEmpty);
+      expect(st().entryAllowed, isFalse);
+      expect(find.byType(YtdlScreen), findsOneWidget);
+      expect(byKey('ytdl-add'), findsNothing);
+      expect(byKey('ytdl-format'), findsOneWidget);
+      expect(shows(t, f.h.l.ytdlErrFfmpeg), isTrue);
+      expect(f.h.toastTexts, isEmpty);
+      await f.typeLink(t, kFeelGood);
+      expect(st().screenDraft.lookup, YtdlLookupState.found);
+      expect(byKey('ytdl-card'), findsOneWidget);
+      expect(shows(t, f.h.l.ytdlErrFfmpeg), isTrue);
+      f.clean(t);
     });
 
     testWidgets('ffmpeg 500, re-ping still says ready: the screen stays, '
@@ -1199,8 +1255,8 @@ void main() {
     });
 
     testWidgets('the folder sheet stepped aside for Choose a folder…: the '
-        'feature going off closes the picker and says why; the sheet stays '
-        'away (spec §8)', (t) async {
+        'feature going off leaves the picker open; once it answers, the '
+        'sheet stays away and says why (spec §7: nothing opens)', (t) async {
       f.setUp(server: ytdlServer(formats: const ['mp3']));
       f.watchErrors();
       f.h.fake.folder(homework);
@@ -1229,10 +1285,16 @@ void main() {
         await ytdlSettle();
       });
       await f.drain(t);
+      expect(st().entryAllowed, isFalse);
+      expect(find.byType(YtdlChooseFolderSheet), findsOneWidget);
+      expect(f.h.toastTexts, isNot(contains(f.h.l.ytdlErrUploadsOff)));
+      await t.tap(byKey('ytdl-choose-folder-Homework'));
+      await f.drain(t);
+      await t.tap(byKey('ytdl-choose-use'));
+      await f.drain(t);
       expect(find.byType(YtdlChooseFolderSheet), findsNothing);
       expect(find.byType(YtdlFolderSheet), findsNothing);
       expect(byKey('ytdl-explorer-button'), findsNothing);
-      expect(f.h.toastTexts, contains(f.h.l.ytdlErrUploadsOff));
       expect(
           f.h.toastTexts.where((m) => m == f.h.l.ytdlErrUploadsOff), hasLength(1));
       f.clean(t);

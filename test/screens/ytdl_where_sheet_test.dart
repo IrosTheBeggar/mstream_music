@@ -16,9 +16,9 @@
 // the keyboard up when there is room, the field keeping its focus), the
 // noMkdir note, Save (remembered, toasted; on with a just-this-song choice
 // in force) and Use for this song (this song only; the remembered layout
-// drops the one-off instead), ✕ dropping changes, the sheet closing itself
-// when the feature goes away, and 360 dp at 200% text without overflow,
-// keyboard up included, a "new" tag scaled once.
+// drops the one-off instead), ✕ dropping changes, the sheet staying open
+// when a re-ping turns the feature off, and 360 dp at 200% text without
+// overflow, keyboard up included, a "new" tag scaled once.
 
 import 'dart:async';
 
@@ -721,15 +721,23 @@ void main() {
       expect(d.choice.kind, 'artistAlbum');
     });
 
-    testWidgets('the feature going away closes the sheet', (tester) async {
+    testWidgets('the feature going away closes nothing (spec §8): the form '
+        'stays, and Use for this song still applies', (tester) async {
       final d = await ready(tester);
       await open(tester, d);
+      var done = false;
+      unawaited(closed.then((_) => done = true));
       // A re-ping found audio conversion off; the state tells its drafts.
       s.transcodeAvailable = false;
       await tester.runAsync(() => st().rememberFormat('mp3'));
       await pumps(tester);
+      expect(st().entryAllowed, isFalse);
+      expect(key('ytdl-where-sheet'), findsOneWidget);
+      expect(done, isFalse);
+      await tap(tester, 'ytdl-where-layout-artist');
+      await tap(tester, 'ytdl-where-use');
       await closed;
-      expect(key('ytdl-where-sheet'), findsNothing);
+      expect(d.justThisSong?.layout, kYtdlLayoutArtist);
     });
   });
 

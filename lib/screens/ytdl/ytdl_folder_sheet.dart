@@ -37,7 +37,9 @@ import 'ytdl_result_card.dart';
 ///
 /// The feature gone for [server] (a re-ping turned uploads or conversion
 /// off — after a menu offering it was built, or while the picker was up)
-/// opens nothing, and says why.
+/// opens nothing, and says why. A sheet already open stays (spec §8): the
+/// card and the lookup go on, and the action bar says why Add is off or
+/// gone.
 Future<void> showYtdlFolderSheet(
   BuildContext context,
   Server server,
@@ -117,34 +119,25 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
   void initState() {
     super.initState();
     _d.attach();
-    _st.addListener(_stateMoved);
   }
 
   @override
   void dispose() {
-    _st.removeListener(_stateMoved);
     _d.detach();
     final gone = widget.gone;
     if (gone != null && !gone.isCompleted) gone.complete();
     super.dispose();
   }
 
-  /// A re-ping turned the feature off: the sheet closes, saying why.
-  void _stateMoved() {
-    if (_closing || !mounted || _st.entryAllowed) return;
-    _close(why: ytdlEntryOffReason(AppLocalizations.of(context), _st.server));
-  }
-
   /// Closes this sheet's own route — and whatever is open over it (the
   /// format menu, opened while "Starting…" ran): popping the top route
   /// would close only that.
-  void _close({String? why, YtdlFolderSheetExit? exit}) {
+  void _close({YtdlFolderSheetExit? exit}) {
     if (_closing || !mounted) return;
     final route = ModalRoute.of(context);
     final nav = route?.navigator;
     if (route == null || nav == null || !route.isActive) return;
     _closing = true;
-    if (why != null) YtdlHub().showToast(why);
     nav.popUntil((r) => r == route);
     nav.pop(exit);
   }

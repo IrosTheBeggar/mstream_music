@@ -311,13 +311,11 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
 
   /// The draft moved (a lookup answered, the presets came in, a re-ping):
   /// a form nobody touched follows the choice in force; a preset that went
-  /// away leaves its layout in Custom's field.
+  /// away leaves its layout in Custom's field. A re-ping that turns the
+  /// feature off closes nothing (spec §8): the card under the sheet says
+  /// why Add is off.
   void _onDraft() {
     if (!mounted) return;
-    if (!st.entryAllowed) {
-      _close();
-      return;
-    }
     final open = _opening;
     if (open != _synced && _choice == _synced) _take(open);
     if (_kind == 'discover' && _discover == null) {

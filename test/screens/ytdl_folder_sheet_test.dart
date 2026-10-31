@@ -12,9 +12,10 @@
 // typing stops, Custom's field keeping what is typed and its chips named
 // by what they show — and is hidden under noMkdir; every sheet starting at
 // Right here (but an add still starting going where it was sent); the
-// name check by tier; the feature gone closing the sheet, or opening
-// nothing (a stale menu item, the picker coming back), saying why; 360 dp
-// at 200% without overflow.
+// name check by tier; the feature turned off by a re-ping leaving an
+// open sheet open (on either page; the lookup goes on, Add off or gone
+// with the line saying why), and opening nothing (a stale menu item, the
+// picker coming back), saying why; 360 dp at 200% without overflow.
 
 import 'dart:async';
 
@@ -295,7 +296,8 @@ void main() {
     });
   });
 
-  group('the feature gone (spec §8: closes or opens nothing, saying why)', () {
+  group('the feature gone (spec §8: an open sheet stays; nothing opens, '
+      'saying why)', () {
     testWidgets('opened after a re-ping turned uploads off (a stale menu '
         'item): no sheet, the toast', (t) async {
       s.noUpload = true;
@@ -599,13 +601,42 @@ void main() {
     });
   });
 
-  testWidgets('a re-ping that turns conversion off closes the sheet', (t) async {
-    await filled(t);
+  testWidgets('a re-ping that turns conversion off keeps the sheet: the '
+      'button goes, the line says why, a lookup still runs', (t) async {
+    final d = await filled(t);
     s.transcodeAvailable = false;
     await h().hub.stateFor(s).rememberFormat('mp3');
     await t.pumpAndSettle();
-    expect(find.byType(YtdlFolderSheet), findsNothing);
-    expect(h().toastTexts, [h().l.ytdlErrFfmpeg]);
+    expect(find.byType(YtdlFolderSheet), findsOneWidget);
+    expect(h().toastTexts, isEmpty);
+    expect(byKey('ytdl-card'), findsOneWidget);
+    expect(byKey('ytdl-add'), findsNothing);
+    expect(shows(t, h().l.ytdlErrFfmpeg), isTrue);
+    await ui.paste(t, d, kFeelGood);
+    expect(d.lookup, YtdlLookupState.found);
+    expect(h().fake.count('GET', '/api/v1/ytdl/metadata'), 2);
+    expect(find.byType(YtdlFolderSheet), findsOneWidget);
+  });
+
+  testWidgets('a re-ping that turns uploads off keeps the sheet on its '
+      'subfolders page; back on the first, Add is off with the line',
+      (t) async {
+    await filled(t);
+    await tapIn(t, byKey('ytdl-sort-subfolders'));
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-subfolders'), findsOneWidget);
+    s.noUpload = true;
+    await h().hub.stateFor(s).rememberFormat('mp3');
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-subfolders'), findsOneWidget);
+    expect(h().toastTexts, isEmpty);
+    await t.tap(byKey('ytdl-sub-album'));
+    await t.pump();
+    await t.tap(byKey('ytdl-sub-done'));
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-card'), findsOneWidget);
+    expect(enabled(t, 'ytdl-add'), isFalse);
+    expect(shows(t, h().l.ytdlErrUploadsOff), isTrue);
   });
 
   testWidgets('360 dp at 200%: both pages fit', (t) async {

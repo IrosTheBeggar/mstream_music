@@ -564,8 +564,9 @@ class YtdlServerState extends ChangeNotifier {
 
   /// [YtdlHub.entryAllowed] for this server as its flags stand now. A
   /// re-ping after a 403 or "FFmpeg is not available yet" can turn it off
-  /// (this state notifies when a re-ping lands): the home card hides, and
-  /// an open screen or folder sheet should close (spec §8 "Audio
+  /// (this state notifies when a re-ping lands): the home card and the
+  /// explorer item hide, while an open screen or folder sheet stays — its
+  /// Add goes or is disabled, its lookup still works (spec §8 "Audio
   /// conversion not ready", "Uploads off").
   bool get entryAllowed => YtdlHub.entryAllowed(server);
 

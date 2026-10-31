@@ -9,7 +9,8 @@
 // failed and timed out with Enter details and Try again, failed after
 // manual entry, the late answer and Use them, offline, yt-dlp missing),
 // Add (the field clears and focus drops after a 200), Clear link, the
-// screen closing when a re-ping turns the feature off, a tag field kept in
+// screen staying when a re-ping turns the feature off (the card and the
+// lookup go on, Add off or gone with the line saying why), a tag field kept in
 // view with SAVES TO above the keyboard — also when the Where sheet asks
 // for one — the iPhone's Done bar over the Year number pad, and 360 dp at
 // 200% text without overflow or a word cut off.
@@ -396,32 +397,58 @@ void main() {
     });
   });
 
-  testWidgets('a re-ping that turns uploads off closes the screen, saying why',
-      (t) async {
-    await ui.pumpScreen(t, s);
-    expect(find.byType(YtdlScreen), findsOneWidget);
+  bool addEnabled(WidgetTester t) =>
+      t
+          .widget<InkWell>(find.descendant(
+              of: byKey('ytdl-add'), matching: find.byType(InkWell)))
+          .onTap !=
+      null;
+
+  testWidgets('a re-ping that turns uploads off keeps the screen (spec §8): '
+      'the card stays, Add off with the line, a lookup still runs', (t) async {
+    h().fake.folder('/Music/Daft Punk/Discovery/');
+    final d = await ui.pumpScreen(t, s);
+    await ui.paste(t, d, kOneMoreTime);
     s.noUpload = true;
     await st().rememberFormat('mp3'); // any change the state tells
     await t.pumpAndSettle();
-    expect(find.byType(YtdlScreen), findsNothing);
-    expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+    expect(st().entryAllowed, isFalse);
+    expect(find.byType(YtdlScreen), findsOneWidget);
+    expect(byKey('ytdl-card'), findsOneWidget);
+    expect(d.block, YtdlBlock.uploadsOff);
+    expect(addEnabled(t), isFalse);
+    expect(shows(t, h().l.ytdlErrUploadsOff), isTrue);
+    expect(h().toastTexts, isEmpty);
+    // The lookup still works.
+    await ui.paste(t, d, kFeelGood);
+    expect(d.lookup, YtdlLookupState.found);
+    expect(h().fake.count('GET', '/api/v1/ytdl/metadata'), 2);
+    expect(byKey('ytdl-card'), findsOneWidget);
+    expect(addEnabled(t), isFalse);
   });
 
-  testWidgets('the re-ping closes the screen under the open format menu too',
-      (t) async {
+  testWidgets('conversion turned off under the open format menu: nothing '
+      'closes; the button goes and the line says why (spec §8)', (t) async {
     h().fake.folder('/Music/Daft Punk/Discovery/');
     final d = await ui.pumpScreen(t, s);
     await ui.paste(t, d, kOneMoreTime);
     await t.tap(byKey('ytdl-format'));
     await t.pumpAndSettle();
     expect(byKey('ytdl-format-menu'), findsOneWidget);
-    s.noUpload = true;
+    s.transcodeAvailable = false;
     await st().rememberFormat('mp3');
     await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsOneWidget);
+    expect(find.byType(YtdlScreen), findsOneWidget);
+    expect(h().toastTexts, isEmpty);
+    await t.tapAt(const Offset(380, 60));
+    await t.pumpAndSettle();
     expect(byKey('ytdl-format-menu'), findsNothing);
-    expect(find.byType(YtdlScreen), findsNothing);
-    expect(byKey('test-open'), findsOneWidget);
-    expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+    expect(find.byType(YtdlScreen), findsOneWidget);
+    expect(d.block, YtdlBlock.convertOff);
+    expect(byKey('ytdl-add'), findsNothing);
+    expect(byKey('ytdl-format'), findsOneWidget);
+    expect(shows(t, h().l.ytdlErrFfmpeg), isTrue);
   });
 
   group('opened at NEEDS A LOOK (the strip\'s Details)', () {

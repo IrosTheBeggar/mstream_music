@@ -8,7 +8,8 @@
 // format turned off (its "pick another" opens the menu), a bare 500, the
 // server's own words, a folder that could not be made (Try again, Choose
 // a folder…), no connection — and "Already adding to this folder"; the
-// button gone while conversion is off; the bar stacking at 200% text.
+// button gone while conversion is off, the line saying why (also after a
+// re-ping that says not ready); the bar stacking at 200% text.
 
 import 'dart:io' show SocketException;
 
@@ -144,6 +145,17 @@ void main() {
       expect(h().fake.count('POST', '/api/v1/ytdl/'), 2);
     });
 
+    testWidgets('FFmpeg not ready and the re-ping says not ready: the button '
+        'goes, the line stays (spec §8)', (t) async {
+      h().hub.reping = (server) async => server.transcodeAvailable = false;
+      await ready(t);
+      await addRefused(t, (500, 'FFmpeg is not available yet'));
+      await ui.settle(t);
+      expect(byKey('ytdl-add'), findsNothing);
+      expect(byKey('ytdl-format'), findsOneWidget);
+      expect(errorLine(t), h().l.ytdlErrFfmpeg);
+    });
+
     testWidgets('uploads off (403): the line, Add off', (t) async {
       await ready(t);
       await addRefused(t, (403, 'Uploading Disabled'));
@@ -273,6 +285,8 @@ void main() {
     expect(d.block, YtdlBlock.convertOff);
     expect(byKey('ytdl-add'), findsNothing);
     expect(byKey('ytdl-format'), findsOneWidget);
+    // Spec §8: why it went, whatever turned it off.
+    expect(errorLine(t), h().l.ytdlErrFfmpeg);
   });
 
   group('large text (Narrow360 e)', () {

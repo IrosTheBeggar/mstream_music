@@ -39,9 +39,9 @@ Future<void> ytdlChooseFolder(BuildContext context, YtdlDraft draft) async {
   if (dir != null) draft.useFolder(dir);
 }
 
-/// Why Add from YouTube went away for [server], for the toast a surface
-/// shows as it closes or declines to open (spec §8): uploads off, else
-/// audio conversion not ready; null for anything else (no library left).
+/// Why Add from YouTube went away for [server], for the toast an entry
+/// point shows as it declines to open (spec §8): uploads off, else audio
+/// conversion not ready; null for anything else (no library left).
 String? ytdlEntryOffReason(AppLocalizations l, Server server) =>
     server.noUpload == true
         ? l.ytdlErrUploadsOff

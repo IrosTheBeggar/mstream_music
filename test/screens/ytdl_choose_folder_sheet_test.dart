@@ -9,8 +9,8 @@
 // dropped. "Use this folder" returns the folder on screen once it has
 // listed ('/Music/Daft Punk/Homework/', which the caller hands to
 // useFolder), Cancel and ✕ return nothing, the feature going away closes
-// it with nothing; the crumb row keeps one height; and 360 dp at 200% text
-// fits.
+// nothing (a pick still comes back); the crumb row keeps one height; and
+// 360 dp at 200% text fits.
 
 import 'dart:async';
 
@@ -164,16 +164,22 @@ void main() {
     expect(tester.getSize(key('ytdl-choose-crumbs')).height, atLibrary);
   });
 
-  testWidgets('the feature going away closes it with nothing picked',
-      (tester) async {
+  testWidgets('the feature going away closes nothing (spec §8): the folders '
+      'stay, and a pick still comes back', (tester) async {
     await open(tester);
+    var done = false;
+    unawaited(picked.then((_) => done = true));
     // A re-ping found audio conversion off; the state tells its drafts.
     s.transcodeAvailable = false;
     await tester.runAsync(() => h.hub.stateFor(s).rememberFormat('mp3'));
     await pumps(tester);
     expect(h.hub.stateFor(s).entryAllowed, isFalse);
-    expect(key('ytdl-choose-sheet'), findsNothing);
-    expect(await picked, isNull);
+    expect(key('ytdl-choose-sheet'), findsOneWidget);
+    expect(done, isFalse);
+    await tap(tester, 'ytdl-choose-folder-Daft Punk');
+    await answer(tester);
+    await tap(tester, 'ytdl-choose-use');
+    expect(await picked, '/Music/Daft Punk/');
   });
 
   testWidgets('a folder it is given: its subfolders in name order, files '
