@@ -6306,4 +6306,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ytdlHelpVideoRelease => 'From the video\'s release date';
+
+  @override
+  String get ytdlChooseLoading => 'Loading folders';
 }

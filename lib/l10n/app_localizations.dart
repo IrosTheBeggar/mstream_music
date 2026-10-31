@@ -9693,6 +9693,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'From the video\'s release date'**
   String get ytdlHelpVideoRelease;
+
+  /// Read by a screen reader while the Choose a folder sheet lists the folders of the folder on screen (the rows show as still placeholders meanwhile).
+  ///
+  /// In en, this message translates to:
+  /// **'Loading folders'**
+  String get ytdlChooseLoading;
 }
 
 class _AppLocalizationsDelegate
