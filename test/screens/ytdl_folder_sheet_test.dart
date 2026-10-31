@@ -217,6 +217,75 @@ void main() {
     expect(d.attached, isFalse);
   });
 
+  group('every sheet starts at Right here (spec §7: not remembered)', () {
+    /// Album chosen and applied on the second page.
+    Future<YtdlDraft> album(WidgetTester t) async {
+      final d = await filled(t);
+      await tapIn(t, byKey('ytdl-sort-subfolders'));
+      await t.pumpAndSettle();
+      await t.tap(byKey('ytdl-sub-album'));
+      await t.pump();
+      await t.tap(byKey('ytdl-sub-done'));
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(addLabel(t), h().l.ytdlAddToLibrary);
+      return d;
+    }
+
+    /// The sheet for the same folder opened again (frames, not
+    /// pumpAndSettle: a "Starting…" ring never settles).
+    Future<void> reopen(WidgetTester t) async {
+      unawaited(showYtdlFolderSheet(
+          t.element(find.byType(Scaffold).first), s, here));
+      for (var i = 0; i < 8; i++) {
+        await t.pump(const Duration(milliseconds: 100));
+      }
+      await ui.settle(t);
+    }
+
+    for (final (how, close) in [
+      ('its ✕', (WidgetTester t) => t.tap(byKey('ytdl-sheet-close'))),
+      (
+        'a drag down',
+        (WidgetTester t) =>
+            t.drag(find.byType(YtdlFolderSheet), const Offset(0, 700)),
+      ),
+    ]) {
+      testWidgets('closed with $how and opened again: Right here, "Add '
+          'here"; the link and the lookup stay', (t) async {
+        final d = await album(t);
+        await close(t);
+        await t.pumpAndSettle();
+        expect(find.byType(YtdlFolderSheet), findsNothing);
+        await reopen(t);
+        expect(d.subLayout, kYtdlLayoutTop);
+        expect(d.link.text, kOneMoreTime);
+        expect(d.lookup, YtdlLookupState.found);
+        expect(addLabel(t), h().l.ytdlAddHere);
+        expect(find.text(h().l.ytdlSavesHere.toUpperCase()), findsOneWidget);
+        expect(d.target.directory, here);
+      });
+    }
+
+    testWidgets('closed while its add starts: that add goes where it was '
+        'sent', (t) async {
+      final d = await album(t);
+      h().fake.addGate = Completer<void>();
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      expect(d.addPhase, YtdlAddPhase.starting);
+      await t.tap(byKey('ytdl-sheet-close'));
+      await t.pumpAndSettle();
+      await reopen(t);
+      expect(d.subLayout, kYtdlLayoutAlbum);
+      h().fake.addGate!.complete();
+      await ui.settle(t);
+      await ui.settle(t);
+      expect(h().fake.bodies('POST', '/api/v1/ytdl/').single['directory'],
+          '${here}Discovery/');
+      expect(d.subLayout, kYtdlLayoutTop, reason: 'the sent draft resets');
+    });
+  });
+
   group('the feature gone (spec §8: closes or opens nothing, saying why)', () {
     testWidgets('opened after a re-ping turned uploads off (a stale menu '
         'item): no sheet, the toast', (t) async {

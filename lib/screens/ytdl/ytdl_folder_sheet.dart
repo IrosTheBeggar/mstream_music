@@ -43,6 +43,9 @@ Future<void> showYtdlFolderSheet(
   String currentPath,
 ) async {
   final st = YtdlHub().stateFor(server);
+  // A new sheet starts at Right here; the round trip through the picker
+  // comes back as it left.
+  st.folderDraft(currentPath).sheetOpened();
   for (;;) {
     if (!context.mounted) return;
     if (!st.entryAllowed) {

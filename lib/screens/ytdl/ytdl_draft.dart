@@ -805,6 +805,15 @@ class YtdlDraft extends ChangeNotifier {
     _afterChange();
   }
 
+  /// A folder sheet opened afresh: its subfolder choice starts at Right
+  /// here — the choice lasts for one sheet (spec §7); the link, the lookup
+  /// and the edits stay. Not while the last sheet's add is still starting:
+  /// it goes where it was sent, and the draft resets when it answers.
+  void sheetOpened() {
+    if (_addPhase == YtdlAddPhase.starting) return;
+    setSubLayout(kYtdlLayoutTop);
+  }
+
   /// Where the song lands, from the current tags and [choice].
   YtdlTarget get target => targetFor(choice);
 
