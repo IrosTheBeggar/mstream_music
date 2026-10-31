@@ -278,25 +278,35 @@ const List<String> kYtdlTagKeys = ['title', 'artist', 'album', 'year'];
 ///
 /// Spoken to the server it is given — unlike DiscoveryPluginsApi, never a
 /// connected server's parent: the feature is hidden on peers (/ytdl is off
-/// the federation allowlist). Over ApiManager's pooled direct client unless
-/// a client is injected (tests); headless, so it never drives the browser's
-/// loading bar. Bounded by [timeout], or [irohTry] when the server rides a
-/// tunnel; every failure throws [YtdlApiException] with the status and the
-/// server's words.
+/// the federation allowlist). The reads go over ApiManager's pooled direct
+/// client; mkdir and the add each go out on a fresh connection, closed
+/// after it — a pooled keep-alive socket the server has already dropped
+/// (Node closes idle ones after 5 s) can swallow the answer to a request
+/// the server did carry out. An injected client (tests) carries everything.
+/// Headless, so it never drives the browser's loading bar. Bounded by
+/// [timeout], or [irohTry] when the server rides a tunnel, and mkdir by
+/// [mkdirTry] on either; every failure throws [YtdlApiException] with the
+/// status and the server's words.
 ///
 /// Like makeServerCall, a call that gets no answer over a tunnel waits for
-/// the tunnel and is sent once more — except the add. POST /ytdl starts a
-/// yt-dlp job and answers before it runs; sent twice it starts two, which on
-/// 6.30+ ends in a name-clash failure for the second and before that in a
-/// re-tag. So the add is never retried, over a tunnel included: a lost
-/// answer is the hub's to resolve against the server's own lists.
+/// the tunnel and is sent once more, and mkdir — recursive and fine when
+/// the folder is there — once more on any transport. Never the add. POST
+/// /ytdl starts a yt-dlp job and answers before it runs; sent twice it
+/// starts two, which on 6.30+ ends in a name-clash failure for the second
+/// and before that in a re-tag. So the add is never retried, over a tunnel
+/// included: a lost answer is the hub's to resolve against the server's
+/// own lists.
 class YtdlApi {
   final Server server;
 
-  /// An injected client (tests); null = ApiManager's pooled one.
+  /// An injected client (tests) for every call; null = ApiManager's pooled
+  /// one for the reads and a one-shot client for mkdir and the add.
   final http.Client? client;
   final Duration timeout;
   final Duration irohTry;
+
+  /// Each mkdir try's bound, on any transport (spec §6: it may retry once).
+  final Duration mkdirTry;
 
   /// Waits for [server]'s tunnel before the one retry; null =
   /// ServerManager.awaitTunnelReady (true at once where there is no tunnel
@@ -307,9 +317,8 @@ class YtdlApi {
       {this.client,
       this.timeout = const Duration(seconds: 30),
       this.irohTry = const Duration(seconds: 20),
+      this.mkdirTry = const Duration(seconds: 15),
       this.awaitTunnel});
-
-  http.Client get _http => client ?? ApiManager().directClient;
 
   // ── the lookup and the add ──────────────────────────────────────────
 
@@ -343,7 +352,7 @@ class YtdlApi {
       'url': url,
       'outputCodec': codec,
       if (tags.isNotEmpty) 'metadata': tags,
-    }, retry: false, needBody: false);
+    }, retry: false, needBody: false, fresh: true);
   }
 
   /// `GET /api/v1/ytdl/downloads` — the server's whole tracker, every
@@ -369,11 +378,13 @@ class YtdlApi {
 
   /// `POST /api/v1/file-explorer/mkdir` {directory}: recursive, and fine
   /// when the folder is already there — which is what makes its one retry
-  /// over a tunnel safe. 403 "Create Folder Disabled" for an account that
-  /// may not make folders. Any 2xx means the folder is there.
+  /// safe, on any transport: an answer lost after the server made the
+  /// folder is asked for again. [mkdirTry] a try, on a fresh connection.
+  /// 403 "Create Folder Disabled" for an account that may not make
+  /// folders. Any 2xx means the folder is there.
   Future<void> mkdir(String directory) async {
     await _post('/api/v1/file-explorer/mkdir', {'directory': directory},
-        needBody: false);
+        needBody: false, fresh: true, anyTransport: true, bound: mkdirTry);
   }
 
   // ── the download record ─────────────────────────────────────────────
@@ -448,45 +459,91 @@ class YtdlApi {
       };
 
   Future<dynamic> _get(String location) async => _decode(await _call(
-      (uri) => _http.get(uri, headers: {'x-access-token': server.authToken ?? ''}),
+      (http, uri) =>
+          http.get(uri, headers: {'x-access-token': server.authToken ?? ''}),
       location,
       retry: true));
 
+  /// [fresh]: on a one-shot connection (mkdir, the add). [anyTransport]:
+  /// its one retry is not kept for a tunnel. [bound]: each try's limit, in
+  /// place of [timeout] / [irohTry].
   Future<dynamic> _post(String location, Object body,
-      {bool retry = true, bool needBody = true}) async {
+      {bool retry = true,
+      bool needBody = true,
+      bool fresh = false,
+      bool anyTransport = false,
+      Duration? bound}) async {
     final encoded = jsonEncode(body);
     return _decode(
-        await _call((uri) => _http.post(uri, headers: _headers, body: encoded),
+        await _call(
+            (http, uri) => http.post(uri, headers: _headers, body: encoded),
             location,
-            retry: retry),
+            retry: retry,
+            fresh: fresh,
+            anyTransport: anyTransport,
+            bound: bound),
         needBody: needBody);
   }
 
-  /// One send, bounded; over a tunnel, and when [retry] allows, one more
-  /// after the tunnel says it is back. Only a call that got NO answer is
-  /// retried — an HTTP error is the server's answer, and stands.
+  /// One send, bounded; when [retry] allows, one more — over a tunnel
+  /// after the tunnel says it is back, elsewhere at once when
+  /// [anyTransport]. Only a call that got NO answer is retried — an HTTP
+  /// error is the server's answer, and stands.
   Future<http.Response> _call(
-      Future<http.Response> Function(Uri uri) send, String location,
-      {required bool retry}) async {
+      Future<http.Response> Function(http.Client http, Uri uri) send,
+      String location,
+      {required bool retry,
+      bool fresh = false,
+      bool anyTransport = false,
+      Duration? bound}) async {
     final overTunnel = server.isIrohTransport;
     try {
-      return await send(server.apiUri(location))
-          .timeout(overTunnel ? irohTry : timeout);
+      return await _try(
+          send, location, fresh, bound ?? (overTunnel ? irohTry : timeout));
     } catch (e) {
-      if (!overTunnel || !retry) throw _noAnswer(e);
+      if (!retry || !(overTunnel || anyTransport)) throw _noAnswer(e);
       final route = location.split('?').first;
-      final ready = await (awaitTunnel ?? _awaitTunnel)(server);
-      if (!ready) {
-        appLog('[ytdl] tunnel down; $route failed: $e');
-        throw _noAnswer(e);
+      if (overTunnel) {
+        final ready = await (awaitTunnel ?? _awaitTunnel)(server);
+        if (!ready) {
+          appLog('[ytdl] tunnel down; $route failed: $e');
+          throw _noAnswer(e);
+        }
+        appLog('[ytdl] $route got no answer over the tunnel ($e); retrying once');
+      } else {
+        appLog('[ytdl] $route got no answer ($e); retrying once');
       }
-      appLog('[ytdl] $route got no answer over the tunnel ($e); retrying once');
     }
     try {
       // The URI again: a re-dialled tunnel has a new port and token.
-      return await send(server.apiUri(location)).timeout(irohTry);
+      return await _try(send, location, fresh, bound ?? irohTry);
     } catch (e) {
       throw _noAnswer(e);
+    }
+  }
+
+  /// One try within [limit]: on the injected client, else on a one-shot
+  /// client when [fresh] (closed after, which also drops a request that
+  /// ran out of time), else on the pool — read per call, since
+  /// ApiManager.resetDirectClient replaces it.
+  Future<http.Response> _try(
+      Future<http.Response> Function(http.Client http, Uri uri) send,
+      String location,
+      bool fresh,
+      Duration limit) async {
+    final injected = client;
+    if (injected != null) {
+      return send(injected, server.apiUri(location)).timeout(limit);
+    }
+    if (!fresh) {
+      return send(ApiManager().directClient, server.apiUri(location))
+          .timeout(limit);
+    }
+    final once = http.Client();
+    try {
+      return await send(once, server.apiUri(location)).timeout(limit);
+    } finally {
+      once.close();
     }
   }
 

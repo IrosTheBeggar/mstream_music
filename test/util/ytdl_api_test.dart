@@ -5,7 +5,10 @@
 // words kept on every failure (a JSON 404 told from Express's HTML one), a
 // client bound that runs out read as status 0 + timedOut, and the retry
 // rule: a call with no answer over a tunnel is sent once more after the
-// tunnel is back — never the add, which would start a second download.
+// tunnel is back, and mkdir (15 s a try) once more on any transport —
+// never the add, which would start a second download. mkdir and the add
+// each go out on a fresh connection closed after it, never a pooled
+// socket the server may have dropped; the reads use the pool.
 
 import 'dart:async';
 import 'dart:convert';
@@ -615,6 +618,84 @@ void main() {
       expect(tunnelWaits, 4);
     });
 
+    test('mkdir with no answer is sent once more on plain HTTP too, each try '
+        'bounded by mkdirTry; an answer, even an error, stands', () async {
+      YtdlApi direct() => YtdlApi(home,
+          client: MockClient((req) async {
+            seen.add(req);
+            return handler(req);
+          }),
+          mkdirTry: const Duration(milliseconds: 20),
+          awaitTunnel: (_) async {
+            tunnelWaits++;
+            return tunnelBack;
+          });
+
+      // The first answer lost (a pooled socket the server already closed).
+      var calls = 0;
+      handler = (_) {
+        if (calls++ == 0) return Completer<http.Response>().future;
+        return Future.value(json({}));
+      };
+      await direct().mkdir('/Music/New/');
+      expect(seen, hasLength(2));
+      expect(tunnelWaits, 0, reason: 'no tunnel to wait for');
+      for (final req in seen) {
+        expect(jsonDecode(req.body), {'directory': '/Music/New/'});
+      }
+
+      seen.clear();
+      calls = 0;
+      handler = (_) async {
+        if (calls++ == 0) throw http.ClientException('Connection reset by peer');
+        return json({});
+      };
+      await direct().mkdir('/Music/New/');
+      expect(seen, hasLength(2));
+
+      seen.clear();
+      handler = (_) => Completer<http.Response>().future;
+      await expectLater(
+          direct().mkdir('/Music/New/'),
+          throwsA(isA<YtdlApiException>()
+              .having((e) => e.status, 'status', 0)
+              .having((e) => e.timedOut, 'timedOut', isTrue)));
+      expect(seen, hasLength(2), reason: 'once more, never a third time');
+
+      seen.clear();
+      handler = (_) async => json({'error': 'Server Error'}, 500);
+      await expectLater(direct().mkdir('/Music/New/'),
+          throwsA(isA<YtdlApiException>().having((e) => e.status, 'status', 500)));
+      expect(seen, hasLength(1));
+
+      // The add still never goes twice on plain HTTP either.
+      seen.clear();
+      handler = (_) async => throw http.ClientException('Connection reset by peer');
+      await expectLater(
+          direct().add(directory: '/Music/', url: link, codec: 'mp3'),
+          throwsA(isA<YtdlApiException>()));
+      expect(seen, hasLength(1));
+    });
+
+    test('over a tunnel mkdir is bounded by mkdirTry, not irohTry', () async {
+      handler = (_) => Completer<http.Response>().future;
+      final a = YtdlApi(irohServer(),
+          client: MockClient((req) async {
+            seen.add(req);
+            return handler(req);
+          }),
+          irohTry: const Duration(seconds: 20),
+          mkdirTry: const Duration(milliseconds: 20),
+          awaitTunnel: (_) async {
+            tunnelWaits++;
+            return true;
+          });
+      await expectLater(a.mkdir('/Music/New/'),
+          throwsA(isA<YtdlApiException>().having((e) => e.timedOut, 'timedOut', isTrue)));
+      expect(seen, hasLength(2));
+      expect(tunnelWaits, 1);
+    });
+
     test('a tunnel that does not come back: no second send', () async {
       tunnelBack = false;
       handler = (_) async => throw http.ClientException('tunnel reset');
@@ -674,6 +755,75 @@ void main() {
           reason: "the peer's own route, through its parent's proxy");
     });
 
+    test('mkdir and the add each go out on a fresh connection, closed after; '
+        'the reads stay on the pool', () async {
+      final made = <_Counted>[];
+      final asked = <String>[];
+      try {
+        await http.runWithClient(() async {
+          ApiManager().resetDirectClient();
+          final pool = made.last;
+          final before = made.length;
+          final a = YtdlApi(home);
+          await a.jobs();
+          await a.list('/Music/');
+          await a.mkdir('/Music/New/');
+          await a.add(directory: '/Music/New/', url: link, codec: 'mp3');
+          await a.records();
+          final fresh = made.sublist(before);
+          expect(fresh, hasLength(2), reason: 'one each');
+          expect(pool.paths, [
+            '/api/v1/ytdl/downloads',
+            '/api/v1/file-explorer',
+            '/api/v1/discovery/downloads',
+          ]);
+          expect(pool.closed, isFalse);
+          expect(fresh.first.paths, ['/api/v1/file-explorer/mkdir']);
+          expect(fresh.last.paths, ['/api/v1/ytdl/']);
+          expect(fresh.every((c) => c.closed), isTrue);
+        }, () {
+          final c = _Counted((req) async {
+            asked.add(req.url.path);
+            return req.url.path.endsWith('/file-explorer')
+                ? json({'path': '/Music/', 'directories': [], 'files': []})
+                : json({'downloads': []});
+          });
+          made.add(c);
+          return c;
+        });
+      } finally {
+        ApiManager().resetDirectClient();
+      }
+      expect(asked, hasLength(5));
+    });
+
+    test('a retried mkdir takes a fresh connection for each try', () async {
+      final made = <_Counted>[];
+      var calls = 0;
+      var before = 0;
+      try {
+        await http.runWithClient(() async {
+          ApiManager().resetDirectClient();
+          before = made.length;
+          await YtdlApi(home).mkdir('/Music/New/');
+        }, () {
+          final c = _Counted((req) async {
+            if (calls++ == 0) throw http.ClientException('Connection closed');
+            return json({});
+          });
+          made.add(c);
+          return c;
+        });
+      } finally {
+        ApiManager().resetDirectClient();
+      }
+      expect(made.skip(before).map((c) => c.paths), [
+        ['/api/v1/file-explorer/mkdir'],
+        ['/api/v1/file-explorer/mkdir'],
+      ]);
+      expect(made.skip(before).every((c) => c.closed), isTrue);
+    });
+
     test("ApiManager's pooled client by default", () async {
       final pooled = <http.Request>[];
       try {
@@ -691,4 +841,25 @@ void main() {
           'http://music.example/api/v1/ytdl/downloads');
     });
   });
+}
+
+/// A client that answers through [handler], keeps the paths it was asked
+/// and whether it was closed.
+class _Counted extends http.BaseClient {
+  final Future<http.Response> Function(http.Request) handler;
+  final List<String> paths = [];
+  bool closed = false;
+  _Counted(this.handler);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    paths.add(request.url.path);
+    final res = await handler(request as http.Request);
+    return http.StreamedResponse(
+        Stream.value(res.bodyBytes), res.statusCode,
+        headers: res.headers, request: request);
+  }
+
+  @override
+  void close() => closed = true;
 }

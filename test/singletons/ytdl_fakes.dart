@@ -3,8 +3,9 @@
 // mkdir over an in-memory tree, the download record (or a server too old to
 // have one), and the account presets — each answered from state the test
 // sets, held on a Completer when it asks, refused with a status and the
-// server's words, every request logged. And the time the hub and the draft
-// run on: a clock the test moves and timers that fire as it passes.
+// server's words (or, for mkdir, carried out with the answer lost), every
+// request logged. And the time the hub and the draft run on: a clock the
+// test moves and timers that fire as it passes.
 //
 // The usual setUp is one line — `h = YtdlHarness()..wire();` — and the
 // tearDown `h.unwire();`. In a widget test (fake async) wrap the waits in
@@ -309,6 +310,11 @@ class FakeYtdlServer {
   Object? mkdirThrows;
   Completer<void>? mkdirGate;
 
+  /// This many mkdirs make the folder and lose their answer on the way back
+  /// (a pooled socket the server had already closed): the client's bound
+  /// runs out.
+  int mkdirAnswersLost = 0;
+
   static String norm(String path) {
     final parts = path.split('/').where((s) => s.isNotEmpty);
     return parts.isEmpty ? '/' : '/${parts.join('/')}/';
@@ -488,6 +494,10 @@ class FakeYtdlServer {
       final dir = (jsonDecode(req.body) as Map)['directory'] as String;
       if (_isFile(dir)) return _json({'error': 'Server Error'}, 500);
       folder(dir);
+      if (mkdirAnswersLost > 0) {
+        mkdirAnswersLost--;
+        throw TimeoutException('no answer');
+      }
       return _json({});
     }
     if (req.method == 'POST' && path.endsWith('/api/v1/file-explorer')) {

@@ -253,6 +253,25 @@ void main() {
       expect(again.failure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Daft Punk'));
     });
 
+    test('a mkdir whose answer is lost is sent once more: the folder is '
+        'there, the add goes on (never a second POST)', () async {
+      h.fake.mkdirAnswersLost = 1;
+      final out = await state().start(h.request(mkdir: dir, inline: () => true));
+      expect(out.ok, isTrue);
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), 2);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+      expect(h.fake.exists(dir), isTrue);
+
+      // Lost twice: the folder is named, nothing is POSTed.
+      h.fake.mkdirAnswersLost = 2;
+      final lost = await state().start(h.request(
+          url: kFeelGood, directory: '/Music/Gorillaz/', mkdir: '/Music/Gorillaz/',
+          inline: () => true));
+      expect(lost.failure, const YtdlFailure(YtdlProblem.mkdirFailed, 'Gorillaz'));
+      expect(h.fake.count('POST', '/file-explorer/mkdir'), 4);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+    });
+
     test('mkdir 403 → mkdirOff, a re-ping, and the account treated as noMkdir', () async {
       h.fake.mkdirRefusal = (403, 'Create Folder Disabled');
       final out = await state().start(h.request(mkdir: dir, inline: () => true));
