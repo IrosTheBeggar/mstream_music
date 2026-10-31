@@ -1,0 +1,678 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
+import 'package:path/path.dart' as p;
+
+import 'index_db.dart';
+import 'models.dart';
+import 'planner.dart';
+import 'transport.dart';
+
+/// Above this the server's `hash` is a sampled digest, not a whole-file MD5
+/// (`src/db/audio-hash.js`, hash_v 2) — size is the only byte-exact check.
+const int kFullHashMaxBytes = 25 * 1024 * 1024;
+
+/// Where one server's mirror lives. All three roots sit under the same
+/// download location so a finished temp file renames into place atomically
+/// and a trashed file is a move, not a copy. The trash and temp trees are
+/// siblings of `media/`, so the Local Files browser never lists them.
+class MirrorConfig {
+  final String server;
+  final String mediaRoot;
+  final String trashRoot;
+  final String tmpRoot;
+
+  /// Where the transcoded tiers live — `<transcodedRoot>/<tier>/<server>/…`,
+  /// a sibling of `media/` so the Local Files browser never lists them.
+  final String transcodedRoot;
+
+  /// Where album-art files for mirrored tracks are cached (flat, by their
+  /// content-addressed server name); null = no art caching.
+  final String? artRoot;
+
+  /// Days a trashed file survives; 0 = keep forever.
+  final int retentionDays;
+  final bool wifiOnly;
+  final int concurrency;
+  final int pageSize;
+
+  const MirrorConfig({
+    required this.server,
+    required this.mediaRoot,
+    required this.trashRoot,
+    required this.tmpRoot,
+    required this.transcodedRoot,
+    this.artRoot,
+    this.retentionDays = 30,
+    this.wifiOnly = false,
+    this.concurrency = 3,
+    this.pageSize = 2000,
+  });
+
+  /// The standard layout under the app's download location:
+  /// `<downloadDir>/media/<server>` (the same tree manual downloads use),
+  /// `<downloadDir>/.mstream-trash/<server>`, `<downloadDir>/.mstream-tmp/<server>`,
+  /// and `<downloadDir>/media-transcoded/<tier>/<server>` for the tiers.
+  factory MirrorConfig.under(String downloadDir, String server,
+          {String? artRoot,
+          int retentionDays = 30,
+          bool wifiOnly = false,
+          int concurrency = 3,
+          int pageSize = 2000}) =>
+      MirrorConfig(
+        server: server,
+        mediaRoot: p.join(downloadDir, 'media', server),
+        trashRoot: p.join(downloadDir, '.mstream-trash', server),
+        tmpRoot: p.join(downloadDir, '.mstream-tmp', server),
+        transcodedRoot: p.join(downloadDir, 'media-transcoded'),
+        artRoot: artRoot,
+        retentionDays: retentionDays,
+        wifiOnly: wifiOnly,
+        concurrency: concurrency,
+        pageSize: pageSize,
+      );
+
+  /// The on-disk file for a data path (`/<vpath>/<rel>`): under [mediaRoot]
+  /// for the original; under [transcodedRoot]`/<tier>/<server>/`, with the
+  /// tier's extension, for a transcode.
+  String localPathFor(String dataPath, {String quality = Quality.original}) {
+    final rel = dataPath.replaceFirst(RegExp(r'^/+'), '');
+    final tier = Tier.parse(quality);
+    return p.normalize(tier == null
+        ? p.join(mediaRoot, rel)
+        : p.join(transcodedRoot, tier.id, server, tier.pathFor(rel)));
+  }
+}
+
+class MirrorProgress {
+  final String phase;
+  final int done;
+  final int total;
+  final int failed;
+  const MirrorProgress(this.phase, this.done, this.total, this.failed);
+}
+
+/// One sync run for one server: refresh the manifest, expand the rules,
+/// plan, then apply — renames and trashes first (they free space), transfers
+/// through a small worker pool, each verified and stamped before it lands,
+/// and a trash sweep at the end. Every outcome is written to `sync_runs`;
+/// per-file failures are counted and recorded on the row, never fatal.
+///
+/// Each quality is planned on its own — the original files and every
+/// transcoded tier a rule asks for, or a row still sits in — and the plans
+/// are applied together: one preflight, one worker pool, one summary.
+///
+/// Runs for one server must not overlap; the app serialises them.
+class MirrorRunner {
+  final LibraryIndex index;
+  final ManifestClient manifest;
+  final Downloader downloader;
+
+  /// The album / artist lists for offline browsing; refreshed whenever the
+  /// manifest changed. Optional — the mirror works without them.
+  final LibraryListsClient? lists;
+
+  /// Album art for the mirrored tracks, cached under [MirrorConfig.artRoot].
+  /// Optional and best-effort: art failures never mark a run.
+  final ArtClient? art;
+
+  /// Free bytes on the volume holding [MirrorConfig.mediaRoot]; null (or a
+  /// null result) skips the preflight.
+  final Future<int?> Function(String dir)? freeSpace;
+  final DateTime Function() now;
+
+  /// Partials (by file name) that broke off mid-transfer this run and stay
+  /// in the temp tree for the next run to resume.
+  final Set<String> _keepPartials = {};
+
+  MirrorRunner({
+    required this.index,
+    required this.manifest,
+    required this.downloader,
+    this.lists,
+    this.art,
+    this.freeSpace,
+    DateTime Function()? now,
+  }) : now = now ?? DateTime.now;
+
+  Future<SyncRun> run(MirrorConfig c,
+      {String trigger = 'manual',
+      void Function(MirrorProgress)? onProgress,
+      bool Function()? isCancelled}) async {
+    _keepPartials.clear();
+    final started = now().millisecondsSinceEpoch;
+    var downloaded = 0, replaced = 0, renamed = 0, trashed = 0, failed = 0;
+    var unchanged = 0, conflicts = 0, bytes = 0;
+    String? error;
+    bool cancelled() => isCancelled?.call() ?? false;
+
+    try {
+      onProgress?.call(const MirrorProgress('manifest', 0, 0, 0));
+      final refreshed = await _refreshManifest(c);
+      await _refreshLists(c, manifestChanged: refreshed.changed);
+      final scanning = refreshed.scanning;
+      final remote = index.remoteTracks(c.server);
+      final local = index.localFilesAll(c.server);
+      final wanted = _expandSubscriptions(c, remote);
+      // One plan per quality: every tier a rule asks for, plus any a row
+      // still sits in, so a tier nobody wants any more is let go.
+      final qualities = <String>{
+        Quality.original,
+        ...wanted.keys,
+        for (final f in local) f.quality,
+      };
+      final plans = [
+        for (final q in qualities)
+          plan(
+            remote: remote,
+            local: local,
+            wanted: wanted[q] ?? const {},
+            options: PlanOptions(scanning: scanning),
+            quality: q,
+          ),
+      ];
+      var needed = 0;
+      for (final pl in plans) {
+        unchanged += pl.unchanged;
+        conflicts += pl.conflicts.length;
+        needed += pl.bytesNeeded;
+      }
+      await _preflight(c, needed);
+
+      final bucket = _bucketName(now());
+      for (final pl in plans) {
+        for (final r in pl.renames) {
+          if (cancelled()) break;
+          await _rename(c, r);
+          renamed++;
+        }
+        for (final f in pl.trashes) {
+          if (cancelled()) break;
+          await _trash(c, f, bucket);
+          trashed++;
+        }
+      }
+
+      final jobs = <(RemoteTrack, bool, String)>[
+        for (final pl in plans) ...[
+          for (final t in pl.downloads) (t, false, pl.quality),
+          for (final t in pl.replaces) (t, true, pl.quality),
+        ],
+      ];
+      // Copies the mirror did not write: keep them if the bytes check out
+      // (counted as unchanged), otherwise they join the replace queue.
+      for (final pl in plans) {
+        for (final a in pl.adoptions) {
+          if (cancelled()) break;
+          if (await _adopt(c, a)) {
+            unchanged++;
+          } else {
+            jobs.add((a.remote, true, pl.quality));
+          }
+        }
+      }
+      var next = 0;
+      var done = 0;
+      Future<void> worker() async {
+        while (!cancelled()) {
+          final k = next++;
+          if (k >= jobs.length) return;
+          final (t, replace, quality) = jobs[k];
+          try {
+            // Landed first, added after: `bytes += await …` would read the
+            // counter before the await and lose the other workers' adds.
+            final landed = await _fetch(c, t,
+                quality: quality, replace: replace, bucket: bucket);
+            bytes += landed;
+            if (replace) {
+              replaced++;
+            } else {
+              downloaded++;
+            }
+          } catch (_) {
+            failed++;
+          }
+          done++;
+          onProgress?.call(MirrorProgress('transfer', done, jobs.length, failed));
+        }
+      }
+
+      await Future.wait([for (var i = 0; i < c.concurrency; i++) worker()]);
+      if (!cancelled()) {
+        final pinned = {for (final s in wanted.values) ...s};
+        await _fetchArt(c, [for (final t in remote) if (pinned.contains(t.path)) t]);
+      }
+      await _sweepTrash(c);
+      await _purgeTmp(c);
+    } catch (e) {
+      error = '$e';
+    }
+
+    final run = SyncRun(
+      server: c.server,
+      started: started,
+      finished: now().millisecondsSinceEpoch,
+      trigger: trigger,
+      downloaded: downloaded,
+      replaced: replaced,
+      renamed: renamed,
+      trashed: trashed,
+      unchanged: unchanged,
+      failed: failed,
+      conflicts: conflicts,
+      bytes: bytes,
+      error: error,
+    );
+    index.recordRun(run);
+    onProgress?.call(MirrorProgress('done', downloaded + replaced, downloaded + replaced + failed, failed));
+    return run;
+  }
+
+  // ── manifest ──────────────────────────────────────────────────────────
+
+  /// Walks every page into the index and prunes what the server dropped.
+  /// A 304 on the first page leaves the rows as they are — they are current.
+  Future<({bool changed, bool scanning})> _refreshManifest(MirrorConfig c) async {
+    final previous = index.meta(c.server, 'revision');
+    var page = await manifest.fetchPage(
+        limit: c.pageSize, ifNoneMatch: previous);
+    if (page == null) return (changed: false, scanning: false);
+    final rev = page.revision;
+    var scanning = page.scanning;
+    while (true) {
+      index.upsertTracks(c.server, page!.entries, rev);
+      final next = page.next;
+      if (next == null) break;
+      page = await manifest.fetchPage(cursor: next, limit: c.pageSize);
+      if (page == null) throw StateError('manifest: 304 mid-walk');
+      scanning = scanning || page.scanning;
+    }
+    // Rows are stamped with the FIRST page's revision even if a scan moved
+    // it mid-walk: the next run then sees a changed tag and re-walks.
+    index.pruneUnseen(c.server, rev);
+    index.setMeta(c.server, 'revision', rev);
+    return (changed: true, scanning: scanning);
+  }
+
+  /// The album / artist lists, replaced wholesale whenever the manifest
+  /// moved. Best-effort: a failure leaves the previous lists in place.
+  /// The browse lists for offline use — a convenience the mirror itself
+  /// does not depend on, so each is fetched on its own and a failure leaves
+  /// the others as they were. Albums and artists follow the manifest (same
+  /// source), so they are refetched only when it moved; the caller's
+  /// playlists and ratings and the genre counts change on their own, so
+  /// those are refreshed every run.
+  Future<void> _refreshLists(MirrorConfig c,
+      {required bool manifestChanged}) async {
+    final client = lists;
+    if (client == null) return;
+    Future<void> attempt(Future<void> Function() fetch) async {
+      try {
+        await fetch();
+      } catch (_) {}
+    }
+
+    if (manifestChanged) {
+      await attempt(() async => index.replaceAlbums(c.server, await client.albums()));
+      await attempt(() async => index.replaceArtists(c.server, await client.artists()));
+    }
+    await attempt(() async => index.replaceGenres(c.server, await client.genres()));
+    await attempt(() async => index.replacePlaylists(c.server, await client.playlists()));
+    await attempt(() async => index.replaceRated(c.server, await client.rated()));
+  }
+
+  /// Album art for [tracks], one fetch per distinct file not yet cached.
+  /// Best-effort, sequential (art is small and the server compresses it on
+  /// the fly); a failed file is simply tried again next run.
+  Future<void> _fetchArt(MirrorConfig c, List<RemoteTrack> tracks) async {
+    final client = art;
+    final root = c.artRoot;
+    if (client == null || root == null) return;
+    final wanted = {for (final t in tracks) if (t.art != null) t.art!};
+    if (wanted.isEmpty) return;
+    await Directory(root).create(recursive: true);
+    for (final file in wanted) {
+      final dest = p.join(root, file);
+      if (await File(dest).exists()) continue;
+      final tmp = p.join(root, '.${_randomId()}.part');
+      try {
+        await client.fetchArt(file, tmp);
+        await _move(File(tmp), dest);
+      } catch (_) {
+        try {
+          await File(tmp).delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  // ── rules ─────────────────────────────────────────────────────────────
+
+  /// Expands the enabled rules to the paths they pin, by quality, and
+  /// rewrites their required-by edges — see [expandRule] for what each kind
+  /// claims.
+  Map<String, Set<String>> _expandSubscriptions(
+      MirrorConfig c, List<RemoteTrack> remote) {
+    final wanted = <String, Set<String>>{};
+    List<AlbumRow>? albums;
+    for (final s in index.subscriptionsFor(c.server)) {
+      final id = s.id;
+      if (id == null) continue;
+      var credited = const <String>{};
+      var members = const <String>{};
+      if (s.enabled) {
+        switch (s.kind) {
+          case RuleKind.artist:
+            albums ??= index.albums(c.server);
+            credited = {
+              for (final a in albums)
+                if (a.albumArtist == s.key) a.name
+            };
+          case RuleKind.playlist:
+            members = {
+              for (final i in index.playlistItems(c.server, s.key)) i.path
+            };
+          case RuleKind.rated:
+            final min = int.tryParse(s.key) ?? 0;
+            members = {
+              for (final t in index.rated(c.server))
+                if ((t.rating ?? 0) >= min) t.path
+            };
+        }
+      }
+      final paths = s.enabled
+          ? expandRule(s, remote,
+              creditedAlbums: credited, memberPaths: members)
+          : const <String>[];
+      index.setSubscriptionFiles(id, c.server, paths);
+      (wanted[s.quality] ??= {}).addAll(paths);
+    }
+    return wanted;
+  }
+
+  Future<void> _preflight(MirrorConfig c, int bytesNeeded) async {
+    final probe = freeSpace;
+    if (probe == null || bytesNeeded == 0) return;
+    await Directory(c.mediaRoot).create(recursive: true);
+    final free = await probe(c.mediaRoot);
+    if (free == null) return;
+    const headroom = 64 << 20;
+    if (free < bytesNeeded + headroom) {
+      throw StateError('not enough free space: need ${bytesNeeded + headroom} '
+          'bytes, have $free');
+    }
+  }
+
+  // ── apply ─────────────────────────────────────────────────────────────
+
+  Future<void> _rename(MirrorConfig c, Rename r) async {
+    final quality = r.from.quality;
+    final to = c.localPathFor(r.to.path, quality: quality);
+    await Directory(p.dirname(to)).create(recursive: true);
+    await _move(File(r.from.localPath), to);
+    await _pruneEmpty(p.dirname(r.from.localPath), _rootFor(c, quality));
+    index.removeLocal(c.server, r.from.path, quality: quality);
+    index.upsertLocal(_row(c, r.to, to,
+        size: r.from.size, origin: LocalOrigin.mirror, quality: quality));
+  }
+
+  /// Moves a copy into the dated bucket under its data path — a tier's
+  /// under `<tier>/`, with the tier's extension, beside the original's —
+  /// and forgets the row.
+  Future<void> _trash(MirrorConfig c, LocalFile f, String bucket) async {
+    final src = File(f.localPath);
+    if (await src.exists()) {
+      final tier = Tier.parse(f.quality);
+      final rel = f.path.replaceFirst(RegExp(r'^/+'), '');
+      final dest = p.join(c.trashRoot, bucket,
+          tier == null ? rel : p.join(tier.id, tier.pathFor(rel)));
+      await Directory(p.dirname(dest)).create(recursive: true);
+      await _move(src, dest);
+      await _pruneEmpty(p.dirname(src.path), _rootFor(c, f.quality));
+    }
+    index.removeLocal(c.server, f.path, quality: f.quality);
+  }
+
+  /// Download to a temp file, verify size (and the whole-file MD5 when the
+  /// server's hash is one), stamp the server's mtime, then rename into place
+  /// — the old copy of a replace goes to the trash first. A tier's transcode
+  /// has no size or hash to check against: it only has to be non-empty.
+  /// The temp file is named for the transfer, so an original that broke off
+  /// is resumed next run by a downloader that can. Returns the bytes that
+  /// landed.
+  Future<int> _fetch(MirrorConfig c, RemoteTrack t,
+      {required String quality,
+      required bool replace,
+      required String bucket}) async {
+    final tier = Tier.parse(quality);
+    final dest = c.localPathFor(t.path, quality: quality);
+    final old = index.localFile(c.server, t.path, quality: quality);
+    await Directory(c.tmpRoot).create(recursive: true);
+    final tmp = _tmpFor(c, t, quality);
+    var landed = false;
+    try {
+      await downloader.download(t.path, tmp,
+          requiresWiFi: c.wifiOnly, tier: tier, modified: t.modified);
+      landed = true;
+      final f = File(tmp);
+      final size = await f.length();
+      if (tier == null) {
+        if (t.size != null && size != t.size) {
+          throw StateError('size mismatch: got $size, expected ${t.size}');
+        }
+        if (t.hash != null && size < kFullHashMaxBytes) {
+          final digest = (await md5.bind(f.openRead()).first).toString();
+          if (digest != t.hash) throw StateError('checksum mismatch');
+        }
+      } else if (size == 0) {
+        throw StateError('empty transcode');
+      }
+      if (t.modified != null) {
+        await f.setLastModified(DateTime.fromMillisecondsSinceEpoch(t.modified!));
+      }
+      await Directory(p.dirname(dest)).create(recursive: true);
+      if (replace && old != null) {
+        await _trash(c, old, bucket);
+      } else if (await File(dest).exists()) {
+        await File(dest).delete();
+      }
+      await _move(f, dest);
+      index.upsertLocal(_row(c, t, dest,
+          size: size,
+          origin: old?.origin ?? LocalOrigin.mirror,
+          quality: quality));
+      return size;
+    } catch (e) {
+      // A transfer that broke off leaves its partial for the next run to
+      // resume (originals only: a transcode has no byte range to ask for);
+      // a copy that landed but failed its checks starts over.
+      if (!landed && tier == null && await _hasBytes(tmp)) {
+        _keepPartials.add(p.basename(tmp));
+      } else {
+        try {
+          await File(tmp).delete();
+        } catch (_) {}
+      }
+      index.upsertLocal(LocalFile(
+        server: c.server,
+        path: t.path,
+        quality: quality,
+        localPath: dest,
+        state: LocalState.failed,
+        origin: old?.origin ?? LocalOrigin.mirror,
+        size: old?.size,
+        mtime: old?.mtime,
+        hash: old?.hash,
+        error: '$e',
+        verifiedAt: now().millisecondsSinceEpoch,
+      ));
+      rethrow;
+    }
+  }
+
+  /// Verifies an existing copy against the server's row — size, and the
+  /// whole-file MD5 where the server's hash is one — then stamps the server
+  /// mtime and records the hash so later runs compare it like any other.
+  /// False when it does not check out (or is gone): the caller replaces it.
+  Future<bool> _adopt(MirrorConfig c, Adoption a) async {
+    final t = a.remote;
+    final f = File(a.local.localPath);
+    if (!await f.exists()) return false;
+    final size = await f.length();
+    if (t.size != null && size != t.size) return false;
+    if (t.hash != null && size < kFullHashMaxBytes) {
+      final digest = (await md5.bind(f.openRead()).first).toString();
+      if (digest != t.hash) return false;
+    }
+    if (t.modified != null) {
+      await f.setLastModified(DateTime.fromMillisecondsSinceEpoch(t.modified!));
+    }
+    index.upsertLocal(
+        _row(c, t, a.local.localPath, size: size, origin: a.local.origin));
+    return true;
+  }
+
+  /// An `ok` row for a landed copy. A tier row records the source's hash
+  /// and mtime — what the planner compares next run — under its own size.
+  LocalFile _row(MirrorConfig c, RemoteTrack t, String localPath,
+          {int? size,
+          required String origin,
+          String quality = Quality.original}) =>
+      LocalFile(
+        server: c.server,
+        path: t.path,
+        quality: quality,
+        localPath: localPath,
+        size: size ?? t.size,
+        mtime: t.modified,
+        hash: t.hash,
+        state: LocalState.ok,
+        origin: origin,
+        verifiedAt: now().millisecondsSinceEpoch,
+      );
+
+  /// The partial file of one transfer — stable across runs, so an
+  /// interrupted original resumes where it stopped.
+  static String _tmpFor(MirrorConfig c, RemoteTrack t, String quality) =>
+      p.join(c.tmpRoot, '${md5.convert(utf8.encode('$quality:${t.path}'))}.part');
+
+  static Future<bool> _hasBytes(String path) async {
+    try {
+      return await File(path).length() > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The tree a copy of [quality] lives in — what [_pruneEmpty] keeps.
+  static String _rootFor(MirrorConfig c, String quality) {
+    final tier = Tier.parse(quality);
+    return tier == null
+        ? c.mediaRoot
+        : p.join(c.transcodedRoot, tier.id, c.server);
+  }
+
+  /// Removes [dir] and then each parent a move left empty, stopping at
+  /// [root] (kept even when empty) — so the Local Files browser never lists
+  /// hollow album folders.
+  static Future<void> _pruneEmpty(String dir, String root) async {
+    var d = p.normalize(dir);
+    final stop = p.normalize(root);
+    while (p.isWithin(stop, d)) {
+      final entity = Directory(d);
+      try {
+        if (!await entity.exists() || !await entity.list().isEmpty) return;
+        await entity.delete();
+      } catch (_) {
+        return;
+      }
+      d = p.dirname(d);
+    }
+  }
+
+  /// rename(), with a copy + delete fallback for a target on another volume.
+  static Future<void> _move(File from, String to) async {
+    try {
+      await from.rename(to);
+    } on FileSystemException {
+      await from.copy(to);
+      await from.delete();
+    }
+  }
+
+  // ── housekeeping ──────────────────────────────────────────────────────
+
+  Future<void> _sweepTrash(MirrorConfig c) async {
+    if (c.retentionDays <= 0) return;
+    final root = Directory(c.trashRoot);
+    if (!await root.exists()) return;
+    final cutoff = now().subtract(Duration(days: c.retentionDays));
+    await for (final e in root.list()) {
+      if (e is! Directory) continue;
+      final day = DateTime.tryParse(p.basename(e.path));
+      if (day != null && day.isBefore(cutoff)) {
+        await e.delete(recursive: true);
+      }
+    }
+  }
+
+  /// Clears the temp tree — except the partials of originals that broke off
+  /// mid-transfer this run, which the next run resumes.
+  Future<void> _purgeTmp(MirrorConfig c) async {
+    final root = Directory(c.tmpRoot);
+    if (!await root.exists()) return;
+    if (_keepPartials.isEmpty) {
+      await root.delete(recursive: true);
+      return;
+    }
+    await for (final e in root.list()) {
+      if (_keepPartials.contains(p.basename(e.path))) continue;
+      await e.delete(recursive: true);
+    }
+  }
+
+  static String _bucketName(DateTime t) =>
+      '${t.year.toString().padLeft(4, '0')}-${t.month.toString().padLeft(2, '0')}-'
+      '${t.day.toString().padLeft(2, '0')}';
+
+  static final Random _rng = Random.secure();
+  static String _randomId() =>
+      List.generate(12, (_) => _rng.nextInt(36).toRadixString(36)).join();
+}
+
+/// The data paths rule [s] pins among [remote]. `library` is a whole vpath
+/// and `folder` a data-path prefix; `album` is every track tagged with that
+/// album name (the same identity the album screens use); `artist` is every
+/// track by them plus the albums credited to them as album artist —
+/// [creditedAlbums], the names from `remote_albums`; `playlist` and `rated`
+/// name their tracks outright — [memberPaths], the playlist's slots or the
+/// tracks rated at least the key, as the index resolved them. Unknown kinds
+/// pin nothing.
+List<String> expandRule(Subscription s, List<RemoteTrack> remote,
+    {Set<String> creditedAlbums = const {},
+    Set<String> memberPaths = const {}}) {
+  switch (s.kind) {
+    case RuleKind.library:
+      final prefix = '/${s.key.replaceAll(RegExp(r'^/+|/+$'), '')}/';
+      return [for (final t in remote) if (t.path.startsWith(prefix)) t.path];
+    case RuleKind.folder:
+      final prefix = s.key.endsWith('/') ? s.key : '${s.key}/';
+      return [for (final t in remote) if (t.path.startsWith(prefix)) t.path];
+    case RuleKind.album:
+      return [for (final t in remote) if (t.album == s.key) t.path];
+    case RuleKind.artist:
+      return [
+        for (final t in remote)
+          if (t.artist == s.key ||
+              (t.album != null && creditedAlbums.contains(t.album)))
+            t.path
+      ];
+    case RuleKind.playlist:
+    case RuleKind.rated:
+      return [for (final t in remote) if (memberPaths.contains(t.path)) t.path];
+    default:
+      return const [];
+  }
+}

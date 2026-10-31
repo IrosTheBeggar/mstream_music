@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
 import './log_manager.dart';
+import './library_index.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
@@ -136,6 +137,7 @@ class FileExplorer {
     if (f.existsSync()) {
       await f.delete();
     }
+    LibraryIndexManager().forgetLocalPath(server?.localname, path);
 
     BrowserManager().removeAll(path, server, 'localFile');
   }
@@ -145,6 +147,7 @@ class FileExplorer {
     if (f.existsSync()) {
       await f.delete(recursive: true);
     }
+    LibraryIndexManager().forgetLocalUnder(server?.localname, path);
 
     BrowserManager().removeAll(path, server, 'localDirectory');
   }

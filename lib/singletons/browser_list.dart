@@ -13,6 +13,7 @@ import '../objects/genre_source.dart';
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
+import 'library_index.dart';
 
 class BrowserManager {
   /// Whether [list] is the home section list: its first row that is not a
@@ -331,6 +332,15 @@ class BrowserManager {
     // folder surviving a server switch) lands on top of the NEW home screen.
     cancelLoading();
     _albumDetail.add(null);
+    // Browsing the copy by choice lasts as long as the offline landing is
+    // open: a reset that discards it (a server switch, the way home) ends
+    // it. An automatic switch stays until the server answers.
+    for (final frame in browserCache) {
+      if (frame.isNotEmpty && frame.first.type == 'offlineHeader') {
+        final s = frame.first.server;
+        if (s != null && !s.offlineAuto) ServerManager().leaveOffline(s);
+      }
+    }
     browserCache.clear();
     browserList.clear();
     // Invariant: scrollCache.length == browserCache.length - 1.
@@ -412,13 +422,6 @@ class BrowserManager {
             Icon(Icons.star, color: VelvetColors.textSecondary), null),
       DisplayItem(server, 'Recent', 'execAction', 'recent',
           Icon(Icons.query_builder, color: VelvetColors.textSecondary), null),
-      DisplayItem(
-          server,
-          'Local Files',
-          'execAction',
-          'localFiles',
-          Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
-          null),
       // LISTEN. Auto DJ runs on every server, a peer included (random-songs
       // is on the federation allowlist since mStream #946). Sonic path only
       // where the server advertised the route (mStream #762) — the flag is
@@ -490,6 +493,30 @@ class BrowserManager {
                   color: VelvetColors.textSecondary),
               null),
       ],
+      // OFFLINE: the library copy on this device — its settings, and the
+      // offline landing ([goToOfflineScreen]), which browses the copy for
+      // as long as it is open; the second card's second line says what
+      // state the copy is in. A federated peer has no copy: the manifest is
+      // off its allowlist.
+      if (!federated) ...[
+        header('Offline'),
+        DisplayItem(server, 'Library copy', 'execAction', 'libraryCopy',
+            Icon(Icons.cloud_sync_outlined, color: VelvetColors.textSecondary),
+            null),
+        DisplayItem(
+            server,
+            'Browse offline',
+            'execAction',
+            'browseOffline',
+            Icon(Icons.cloud_off_outlined, color: VelvetColors.textSecondary),
+            server.browseOffline
+                ? (server.offlineAuto ? 'offline:auto' : 'offline:on')
+                : ((LibraryIndexManager().index?.remoteCount(server.localname) ??
+                            0) >
+                        0
+                    ? 'offline:ready'
+                    : 'offline:none')),
+      ],
     ];
 
     browserCache.add(sections);
@@ -522,6 +549,38 @@ class BrowserManager {
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
 
     _browserStream.sink.add(browserList);
+  }
+
+  /// The offline landing: a list frame of what the copy on this device can
+  /// browse, headed by a status row and ending with the way back. Its first
+  /// row is not an action, so [isHomeList] leaves it a list rather than the
+  /// home grid; the action rows dispatch exactly like the home's, and the
+  /// browse flag routes them to the index.
+  void goToOfflineScreen(Server server) {
+    final ix = LibraryIndexManager().index;
+    final files = ix?.localCount(server.localname) ?? 0;
+    final bytes = ix?.localBytes(server.localname) ?? 0;
+    Icon icon(IconData d) => Icon(d, color: VelvetColors.textSecondary);
+    addListToStack([
+      DisplayItem(server, 'Offline copy', 'offlineHeader', null,
+          Icon(Icons.cloud_off_outlined, color: VelvetColors.primary),
+          'offlineFiles:$files:$bytes'),
+      DisplayItem(server, 'File Explorer', 'execAction', 'fileExplorer',
+          Icon(Icons.folder, color: VelvetColors.warning), null),
+      DisplayItem(server, 'Playlists', 'execAction', 'playlists',
+          icon(Icons.queue_music), null),
+      DisplayItem(server, 'Albums', 'execAction', 'albums', icon(Icons.album),
+          null),
+      DisplayItem(server, 'Artists', 'execAction', 'artists',
+          icon(Icons.library_music), null),
+      DisplayItem(server, 'Rated', 'execAction', 'rated', icon(Icons.star),
+          null),
+      DisplayItem(server, 'Recent', 'execAction', 'recent',
+          icon(Icons.query_builder), null),
+      DisplayItem(server, 'Back online', 'execAction', 'backOnline',
+          icon(Icons.cloud_outlined), null),
+    ]);
+    setBrowserLabel('Offline copy');
   }
 
   void addListToStack(List<DisplayItem> newList,
@@ -708,6 +767,12 @@ class BrowserManager {
       return;
     }
 
+    // Backing out of the offline landing ends browsing the copy by choice.
+    final leaving = browserCache.last;
+    if (leaving.isNotEmpty && leaving.first.type == 'offlineHeader') {
+      final s = leaving.first.server;
+      if (s != null && !s.offlineAuto) ServerManager().leaveOffline(s);
+    }
     browserCache.removeLast();
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
     if (pathCache.isNotEmpty) pathCache.removeLast();
@@ -737,6 +802,10 @@ class BrowserManager {
 
     if (BrowserManager().browserCache.length == 1) {
       _browserLabel.sink.add('Browser');
+    } else if (browserList.isNotEmpty &&
+        browserList.first.type == 'offlineHeader') {
+      // Back on the offline landing: the label a deeper list set goes.
+      setBrowserLabel('Offline copy');
     }
   }
 

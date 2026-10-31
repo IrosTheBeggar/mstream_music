@@ -636,7 +636,8 @@ void main() {
       );
       if (at < 0) return const [];
       return [
-        for (final i in home.skip(at + 1))
+        // Up to the next section (Offline follows Server).
+        for (final i in home.skip(at + 1).takeWhile((i) => i.type != 'section'))
           if (i.type == 'execAction') i.data,
       ];
     }

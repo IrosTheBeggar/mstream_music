@@ -1511,6 +1511,89 @@ class AppLocalizationsDe extends AppLocalizations {
       'In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Ist möglicherweise nicht mehr verfügbar, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.';
 
   @override
+  String get mirrorRootLabel => 'Ordner mit lokaler Kopie (optional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Ein Ordner, der bereits eine Kopie dieser Bibliothek enthält und von einem anderen Programm synchron gehalten wird (Syncthing, rclone, NAS). Dort gefundene Dateien werden von der Festplatte abgespielt. Die App schreibt nie hinein.';
+
+  @override
+  String get libraryCopyTitle => 'Bibliothekskopie';
+
+  @override
+  String get libraryCopyKeepSection =>
+      'Vollständige Kopie auf diesem Gerät behalten';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Jeder Titel wird in Originalqualität heruntergeladen und synchron gehalten: Neue Dateien kommen hinzu, geänderte werden ersetzt, und auf dem Server gelöschte Dateien wandern für eine Weile in einen Papierkorb-Ordner.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'Dieser Server bietet keine Bibliothekssynchronisierung. Er benötigt mStream 6.27 oder neuer.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'Noch keine Bibliotheken gemeldet — den Server einmal öffnen und dann zurückkommen.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Noch nicht synchronisiert';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Zuletzt synchronisiert $when · $files Dateien · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Synchronisiere… $done von $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Server wird geprüft…';
+
+  @override
+  String get libraryCopySyncNow => 'Jetzt synchronisieren';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n Dateien fehlgeschlagen';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Fehlgeschlagene Dateien';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'Letzte Synchronisierung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Gelöschte Dateien aufbewahren für';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n Tage';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Für immer';
+
+  @override
+  String get libraryCopyWifiOnly => 'Nur über WLAN';
+
+  @override
+  String get libraryCopyDesktopNote =>
+      'Synchronisiert, solange die App geöffnet ist.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Noch kein Bibliotheksindex — einmal synchronisieren, solange der Server erreichbar ist.';
+
+  @override
+  String get offlineChip => 'Offline-Kopie';
+
+  @override
   String get storageChooseFolder => 'Ordner wählen';
 
   @override
@@ -5593,4 +5676,77 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Playlist teilen';
+
+  @override
+  String get keepOffline => 'Offline behalten';
+
+  @override
+  String get keepOfflineOn => 'Wird offline behalten';
+
+  @override
+  String get keepOfflineHelp =>
+      'Wird heruntergeladen und auf diesem Gerät synchron gehalten.';
+
+  @override
+  String get keepRatedTitle => 'Bewertete Titel offline behalten';
+
+  @override
+  String keepRatedStars(int n) {
+    return 'Ab $n Sternen';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 Sterne';
+
+  @override
+  String get keptOfflineSection => 'Außerdem offline behalten';
+
+  @override
+  String get keptOfflineNone =>
+      'Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern, Playlists und Ordnern.';
+
+  @override
+  String get keepQualityTitle => 'Qualität der Offline-Inhalte';
+
+  @override
+  String get keepQualityHelp =>
+      'Offline behaltene Alben, Künstler, Playlists, Ordner und bewertete Titel werden in dieser Qualität gespeichert. Komplette Bibliothekskopien behalten immer die Originaldateien.';
+
+  @override
+  String get keepQualityOriginal => 'Originaldateien';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbit/s';
+  }
+
+  @override
+  String get browserSectionOffline => 'Offline';
+
+  @override
+  String get browserBrowseOffline => 'Offline durchsuchen';
+
+  @override
+  String get browserBackOnline => 'Wieder online';
+
+  @override
+  String get browserOfflineReady => 'Lokale Kopie';
+
+  @override
+  String get browserOfflineNone => 'Noch keine Kopie';
+
+  @override
+  String get browserOfflineOn => 'Lokale Kopie in Gebrauch';
+
+  @override
+  String get browserOfflineAuto => 'Server nicht erreichbar';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files Dateien · $size';
+  }
+
+  @override
+  String get keepFolderHelp =>
+      'Dieser Ordner mit allem darin, auf diesem Gerät synchron gehalten.';
 }

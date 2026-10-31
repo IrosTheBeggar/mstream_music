@@ -6,9 +6,12 @@
 // to a passed-in handler so the same Browser navigation logic still
 // drives drilldown.
 
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../objects/display_item.dart';
+import '../singletons/art_cache.dart';
 import '../theme/velvet_theme.dart';
 import 'letter_strip.dart';
 import '../util/stream_url.dart';
@@ -259,6 +262,16 @@ class AlbumGridCard extends StatelessWidget {
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
+      // The mirror's cached cover serves offline and saves a round-trip online.
+      final cached = ArtCache().pathFor(item.server!.localname, aaFile);
+      if (cached != null) {
+        return Image.file(
+          File(cached),
+          fit: BoxFit.cover,
+          cacheWidth: cacheWidth,
+          errorBuilder: (_, _, _) => _NoArtPlaceholder(),
+        );
+      }
       // 'l': the server's 256 px rendition, the webapp's album-card size.
       // mStream caches only 's' (92 px) and 'l'; any other value serves the
       // full-size original, which is what 'm' quietly did here.

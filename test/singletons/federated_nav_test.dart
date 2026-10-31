@@ -1,8 +1,8 @@
 // The section list a federated server gets. Playlists and Rated are the two
 // nav entries whose routes are off the federation allowlist (every
 // /api/v1/playlist/* route, and db/rated), so they can only ever 403 on a
-// peer — everything else on this screen is allowlisted, and Local Files is
-// this device's own downloads either way.
+// peer — everything else on this screen is allowlisted. The Offline group
+// (the library copy) is a plain server's alone: a peer has no manifest.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/display_item.dart';
@@ -54,14 +54,82 @@ void main() {
       'genres',
       'rated',
       'recent',
-      'localFiles',
       'autoDj',
       'torrents',
+      'libraryCopy',
+      'browseOffline',
     ]);
     expect(BrowserManager().browserList.any((i) => i.type == 'note'), isFalse);
     // Grouped under headers: LIBRARY, LISTEN, SERVER — no NETWORK without a
     // peer, no Sonic path without the route advertised.
-    expect(_headers(), ['Library', 'Listen', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Server', 'Offline']);
+  });
+
+  test('the Offline card says what state the copy is in', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    DisplayItem card() =>
+        BrowserManager().browserList.firstWhere((i) => i.data == 'browseOffline');
+
+    BrowserManager().goToNavScreen();
+    expect(card().name, 'Browse offline');
+    expect(card().subtext, 'offline:none', reason: 'no index rows in this test');
+
+    s.browseOffline = true;
+    BrowserManager().goToNavScreen();
+    expect(card().name, 'Browse offline', reason: 'the way back lives on the landing');
+    expect(card().subtext, 'offline:on');
+
+    s.offlineAuto = true;
+    BrowserManager().goToNavScreen();
+    expect(card().subtext, 'offline:auto');
+  });
+
+  test('the offline landing lists what the copy can browse, headed by its status, ending with the way back', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    BrowserManager().goToOfflineScreen(s);
+    final list = BrowserManager().browserList;
+    expect(BrowserManager.isHomeList(list), isFalse, reason: 'a list frame, not the home grid');
+    expect(list.first.type, 'offlineHeader');
+    expect(list.first.subtext, 'offlineFiles:0:0', reason: 'no index in this test');
+    expect(_sections(),
+        ['fileExplorer', 'playlists', 'albums', 'artists', 'rated', 'recent', 'backOnline']);
+    expect(BrowserManager().listName, 'Offline copy');
+    expect(BrowserManager().browserCache, hasLength(2));
+    BrowserManager().popBrowser();
+    expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
+  });
+
+  test('browsing the copy by choice ends with the landing; an automatic switch stays', () {
+    // A closed local port: the ping the exit fires fails fast and, without
+    // an index, changes nothing.
+    final s = Server('http://127.0.0.1:1', null, null, null, 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+
+    s.browseOffline = true;
+    s.offlineAuto = false;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().popBrowser();
+    expect(s.browseOffline, isFalse, reason: 'back from the landing');
+
+    s.browseOffline = true;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().goToNavScreen();
+    expect(s.browseOffline, isFalse, reason: 'a reset that discards the landing');
+
+    s.browseOffline = true;
+    s.offlineAuto = true;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().popBrowser();
+    expect(s.browseOffline, isTrue, reason: 'unreachable: the copy stays until the server answers');
+    s.browseOffline = false;
+    s.offlineAuto = false;
   });
 
   test('a server that advertises the path route gets Sonic path under Listen',
@@ -99,13 +167,14 @@ void main() {
       'genres',
       'rated',
       'recent',
-      'localFiles',
       'autoDj',
       'sonicPath',
       'discover',
       'torrents',
+      'libraryCopy',
+      'browseOffline',
     ]);
-    expect(_headers(), ['Library', 'Listen', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Server', 'Offline']);
     final card =
         BrowserManager().browserList.singleWhere((r) => r.data == 'discover');
     expect(card.name, 'Discover', reason: 'browserChromeLabel keys on it');
@@ -156,7 +225,7 @@ void main() {
     manager.serverList.addAll([parent, peer, hidden]);
     manager.currentServer = parent;
     BrowserManager().goToNavScreen();
-    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server', 'Offline']);
     final fed = BrowserManager()
         .browserList
         .singleWhere((r) => r.data == 'federation');
@@ -175,7 +244,7 @@ void main() {
     manager.serverList.add(s);
     manager.currentServer = s;
     BrowserManager().goToNavScreen();
-    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server', 'Offline']);
     final fed = BrowserManager()
         .browserList
         .singleWhere((r) => r.data == 'federation');
@@ -188,7 +257,7 @@ void main() {
     manager.serverList.add(s);
     manager.currentServer = s;
     BrowserManager().goToNavScreen();
-    expect(_headers(), ['Library', 'Listen', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Server', 'Offline']);
   });
 
   test('a server whose build has the discovery network gets the P2P card',
@@ -200,7 +269,7 @@ void main() {
     manager.serverList.add(s);
     manager.currentServer = s;
     BrowserManager().goToNavScreen();
-    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server', 'Offline']);
     expect(_sections(), isNot(contains('federation')),
         reason: 'no federation without the flag or a peer');
     final p2p = BrowserManager()
@@ -235,7 +304,6 @@ void main() {
       'artists',
       'genres',
       'recent',
-      'localFiles',
       'autoDj',
     ]);
     // A peer hosts the DJ (mStream #946) but takes no torrents and has no
@@ -330,7 +398,7 @@ void main() {
     expect(first.subtext, 'federationInbox:2');
     expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
     // The count alone is not a NETWORK group: that still needs the flag.
-    expect(_headers(), ['Library', 'Listen', 'Server']);
+    expect(_headers(), ['Library', 'Listen', 'Server', 'Offline']);
 
     // Nothing waiting: no banner.
     s.federationInbox = 0;

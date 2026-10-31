@@ -1,0 +1,201 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:library_mirror/library_mirror.dart';
+import 'package:path/path.dart' as p;
+import 'package:test/test.dart';
+
+void main() {
+  final server = MirrorServer('http://h:3000/', token: 'tok');
+
+  test('MirrorServer: trailing slash trimmed, paths encoded, token carried', () {
+    expect(server.base, 'http://h:3000');
+    expect(server.api('/api/v1/ping').toString(), 'http://h:3000/api/v1/ping');
+    expect(server.media('/music/A B/1 #2.mp3').toString(),
+        'http://h:3000/media/music/A%20B/1%20%232.mp3?token=tok');
+    expect(MirrorServer('http://h').media('/m/x.mp3').toString(),
+        'http://h/media/m/x.mp3');
+    expect(server.art('aa.jpeg').toString(),
+        'http://h:3000/album-art/aa.jpeg?compress=m&token=tok');
+    expect(server.headers, {'x-access-token': 'tok'});
+    expect(server.transcode('/music/A B/1.flac', const Tier('opus', 96)).toString(),
+        'http://h:3000/transcode/music/A%20B/1.flac?codec=opus&bitrate=96k&token=tok');
+    expect(MirrorServer('http://h').transcode('/m/x.flac', const Tier('mp3', 192)).toString(),
+        'http://h/transcode/m/x.flac?codec=mp3&bitrate=192k');
+  });
+
+  test('login returns a server bound to the token; a refusal throws', () async {
+    late http.Request seen;
+    final ok = MockClient((r) async {
+      seen = r;
+      return http.Response(jsonEncode({'token': 'jwt'}), 200);
+    });
+    final s = await MirrorServer.login('http://h/', 'paul', 'pw', client: ok);
+    expect(s.token, 'jwt');
+    expect(seen.url.toString(), 'http://h/api/v1/auth/login');
+    expect(seen.bodyFields, {'username': 'paul', 'password': 'pw'});
+    final bad = MockClient((_) async => http.Response('no', 401));
+    expect(MirrorServer.login('http://h', 'x', 'y', client: bad),
+        throwsA(isA<HttpException>()));
+  });
+
+  test('manifest: cursor and limit in the body, quoted ETag, 304 → null', () async {
+    final seen = <http.Request>[];
+    final c = MockClient((r) async {
+      seen.add(r);
+      if (r.headers['If-None-Match'] == '"r1"') return http.Response('', 304);
+      return http.Response(
+          jsonEncode({
+            'revision': 'r1',
+            'scanning': false,
+            'next': null,
+            'entries': [
+              {'filepath': 'music/a.mp3', 'id': 1, 'file-size': 3, 'modified': 1,
+                'hash': 'h', 'metadata': {'title': 'A'}},
+            ],
+          }),
+          200);
+    });
+    final m = HttpManifestClient(server, c);
+    final page = await m.fetchPage(cursor: 5, limit: 10);
+    expect(page!.entries.single.path, '/music/a.mp3');
+    expect(jsonDecode(seen.first.body), {'cursor': 5, 'limit': 10});
+    expect(seen.first.headers['x-access-token'], 'tok');
+    expect(await m.fetchPage(ifNoneMatch: 'r1'), isNull);
+    expect(jsonDecode(seen.last.body), {'limit': 2000});
+    final down = HttpManifestClient(server, MockClient((_) async => http.Response('x', 500)));
+    expect(down.fetchPage(), throwsA(isA<HttpException>()));
+  });
+
+  test('downloader streams the media to the file; a refusal leaves none', () async {
+    final tmp = Directory.systemTemp.createTempSync('http_dl_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final c = MockClient((r) async {
+      if (r.url.path.startsWith('/transcode/')) {
+        expect(r.url.queryParameters, {'codec': 'aac', 'bitrate': '128k', 'token': 'tok'});
+        return http.Response.bytes([7], 200);
+      }
+      return r.url.path.endsWith('/1.mp3')
+          ? http.Response.bytes([1, 2, 3], 200)
+          : http.Response('nope', 404);
+    });
+    final d = HttpDownloader(server, c);
+    final dest = p.join(tmp.path, 'out.part');
+    await d.download('/music/1.mp3', dest);
+    expect(File(dest).readAsBytesSync(), [1, 2, 3]);
+    final tiered = p.join(tmp.path, 'tier.part');
+    await d.download('/music/1.mp3', tiered, tier: const Tier('aac', 128));
+    expect(File(tiered).readAsBytesSync(), [7]);
+    expect(d.download('/music/2.mp3', p.join(tmp.path, 'none.part')),
+        throwsA(isA<HttpException>()));
+  });
+
+  test('an interrupted original resumes with Range + If-Range; a changed file comes back whole', () async {
+    final tmp = Directory.systemTemp.createTempSync('http_resume_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final body = utf8.encode('0123456789');
+    const mtime = 1700000000000;
+    var cut = true;
+    final seen = <Map<String, String>>[];
+    final c = MockClient.streaming((r, _) async {
+      seen.add(Map.of(r.headers));
+      final range = r.headers['Range'];
+      if (range == null) {
+        // The first attempt dies after four bytes.
+        final s = cut
+            ? Stream<List<int>>.fromFutures([
+                Future.value(body.sublist(0, 4)),
+                Future.error(const SocketException('cut')),
+              ])
+            : Stream.value(body);
+        return http.StreamedResponse(s, 200);
+      }
+      final from = int.parse(range.substring('bytes='.length, range.length - 1));
+      final fresh = r.headers['If-Range'] ==
+          HttpDate.format(DateTime.fromMillisecondsSinceEpoch(mtime, isUtc: true));
+      return fresh
+          ? http.StreamedResponse(Stream.value(body.sublist(from)), 206)
+          : http.StreamedResponse(Stream.value(body), 200);
+    });
+    final d = HttpDownloader(server, c);
+    final dest = p.join(tmp.path, 'x.part');
+    await expectLater(d.download('/music/1.mp3', dest, modified: mtime),
+        throwsA(isA<SocketException>()));
+    expect(File(dest).readAsStringSync(), '0123');
+    cut = false;
+    await d.download('/music/1.mp3', dest, modified: mtime);
+    expect(File(dest).readAsStringSync(), '0123456789');
+    expect(seen.last['Range'], 'bytes=4-');
+    expect(seen.last['If-Range'], 'Tue, 14 Nov 2023 22:13:20 GMT');
+
+    // The source moved on since the partial: If-Range misses, 200, rewritten whole.
+    File(dest).writeAsStringSync('0123');
+    await d.download('/music/1.mp3', dest, modified: mtime + 60000);
+    expect(File(dest).readAsStringSync(), '0123456789');
+    expect(seen.last['Range'], 'bytes=4-');
+
+    // A partial the server will not resume from (416, or mStream's 500 for a
+    // range past the end) is discarded and the call fails.
+    File(dest).writeAsStringSync('0123456789-and-more');
+    final c416 = MockClient.streaming(
+        (r, _) async => http.StreamedResponse(Stream.value(<int>[]), 500));
+    await expectLater(HttpDownloader(server, c416).download('/music/1.mp3', dest, modified: mtime),
+        throwsA(isA<HttpException>()));
+    expect(File(dest).existsSync(), isFalse);
+
+    // A transcode never asks for a range, whatever sits at the destination.
+    File(dest).writeAsStringSync('junk');
+    seen.clear();
+    await d.download('/music/1.mp3', dest, tier: const Tier('opus', 96), modified: mtime);
+    expect(seen.single.containsKey('Range'), isFalse);
+  });
+
+  test('lists: albums, artists, genres, playlists (getall + load), rated', () async {
+    final c = MockClient((r) async {
+      final path = r.url.path;
+      Object body;
+      if (path.endsWith('/db/albums')) {
+        body = {'albums': [{'name': 'Alpha', 'album_artist': 'Ann', 'year': 2001, 'album_art_file': 'aa.jpeg'}]};
+      } else if (path.endsWith('/db/artists')) {
+        body = {'artists': ['Ann', {'name': 'Bob'}]};
+      } else if (path.endsWith('/db/genres')) {
+        body = {'genres': [{'name': 'Rock', 'track_count': 2}]};
+      } else if (path.endsWith('/playlist/getall')) {
+        body = [{'name': 'Mix'}];
+      } else if (path.endsWith('/playlist/load')) {
+        expect(jsonDecode(r.body), {'playlistname': 'Mix'});
+        body = [{'filepath': 'music/a.mp3', 'metadata': {}}];
+      } else if (path.endsWith('/db/rated')) {
+        body = [{'filepath': 'music/b.mp3', 'metadata': {'rating': 8}}, {'filepath': 'music/c.mp3', 'metadata': {}}];
+      } else {
+        return http.Response('?', 404);
+      }
+      return http.Response(jsonEncode(body), 200);
+    });
+    final l = HttpListsClient(server, c);
+    final albums = await l.albums();
+    expect(albums.single.name, 'Alpha');
+    expect(albums.single.albumArtist, 'Ann');
+    expect(albums.single.art, 'aa.jpeg');
+    expect(await l.artists(), ['Ann', 'Bob']);
+    expect(await l.genres(), {'Rock': 2});
+    final pls = await l.playlists();
+    expect(pls.single.name, 'Mix');
+    expect(pls.single.paths, ['/music/a.mp3']);
+    expect(await l.rated(), {'/music/b.mp3': 8});
+  });
+
+  test('art is written to the destination', () async {
+    final tmp = Directory.systemTemp.createTempSync('http_art_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final c = MockClient((r) async {
+      expect(r.url.toString(), 'http://h:3000/album-art/aa.jpeg?compress=m&token=tok');
+      return http.Response.bytes([9, 9], 200);
+    });
+    final dest = p.join(tmp.path, 'aa.jpeg');
+    await HttpArtClient(server, c).fetchArt('aa.jpeg', dest);
+    expect(File(dest).readAsBytesSync(), [9, 9]);
+  });
+}

@@ -11,14 +11,18 @@ import 'package:mstream_music/singletons/migration_manager.dart';
 import 'package:mstream_music/singletons/log_manager.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/singletons/auto_download_ledger.dart';
+import 'package:mstream_music/singletons/library_index.dart';
+import 'package:mstream_music/singletons/mirror_manager.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
 
+import 'package:library_mirror/library_mirror.dart' show LibraryIndex;
 import '../objects/download_tracker.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
+import '../util/local_copy.dart';
 import '../media/cast_origin.dart' show irohLoopbackUri;
 
 class DownloadManager {
@@ -56,7 +60,8 @@ class DownloadManager {
     // single stream, so the old flutter_downloader background-isolate /
     // SendPort plumbing is no longer needed.
     _updatesSub = FileDownloader().updates.listen(_onUpdate);
-    // Load the auto-download ledger before any sweep records into it.
+    // Fold the pre-A8 auto-download ledger into the index before the first
+    // sweep's completion enforces the cap.
     await AutoDownloadLedger().load();
     // Rehydrate tasks that survived a process death in WorkManager (a
     // Wi-Fi-held keep-queue-offline transfer routinely does). Without this a
@@ -93,6 +98,13 @@ class DownloadManager {
   }
 
   Future<void> _onUpdate(TaskUpdate update) async {
+    // The mirror's transfers live in their own group and complete into a
+    // temp tree the runner owns — hand them over instead of looking for a
+    // tracker that was never registered.
+    if (update.task.group == kMirrorGroup) {
+      MirrorManager().onTaskUpdate(update);
+      return;
+    }
     final DownloadTracker? dt = downloadMap[update.task.taskId];
     if (dt == null) return;
 
@@ -115,13 +127,15 @@ class DownloadManager {
               dt.dataPath != null) {
             MediaManager().audioHandler.onTrackDownloaded(
                 dt.serverName!, dt.dataPath!, dt.localPath!);
-            // Record auto-downloads in the ledger and enforce the cap. Only
-            // here (a fresh auto-download landing, i.e. online) — never on
-            // startup or a connectivity change, so waking up offline can't
-            // trigger a sweep that deletes what you're about to play.
+            LibraryIndexManager().recordDownloaded(
+                dt.serverName!, dt.dataPath!, dt.localPath!,
+                auto: dt.auto);
+            // The index row above is the ledger entry (origin `auto`, newest
+            // by its stamp). Enforce the cap only here (a fresh auto-download
+            // landing, i.e. online) — never on startup or a connectivity
+            // change, so waking up offline can't trigger a sweep that deletes
+            // what you're about to play.
             if (dt.auto) {
-              await AutoDownloadLedger()
-                  .record(dt.serverName!, dt.dataPath!, dt.localPath!);
               await _enforceAutoDownloadCap();
               // A slot just freed: pull the next unmarked track in. The
               // queue patch above usually re-sweeps too; this makes sure of
@@ -520,6 +534,14 @@ class DownloadManager {
   /// on every track change.
   Future<void> enforceAutoDownloadCap() => _enforceAutoDownloadCap();
 
+  /// What the cap must not evict: the cache window's tracks (keyed
+  /// server + path) and anything a library-copy rule pins — the mirror would
+  /// only fetch that again. Pure; unit-tested.
+  static bool Function(String server, String path) cacheProtection(
+          Set<String> queued, LibraryIndex? index) =>
+      (s, p) =>
+          queued.contains(s + p) || (index != null && index.requiredBy(s, p) > 0);
+
   Future<void> _enforceAutoDownloadCap() async {
     final cap = SettingsManager().autoDownloadCap;
     if (cap <= 0) return;
@@ -534,20 +556,20 @@ class DownloadManager {
       final s = m.extras?['server'], p = m.extras?['path'];
       if (s is String && p is String) queued.add(s + p);
     }
-    final victims =
-        AutoDownloadLedger().evictionsFor(cap, (s, p) => queued.contains(s + p));
+    final victims = AutoDownloadLedger().evictionsFor(
+        cap, cacheProtection(queued, LibraryIndexManager().index));
     if (victims.isEmpty) return;
     for (final v in victims) {
       try {
         final f = File(v.localPath);
         if (f.existsSync()) f.deleteSync();
+        LibraryIndexManager().forgetLocalPath(v.server, v.localPath);
       } catch (e) {
         appLog('[auto-dl] evict delete failed: $e');
       }
       // Drop the once-per-session sweep guard so the track can auto-download
-      // again if it later re-enters the queue, and drop it from the ledger.
+      // again if it later re-enters the queue (its row went with the file).
       _autoAttempted.remove(v.key);
-      await AutoDownloadLedger().forget(v.server, v.path);
     }
     appLog('[auto-dl] evicted ${victims.length} over cap $cap');
     // The "downloaded" badge is file-existence derived; refresh any visible
@@ -621,14 +643,13 @@ class DownloadManager {
     }
     String downloadDirectory = serverName + filepath;
 
-    // Manual wins: an explicit download of a track removes it from the auto
-    // ledger so it can never be evicted (forget is a cheap no-op when it isn't
-    // tracked). Done up front so it applies whether or not the file already
-    // exists below. Also demote any in-flight auto-download of the same track,
-    // so when it completes it records as manual (i.e. isn't re-added to the
-    // ledger) instead of racing the forget.
+    // Manual wins: an explicit download of a track re-labels its index row
+    // `manual` so it can never be evicted (a no-op when it isn't auto). Done
+    // up front so it applies whether or not the file already exists below.
+    // Also demote any in-flight auto-download of the same track, so when it
+    // completes it records as manual instead of racing the re-label.
     if (!auto) {
-      unawaited(AutoDownloadLedger().forget(serverName, filepath));
+      AutoDownloadLedger().forget(serverName, filepath);
       for (final t in downloadMap.values) {
         if (t.serverName == serverName && t.dataPath == filepath) {
           t.auto = false;
@@ -678,13 +699,17 @@ class DownloadManager {
 
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 
-    if (File(downloadTo).existsSync() == true) {
-      // Already on disk — still patch any queued copies (self-healing: covers
-      // a track downloaded before it was queued, and a patch lost to a rare
-      // publish race — every later download attempt re-lands it).
+    // Already on disk — in the download tree or the server's mirror root —
+    // so nothing to transfer; still patch any queued copies (self-healing:
+    // covers a track downloaded before it was queued, and a patch lost to a
+    // rare publish race — every later download attempt re-lands it).
+    // Originals only: a transcoded stand-in is no reason to skip the fetch.
+    final existing = firstExistingSync(
+        localCopyCandidates(server, dir, filepath, transcoded: false));
+    if (existing != null) {
       MediaManager()
           .audioHandler
-          .onTrackDownloaded(serverName, filepath, downloadTo);
+          .onTrackDownloaded(serverName, filepath, existing);
       return;
     }
     if (_inFlight.contains(downloadDirectory)) {

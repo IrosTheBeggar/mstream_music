@@ -19,10 +19,48 @@ class Server {
   String storageMode = 'appLocal';
   String? storageBasePath;
 
+  // Optional folder that already holds a copy of this server's library in
+  // `<vpath>/<relative path>` shape, kept current by something other than the
+  // app (Syncthing, rclone, robocopy, a NAS mirror). Files found there count
+  // as local copies for playback and the downloaded badge; the app never
+  // writes to it. Offered on desktop and on the full Android flavor (needs
+  // all-files access, like 'permanent'). null = not set.
+  String? mirrorRoot;
+
+  // Library sync capability from the /api/ features block (mStream 6.27+:
+  // the server serves POST /api/v1/sync/manifest). Gated strictly on
+  // `== true` like the discovery flags, and persisted like them so the
+  // Library copy screen renders before the first ping.
+  bool? syncAvailable;
+  // Library copy settings: how long a file the mirror removed stays in its
+  // trash (days, 0 = forever) and whether transfers wait for Wi-Fi (mobile
+  // only; ignored on desktop).
+  int mirrorRetentionDays = 30;
+  bool mirrorWifiOnly = true;
+  // Quality the entity rules — "Keep offline" on albums, artists and
+  // playlists, and the rated rule — are kept at: 'original', or a transcode
+  // tier such as 'opus-96' (A7). Whole-library copies always keep the
+  // originals.
+  String mirrorQuality = 'original';
+
   // Runtime-only (never persisted): the live loopback port of this server's iroh
   // tunnel while it is the active server. Set by ServerManager when the tunnel
   // starts; consumed by [effectiveBaseUrl].
   int? tunnelPort;
+
+  // Runtime-only (never persisted): browse this server from the library
+  // index on this device instead of the server (A4). Set by the user on the
+  // Library copy screen, or automatically ([offlineAuto]) when the server's
+  // capability ping fails while the index has rows for it — and cleared
+  // again on the next successful ping only when it was automatic.
+  bool browseOffline = false;
+  bool offlineAuto = false;
+
+  // Runtime-only (never persisted): the transcoded tiers the mirror holds
+  // copies in for this server (A7), so playback and the downloaded badge can
+  // fall back to one when there is no original — see localCopyCandidates.
+  // Kept current by MirrorManager.
+  Set<String> mirrorTiers = const {};
 
   // Runtime-only (never persisted): the iroh tunnel's loopback auth token while
   // this server is active. The local proxy requires it as `__lt=<token>` so other
@@ -415,6 +453,17 @@ class Server {
             : ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
         storageBasePath =
             json['storageBasePath'] is String ? json['storageBasePath'] : null,
+        mirrorRoot = json['mirrorRoot'] is String ? json['mirrorRoot'] : null,
+        syncAvailable =
+            json['syncAvailable'] is bool ? json['syncAvailable'] : null,
+        mirrorRetentionDays = json['mirrorRetentionDays'] is int
+            ? json['mirrorRetentionDays'] as int
+            : 30,
+        mirrorWifiOnly =
+            json['mirrorWifiOnly'] is bool ? json['mirrorWifiOnly'] : true,
+        mirrorQuality = json['mirrorQuality'] is String
+            ? json['mirrorQuality'] as String
+            : 'original',
         transcodeAvailable =
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
@@ -487,6 +536,11 @@ class Server {
         'allowSelfSigned': allowSelfSigned,
         'storageMode': storageMode,
         'storageBasePath': storageBasePath,
+        'mirrorRoot': mirrorRoot,
+        'syncAvailable': syncAvailable,
+        'mirrorRetentionDays': mirrorRetentionDays,
+        'mirrorWifiOnly': mirrorWifiOnly,
+        'mirrorQuality': mirrorQuality,
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
         'transcodeDefaultBitrate': transcodeDefaultBitrate,

@@ -1,0 +1,202 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
+import 'package:path/path.dart' as p;
+
+import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/singletons/library_index.dart';
+import 'package:mstream_music/singletons/mirror_manager.dart';
+
+void main() {
+  group('ServerManifestClient', () {
+    final server = Server('http://h:1', null, null, 'jwt-1', 'home');
+
+    ServerManifestClient client(http.Response Function(http.Request) handle) =>
+        ServerManifestClient(server, client: () => MockClient((r) async => handle(r)));
+
+    test('sends the token, the quoted If-None-Match and the paging body', () async {
+      late http.Request seen;
+      final c = client((r) {
+        seen = r;
+        return http.Response(jsonEncode({'revision': 'r2', 'scanning': false, 'next': null,
+          'entries': [{'filepath': 'music/a.mp3', 'id': 1, 'metadata': {'title': 'A'}}]}), 200);
+      });
+      final page = await c.fetchPage(cursor: 7, limit: 50, ifNoneMatch: 'r1');
+      expect(seen.url.path, '/api/v1/sync/manifest');
+      expect(seen.headers['x-access-token'], 'jwt-1');
+      expect(seen.headers['If-None-Match'], '"r1"');
+      expect(jsonDecode(seen.body), {'cursor': 7, 'limit': 50});
+      expect(page!.revision, 'r2');
+      expect(page.entries.single.path, '/music/a.mp3');
+      expect(page.entries.single.title, 'A');
+    });
+
+    test('a 304 is null and the first page omits the cursor', () async {
+      late http.Request seen;
+      final c = client((r) {
+        seen = r;
+        return http.Response('', 304);
+      });
+      expect(await c.fetchPage(ifNoneMatch: 'r1'), isNull);
+      expect(jsonDecode(seen.body), {'limit': 2000});
+    });
+
+    test('any other status throws', () async {
+      final c = client((_) => http.Response('nope', 500));
+      expect(c.fetchPage(), throwsA(isA<HttpException>()));
+    });
+  });
+
+  group('MirrorManager rules', () {
+    late Directory tmp;
+    setUp(() async {
+      tmp = Directory.systemTemp.createTempSync('mirror_manager_');
+      await LibraryIndexManager().open(path: p.join(tmp.path, 'index.db'));
+    });
+    tearDown(() {
+      LibraryIndexManager().close();
+      try {
+        tmp.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+
+    test('keep-full-copy toggles a library rule and publishes a status', () async {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      expect(m.keepsFullCopy(s, 'music'), isFalse);
+      expect(m.hasRules(s), isFalse);
+
+      // syncAvailable is unset, so the sync the toggle kicks off returns early.
+      m.setKeepFullCopy(s, 'music', true);
+      expect(m.keepsFullCopy(s, 'music'), isTrue);
+      expect(m.hasRules(s), isTrue);
+      final rule = LibraryIndexManager().index!.subscriptionsFor('home').single;
+      expect(rule.kind, 'library');
+      expect(rule.key, 'music');
+      expect(m.statusFor(s)!.files, 0);
+      expect(m.statusFor(s)!.running, isFalse);
+
+      m.setKeepFullCopy(s, 'music', false);
+      expect(m.keepsFullCopy(s, 'music'), isFalse);
+      expect(LibraryIndexManager().index!.subscriptionsFor('home'), isEmpty);
+      expect(await m.sync(s), isNull, reason: 'no sync flag → no run');
+    });
+
+    test('album / artist rules: keepsRule, setRule, canKeep', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      expect(m.canKeep(s), isFalse, reason: 'no sync flag');
+      s.syncAvailable = true;
+      expect(m.canKeep(s), isTrue);
+      // Back to "unknown" so the sync a toggle kicks off returns early.
+      s.syncAvailable = null;
+      m.setRule(s, RuleKind.album, 'Be Somebody', true);
+      m.setRule(s, RuleKind.artist, 'Icarus', true);
+      expect(m.keepsRule(s, RuleKind.album, 'Be Somebody'), isTrue);
+      expect(m.keepsRule(s, RuleKind.album, 'Other'), isFalse);
+      expect(m.keepsFullCopy(s, 'music'), isFalse);
+      final rules = LibraryIndexManager().index!.subscriptionsFor('home');
+      expect(rules.map((r) => (r.kind, r.key)),
+          [(RuleKind.album, 'Be Somebody'), (RuleKind.artist, 'Icarus')]);
+      m.setRule(s, RuleKind.album, 'Be Somebody', false);
+      expect(LibraryIndexManager().index!.subscriptionsFor('home').single.kind,
+          RuleKind.artist);
+    });
+
+    test('playlist rule, rated threshold and the entity list', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      m.setRule(s, RuleKind.playlist, 'Mix', true);
+      m.setRule(s, RuleKind.album, 'Alpha', true);
+      expect(m.entityRules(s).map((r) => (r.kind, r.key)),
+          [(RuleKind.playlist, 'Mix'), (RuleKind.album, 'Alpha')]);
+      expect(m.ratedThreshold(s), isNull);
+      m.setRatedThreshold(s, 8);
+      expect(m.ratedThreshold(s), 8);
+      m.setRatedThreshold(s, 10);
+      expect(m.ratedThreshold(s), 10, reason: 'one rated rule, replaced');
+      final ix = LibraryIndexManager().index!;
+      expect(ix.subscriptionsFor('home').where((r) => r.kind == RuleKind.rated),
+          hasLength(1));
+      expect(m.entityRules(s), hasLength(2), reason: 'rated is not an entity');
+      m.setRatedThreshold(s, null);
+      expect(m.ratedThreshold(s), isNull);
+      m.setRule(s, RuleKind.playlist, 'Mix', false);
+      expect(m.entityRules(s).single.key, 'Alpha');
+      m.setRule(s, RuleKind.folder, '/music/Live', true);
+      expect(m.entityRules(s).map((r) => (r.kind, r.key)),
+          [(RuleKind.album, 'Alpha'), (RuleKind.folder, '/music/Live')]);
+    });
+
+    test('folderRuleKey: leading slash on, trailing slash off', () {
+      expect(folderRuleKey('music/Live'), '/music/Live');
+      expect(folderRuleKey('/music/Live/'), '/music/Live');
+      expect(folderRuleKey('/'), '/');
+      expect(folderRuleKey(''), '/');
+    });
+
+    test('kept quality: new entity rules take it, existing ones are re-keyed, library rules stay original', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      final ix = LibraryIndexManager().index!;
+      m.setKeepFullCopy(s, 'music', true);
+      m.setRule(s, RuleKind.album, 'Alpha', true);
+      m.setRatedThreshold(s, 8);
+      expect(ix.subscriptionsFor('home').map((r) => r.quality), everyElement('original'));
+
+      m.setKeepQuality(s, 'opus-96');
+      expect(s.mirrorQuality, 'opus-96');
+      expect({for (final r in ix.subscriptionsFor('home')) '${r.kind}:${r.key}': r.quality},
+          {'library:music': 'original', 'album:Alpha': 'opus-96', 'rated:8': 'opus-96'});
+      m.setRule(s, RuleKind.artist, 'Ann', true);
+      expect(ix.subscriptionsFor('home').last.quality, 'opus-96');
+      expect(m.keepsRule(s, RuleKind.album, 'Alpha'), isTrue, reason: 'quality-blind');
+      expect(m.ratedThreshold(s), 8);
+      expect(m.entityRules(s), hasLength(2));
+
+      m.setKeepQuality(s, 'flac');
+      expect(s.mirrorQuality, 'opus-96', reason: 'not a tier: ignored');
+      m.setKeepQuality(s, 'original');
+      expect(ix.subscriptionsFor('home').map((r) => r.quality), everyElement('original'));
+      expect(ix.subscriptionsFor('home'), hasLength(4));
+      m.setRule(s, RuleKind.album, 'Alpha', false);
+      expect(m.keepsRule(s, RuleKind.album, 'Alpha'), isFalse);
+    });
+  });
+
+  group('Server library-copy settings', () {
+    const base = {'url': 'u', 'username': null, 'password': null, 'jwt': null, 'localname': 'l'};
+
+    test('defaults: 30 days, Wi-Fi only, sync flag unknown, original quality', () {
+      final s = Server.fromJson(Map.of(base));
+      expect(s.mirrorRetentionDays, 30);
+      expect(s.mirrorWifiOnly, isTrue);
+      expect(s.syncAvailable, isNull);
+      expect(s.mirrorQuality, 'original');
+      expect(s.mirrorTiers, isEmpty);
+    });
+
+    test('round-trips', () {
+      final s = Server.fromJson({...base, 'mirrorRetentionDays': 0, 'mirrorWifiOnly': false,
+        'syncAvailable': true, 'mirrorQuality': 'opus-96'});
+      final back = Server.fromJson(s.toJson());
+      expect(back.mirrorRetentionDays, 0);
+      expect(back.mirrorWifiOnly, isFalse);
+      expect(back.syncAvailable, isTrue);
+      expect(back.mirrorQuality, 'opus-96');
+    });
+
+    test('junk values fall back to the defaults', () {
+      final s = Server.fromJson({...base, 'mirrorRetentionDays': 'x', 'mirrorWifiOnly': 3,
+        'syncAvailable': 'yes', 'mirrorQuality': 5});
+      expect(s.mirrorRetentionDays, 30);
+      expect(s.mirrorWifiOnly, isTrue);
+      expect(s.syncAvailable, isNull);
+      expect(s.mirrorQuality, 'original');
+    });
+  });
+}
