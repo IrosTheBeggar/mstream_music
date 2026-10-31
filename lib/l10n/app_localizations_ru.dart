@@ -6309,4 +6309,8 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ytdlChooseLoading => 'Loading folders';
+
+  @override
+  String get ytdlRowNoConnection =>
+      'Didn\'t start · the phone couldn\'t reach the server';
 }

@@ -9699,6 +9699,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading folders'**
   String get ytdlChooseLoading;
+
+  /// Status of a row in the Needs a look section of Add from YouTube: the add never left the phone because it had no connection to the server, so the server never started it. A 'Try again' button follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t start · the phone couldn\'t reach the server'**
+  String get ytdlRowNoConnection;
 }
 
 class _AppLocalizationsDelegate

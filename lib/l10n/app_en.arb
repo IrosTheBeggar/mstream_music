@@ -6957,5 +6957,9 @@
   "ytdlChooseLoading": "Loading folders",
   "@ytdlChooseLoading": {
     "description": "Read by a screen reader while the Choose a folder sheet lists the folders of the folder on screen (the rows show as still placeholders meanwhile)."
+  },
+  "ytdlRowNoConnection": "Didn't start · the phone couldn't reach the server",
+  "@ytdlRowNoConnection": {
+    "description": "Status of a row in the Needs a look section of Add from YouTube: the add never left the phone because it had no connection to the server, so the server never started it. A 'Try again' button follows."
   }
 }
