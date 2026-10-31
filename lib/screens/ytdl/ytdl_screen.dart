@@ -104,13 +104,7 @@ class _YtdlScreenState extends State<YtdlScreen> {
     final nav = route?.navigator;
     if (route == null || nav == null || !route.isActive) return;
     _closing = true;
-    final l = AppLocalizations.of(context);
-    final s = _st.server;
-    final why = s.noUpload == true
-        ? l.ytdlErrUploadsOff
-        : s.transcodeAvailable == false
-        ? l.ytdlErrFfmpeg
-        : null;
+    final why = ytdlEntryOffReason(AppLocalizations.of(context), _st.server);
     if (why != null) YtdlHub().showToast(why);
     nav.popUntil((r) => r == route);
     nav.pop();

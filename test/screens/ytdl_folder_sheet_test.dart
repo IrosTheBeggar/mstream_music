@@ -217,6 +217,46 @@ void main() {
     expect(d.attached, isFalse);
   });
 
+  group('the feature gone (spec §8: closes or opens nothing, saying why)', () {
+    testWidgets('opened after a re-ping turned uploads off (a stale menu '
+        'item): no sheet, the toast', (t) async {
+      s.noUpload = true;
+      await ui.pumpSheet(t, s, here);
+      expect(find.byType(YtdlFolderSheet), findsNothing);
+      expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+    });
+
+    testWidgets('… conversion off says so', (t) async {
+      s.transcodeAvailable = false;
+      await ui.pumpSheet(t, s, here);
+      expect(find.byType(YtdlFolderSheet), findsNothing);
+      expect(h().toastTexts, [h().l.ytdlErrFfmpeg]);
+    });
+
+    testWidgets('gone while the picker stood in for the sheet: the sheet '
+        'doesn\'t come back, and says why', (t) async {
+      final d = await filled(t);
+      d.setSubLayout(kYtdlLayoutAlbum);
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      h().fake.mkdirRefusal = (500, 'EACCES');
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      // The picker: a re-ping lands while it is up, and it closes empty.
+      YtdlSheets.chooseFolder = (context, draft) async {
+        s.noUpload = true;
+        await h().hub.stateFor(s).rememberFormat('mp3');
+        return null;
+      };
+      await t.tap(byKey('ytdl-mkdir-choose'));
+      await t.pumpAndSettle();
+      await ui.settle(t);
+      await t.pumpAndSettle();
+      expect(find.byType(YtdlFolderSheet), findsNothing);
+      expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+    });
+  });
+
   group('Sort into subfolders (ExplorerSubfolders)', () {
     Future<YtdlDraft> page(WidgetTester t) async {
       final d = await filled(t);

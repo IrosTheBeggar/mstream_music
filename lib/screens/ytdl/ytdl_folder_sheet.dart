@@ -33,13 +33,23 @@ import 'ytdl_result_card.dart';
 /// folder that couldn't be made) never opens a sheet on top of this one
 /// (spec §1): this sheet goes, the folder picker comes, and this sheet
 /// comes back with the pick applied — or as it was, when cancelled.
+///
+/// The feature gone for [server] (a re-ping turned uploads or conversion
+/// off — after a menu offering it was built, or while the picker was up)
+/// opens nothing, and says why.
 Future<void> showYtdlFolderSheet(
   BuildContext context,
   Server server,
   String currentPath,
 ) async {
+  final st = YtdlHub().stateFor(server);
   for (;;) {
     if (!context.mounted) return;
+    if (!st.entryAllowed) {
+      final why = ytdlEntryOffReason(AppLocalizations.of(context), server);
+      if (why != null) YtdlHub().showToast(why);
+      return;
+    }
     final gone = Completer<void>();
     final exit = await showModalBottomSheet<YtdlFolderSheetExit>(
       context: context,
@@ -60,10 +70,7 @@ Future<void> showYtdlFolderSheet(
     // shows over it, and the sheet coming back attaches after it.
     await gone.future;
     if (!context.mounted) return;
-    final st = YtdlHub().stateFor(server);
     await ytdlChooseFolder(context, st.folderDraft(currentPath));
-    // The feature went away while the picker was up: nothing to come back to.
-    if (!st.entryAllowed) return;
   }
 }
 
@@ -121,13 +128,7 @@ class _YtdlFolderSheetState extends State<YtdlFolderSheet> {
   /// A re-ping turned the feature off: the sheet closes, saying why.
   void _stateMoved() {
     if (_closing || !mounted || _st.entryAllowed) return;
-    _close(
-      why: _st.server.noUpload == true
-          ? AppLocalizations.of(context).ytdlErrUploadsOff
-          : _st.server.transcodeAvailable == false
-          ? AppLocalizations.of(context).ytdlErrFfmpeg
-          : null,
-    );
+    _close(why: ytdlEntryOffReason(AppLocalizations.of(context), _st.server));
   }
 
   /// Closes this sheet's own route — and whatever is open over it (the

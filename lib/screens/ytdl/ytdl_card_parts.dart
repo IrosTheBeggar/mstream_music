@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../objects/server.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_jobs.dart' show pathCrumbs;
 import '../../util/image_cache.dart';
@@ -37,6 +38,16 @@ Future<void> ytdlChooseFolder(BuildContext context, YtdlDraft draft) async {
   final dir = await YtdlSheets.chooseFolder(context, draft);
   if (dir != null) draft.useFolder(dir);
 }
+
+/// Why Add from YouTube went away for [server], for the toast a surface
+/// shows as it closes or declines to open (spec §8): uploads off, else
+/// audio conversion not ready; null for anything else (no library left).
+String? ytdlEntryOffReason(AppLocalizations l, Server server) =>
+    server.noUpload == true
+        ? l.ytdlErrUploadsOff
+        : server.transcodeAvailable == false
+        ? l.ytdlErrFfmpeg
+        : null;
 
 /// Every tap target here is at least this tall (spec §9); the 32–44 px
 /// drawn chips and links get the rest as padding.
