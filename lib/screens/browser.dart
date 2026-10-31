@@ -42,6 +42,7 @@ import 'discovery/discovery_widgets.dart';
 import 'discovery/keep_copy_ui.dart';
 import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
+import 'ytdl/ytdl_folder_strip.dart';
 import 'ytdl/ytdl_home_lines.dart';
 import 'ytdl/ytdl_screen.dart';
 
@@ -749,6 +750,11 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
+                  // The subfolder an Add from YouTube just went into, for 2 s
+                  // (a tint: the row keeps its height).
+                  tileColor: YtdlRowHighlight.isLit(b[i])
+                      ? VelvetColors.primaryDim
+                      : null,
                   // Long-press = this row's actions, the same convention the
                   // track rows use. The swipe pane has carried Add all for a
                   // while, but a swipe is only found by accident.
@@ -1163,7 +1169,10 @@ class _BrowserState extends State<Browser> {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Material(
-            color: VelvetColors.bg,
+            // The file an Add from YouTube just put here, tinted for 2 s.
+            color: YtdlRowHighlight.isLit(b[i])
+                ? Color.alphaBlend(VelvetColors.primaryDim, VelvetColors.bg)
+                : VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
                 // Nothing for an .m3u: the track sheet rates, queues and finds
@@ -1321,6 +1330,18 @@ class _BrowserState extends State<Browser> {
       onClear: () =>
           unawaited(ApiManager().setMoodFilter(frame, MoodFilter.empty)),
     );
+  }
+
+  /// The folder on screen's Add from YouTube strip, or nothing: not a
+  /// server folder that offers it (ytdlExplorerEntry), or nothing running
+  /// or failed there.
+  Widget _ytdlStrip() {
+    final server = ytdlExplorerServer();
+    final path = BrowserManager().currentPath;
+    if (server == null || path == null || !ytdlExplorerEntry()) {
+      return const SizedBox.shrink();
+    }
+    return YtdlFolderStrip(server: server, path: path);
   }
 
   /// A Discover header, in the home's section style (small accent caps).
@@ -1503,6 +1524,12 @@ class _BrowserState extends State<Browser> {
       StreamBuilder<List<DisplayItem>>(
         stream: BrowserManager().browserListStream,
         builder: (context, _) => _moodStrip(),
+      ),
+      // A File Explorer folder Add from YouTube is adding into (or below):
+      // "Adding “One More Time”… · See all", or the failure's Details.
+      StreamBuilder<List<DisplayItem>>(
+        stream: BrowserManager().browserListStream,
+        builder: (context, _) => _ytdlStrip(),
       ),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
