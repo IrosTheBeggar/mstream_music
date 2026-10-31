@@ -535,6 +535,16 @@ class ServerManager {
     notifyServerChanged();
   }
 
+  /// The network is back: ask every server the copy stands in for now, not
+  /// at the next app resume, so an automatic switch ends as soon as the
+  /// server answers. A server behind an iroh tunnel is asked when its
+  /// tunnel reconnects instead; the copy chosen by hand is left alone.
+  void recheckOffline() {
+    for (final s in serverList) {
+      if (s.offlineAuto && !s.isIrohTransport) unawaited(getServerPaths(s));
+    }
+  }
+
   /// Back to the server after browsing the copy by choice: the writes
   /// queued meanwhile are sent, and a ping decides whether the server is
   /// really there — one that is still unreachable flips straight back on
@@ -549,10 +559,12 @@ class ServerManager {
   }
 
   /// Re-emits the server streams after a runtime flag flipped (the app bar's
-  /// offline chip, the Library copy screen).
+  /// offline chip, the Library copy screen), and redraws a home in front
+  /// whose Offline card the flip made stale.
   void notifyServerChanged() {
     _serverListStream.sink.add(serverList);
     _currentServerStream.sink.add(currentServer);
+    BrowserManager().refreshOfflineCard();
   }
 
   /// `GET /api/` — the layered server-info endpoint (mStream #932/#934):

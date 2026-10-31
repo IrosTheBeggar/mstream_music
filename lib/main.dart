@@ -350,6 +350,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         unawaited(PlaySync().drain(reason: 'connectivity', bypassBackoff: true));
         unawaited(ServerManager()
             .handleNetworkChange(reason: 'connectivity:$names'));
+        // A server the library copy stood in for is asked again now.
+        ServerManager().recheckOffline();
         // Resume on-device playback if a network outage had paused it (no-op
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();

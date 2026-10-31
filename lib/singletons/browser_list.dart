@@ -38,6 +38,34 @@ class BrowserManager {
   static bool Function(Server server) homeCopiesRow = noCopiesRow;
   static bool noCopiesRow(Server server) => false;
 
+  /// The home's "Browse offline" card's second line, in its machine form:
+  /// the copy browsed by choice or because the server is unreachable, else
+  /// whether the index holds the server's library yet.
+  static String offlineCardState(Server server) => server.browseOffline
+      ? (server.offlineAuto ? 'offline:auto' : 'offline:on')
+      : ((LibraryIndexManager().index?.remoteCount(server.localname) ?? 0) > 0
+          ? 'offline:ready'
+          : 'offline:none');
+
+  /// Whether [home]'s "Browse offline" card no longer says what state the
+  /// copy is in — a sync landed, or the server went away or came back,
+  /// while the home was drawn.
+  static bool _offlineCardStale(List<DisplayItem> home) {
+    for (final i in home) {
+      if (i.type == 'execAction' && i.data == 'browseOffline') {
+        return i.server != null && i.subtext != offlineCardState(i.server!);
+      }
+    }
+    return false;
+  }
+
+  /// Draws the home again when it is in front and its Offline card is
+  /// stale — never otherwise, so a background sync does not reset it.
+  void refreshOfflineCard() {
+    if (browserCache.length != 1 || !isHomeList(browserList)) return;
+    if (_offlineCardStale(browserList)) goToNavScreen();
+  }
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip
@@ -509,13 +537,7 @@ class BrowserManager {
             'execAction',
             'browseOffline',
             Icon(Icons.cloud_off_outlined, color: VelvetColors.textSecondary),
-            server.browseOffline
-                ? (server.offlineAuto ? 'offline:auto' : 'offline:on')
-                : ((LibraryIndexManager().index?.remoteCount(server.localname) ??
-                            0) >
-                        0
-                    ? 'offline:ready'
-                    : 'offline:none')),
+            offlineCardState(server)),
       ],
     ];
 
@@ -783,6 +805,12 @@ class BrowserManager {
     browserList
       ..clear()
       ..addAll(browserCache.last);
+
+    // Back on a home drawn before the library copy changed: draw it again.
+    if (browserCache.length == 1 && _offlineCardStale(browserList)) {
+      goToNavScreen();
+      return;
+    }
 
     // Restore scroll BEFORE emitting so the rebuilt ListView lays
     // out at the target offset in its first frame. Going through

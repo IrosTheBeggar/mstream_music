@@ -65,6 +65,43 @@ void main() {
     expect(s.offlineAuto, isTrue);
   });
 
+  test('the network coming back asks again only the servers the copy stands in for', () async {
+    // One listener per server, so each one's pings are counted apart.
+    final hits = <String, int>{};
+    final listeners = <HttpServer>[];
+    Future<Server> serverNamed(String name) async {
+      final http = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      listeners.add(http);
+      http.listen((req) {
+        hits[name] = (hits[name] ?? 0) + 1;
+        req.response
+          ..statusCode = 503
+          ..close();
+      });
+      return Server('http://127.0.0.1:${http.port}', null, null, null, name);
+    }
+
+    final away = (await serverNamed('away'))
+      ..browseOffline = true
+      ..offlineAuto = true;
+    final chosen = (await serverNamed('chosen'))..browseOffline = true;
+    final online = await serverNamed('online');
+    ServerManager().serverList.addAll([away, chosen, online]);
+
+    ServerManager().recheckOffline();
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    expect(hits['away'], greaterThan(0), reason: 'switched automatically: asked');
+    expect(hits['chosen'], isNull, reason: 'browsed by choice: left alone');
+    expect(hits['online'], isNull, reason: 'not on the copy at all');
+    // Any HTTP answer, an error included, means the server is there again.
+    expect(away.offlineAuto, isFalse, reason: 'it answered: back online');
+    expect(away.browseOffline, isFalse);
+    expect(chosen.browseOffline, isTrue);
+    for (final l in listeners) {
+      await l.close(force: true);
+    }
+  });
+
   test('without index rows a failed ping never switches', () async {
     final s = Server('http://127.0.0.1:$port', null, null, null, 'empty');
     ServerManager().serverList.add(s);

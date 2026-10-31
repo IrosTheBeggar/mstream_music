@@ -325,6 +325,8 @@ class MirrorManager {
       _publish(name);
       // Files landed or left: the browser's badges are existence-derived.
       unawaited(BrowserManager().refreshDownloadStatus(s));
+      // A first run fills the index the home's Offline card reads.
+      BrowserManager().refreshOfflineCard();
     }
   }
 

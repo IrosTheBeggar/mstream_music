@@ -86,6 +86,40 @@ void main() {
     expect(card().subtext, 'offline:auto');
   });
 
+  test('a home whose Offline card went stale is drawn again — in front, or on the way back', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    DisplayItem card() =>
+        BrowserManager().browserList.firstWhere((i) => i.data == 'browseOffline');
+
+    BrowserManager().goToNavScreen();
+    expect(card().subtext, 'offline:none');
+    final drawn = BrowserManager().browserCache.single;
+    BrowserManager().refreshOfflineCard();
+    expect(BrowserManager().browserCache.single, same(drawn),
+        reason: 'nothing changed: the home is left as drawn');
+
+    // The server went away while the home was in front.
+    s.browseOffline = true;
+    s.offlineAuto = true;
+    BrowserManager().refreshOfflineCard();
+    expect(card().subtext, 'offline:auto');
+
+    // It came back while a list was in front: the list is left alone, and
+    // the home is drawn again on the way back to it.
+    BrowserManager().addListToStack([
+      DisplayItem(s, 'An artist', 'artist', 'An artist', null, null),
+    ]);
+    s.browseOffline = false;
+    s.offlineAuto = false;
+    BrowserManager().refreshOfflineCard();
+    expect(BrowserManager().browserCache, hasLength(2));
+    BrowserManager().popBrowser();
+    expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
+    expect(card().subtext, 'offline:none');
+  });
+
   test('the offline landing lists what the copy can browse, headed by its status, ending with the way back', () {
     final s = Server('https://home.example.com', null, null, 'JWT', 'home');
     manager.serverList.add(s);
