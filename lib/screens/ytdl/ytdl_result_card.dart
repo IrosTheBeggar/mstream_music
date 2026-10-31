@@ -115,6 +115,8 @@ class YtdlResultCard extends StatelessWidget {
     );
   }
 
+  /// The card: raised, and its links, tags and status words measured on
+  /// that ground ([YtdlGround]).
   Widget _shell({Key? key, required List<Widget> children}) => Container(
     key: key,
     width: double.infinity,
@@ -123,9 +125,12 @@ class YtdlResultCard extends StatelessWidget {
       color: VelvetColors.raised,
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
+    child: YtdlGround(
+      color: VelvetColors.raised,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     ),
   );
 

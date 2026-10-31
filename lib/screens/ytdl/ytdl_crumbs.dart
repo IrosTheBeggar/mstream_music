@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
-import '../discovery/keep_copy_ui.dart' show keepInk;
+import 'ytdl_card_parts.dart' show ytdlInk;
 
 /// How Add from YouTube draws a folder path ("Music › Daft Punk ›
 /// Discovery"), on the card, in rows, toasts and the explorer strip.
@@ -163,7 +163,7 @@ class YtdlNewTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final ink = keepInk();
+    final ink = ytdlInk(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(

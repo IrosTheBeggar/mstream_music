@@ -14,6 +14,7 @@ import '../../util/ytdl_link.dart';
 import '../auto_dj_sheets.dart' show autoDjServerName;
 import '../discovery/destination_pieces.dart';
 import '../discovery/keep_copy_ui.dart';
+import 'ytdl_card_parts.dart' show YtdlGround;
 import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart';
 
@@ -748,41 +749,46 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
             : null,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
-        crossAxisAlignment: blocked != null
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: blocked != null ? 0 : 2),
-            child: Icon(
-              warn ? Icons.warning_amber_rounded : Icons.folder_outlined,
-              size: 18,
-              color: warn
-                  ? keepTone(VelvetColors.warning)
-                  : VelvetColors.textSecondary,
+      // The path's "new" tags and the bracket warning's link are measured
+      // on the raised card they sit on.
+      child: YtdlGround(
+        color: VelvetColors.raised,
+        child: Row(
+          crossAxisAlignment: blocked != null
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: blocked != null ? 0 : 2),
+              child: Icon(
+                warn ? Icons.warning_amber_rounded : Icons.folder_outlined,
+                size: 18,
+                color: warn
+                    ? keepTone(VelvetColors.warning)
+                    : VelvetColors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drawn at once; read once it has settled.
-                Semantics(
-                  container: true,
-                  liveRegion: true,
-                  label: _spoken ?? m.spoken,
-                  excludeSemantics: true,
-                  child: shown,
-                ),
-                if (!compact && trap != null)
-                  _trapPanel(l, m.trapWords!, trap),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drawn at once; read once it has settled.
+                  Semantics(
+                    container: true,
+                    liveRegion: true,
+                    label: _spoken ?? m.spoken,
+                    excludeSemantics: true,
+                    child: shown,
+                  ),
+                  if (!compact && trap != null)
+                    _trapPanel(l, m.trapWords!, trap),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -790,7 +796,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
   /// The bracket warning (YearTrap): amber, with the link that fills the
   /// folder.
   Widget _trapPanel(AppLocalizations l, String words, YtdlTrap trap) {
-    final ink = keepInk();
+    final ink = keepInkOn(VelvetColors.raised);
     final link = trap.kind == YtdlTrapKind.missingYear
         ? l.ytdlTrapAddYear
         : l.ytdlEditTags;

@@ -286,7 +286,7 @@ class _YtdlTagFieldsState extends State<YtdlTagFields> {
   }) {
     final year = f == YtdlField.year;
     final invalid = year && _d.yearInvalid;
-    final err = keepTone(VelvetColors.error);
+    final err = ytdlTone(context, VelvetColors.error);
     final radius = BorderRadius.circular(7);
     OutlineInputBorder edge(Color c, double w) => OutlineInputBorder(
       borderRadius: radius,

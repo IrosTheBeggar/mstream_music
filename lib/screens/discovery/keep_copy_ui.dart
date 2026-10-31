@@ -67,6 +67,9 @@ Color keepTone(Color c) => _readable(c, VelvetColors.card);
 /// The same, on the page's ground (the row markers' glyphs).
 Color keepToneOnPage(Color c) => _readable(c, VelvetColors.bg);
 
+/// The same, on any [ground] (text on a raised card).
+Color keepToneOn(Color c, Color ground) => _readable(c, ground);
+
 // ── pieces ────────────────────────────────────────────────────────────────
 
 /// A 44 px tall hit band around a smaller control.

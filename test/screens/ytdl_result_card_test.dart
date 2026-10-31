@@ -8,16 +8,24 @@
 // this folder", letters outside A–Z), the bracket warning's links to the
 // field, the name check by tier (Add anyway; blocked with Change format
 // and Change), the noMkdir choices, the summary a screen reader hears, the
-// restore chips' spoken names, and 360 dp at 200% without overflow.
+// restore chips' spoken names, 360 dp at 200% without overflow, and its
+// links, tags and year error at 4.5:1 on the raised card in every theme
+// and accent.
+
+import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
+import 'package:mstream_music/screens/ytdl/ytdl_card_parts.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_draft.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_saves_block.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
 import 'package:mstream_music/util/ytdl_layout.dart';
+import 'package:mstream_music/widgets/accent_color_sheet.dart' show kAccentPresets;
 
 import '../singletons/ytdl_fakes.dart';
 import 'ytdl_ui_fixtures.dart';
@@ -67,10 +75,11 @@ void main() {
       expect(crumbs.newAt, {2});
       expect(shows(t, 'about One_More_Time.mp3'), isTrue);
       expect(find.text(l.ytdlSavesTo.toUpperCase()), findsOneWidget);
-      // "new" is the one amber mark on the path.
+      // "new" is the one amber mark on the path, in the ink measured on the
+      // raised card it sits on.
       final tag = t.widget<Text>(find.descendant(
           of: find.byType(YtdlNewTag), matching: find.byType(Text)));
-      expect(tag.style!.color, keepInk());
+      expect(tag.style!.color, keepInkOn(VelvetColors.raised));
     });
 
     testWidgets('Edit tags: each field from YouTube Music; Edited; blank lines',
@@ -547,6 +556,51 @@ void main() {
       await card(t, kOneMoreTime, size: const Size(360, 800));
       expect(savesCrumbs(t).crumbs, ['Music', 'عمرو دياب', 'نور العين']);
       expect(t.takeException(), isNull);
+    });
+  });
+
+  group('small text on the raised card (spec §9: 4.5:1)', () {
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+    }
+
+    Color inkOf(WidgetTester t, Finder of) => t
+        .widget<Text>(find.descendant(of: of, matching: find.byType(Text)).first)
+        .style!
+        .color!;
+
+    testWidgets('links, tags and the year error, in every theme and accent',
+        (t) async {
+      addTearDown(() => VelvetColors.setActive(paletteFor(AppTheme.dark)));
+      h().fake.folder('/Music/Daft Punk/');
+      final d = await card(t, kOneMoreTime);
+      d.useFolder('/Music/Daft Punk/');
+      await openTags(t);
+      await t.enterText(byKey('ytdl-field-year'), '01');
+      await t.pump();
+      expect(byKey('ytdl-year-error'), findsOneWidget);
+      for (final theme in AppTheme.values) {
+        for (final accent in <Color?>[null, ...kAccentPresets]) {
+          final base = paletteFor(theme);
+          final p = accent == null ? base : base.withAccent(accent);
+          VelvetColors.setActive(p);
+          // Every element rebuilt under the new palette, as a theme switch
+          // does it.
+          unawaited(t.binding.reassembleApplication());
+          await t.pump();
+          final what = '${theme.name} ${accent ?? 'default'}';
+          for (final (name, ink) in [
+            ('Edit tags', inkOf(t, byKey('ytdl-edit-tags'))),
+            ('Change', inkOf(t, byKey('ytdl-saves-change'))),
+            ('Just this song', inkOf(t, find.byType(YtdlTag))),
+            ('the year error', inkOf(t, byKey('ytdl-year-error'))),
+          ]) {
+            expect(contrast(ink, p.raised), greaterThanOrEqualTo(4.5),
+                reason: '$name, $what');
+          }
+        }
+      }
     });
   });
 }

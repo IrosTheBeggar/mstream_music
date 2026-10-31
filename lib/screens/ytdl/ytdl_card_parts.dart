@@ -88,6 +88,33 @@ List<String> ytdlSampleCrumbs(AppLocalizations l, YtdlChoice c) {
 
 final RegExp _token = RegExp(r'\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}');
 
+/// The ground the parts below are drawn on, when it is not the sheet's:
+/// the result card and a sheet's preview card are raised. Their inks are
+/// measured against it ([ytdlInk], [ytdlTone]), so small text stays at
+/// 4.5:1 on the card it sits on (spec §9) in every theme and accent.
+class YtdlGround extends InheritedWidget {
+  final Color color;
+  const YtdlGround({super.key, required this.color, required super.child});
+
+  static Color? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<YtdlGround>()?.color;
+
+  @override
+  bool updateShouldNotify(YtdlGround oldWidget) => oldWidget.color != color;
+}
+
+/// Text in the primary's place ([keepInk]), on the ground it is drawn on.
+Color ytdlInk(BuildContext context) {
+  final ground = YtdlGround.maybeOf(context);
+  return ground == null ? keepInk() : keepInkOn(ground);
+}
+
+/// A status colour as text ([keepTone]), on the ground it is drawn on.
+Color ytdlTone(BuildContext context, Color c) {
+  final ground = YtdlGround.maybeOf(context);
+  return ground == null ? keepTone(c) : keepToneOn(c, ground);
+}
+
 /// An inline link in the primary's ink (Change, Undo all, Use them, Try
 /// again…): 13–14/600 text on a 48 px band, padded at the sides.
 class YtdlTextLink extends StatelessWidget {
@@ -115,7 +142,7 @@ class YtdlTextLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ink = onTap == null ? VelvetColors.textTertiary : keepInk();
+    final ink = onTap == null ? VelvetColors.textTertiary : ytdlInk(context);
     final text = Text(
       label,
       maxLines: wrap ? null : 1,
@@ -363,7 +390,7 @@ class YtdlTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ink = keepInk();
+    final ink = ytdlInk(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 20),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
