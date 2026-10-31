@@ -27,6 +27,7 @@ import '../util/image_cache.dart';
 import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
+import '../singletons/ytdl_hub.dart';
 import 'federation/federation_screen.dart';
 import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
@@ -41,6 +42,8 @@ import 'discovery/discovery_widgets.dart';
 import 'discovery/keep_copy_ui.dart';
 import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
+import 'ytdl/ytdl_home_lines.dart';
+import 'ytdl/ytdl_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -187,6 +190,17 @@ class _BrowserState extends State<Browser> {
         browserList[index].data == 'torrents') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
+      return;
+    }
+    // Add from YouTube: its own pushed route, like Add torrent (the player
+    // overlay stays under it), for the server whose home this is.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'ytdl') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => YtdlScreen(server: s)));
+      }
       return;
     }
     // Copies: what the server is copying for you (Discover's Keep a copy),
@@ -1039,6 +1053,9 @@ class _BrowserState extends State<Browser> {
                     else if (item.data == 'copies' && item.server != null)
                       // Live counts only: "Copying 2" / "1 failed".
                       CopiesHomeLines(jobs: CopiesHub().jobsFor(item.server!))
+                    else if (item.data == 'ytdl' && item.server != null)
+                      // "Adding 1" / "1 failed" / "Added 2", else nothing.
+                      YtdlHomeLines(state: YtdlHub().stateFor(item.server!))
                     else if (item.subtext != null)
                       Text(
                         homeCardSubtext(l, item.subtext!),
