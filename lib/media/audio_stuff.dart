@@ -637,6 +637,20 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  /// Settings › Reset: the saved EQ is already back to its defaults (off,
+  /// flat, limiter on) — bring the live engine along. The ten-band engine
+  /// keeps its last gains until told, so the EQ screen and a later enable
+  /// would bring the old curve back; the five-band one is rebuilt plain by
+  /// turning it off.
+  Future<void> resetEqualizer({required bool wasOn}) async {
+    final dyn = dynamicsEqualizer;
+    if (dyn != null) {
+      await dyn.setGains(List<double>.filled(DynamicsEqualizer.bandCount, 0));
+      await dyn.setLimiter(SettingsManager().eqLimiter);
+    }
+    if (wasOn) await setEqEnabled(false);
+  }
+
   /// Toggle the native EQ on or off. just_audio fixes the audio pipeline at
   /// player construction, so this rebuilds the local player WITH or WITHOUT
   /// the EQ effect (LocalPlaybackBackend.rebuildPlayer) and carries playback

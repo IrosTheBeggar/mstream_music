@@ -234,9 +234,10 @@ class SettingsManager {
   // (background_downloader holds them until it's available).
   bool offlineQueue = false;
   bool offlineQueueWifiOnly = true;
-  // Cap on how many auto-downloaded (keep-queue-offline) tracks to retain. When
-  // the total grows past this, the oldest orphans (auto-downloads no longer in
-  // the queue) are deleted, newest kept. 0 = keep everything. Only auto-
+  // Cap on how many auto-downloaded (keep-queue-offline) tracks to retain: the
+  // sweep fetches at most this many from the playing one on, and when the
+  // total grows past it the oldest auto-downloads outside that window are
+  // deleted (DownloadManager.cacheWindow). 0 = keep everything. Only auto-
   // downloads count; user-initiated downloads are never evicted. Default 50.
   int autoDownloadCap = 50;
   // Discover screen: restrict the P2P / federation lead sections to artists
@@ -973,7 +974,13 @@ class SettingsManager {
     visualizerGlobalParams = const [];
     visualizerShaderParams = {};
     language = null;
+    // Rows on the Settings page itself: Reset there must reach them too.
+    torrentSkipChooser = false;
+    castVisualizerQuality = CastVisualizerQuality.fhd1080;
     _albumGridStream.add(albumGrid);
+    // The expanded player follows this stream; without it the player keeps
+    // the old layout until a restart while the row already says Medium.
+    _playerLayoutStream.add(playerLayout);
     _letterStripStream.add(letterStripThreshold);
     _letterStripSideStream.add(letterStripSide);
     _themeStream.add(appTheme);

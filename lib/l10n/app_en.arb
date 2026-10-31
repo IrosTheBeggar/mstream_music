@@ -37,10 +37,6 @@
   "@languageSystemDefault": {
     "description": "First entry in the language picker: follow the OS locale."
   },
-  "settingsLanguageSubtitle": "The app's display language. \"System default\" follows your device.",
-  "@settingsLanguageSubtitle": {
-    "description": "Subtitle under the language picker row in Settings."
-  },
   "couldNotOpen": "Could not open {url}",
   "@couldNotOpen": {
     "description": "Snackbar when a URL fails to launch.",
@@ -366,17 +362,13 @@
   "settingsTitle": "Settings",
   "settingsSectionAppearance": "Appearance",
   "settingsSectionPlayback": "Playback",
-  "settingsSectionBrowse": "Browse",
-  "settingsSectionAbout": "About",
+  "settingsSectionBrowse": "Library",
   "@settingsTitle": {
     "description": "Settings screen app bar title and section headers."
   },
   "settingsTheme": "Theme",
-  "themeSubtitleVelvet": "Navy and purple — the signature dark theme.",
-  "themeSubtitleDark": "Neutral dark with amber accents.",
-  "themeSubtitleLight": "Light body with a dark app bar and amber accents — matches the older shipped theme.",
   "@settingsTheme": {
-    "description": "Theme picker row label + per-theme subtitles."
+    "description": "Theme row title (the row shows the theme name) and its picker sheet title."
   },
   "settingsTranscode": "Transcode audio",
   "settingsTranscodeSubtitle": "Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.",
@@ -392,41 +384,33 @@
   },
   "settingsTapBehavior": "When you tap a song",
   "settingsStartupPage": "Startup page",
-  "settingsStartupPageSubtitle": "Open the app to this browser view; Back returns to the browser.",
-  "tapSubtitleAddToQueue": "Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.",
-  "tapSubtitlePlayFromHere": "Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.",
-  "tapSubtitleAppendAndJump": "Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.",
+  "tapSubtitleAddToQueue": "Adds it to the end of the queue",
+  "tapSubtitlePlayFromHere": "Replaces the queue and plays from that song",
+  "tapSubtitleAppendAndJump": "Adds it to the end of the queue and plays it now",
   "@settingsTapBehavior": {
-    "description": "Tap-behavior picker row label + per-mode subtitles."
+    "description": "Tap-behaviour row title and picker title; the tapSubtitle* strings are the picker hints and the first-run cards."
   },
-  "settingsVisualizerSource": "Visualizer audio source",
-  "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
-  "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",
+  "settingsVisualizerSource": "Audio source",
+  "visualizerSourceSubtitleSynthesized": "No permission needed",
+  "visualizerSourceSubtitleReal": "Needs the microphone permission, but never uses the mic",
   "@settingsVisualizerSource": {
-    "description": "Visualizer audio-source picker row label + per-source subtitles."
+    "description": "Visualizer audio-source row title under the Visualizer header; the visualizerSourceSubtitle* strings are its picker hints."
   },
-  "settingsAlbumGrid": "Album grid view",
-  "settingsAlbumGridSubtitle": "Show albums as a grid of cards with cover art instead of a plain list.",
+  "settingsAlbumGrid": "Album grid",
   "@settingsAlbumGrid": {
     "description": "Album-grid toggle row."
   },
-  "settingsFileMetadata": "Read song metadata in file explorer",
-  "settingsFileMetadataSubtitle": "Fetch title, artist, and album art for each song when browsing server files. Off shows raw filenames (faster for huge folders).",
+  "settingsFileMetadata": "Song info in File Explorer",
   "@settingsFileMetadata": {
     "description": "File-explorer metadata toggle row."
   },
-  "settingsLetterStrip": "Letter scrubber threshold",
-  "settingsLetterStripSubtitle": "Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.",
+  "settingsLetterStrip": "A–Z scrubber",
   "@settingsLetterStrip": {
     "description": "Letter-scrubber threshold slider row."
   },
-  "settingsLetterStripSide": "Scrubber side",
+  "settingsLetterStripSide": "Side",
   "@settingsLetterStripSide": {
     "description": "Label for the setting choosing which screen edge the A-Z scrubber sits on."
-  },
-  "settingsLetterStripSideSubtitle": "Which edge the A–Z strip sits on.",
-  "@settingsLetterStripSideSubtitle": {
-    "description": "Explains the scrubber-side setting."
   },
   "settingsLetterStripLeft": "Left",
   "@settingsLetterStripLeft": {
@@ -436,18 +420,17 @@
   "@settingsLetterStripRight": {
     "description": "Segmented-button option: scrubber on the right edge."
   },
-  "settingsReset": "Reset to defaults",
-  "settingsResetSubtitle": "Restore all settings on this screen to their default values. Servers and downloads are not affected.",
-  "settingsResetDone": "Settings restored to defaults",
+  "settingsReset": "Reset settings",
+  "settingsResetDone": "Settings reset",
   "@settingsReset": {
-    "description": "Reset-to-defaults row + confirmation snackbar."
+    "description": "Reset row title; settingsResetDone is the snackbar after it."
   },
   "realAudioDialogTitle": "Use real audio?",
   "realAudioDialogBody": "To react to the song that's playing, the visualizer reads mStream's own audio output, and Android only allows that with the microphone permission.",
   "realAudioPermPermanentlyDenied": "Permission permanently denied. Enable it in system settings to use real audio.",
   "realAudioPermDenied": "Permission denied. Staying on synthesized audio.",
   "@realAudioDialogTitle": {
-    "description": "Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer audio source — plus the denial snackbars."
+    "description": "Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer › Audio source — plus the denial snackbars."
   },
   "visualizerTapHint": "Tap = next preset · back arrow (top-left) or long-press to exit",
   "@visualizerTapHint": {
@@ -1185,12 +1168,12 @@
   "@browserFileExplorer": {
     "description": "Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated."
   },
-  "settingsVisualizerKnobs": "Visualizer tuning knobs",
-  "settingsVisualizerKnobsSubtitle": "Show live sliders over the visualizer to tweak each shader's audio reactivity. ShaderToy Visualizer only.",
+  "settingsVisualizerKnobs": "Tuning sliders",
+  "settingsVisualizerKnobsSubtitle": "ShaderToy only",
   "visualizerTuningTitle": "Tuning",
   "close": "Close",
   "@settingsVisualizerKnobs": {
-    "description": "Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English)."
+    "description": "Switch for the ShaderToy visualizer tuning sliders, under the Visualizer header (DSP param labels stay English)."
   },
   "migMoveStopped": "Move stopped — not enough space, or the location is unavailable.",
   "migMoveComplete": "Move complete",
@@ -1226,10 +1209,7 @@
   "mainMore": "More",
   "commonOn": "On",
   "commonOff": "Off",
-  "settingsCastQuality": "Cast visualizer quality",
-  "settingsCastQualitySubtitle720": "Resolution the visualizer streams to a TV at. 720p — lightest on the phone.",
-  "settingsCastQualitySubtitle1080": "Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).",
-  "settingsCastQualitySubtitle4k": "Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.",
+  "settingsCastQualitySubtitle4k": "Needs a 4K Chromecast; heaviest on the phone",
   "eqCasting": "The equalizer adjusts audio on this device, so it’s unavailable while casting. Disconnect to use it.",
   "browserNothingToDownload": "Nothing to download in this list",
   "browserDownloadAllTitle": "Download all",
@@ -1336,12 +1316,12 @@
   "castSearching": "Searching for cast devices…",
   "castNotSeeing": "Don't see your device? Make sure it's on the same Wi-Fi.",
   "castVisualizer": "Cast visualizer",
-  "castVisualizerSubtitle": "Stream the visualizer to the TV · Chromecast only",
+  "castVisualizerSubtitle": "Chromecast only",
   "castThisDevice": "This device",
   "@castThisDevice": {
     "description": "The local (phone) target in the cast picker — playback stays on this device instead of a Chromecast/DLNA renderer."
   },
-  "visualizerNoKnobs": "This shader exposes no knobs.",
+  "visualizerNoKnobs": "This shader has no sliders.",
   "nowPlaying": "Now Playing",
   "settingsPlayerLayout": "Now Playing layout",
   "@settingsPlayerLayout": {
@@ -1351,14 +1331,9 @@
   "playerLayoutMedium": "Medium",
   "playerLayoutLarge": "Large",
   "playerLayoutXl": "XL",
-  "playerLayoutSmallDesc": "Slim bar — maximum queue",
-  "playerLayoutMediumDesc": "Banner — balanced (default)",
-  "playerLayoutLargeDesc": "Compact — centered art",
-  "playerLayoutXlDesc": "Hero — full album art",
   "queueNothingToDownloadEmpty": "Queue is empty — nothing to download",
   "queueNothingToDownloadSaved": "Nothing to download — tracks are already saved",
   "settingsAccentColor": "Accent color",
-  "settingsAccentColorSubtitle": "The highlight color used across the app.",
   "accentThemeDefault": "Theme default",
   "accentCustom": "Custom",
   "lanOnYourNetwork": "Servers on your local network",
@@ -1383,38 +1358,28 @@
   "lanUnreachable": "Couldn't reach this server on the network.",
   "lanNoCode": "Quick Connect is on for this server, but it didn't share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.",
   "settingsResumeQueue": "Resume queue on launch",
-  "settingsResumeQueueSubtitle": "Save the play queue and your place, and restore them when you reopen the app.",
-  "settingsOfflineQueue": "Keep queue available offline",
-  "settingsOfflineQueueSubtitle": "Automatically download queued tracks to this device so playback survives losing the connection.",
-  "settingsOfflineQueueWifiOnly": "Download on Wi-Fi only",
-  "settingsOfflineQueueWifiOnlySubtitle": "Wait for Wi-Fi before downloading queued tracks.",
-  "settingsAutoDownloadCap": "Auto-download limit",
+  "settingsOfflineQueue": "Download the queue",
+  "settingsOfflineQueueSubtitle": "Playback keeps going when the connection drops.",
+  "settingsOfflineQueueWifiOnly": "Wi-Fi only",
+  "settingsAutoDownloadCap": "Download limit",
   "@settingsAutoDownloadCap": {
     "description": "Title of the keep-queue-offline retention-cap setting."
-  },
-  "settingsAutoDownloadCapSubtitle": "Cache this many songs ahead of the one playing; songs left behind are removed as you go.",
-  "@settingsAutoDownloadCapSubtitle": {
-    "description": "Subtitle when a finite auto-download cap is set."
-  },
-  "settingsAutoDownloadCapSubtitleUnlimited": "Cache the whole queue (no limit).",
-  "@settingsAutoDownloadCapSubtitleUnlimited": {
-    "description": "Subtitle when the auto-download cap is unlimited (0)."
   },
   "settingsAutoDownloadCapUnlimited": "Unlimited",
   "@settingsAutoDownloadCapUnlimited": {
     "description": "Shown as the auto-download cap value when there's no limit."
   },
-  "settingsAutoDownloadCapField": "Number of tracks",
+  "settingsAutoDownloadCapField": "Songs",
   "@settingsAutoDownloadCapField": {
     "description": "Text field label in the auto-download limit dialog."
   },
-  "settingsAutoDownloadCapDialogBody": "How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.",
+  "settingsAutoDownloadCapDialogBody": "How many songs to keep downloaded, counting from the one playing. Older ones outside that are deleted as new ones arrive.",
   "@settingsAutoDownloadCapDialogBody": {
     "description": "Explainer in the auto-download limit dialog."
   },
   "downloadWaitingWifi": "Waiting for Wi-Fi",
   "settingsRatingHalf": "Half-star ratings",
-  "settingsRatingHalfSubtitle": "Rate songs in half-star steps (long-press a star).",
+  "settingsRatingHalfSubtitle": "Long-press a star",
   "ratingTitle": "Rate",
   "ratingFailed": "Could not save rating",
   "diagnosticsTitle": "Diagnostics",
@@ -1438,10 +1403,6 @@
   "@importedShadersTitle": {
     "description": "Title of the Imported Shaders screen and its Settings entry."
   },
-  "importedShadersSettingsSubtitle": "Add your own .glsl files to the ShaderToy Visualizer's rotation.",
-  "@importedShadersSettingsSubtitle": {
-    "description": "Subtitle under the Imported shaders entry in Settings."
-  },
   "importedShadersRescan": "Rescan folder",
   "@importedShadersRescan": {
     "description": "Tooltip for the button that re-scans the shader folder for new files."
@@ -1454,15 +1415,15 @@
   "@importedShadersCopyPath": {
     "description": "Tooltip for the button that copies the shader folder path to the clipboard."
   },
-  "importedShadersReachableHint": "Reachable over USB or a file manager (under Android/data). Imported shaders join the ShaderToy Visualizer's rotation.",
+  "importedShadersReachableHint": "Reach it over USB. Uninstalling mStream deletes it.",
   "@importedShadersReachableHint": {
     "description": "Help text explaining where the shader folder is and when imported shaders are used."
   },
-  "importedShadersRemove": "Remove",
+  "importedShadersRemove": "Delete",
   "@importedShadersRemove": {
     "description": "Tooltip for the button that deletes an imported shader file."
   },
-  "importedShadersEmptyTitle": "No shaders in the folder yet",
+  "importedShadersEmptyTitle": "No shaders yet",
   "@importedShadersEmptyTitle": {
     "description": "Empty-state title when the shader folder has no files."
   },
@@ -1470,7 +1431,7 @@
   "@importedShadersEmptyBody": {
     "description": "Empty-state body when the shader folder has no files."
   },
-  "importedShadersInvalid": "May not be a valid shader — no mainImage/main entry point.",
+  "importedShadersInvalid": "May not run: no mainImage or main",
   "@importedShadersInvalid": {
     "description": "Warning subtitle when an imported file does not look like a fragment shader."
   },
@@ -1478,7 +1439,7 @@
   "@importedShadersImportDownloads": {
     "description": "Button that copies .glsl shaders found in the device Downloads folder into the shader folder."
   },
-  "importedShadersDownloadsImported": "Imported {count} shader(s) from Downloads",
+  "importedShadersDownloadsImported": "{count, plural, one{Imported {count} shader} other{Imported {count} shaders}}",
   "@importedShadersDownloadsImported": {
     "description": "Snackbar after copying shaders in from the Downloads folder.",
     "placeholders": {
@@ -2417,17 +2378,13 @@
   "@settingsTorrentAskTitle": {
     "description": "Settings switch re-enabling the torrent chooser sheet."
   },
-  "settingsTorrentAskSub": "When a torrent is opened with mStream, offer to hand it to another app",
-  "@settingsTorrentAskSub": {
-    "description": "Subtitle for that settings switch."
-  },
   "settingsTorrentDefaultTitle": "Default app for torrents",
   "@settingsTorrentDefaultTitle": {
     "description": "Settings row opening Android per-app default-handler settings."
   },
-  "settingsTorrentDefaultSub": "Opens Android settings, where you can choose which app handles torrents and magnet links",
+  "settingsTorrentDefaultSub": "Opens Android settings",
   "@settingsTorrentDefaultSub": {
-    "description": "Subtitle for that row."
+    "description": "Screen-reader label of the open-in-new icon on the Default app for torrents row."
   },
   "settingsTorrentDefaultFailed": "Could not open Android settings",
   "@settingsTorrentDefaultFailed": {
@@ -4617,45 +4574,33 @@
   "@autoRecentlyPlayed": {
     "description": "Android Auto / CarPlay tab: this phone's recent plays of the server's tracks."
   },
-  "settingsSectionListening": "Listening history",
-  "@settingsSectionListening": {
-    "description": "Settings section header."
-  },
-  "settingsHistoryEnabled": "Keep listening history",
+  "settingsHistoryEnabled": "Record plays",
   "@settingsHistoryEnabled": {
     "description": "Settings switch."
   },
-  "settingsHistoryEnabledSubtitle": "Record what this phone plays, on every server and for local files. Kept on this device only.",
-  "@settingsHistoryEnabledSubtitle": {
-    "description": "Settings switch subtitle."
-  },
-  "settingsHistorySend": "Send plays to your servers",
+  "settingsHistorySend": "Send plays to servers",
   "@settingsHistorySend": {
     "description": "Settings switch."
   },
-  "settingsHistorySendSubtitle": "Each play goes to the server the track lives on (a peer's track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.",
-  "@settingsHistorySendSubtitle": {
-    "description": "Settings switch subtitle."
-  },
-  "settingsHistoryClear": "Clear listening history",
+  "settingsHistoryClear": "Clear history",
   "@settingsHistoryClear": {
-    "description": "Settings action row title and its confirm button."
+    "description": "Settings action row title."
   },
-  "settingsHistoryClearSubtitle": "Removes this phone's record ({size}). Your servers keep theirs.",
-  "@settingsHistoryClearSubtitle": {
-    "description": "Settings action row subtitle; {size} is a formatted byte count like '1.2 MB'."
-  },
-  "settingsHistoryClearConfirm": "Delete this phone's listening history? Plays already sent to a server stay there.",
+  "settingsHistoryClearConfirm": "{count, plural, =0{This deletes this phone's listening history ({size}). Servers keep theirs.} one{This deletes this phone's listening history ({size}), including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone's listening history ({size}), including {count} plays not synced yet. Servers keep theirs.}}",
   "@settingsHistoryClearConfirm": {
-    "description": "Confirm dialog body."
+    "description": "Clear history confirm body: the history size on this phone and how many unsent plays go with it.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "settingsHistoryCleared": "Listening history cleared",
   "@settingsHistoryCleared": {
     "description": "Snackbar after clearing."
-  },
-  "settingsHistoryUnsynced": "{count, plural, =0{Everything is synced} =1{1 play waiting to be sent} other{{count} plays waiting to be sent}}",
-  "@settingsHistoryUnsynced": {
-    "description": "Settings line under the send switch: outbox size."
   },
   "songInfoServerPlays": "{count, plural, =1{1 play on {server}} other{{count} plays on {server}}}",
   "@songInfoServerPlays": {
@@ -4940,10 +4885,6 @@
   "settingsHomeWidget": "Home screen widget",
   "@settingsHomeWidget": {
     "description": "Settings row title: adding the app's Now Playing home-screen widget."
-  },
-  "settingsHomeWidgetSubtitle": "Add the Now Playing widget to your home screen in one of five sizes.",
-  "@settingsHomeWidgetSubtitle": {
-    "description": "Subtitle of that row on Android, where a tap opens the size sheet."
   },
   "settingsHomeWidgetSubtitleIos": "Long-press the home screen, add a widget, and pick mStream Music.",
   "@settingsHomeWidgetSubtitleIos": {
@@ -6092,5 +6033,84 @@
   "queueSharePlaylist": "Share playlist",
   "@queueSharePlaylist": {
     "description": "Now-playing queue ⋮ menu: opens the Share Playlist dialog for the queue. Sentence case like the menu's other rows."
+  },
+  "settingsSectionVisualizer": "Visualizer",
+  "@settingsSectionVisualizer": {
+    "description": "Settings section header over the visualizer rows (Android only)."
+  },
+  "settingsOfflineQueueFooter": "Queue downloads only. Songs you download yourself always stay.",
+  "@settingsOfflineQueueFooter": {
+    "description": "Note under the Playback card while Download the queue is on: Wi-Fi only and the download limit apply to the automatic queue downloads, never to songs the user downloaded."
+  },
+  "settingsAutoDownloadCapValue": "{count, plural, one{{count} song} other{{count} songs}}",
+  "@settingsAutoDownloadCapValue": {
+    "description": "Value on the Download limit row.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoDownloadCapHint": "0 = no limit",
+  "@settingsAutoDownloadCapHint": {
+    "description": "Helper text under the number field in the Download limit dialog."
+  },
+  "settingsStartupRecentHint": "Recently added",
+  "@settingsStartupRecentHint": {
+    "description": "Hint under 'Recent' in the Startup page picker: the Recent view lists recently ADDED songs."
+  },
+  "settingsLetterStripValue": "{count, plural, =0{Always} other{{count}+ items}}",
+  "@settingsLetterStripValue": {
+    "description": "Value on the A–Z scrubber row: the list length from which the scrubber shows; 0 = on every list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLetterStripHint": "On A–Z lists. Shorter lists wrap long names instead.",
+  "@settingsLetterStripHint": {
+    "description": "Line under the A–Z scrubber slider."
+  },
+  "settingsHistoryFooter": "Servers scrobble to Last.fm only if you linked an account there.",
+  "@settingsHistoryFooter": {
+    "description": "Note under the Listening stats card in Settings."
+  },
+  "settingsHistoryEmpty": "Empty",
+  "@settingsHistoryEmpty": {
+    "description": "Value on the Clear history row when there is nothing to clear."
+  },
+  "settingsHistoryOffTitle": "Stop recording plays?",
+  "@settingsHistoryOffTitle": {
+    "description": "Title of the confirm shown when Record plays is switched off."
+  },
+  "settingsHistoryOffBody": "{count, plural, =0{This deletes this phone's listening history. Servers keep theirs.} one{This deletes this phone's listening history, including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone's listening history, including {count} plays not synced yet. Servers keep theirs.}}",
+  "@settingsHistoryOffBody": {
+    "description": "Body of that confirm: how many unsent plays are deleted with the history.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsHistoryOffConfirm": "Turn off",
+  "@settingsHistoryOffConfirm": {
+    "description": "Red confirm button of that dialog."
+  },
+  "settingsHistoryClearTitle": "Clear history?",
+  "@settingsHistoryClearTitle": {
+    "description": "Title of the Clear history confirm."
+  },
+  "settingsResetTitle": "Reset settings?",
+  "@settingsResetTitle": {
+    "description": "Title of the Reset settings confirm."
+  },
+  "settingsResetBody": "Also resets Equalizer, Transcoding and a few options outside Settings. Servers, downloads, listening history and saved presets stay.",
+  "@settingsResetBody": {
+    "description": "Reset confirm body on Android (names the Equalizer)."
+  },
+  "settingsResetBodyIos": "Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.",
+  "@settingsResetBodyIos": {
+    "description": "Reset confirm body on iPhone (no Equalizer there)."
   }
 }

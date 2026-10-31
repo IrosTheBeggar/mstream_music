@@ -29,11 +29,13 @@ Widget _app(Widget body) => MaterialApp(
 void main() {
   late List<MethodCall> calls;
 
-  /// Android answers every permission request with [status].
-  void androidAnswers(int status) {
+  /// Android answers every permission request with [status]; a status check
+  /// says [current] (not yet granted, unless a test says otherwise).
+  void androidAnswers(int status, {int current = _denied}) {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_permissions, (call) async {
       calls.add(call);
+      if (call.method == 'checkPermissionStatus') return current;
       return {for (final p in call.arguments as List) p as int: status};
     });
   }
@@ -180,5 +182,23 @@ void main() {
       await tapAndSettle(tester, button);
     }
     expect(results, [false, false, true]);
+  });
+
+  testWidgets('Settings with the permission already granted: no dialog',
+      (tester) async {
+    final results = <bool>[];
+    androidAnswers(_denied, current: _granted);
+    await tester.pumpWidget(_app(Builder(
+      builder: (context) => TextButton(
+        onPressed: () async =>
+            results.add(await confirmRealAudioPermission(context)),
+        child: const Text('open'),
+      ),
+    )));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use real audio?'), findsNothing);
+    expect(results, [true]);
+    expect(calls.map((c) => c.method), ['checkPermissionStatus']);
   });
 }

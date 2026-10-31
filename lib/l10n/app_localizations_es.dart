@@ -40,10 +40,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get languageSystemDefault => 'Predeterminado del sistema';
 
   @override
-  String get settingsLanguageSubtitle =>
-      'El idioma de la aplicación. \"Predeterminado del sistema\" sigue el de tu dispositivo.';
-
-  @override
   String couldNotOpen(String url) {
     return 'No se pudo abrir $url';
   }
@@ -336,24 +332,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSectionPlayback => 'Reproducción';
 
   @override
-  String get settingsSectionBrowse => 'Explorar';
-
-  @override
-  String get settingsSectionAbout => 'Acerca de';
+  String get settingsSectionBrowse => 'Biblioteca';
 
   @override
   String get settingsTheme => 'Tema';
-
-  @override
-  String get themeSubtitleVelvet =>
-      'Azul marino y púrpura — el tema oscuro característico.';
-
-  @override
-  String get themeSubtitleDark => 'Oscuro neutro con detalles ámbar.';
-
-  @override
-  String get themeSubtitleLight =>
-      'Cuerpo claro con barra de aplicación oscura y detalles ámbar — coincide con el tema anterior.';
 
   @override
   String get settingsTranscode => 'Transcodificar audio';
@@ -392,60 +374,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsStartupPage => 'Pantalla de inicio';
 
   @override
-  String get settingsStartupPageSubtitle =>
-      'Abrir la app en esta vista del explorador; Atrás vuelve al explorador.';
-
-  @override
-  String get tapSubtitleAddToQueue =>
-      'Al tocar una canción se añade a la cola. Si la cola está vacía, la reproducción comienza automáticamente.';
+  String get tapSubtitleAddToQueue => 'La añade al final de la cola';
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Al tocar una canción se reemplaza la cola con las canciones de la vista actual y la reproducción comienza en la canción tocada.';
+      'Reemplaza la cola y reproduce desde esa canción';
 
   @override
   String get tapSubtitleAppendAndJump =>
-      'Al tocar una canción se añade a la cola y la reproducción salta a ella, interrumpiendo lo que se estuviera reproduciendo.';
+      'La añade al final de la cola y la reproduce ahora';
 
   @override
-  String get settingsVisualizerSource => 'Fuente de audio del visualizador';
+  String get settingsVisualizerSource => 'Fuente de audio';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'Predeterminado. El visualizador reacciona solo al tiempo de reproducción — no requiere permiso de micrófono.';
+  String get visualizerSourceSubtitleSynthesized => 'No necesita permiso';
 
   @override
   String get visualizerSourceSubtitleReal =>
-      'El visualizador reacciona a la salida de audio real. Requiere el permiso RECORD_AUDIO en Android.';
+      'Necesita permiso de micrófono, pero nunca usa el micrófono';
 
   @override
-  String get settingsAlbumGrid => 'Vista de cuadrícula de álbumes';
-
-  @override
-  String get settingsAlbumGridSubtitle =>
-      'Muestra los álbumes como una cuadrícula de tarjetas con la portada en lugar de una lista simple.';
+  String get settingsAlbumGrid => 'Cuadrícula de álbumes';
 
   @override
   String get settingsFileMetadata =>
-      'Leer metadatos de canciones en el explorador de archivos';
+      'Info de canciones en el explorador de archivos';
 
   @override
-  String get settingsFileMetadataSubtitle =>
-      'Obtiene el título, artista y portada de cada canción al explorar los archivos del servidor. Desactivado muestra los nombres de archivo sin procesar (más rápido para carpetas grandes).';
+  String get settingsLetterStrip => 'Barra A–Z';
 
   @override
-  String get settingsLetterStrip => 'Umbral de la barra alfabética';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      'Muestra la barra de desplazamiento rápido A–Z cuando una lista tiene esta cantidad de elementos o más. Por debajo de este tamaño la barra se oculta y los nombres largos de carpetas/archivos se ajustan en varias líneas en lugar de truncarse. Pon 0 para mostrar siempre la barra.';
-
-  @override
-  String get settingsLetterStripSide => 'Lado de la barra alfabética';
-
-  @override
-  String get settingsLetterStripSideSubtitle =>
-      'En qué borde se sitúa la barra A–Z.';
+  String get settingsLetterStripSide => 'Lado';
 
   @override
   String get settingsLetterStripLeft => 'Izquierda';
@@ -454,15 +414,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsLetterStripRight => 'Derecha';
 
   @override
-  String get settingsReset => 'Restablecer valores predeterminados';
+  String get settingsReset => 'Restablecer ajustes';
 
   @override
-  String get settingsResetSubtitle =>
-      'Restaura todos los ajustes de esta pantalla a sus valores predeterminados. Los servidores y las descargas no se ven afectados.';
-
-  @override
-  String get settingsResetDone =>
-      'Ajustes restaurados a los valores predeterminados';
+  String get settingsResetDone => 'Ajustes restablecidos';
 
   @override
   String get realAudioDialogTitle => '¿Usar audio real?';
@@ -1335,11 +1290,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get browserWelcomeSubtitle => 'Toca aquí para añadir un servidor';
 
   @override
-  String get settingsVisualizerKnobs => 'Controles de ajuste del visualizador';
+  String get settingsVisualizerKnobs => 'Deslizadores de ajuste';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      'Muestra controles deslizantes sobre el visualizador para ajustar la reactividad de audio de cada shader. Solo en el visualizador ShaderToy.';
+  String get settingsVisualizerKnobsSubtitle => 'Solo ShaderToy';
 
   @override
   String get visualizerTuningTitle => 'Ajuste';
@@ -1399,19 +1353,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonOff => 'Desactivado';
 
   @override
-  String get settingsCastQuality => 'Calidad del visualizador en Cast';
-
-  @override
-  String get settingsCastQualitySubtitle720 =>
-      'Resolución a la que el visualizador se transmite a una TV. 720p — la más ligera para el teléfono.';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      'Resolución a la que el visualizador se transmite a una TV. 1080p — nítida en cualquier Chromecast (predeterminada).';
-
-  @override
   String get settingsCastQualitySubtitle4k =>
-      'Resolución a la que el visualizador se transmite a una TV. 4K — necesita un Chromecast 4K; mucha más carga para el teléfono.';
+      'Necesita un Chromecast 4K; máxima carga para el teléfono';
 
   @override
   String get eqCasting =>
@@ -1657,14 +1600,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get castVisualizer => 'Transmitir el visualizador';
 
   @override
-  String get castVisualizerSubtitle =>
-      'Transmite el visualizador a la TV · solo Chromecast';
+  String get castVisualizerSubtitle => 'Solo Chromecast';
 
   @override
   String get castThisDevice => 'Este dispositivo';
 
   @override
-  String get visualizerNoKnobs => 'Este shader no expone ningún control.';
+  String get visualizerNoKnobs => 'Este shader no tiene deslizadores.';
 
   @override
   String get nowPlaying => 'Reproduciendo ahora';
@@ -1685,19 +1627,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc =>
-      'Barra fina — máximo espacio para la cola';
-
-  @override
-  String get playerLayoutMediumDesc => 'Banner — equilibrado (predeterminado)';
-
-  @override
-  String get playerLayoutLargeDesc => 'Compacto — carátula centrada';
-
-  @override
-  String get playerLayoutXlDesc => 'Destacado — carátula completa';
-
-  @override
   String get queueNothingToDownloadEmpty =>
       'La cola está vacía — no hay nada que descargar';
 
@@ -1707,10 +1636,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsAccentColor => 'Color de acento';
-
-  @override
-  String get settingsAccentColorSubtitle =>
-      'El color de resalte que se usa en toda la aplicación.';
 
   @override
   String get accentThemeDefault => 'Predeterminado del tema';
@@ -1749,43 +1674,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsResumeQueue => 'Reanudar la cola al iniciar';
 
   @override
-  String get settingsResumeQueueSubtitle =>
-      'Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.';
-
-  @override
-  String get settingsOfflineQueue => 'Mantener la cola disponible sin conexión';
+  String get settingsOfflineQueue => 'Descargar la cola';
 
   @override
   String get settingsOfflineQueueSubtitle =>
-      'Descarga automáticamente las pistas de la cola en este dispositivo para que la reproducción sobreviva a la pérdida de conexión.';
+      'La reproducción sigue aunque se pierda la conexión.';
 
   @override
-  String get settingsOfflineQueueWifiOnly => 'Descargar solo con Wi-Fi';
+  String get settingsOfflineQueueWifiOnly => 'Solo con Wi-Fi';
 
   @override
-  String get settingsOfflineQueueWifiOnlySubtitle =>
-      'Espera a tener Wi-Fi antes de descargar las pistas de la cola.';
-
-  @override
-  String get settingsAutoDownloadCap => 'Límite de descarga automática';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      'Guarda esta cantidad de canciones por delante de la actual; las que quedan atrás se eliminan.';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Guarda toda la cola (sin límite).';
+  String get settingsAutoDownloadCap => 'Límite de descarga';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Sin límite';
 
   @override
-  String get settingsAutoDownloadCapField => 'Número de canciones';
+  String get settingsAutoDownloadCapField => 'Canciones';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Cuántas canciones de la cola se mantienen descargadas, contando desde la que suena. A medida que avanza la reproducción, las que quedan atrás se eliminan. 0 para toda la cola.';
+      'Cuántas canciones mantener descargadas, contando desde la que suena. Las anteriores que queden fuera se eliminan al llegar otras nuevas.';
 
   @override
   String get downloadWaitingWifi => 'Esperando Wi-Fi';
@@ -1794,8 +1703,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsRatingHalf => 'Valoraciones de media estrella';
 
   @override
-  String get settingsRatingHalfSubtitle =>
-      'Valora canciones en pasos de media estrella (mantén pulsada una estrella).';
+  String get settingsRatingHalfSubtitle => 'Mantén pulsada una estrella';
 
   @override
   String get ratingTitle => 'Valorar';
@@ -1852,10 +1760,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get importedShadersTitle => 'Shaders importados';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      'Añade tus propios archivos .glsl a la rotación del visualizador ShaderToy.';
-
-  @override
   String get importedShadersRescan => 'Volver a escanear la carpeta';
 
   @override
@@ -1867,13 +1771,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Accesible por USB o un gestor de archivos (en Android/data). Los shaders importados se unen a la rotación del visualizador ShaderToy.';
+      'Accesible por USB. Se elimina al desinstalar mStream.';
 
   @override
-  String get importedShadersRemove => 'Quitar';
+  String get importedShadersRemove => 'Eliminar';
 
   @override
-  String get importedShadersEmptyTitle => 'Aún no hay shaders en la carpeta';
+  String get importedShadersEmptyTitle => 'Aún no hay shaders';
 
   @override
   String get importedShadersEmptyBody =>
@@ -1881,14 +1785,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get importedShadersInvalid =>
-      'Puede que no sea un shader válido — sin punto de entrada mainImage/main.';
+      'Puede que no funcione: sin mainImage ni main';
 
   @override
   String get importedShadersImportDownloads => 'Importar .glsl desde Descargas';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Importados desde Descargas: $count shader(s)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count shaders importados',
+      one: '$count shader importado',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2646,16 +2556,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTorrentAskTitle => 'Preguntar qué hacer con los torrents';
 
   @override
-  String get settingsTorrentAskSub =>
-      'Cuando se abra un torrent con mStream, ofrecer pasarlo a otra aplicación';
-
-  @override
   String get settingsTorrentDefaultTitle =>
       'Aplicación predeterminada para torrents';
 
   @override
-  String get settingsTorrentDefaultSub =>
-      'Abre los ajustes de Android, donde puedes elegir qué aplicación abre torrents y enlaces magnet';
+  String get settingsTorrentDefaultSub => 'Abre los ajustes de Android';
 
   @override
   String get settingsTorrentDefaultFailed =>
@@ -4345,48 +4250,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoRecentlyPlayed => 'Reproducido recientemente';
 
   @override
-  String get settingsSectionListening => 'Historial de escucha';
+  String get settingsHistoryEnabled => 'Registrar reproducciones';
 
   @override
-  String get settingsHistoryEnabled => 'Guardar el historial de escucha';
+  String get settingsHistorySend => 'Enviar reproducciones a los servidores';
 
   @override
-  String get settingsHistoryEnabledSubtitle =>
-      'Registra lo que reproduce este teléfono, en todos los servidores y con archivos locales. Se guarda solo en este dispositivo.';
+  String get settingsHistoryClear => 'Borrar historial';
 
   @override
-  String get settingsHistorySend => 'Enviar reproducciones a tus servidores';
-
-  @override
-  String get settingsHistorySendSubtitle =>
-      'Cada reproducción va al servidor donde está la pista (la pista de un par, a su servidor principal), para que tus estadísticas incluyan este teléfono. Los servidores solo reenvían a Last.fm si vinculaste una cuenta allí.';
-
-  @override
-  String get settingsHistoryClear => 'Borrar el historial de escucha';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return 'Elimina el registro de este teléfono ($size). Tus servidores conservan el suyo.';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm =>
-      '¿Borrar el historial de escucha de este teléfono? Las reproducciones ya enviadas a un servidor se conservan allí.';
-
-  @override
-  String get settingsHistoryCleared => 'Historial de escucha borrado';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count reproducciones pendientes de envío',
-      one: '1 reproducción pendiente de envío',
-      zero: 'Todo está sincronizado',
+      other:
+          'Esto borra el historial de escucha de este teléfono ($size), incluidas $count reproducciones sin sincronizar. Los servidores conservan el suyo.',
+      one:
+          'Esto borra el historial de escucha de este teléfono ($size), incluida $count reproducción sin sincronizar. Los servidores conservan el suyo.',
+      zero:
+          'Esto borra el historial de escucha de este teléfono ($size). Los servidores conservan el suyo.',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => 'Historial de escucha borrado';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4688,10 +4576,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => 'Widget de pantalla de inicio';
-
-  @override
-  String get settingsHomeWidgetSubtitle =>
-      'Añade el widget Reproduciendo ahora a la pantalla de inicio en uno de cinco tamaños.';
 
   @override
   String get settingsHomeWidgetSubtitleIos =>
@@ -5586,4 +5470,86 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Compartir lista de reproducción';
+
+  @override
+  String get settingsSectionVisualizer => 'Visualizador';
+
+  @override
+  String get settingsOfflineQueueFooter =>
+      'Solo descargas de la cola. Lo que descargas tú se conserva siempre.';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count canciones',
+      one: '$count canción',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = sin límite';
+
+  @override
+  String get settingsStartupRecentHint => 'Añadido recientemente';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count+ elementos',
+      one: '$count+ elementos',
+      zero: 'Siempre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint =>
+      'En listas A–Z. En las más cortas, los nombres largos ocupan varias líneas.';
+
+  @override
+  String get settingsHistoryFooter =>
+      'Los servidores solo envían reproducciones a Last.fm si tienen una cuenta vinculada.';
+
+  @override
+  String get settingsHistoryEmpty => 'Vacío';
+
+  @override
+  String get settingsHistoryOffTitle => '¿Dejar de registrar reproducciones?';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Esto borra el historial de escucha de este teléfono, incluidas $count reproducciones sin sincronizar. Los servidores conservan el suyo.',
+      one:
+          'Esto borra el historial de escucha de este teléfono, incluida $count reproducción sin sincronizar. Los servidores conservan el suyo.',
+      zero:
+          'Esto borra el historial de escucha de este teléfono. Los servidores conservan el suyo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => 'Desactivar';
+
+  @override
+  String get settingsHistoryClearTitle => '¿Borrar historial?';
+
+  @override
+  String get settingsResetTitle => '¿Restablecer ajustes?';
+
+  @override
+  String get settingsResetBody =>
+      'También restablece el ecualizador, la transcodificación y algunas opciones fuera de los ajustes. Se conservan servidores, descargas, historial de escucha y preajustes guardados.';
+
+  @override
+  String get settingsResetBodyIos =>
+      'También restablece la transcodificación y algunas opciones fuera de los ajustes. Se conservan servidores, descargas e historial de escucha.';
 }
