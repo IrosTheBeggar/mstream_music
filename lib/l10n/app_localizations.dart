@@ -3408,6 +3408,12 @@ abstract class AppLocalizations {
   /// **' · via relay'**
   String get irohPathSuffixRelay;
 
+  /// Quick Connect test result when the iroh tunnel is up (the handshake passed) but the server closes the first HTTP request through it without a response — its bridge to 127.0.0.1:<port> is refused when mStream is bound to one interface or another port.
+  ///
+  /// In en, this message translates to:
+  /// **'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.'**
+  String get irohTunnelNoAnswer;
+
   /// Shown when the iroh tunnel connects but the server's HTTP reply times out.
   ///
   /// In en, this message translates to:

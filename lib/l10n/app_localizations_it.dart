@@ -1977,6 +1977,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get irohPathSuffixRelay => ' · tramite relay';
 
   @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
+
+  @override
   String get irohTunnelTimeout =>
       'Tunnel aperto, ma il server non ha risposto in tempo.';
 

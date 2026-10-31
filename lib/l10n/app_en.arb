@@ -1592,6 +1592,10 @@
   "@irohPathSuffixRelay": {
     "description": "Suffix appended to the iroh test result when the connection is routed through a relay."
   },
+  "irohTunnelNoAnswer": "The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.",
+  "@irohTunnelNoAnswer": {
+    "description": "Quick Connect test result when the iroh tunnel is up (the handshake passed) but the server closes the first HTTP request through it without a response — its bridge to 127.0.0.1:<port> is refused when mStream is bound to one interface or another port."
+  },
   "irohTunnelTimeout": "Tunnel opened but the server did not respond in time.",
   "@irohTunnelTimeout": {
     "description": "Shown when the iroh tunnel connects but the server's HTTP reply times out."

@@ -1855,6 +1855,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohPathSuffixRelay => ' · 经中继';
 
   @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
+
+  @override
   String get irohTunnelTimeout => '隧道已打开，但服务器未及时响应。';
 
   @override
