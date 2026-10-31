@@ -203,17 +203,6 @@ class FederationInboxAlerts {
 
   int _id(Server s) => s.localname.hashCode & 0x7fffffff;
 
-  // Strings without a widget context: the live app's localizations when the
-  // navigator is up, else the configured (or device) locale.
-  AppLocalizations _l10n() {
-    final ctx = rootNavigatorKey.currentContext;
-    if (ctx != null) return AppLocalizations.of(ctx);
-    final locale = SettingsManager().localeOverride ??
-        WidgetsBinding.instance.platformDispatcher.locale;
-    try {
-      return lookupAppLocalizations(locale);
-    } catch (_) {
-      return lookupAppLocalizations(const Locale('en'));
-    }
-  }
+  // Strings without a widget context (app_messenger.dart's appL10n).
+  AppLocalizations _l10n() => appL10n();
 }

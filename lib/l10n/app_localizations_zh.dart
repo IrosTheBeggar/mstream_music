@@ -1778,6 +1778,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohPathSuffixRelay => ' · 经中继';
 
   @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
+
+  @override
   String get irohTunnelTimeout => '隧道已打开，但服务器未及时响应。';
 
   @override
@@ -5126,6 +5130,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => '分享播放列表';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
 
   @override
   String get settingsSectionVisualizer => '可视化';

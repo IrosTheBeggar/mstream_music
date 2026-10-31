@@ -1391,6 +1391,28 @@ class ServerManager {
     _lastOfflineAt = DateTime.now();
   }
 
+  /// Called by the connectivity listener on any usable result (invariant:
+  /// the only place _lastOnlineAt is written).
+  void noteConnectivityRestored() {
+    _lastOnlineAt = DateTime.now();
+  }
+
+  DateTime? _lastOnlineAt;
+
+  /// The connectivity listener's last word was `[none]`.
+  bool get _offlineNow =>
+      _lastOfflineAt != null &&
+      (_lastOnlineAt == null || _lastOfflineAt!.isAfter(_lastOnlineAt!));
+
+  /// Called by the lifecycle observer when the app leaves the foreground
+  /// (invariant: the only writer). Read and cleared by the resume run of
+  /// [handleNetworkChange], which turns it into how long the app was away.
+  void noteBackgrounded() {
+    _backgroundedAt ??= DateTime.now();
+  }
+
+  DateTime? _backgroundedAt;
+
   /// React to a device network change / app resume / the strip's Retry tap:
   /// nudge iroh to re-probe paths (it can't self-detect on Android), then let
   /// the pure [TunnelPolicy] decide per tunnel — leave a reconnecting one to
@@ -1438,6 +1460,13 @@ class ServerManager {
   }
 
   Future<void> _handleNetworkChangeOnce(String reason, bool user) async {
+    // How long the app was away, on a resume: consumed here so a stay is
+    // counted once, whichever run the resume lands in.
+    Duration? backgroundFor;
+    if (reason == 'resume') {
+      backgroundFor = _since(_backgroundedAt);
+      _backgroundedAt = null;
+    }
     if (!IrohTunnel.isSupported) return;
     final targets = _tunnelTargets();
     if (targets.isEmpty) return;
@@ -1449,12 +1478,14 @@ class ServerManager {
     await Future.wait([
       for (final t in targets)
         _handleNetworkChangeFor(_handleOf(t), reason,
-            user && (banner == null || banner.localname == t.localname)),
+            user && (banner == null || banner.localname == t.localname),
+            backgroundFor: backgroundFor),
     ]);
   }
 
   Future<void> _handleNetworkChangeFor(
-      TunnelHandle h, String reason, bool user) async {
+      TunnelHandle h, String reason, bool user,
+      {Duration? backgroundFor}) async {
     final s = h.server;
     final name = s.localname;
     if (!user && reason.startsWith('connectivity:') && h.starting) {
@@ -1463,16 +1494,30 @@ class ServerManager {
     final native = _nativeStatusOf(h);
     final code = h.code;
     final port = h.port;
+    final away = backgroundFor == null ? '' : 'away=${backgroundFor.inSeconds}s ';
     appLog('[iroh] network change ($reason) native=${native.name} port=$port '
         'notConnectedFor=${_since(h.notConnectedSince)?.inSeconds ?? 0}s '
-        'for=$name');
+        '${away}for=$name');
     switch (TunnelPolicy.onNetworkChange(
         native: native,
         assigned: tunnelAssignedTo(s) && port != null,
         starting: h.starting,
         rejected: native == IrohTunnelStatus.rejected || h.startRejected,
         sinceOffline: _since(_lastOfflineAt),
-        userInitiated: user)) {
+        userInitiated: user,
+        backgroundFor: backgroundFor,
+        offlineNow: _offlineNow)) {
+      case NetworkChangeRemedy.rebuild:
+        // The OS cut the app's network while it was away (Android 15+,
+        // nothing playing) and the connection died under the supervisor:
+        // its re-dial on the stale endpoint sat 30 s+ on a Galaxy S25 while
+        // a fresh endpoint took 0.7 s — and nothing streams on the old port,
+        // or the tunnel would still be up.
+        appLog('[iroh] back after ${backgroundFor?.inSeconds}s away with the '
+            'tunnel ${native.name} — dialing a fresh endpoint for=$name');
+        await _hardRebuild(h,
+            code: code, port: port, reason: 'background-cut', user: false);
+        return;
       case NetworkChangeRemedy.leaveRejected:
         appLog('[iroh] pairing rejected — waiting for a repair, not '
             're-dialing for=$name');
@@ -1975,6 +2020,13 @@ class ServerManager {
     final st = _effectiveStatus(h);
     final pk = h.starting ? IrohPathKind.unknown : _nativePathKindOf(h);
     final now = DateTime.now();
+    if (st == h.lastStatus && pk != h.lastPath) {
+      // A path flip on a tunnel whose status did not move (direct ↔ relay
+      // migration): the status line below never fires for it, and on
+      // cellular it is the first thing to correlate a stall with.
+      appLog('[iroh] path ${h.lastPath.name} → ${pk.name} port=${h.port} '
+          'for=$name');
+    }
     if (st != h.lastStatus) {
       final was = h.notConnectedSince;
       final after = (st == IrohTunnelStatus.connected && was != null)

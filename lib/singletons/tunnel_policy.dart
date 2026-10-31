@@ -67,6 +67,19 @@ class TunnelTiming {
   /// iroh's idle timeout + the supervisor handle those on their own.
   static const Duration recentlyOffline = Duration(seconds: 15);
 
+  /// Android 15+ cuts a cached app's network 5 s after it leaves the
+  /// foreground (the background firewall chain: its relay TCP link is
+  /// destroyed, its UDP blocked) unless a foreground service runs, so a
+  /// tunnel idle in the background dies within the 30 s QUIC idle timeout —
+  /// the connection-level `max_idle_timeout` (IROH_KEEPALIVE_BATTERY.md). A
+  /// tunnel that reports reconnecting when the app comes back after at least
+  /// this long away died while it was away, not from a blip the supervisor
+  /// is mid-way through healing. (Galaxy S25, 2026-10-31: after 8 min away
+  /// the thawed supervisor's attempt had expired in the freeze and the next
+  /// one sat on the stale endpoint for 30 s+; a fresh endpoint connected in
+  /// 0.7 s.)
+  static const Duration backgroundNetworkCut = Duration(seconds: 30);
+
   /// Retry schedule after a failed cold dial: fast for a blip, then at most one
   /// dial a minute, then [retryLongDelay] once it is clearly a long outage
   /// (each attempt holds the radio for up to ~43s).
@@ -131,6 +144,11 @@ enum NetworkChangeRemedy {
 
   /// Pairing rejected: only a repair helps; do not re-dial on every event.
   leaveRejected,
+
+  /// Stop the native tunnel and dial a fresh endpoint at once: the app is
+  /// back from a background stay long enough for the OS to have cut its
+  /// network under the connection (see [TunnelTiming.backgroundNetworkCut]).
+  rebuild,
 }
 
 /// What to do about a tunnel that reports connected but failed two probes.
@@ -145,7 +163,10 @@ class TunnelPolicy {
   /// port is recorded). [starting]: a Dart-side dial is in flight.
   /// [rejected]: native status is rejected OR a cold dial answered "NO" (then
   /// no native tunnel exists to report it). [sinceOffline]: time since the
-  /// last `[none]` connectivity event, null if never.
+  /// last `[none]` connectivity event, null if never. [backgroundFor]: how
+  /// long the app had been in the background when this is a resume, null
+  /// for every other trigger. [offlineNow]: the connectivity listener's last
+  /// word was `[none]`.
   static NetworkChangeRemedy onNetworkChange({
     required IrohTunnelStatus native,
     required bool assigned,
@@ -153,6 +174,8 @@ class TunnelPolicy {
     required bool rejected,
     required Duration? sinceOffline,
     required bool userInitiated,
+    Duration? backgroundFor,
+    bool offlineNow = false,
   }) {
     if (rejected) {
       // A user-initiated Retry may re-dial (the code may have been fixed on
@@ -168,10 +191,19 @@ class TunnelPolicy {
       case IrohTunnelStatus.reconnecting:
       case IrohTunnelStatus.connecting:
         // The supervisor is already re-dialing on the same port. Only the
-        // user may cut it short (the banner's Retry).
-        return userInitiated
-            ? NetworkChangeRemedy.escalate
-            : NetworkChangeRemedy.leaveToSupervisor;
+        // user may cut it short (the banner's Retry) — and a resume after a
+        // background stay long enough for the OS to have cut the app's
+        // network: the connection died while the app was away, and the
+        // supervisor's re-dial on that stale endpoint is the slow path (a
+        // fresh endpoint connects in under a second). Never into a dead
+        // zone, which keeps the supervisor's relay-back wake.
+        if (userInitiated) return NetworkChangeRemedy.escalate;
+        if (backgroundFor != null &&
+            backgroundFor >= TunnelTiming.backgroundNetworkCut &&
+            !offlineNow) {
+          return NetworkChangeRemedy.rebuild;
+        }
+        return NetworkChangeRemedy.leaveToSupervisor;
       case IrohTunnelStatus.connected:
         // A modem that just re-attached: the connection is either fine or
         // about to hit the idle timeout, after which the supervisor heals it

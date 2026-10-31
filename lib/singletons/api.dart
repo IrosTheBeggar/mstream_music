@@ -32,6 +32,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
 
+/// Thrown by [ApiManager.makeServerCall] when the user backed out of the
+/// browse (Back cancels the in-flight fetch) — not a failure to report.
+class BrowseCancelled implements Exception {
+  const BrowseCancelled();
+  @override
+  String toString() => 'BrowseCancelled';
+}
+
 class ApiManager {
   ApiManager._privateConstructor();
   static final ApiManager _instance = ApiManager._privateConstructor();
@@ -59,6 +67,28 @@ class ApiManager {
   /// ApiManager (DiscoveryPluginsApi). Read it per call: [resetDirectClient]
   /// replaces it.
   http.Client get directClient => _direct;
+
+  /// A browse fetch failed for a reason other than the user backing out:
+  /// log it and say so on screen. Every browse getter used to swallow its
+  /// failure with the log line alone, so a request that timed out — a
+  /// tunnel mid-reconnect, a server that stopped answering — looked exactly
+  /// like a tap that did nothing (mStream#1101: "click on albums, no
+  /// response"). The status strip explains a Quick Connect state; this is
+  /// the one line for the request itself, rate-limited so a burst of
+  /// failures (a resume refresh plus a tap) reads as one.
+  void _browseFailed(String what, Object err) {
+    appLog('[api] $what failed: $err');
+    if (err is BrowseCancelled) return;
+    final now = DateTime.now();
+    final last = _lastBrowseFailureSnack;
+    if (last != null && now.difference(last) < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastBrowseFailureSnack = now;
+    showGlobalSnack(appL10n().browseLoadFailed);
+  }
+
+  DateTime? _lastBrowseFailureSnack;
 
   /// POST /api/v1/db/genres — returns the server's distinct genre
   /// list with track counts. Used by the AutoDJ screen to populate
@@ -199,10 +229,13 @@ class ApiManager {
         response = await send()
             .timeout(Duration(seconds: isIroh ? 20 : 30));
       } catch (e) {
+        // The user backed out: closing the client is what made this throw.
+        if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
+          throw const BrowseCancelled();
+        }
         // An iroh connection error usually means the tunnel is mid-drop; give the
-        // self-healing tunnel a moment to recover, then retry once. (Skip on a
-        // user cancel — closing the client throws too.)
-        if (isIroh && !BrowserManager().isLoadCancelled(loadToken)) {
+        // self-healing tunnel a moment to recover, then retry once.
+        if (isIroh) {
           // Wait for THIS call's server (the tunnel may be serving a background
           // playback server instead of the browsed one).
           final ready = await ServerManager()
@@ -235,7 +268,7 @@ class ApiManager {
       // folder can't pop onto the stack after the user cancelled / navigated.
       // Skipped for non-cancelable mutations — those must run to completion.
       if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
-        throw Exception('Navigation cancelled');
+        throw const BrowseCancelled();
       }
 
       // Whole-library payloads (artists / albums / playlist loads / recursive
@@ -328,7 +361,7 @@ class ApiManager {
       // the idle stub's landing row.
       if (wasEmpty) await handler.play();
     } catch (err) {
-      appLog('[api] getRecursiveFiles failed: $err');
+      _browseFailed('getRecursiveFiles', err);
     }
   }
 
@@ -353,8 +386,7 @@ class ApiManager {
       BrowserManager().setBrowserLabel('Playlists');
       BrowserManager().addListToStack(_playlistItems(res, useThisServer));
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getPlaylists failed: $err');
+      _browseFailed('getPlaylists', err);
     }
   }
 
@@ -581,7 +613,7 @@ class ApiManager {
       // …" subheader (and it reverts on back-nav, like the file-explorer path).
       BrowserManager().addListToStack(newList, searchTerm: search);
     } catch (err) {
-      appLog('[api] searchServer failed: $err');
+      _browseFailed('searchServer', err);
     }
   }
 
@@ -635,8 +667,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getAlbums failed: $err');
+      _browseFailed('getAlbums', err);
     }
   }
 
@@ -712,8 +743,7 @@ class ApiManager {
       newList = await fetchAlbumSongs(album,
           useThisServer: useThisServer, year: year, albumArtist: albumArtist);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getAlbumSongs failed: $err');
+      _browseFailed('getAlbumSongs', err);
       return;
     }
 
@@ -777,8 +807,7 @@ class ApiManager {
         BrowserManager().addListToStack(newList, moodFrame: asked.frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getRecentlyAdded failed: $err');
+      _browseFailed('getRecentlyAdded', err);
     }
   }
 
@@ -821,8 +850,7 @@ class ApiManager {
         BrowserManager().addListToStack(newList, moodFrame: asked.frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getRated failed: $err');
+      _browseFailed('getRated', err);
     }
   }
 
@@ -1386,8 +1414,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, moodFrame: moodFrame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getArtists failed: $err');
+      _browseFailed('getArtists', err);
     }
   }
 
@@ -1417,8 +1444,7 @@ class ApiManager {
 
       BrowserManager().addListToStack(newList);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getArtistAlbums failed: $err');
+      _browseFailed('getArtistAlbums', err);
     }
   }
 
@@ -1462,8 +1488,7 @@ class ApiManager {
             .addListToStack(newList, alphabetical: true, genreFrame: frame);
       }
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getGenreList failed: $err');
+      _browseFailed('getGenreList', err);
     }
   }
 
@@ -1496,8 +1521,7 @@ class ApiManager {
       });
       BrowserManager().addListToStack(newList);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getGenreSongs failed: $err');
+      _browseFailed('getGenreSongs', err);
     }
   }
 
@@ -1528,8 +1552,7 @@ class ApiManager {
       // empty" rather than a blank list.
       BrowserManager().addListToStack(newList, playlist: playlistName);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getPlaylistContents failed: $err');
+      _browseFailed('getPlaylistContents', err);
     }
   }
 
@@ -1591,8 +1614,7 @@ class ApiManager {
       BrowserManager()
           .addListToStack(newList, alphabetical: true, path: res['path']);
     } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getFileList failed: $err');
+      _browseFailed('getFileList', err);
     }
   }
 
@@ -1616,7 +1638,7 @@ class ApiManager {
       res = await makeServerCall(useThisServer, '/api/v1/file-explorer/m3u',
           {'path': filepath}, 'POST');
     } catch (err) {
-      appLog('[api] getM3uContents failed: $err');
+      _browseFailed('getM3uContents', err);
       return;
     }
 

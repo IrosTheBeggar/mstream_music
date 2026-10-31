@@ -1884,6 +1884,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get irohPathSuffixRelay => ' · via relay';
 
   @override
+  String get irohTunnelNoAnswer =>
+      'The tunnel connected, but the server closed the request without answering. On the server, check the bind address and port mStream listens on (the tunnel reaches it at 127.0.0.1), then try again.';
+
+  @override
   String get irohTunnelTimeout =>
       'O túnel abriu, mas o servidor não respondeu a tempo.';
 
@@ -5458,6 +5462,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Compartilhar playlist';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
 
   @override
   String get settingsSectionVisualizer => 'Visualizador';
