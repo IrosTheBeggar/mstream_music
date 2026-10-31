@@ -109,9 +109,13 @@ Future<RealAudioAnswer?> askForRealAudio(BuildContext context,
 }
 
 /// Settings' entry point: true only when the user accepted both steps, so the
-/// caller can leave the setting alone on a refusal.
-Future<bool> confirmRealAudioPermission(BuildContext context) async =>
-    (await askForRealAudio(context))?.granted ?? false;
+/// caller can leave the setting alone on a refusal. Already granted means
+/// nothing left to explain or ask — true at once, no dialog.
+Future<bool> confirmRealAudioPermission(BuildContext context) async {
+  if (await Permission.microphone.isGranted) return true;
+  if (!context.mounted) return false;
+  return (await askForRealAudio(context))?.granted ?? false;
+}
 
 /// The OS prompt, plus a snackbar saying so when it comes back refused. A
 /// permanent refusal returns at once with no prompt at all, so that snackbar

@@ -174,12 +174,6 @@ abstract class AppLocalizations {
   /// **'System default'**
   String get languageSystemDefault;
 
-  /// Subtitle under the language picker row in Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'The app\'s display language. \"System default\" follows your device.'**
-  String get settingsLanguageSubtitle;
-
   /// Snackbar when a URL fails to launch.
   ///
   /// In en, this message translates to:
@@ -675,38 +669,14 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSectionBrowse.
   ///
   /// In en, this message translates to:
-  /// **'Browse'**
+  /// **'Library'**
   String get settingsSectionBrowse;
 
-  /// No description provided for @settingsSectionAbout.
-  ///
-  /// In en, this message translates to:
-  /// **'About'**
-  String get settingsSectionAbout;
-
-  /// Theme picker row label + per-theme subtitles.
+  /// Theme row title (the row shows the theme name) and its picker sheet title.
   ///
   /// In en, this message translates to:
   /// **'Theme'**
   String get settingsTheme;
-
-  /// No description provided for @themeSubtitleVelvet.
-  ///
-  /// In en, this message translates to:
-  /// **'Navy and purple — the signature dark theme.'**
-  String get themeSubtitleVelvet;
-
-  /// No description provided for @themeSubtitleDark.
-  ///
-  /// In en, this message translates to:
-  /// **'Neutral dark with amber accents.'**
-  String get themeSubtitleDark;
-
-  /// No description provided for @themeSubtitleLight.
-  ///
-  /// In en, this message translates to:
-  /// **'Light body with a dark app bar and amber accents — matches the older shipped theme.'**
-  String get themeSubtitleLight;
 
   /// Transcode toggle row.
   ///
@@ -762,7 +732,7 @@ abstract class AppLocalizations {
   /// **'When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.'**
   String get transcodeReloadQueueSubtitle;
 
-  /// Tap-behavior picker row label + per-mode subtitles.
+  /// Tap-behaviour row title and picker title; the tapSubtitle* strings are the picker hints and the first-run cards.
   ///
   /// In en, this message translates to:
   /// **'When you tap a song'**
@@ -774,95 +744,65 @@ abstract class AppLocalizations {
   /// **'Startup page'**
   String get settingsStartupPage;
 
-  /// No description provided for @settingsStartupPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open the app to this browser view; Back returns to the browser.'**
-  String get settingsStartupPageSubtitle;
-
   /// No description provided for @tapSubtitleAddToQueue.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.'**
+  /// **'Adds it to the end of the queue'**
   String get tapSubtitleAddToQueue;
 
   /// No description provided for @tapSubtitlePlayFromHere.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.'**
+  /// **'Replaces the queue and plays from that song'**
   String get tapSubtitlePlayFromHere;
 
   /// No description provided for @tapSubtitleAppendAndJump.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.'**
+  /// **'Adds it to the end of the queue and plays it now'**
   String get tapSubtitleAppendAndJump;
 
-  /// Visualizer audio-source picker row label + per-source subtitles.
+  /// Visualizer audio-source row title under the Visualizer header; the visualizerSourceSubtitle* strings are its picker hints.
   ///
   /// In en, this message translates to:
-  /// **'Visualizer audio source'**
+  /// **'Audio source'**
   String get settingsVisualizerSource;
 
   /// No description provided for @visualizerSourceSubtitleSynthesized.
   ///
   /// In en, this message translates to:
-  /// **'Default. Visualizer reacts to playback timing only — no microphone permission required.'**
+  /// **'No permission needed'**
   String get visualizerSourceSubtitleSynthesized;
 
   /// No description provided for @visualizerSourceSubtitleReal.
   ///
   /// In en, this message translates to:
-  /// **'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.'**
+  /// **'Needs the microphone permission, but never uses the mic'**
   String get visualizerSourceSubtitleReal;
 
   /// Album-grid toggle row.
   ///
   /// In en, this message translates to:
-  /// **'Album grid view'**
+  /// **'Album grid'**
   String get settingsAlbumGrid;
-
-  /// No description provided for @settingsAlbumGridSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show albums as a grid of cards with cover art instead of a plain list.'**
-  String get settingsAlbumGridSubtitle;
 
   /// File-explorer metadata toggle row.
   ///
   /// In en, this message translates to:
-  /// **'Read song metadata in file explorer'**
+  /// **'Song info in File Explorer'**
   String get settingsFileMetadata;
-
-  /// No description provided for @settingsFileMetadataSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Fetch title, artist, and album art for each song when browsing server files. Off shows raw filenames (faster for huge folders).'**
-  String get settingsFileMetadataSubtitle;
 
   /// Letter-scrubber threshold slider row.
   ///
   /// In en, this message translates to:
-  /// **'Letter scrubber threshold'**
+  /// **'A–Z scrubber'**
   String get settingsLetterStrip;
-
-  /// No description provided for @settingsLetterStripSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.'**
-  String get settingsLetterStripSubtitle;
 
   /// Label for the setting choosing which screen edge the A-Z scrubber sits on.
   ///
   /// In en, this message translates to:
-  /// **'Scrubber side'**
+  /// **'Side'**
   String get settingsLetterStripSide;
-
-  /// Explains the scrubber-side setting.
-  ///
-  /// In en, this message translates to:
-  /// **'Which edge the A–Z strip sits on.'**
-  String get settingsLetterStripSideSubtitle;
 
   /// Segmented-button option: scrubber on the left edge.
   ///
@@ -876,25 +816,19 @@ abstract class AppLocalizations {
   /// **'Right'**
   String get settingsLetterStripRight;
 
-  /// Reset-to-defaults row + confirmation snackbar.
+  /// Reset row title; settingsResetDone is the snackbar after it.
   ///
   /// In en, this message translates to:
-  /// **'Reset to defaults'**
+  /// **'Reset settings'**
   String get settingsReset;
-
-  /// No description provided for @settingsResetSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore all settings on this screen to their default values. Servers and downloads are not affected.'**
-  String get settingsResetSubtitle;
 
   /// No description provided for @settingsResetDone.
   ///
   /// In en, this message translates to:
-  /// **'Settings restored to defaults'**
+  /// **'Settings reset'**
   String get settingsResetDone;
 
-  /// Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer audio source — plus the denial snackbars.
+  /// Real-audio consent dialog — shown when a visualizer opens without the microphone permission, and from Settings › Visualizer › Audio source — plus the denial snackbars.
   ///
   /// In en, this message translates to:
   /// **'Use real audio?'**
@@ -2358,16 +2292,16 @@ abstract class AppLocalizations {
   /// **'Tap here to add a server'**
   String get browserWelcomeSubtitle;
 
-  /// Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English).
+  /// Switch for the ShaderToy visualizer tuning sliders, under the Visualizer header (DSP param labels stay English).
   ///
   /// In en, this message translates to:
-  /// **'Visualizer tuning knobs'**
+  /// **'Tuning sliders'**
   String get settingsVisualizerKnobs;
 
   /// No description provided for @settingsVisualizerKnobsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. ShaderToy Visualizer only.'**
+  /// **'ShaderToy only'**
   String get settingsVisualizerKnobsSubtitle;
 
   /// No description provided for @visualizerTuningTitle.
@@ -2442,28 +2376,10 @@ abstract class AppLocalizations {
   /// **'Off'**
   String get commonOff;
 
-  /// No description provided for @settingsCastQuality.
-  ///
-  /// In en, this message translates to:
-  /// **'Cast visualizer quality'**
-  String get settingsCastQuality;
-
-  /// No description provided for @settingsCastQualitySubtitle720.
-  ///
-  /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 720p — lightest on the phone.'**
-  String get settingsCastQualitySubtitle720;
-
-  /// No description provided for @settingsCastQualitySubtitle1080.
-  ///
-  /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).'**
-  String get settingsCastQualitySubtitle1080;
-
   /// No description provided for @settingsCastQualitySubtitle4k.
   ///
   /// In en, this message translates to:
-  /// **'Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.'**
+  /// **'Needs a 4K Chromecast; heaviest on the phone'**
   String get settingsCastQualitySubtitle4k;
 
   /// No description provided for @eqCasting.
@@ -2847,7 +2763,7 @@ abstract class AppLocalizations {
   /// No description provided for @castVisualizerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Stream the visualizer to the TV · Chromecast only'**
+  /// **'Chromecast only'**
   String get castVisualizerSubtitle;
 
   /// The local (phone) target in the cast picker — playback stays on this device instead of a Chromecast/DLNA renderer.
@@ -2859,7 +2775,7 @@ abstract class AppLocalizations {
   /// No description provided for @visualizerNoKnobs.
   ///
   /// In en, this message translates to:
-  /// **'This shader exposes no knobs.'**
+  /// **'This shader has no sliders.'**
   String get visualizerNoKnobs;
 
   /// No description provided for @nowPlaying.
@@ -2898,30 +2814,6 @@ abstract class AppLocalizations {
   /// **'XL'**
   String get playerLayoutXl;
 
-  /// No description provided for @playerLayoutSmallDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Slim bar — maximum queue'**
-  String get playerLayoutSmallDesc;
-
-  /// No description provided for @playerLayoutMediumDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Banner — balanced (default)'**
-  String get playerLayoutMediumDesc;
-
-  /// No description provided for @playerLayoutLargeDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Compact — centered art'**
-  String get playerLayoutLargeDesc;
-
-  /// No description provided for @playerLayoutXlDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Hero — full album art'**
-  String get playerLayoutXlDesc;
-
   /// No description provided for @queueNothingToDownloadEmpty.
   ///
   /// In en, this message translates to:
@@ -2939,12 +2831,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accent color'**
   String get settingsAccentColor;
-
-  /// No description provided for @settingsAccentColorSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'The highlight color used across the app.'**
-  String get settingsAccentColorSubtitle;
 
   /// No description provided for @accentThemeDefault.
   ///
@@ -3006,53 +2892,29 @@ abstract class AppLocalizations {
   /// **'Resume queue on launch'**
   String get settingsResumeQueue;
 
-  /// No description provided for @settingsResumeQueueSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Save the play queue and your place, and restore them when you reopen the app.'**
-  String get settingsResumeQueueSubtitle;
-
   /// No description provided for @settingsOfflineQueue.
   ///
   /// In en, this message translates to:
-  /// **'Keep queue available offline'**
+  /// **'Download the queue'**
   String get settingsOfflineQueue;
 
   /// No description provided for @settingsOfflineQueueSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Automatically download queued tracks to this device so playback survives losing the connection.'**
+  /// **'Playback keeps going when the connection drops.'**
   String get settingsOfflineQueueSubtitle;
 
   /// No description provided for @settingsOfflineQueueWifiOnly.
   ///
   /// In en, this message translates to:
-  /// **'Download on Wi-Fi only'**
+  /// **'Wi-Fi only'**
   String get settingsOfflineQueueWifiOnly;
-
-  /// No description provided for @settingsOfflineQueueWifiOnlySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Wait for Wi-Fi before downloading queued tracks.'**
-  String get settingsOfflineQueueWifiOnlySubtitle;
 
   /// Title of the keep-queue-offline retention-cap setting.
   ///
   /// In en, this message translates to:
-  /// **'Auto-download limit'**
+  /// **'Download limit'**
   String get settingsAutoDownloadCap;
-
-  /// Subtitle when a finite auto-download cap is set.
-  ///
-  /// In en, this message translates to:
-  /// **'Cache this many songs ahead of the one playing; songs left behind are removed as you go.'**
-  String get settingsAutoDownloadCapSubtitle;
-
-  /// Subtitle when the auto-download cap is unlimited (0).
-  ///
-  /// In en, this message translates to:
-  /// **'Cache the whole queue (no limit).'**
-  String get settingsAutoDownloadCapSubtitleUnlimited;
 
   /// Shown as the auto-download cap value when there's no limit.
   ///
@@ -3063,13 +2925,13 @@ abstract class AppLocalizations {
   /// Text field label in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'Number of tracks'**
+  /// **'Songs'**
   String get settingsAutoDownloadCapField;
 
   /// Explainer in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.'**
+  /// **'How many songs to keep downloaded, counting from the one playing. Older ones outside that are deleted as new ones arrive.'**
   String get settingsAutoDownloadCapDialogBody;
 
   /// No description provided for @downloadWaitingWifi.
@@ -3087,7 +2949,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRatingHalfSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Rate songs in half-star steps (long-press a star).'**
+  /// **'Long-press a star'**
   String get settingsRatingHalfSubtitle;
 
   /// No description provided for @ratingTitle.
@@ -3192,12 +3054,6 @@ abstract class AppLocalizations {
   /// **'Imported shaders'**
   String get importedShadersTitle;
 
-  /// Subtitle under the Imported shaders entry in Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'Add your own .glsl files to the ShaderToy Visualizer\'s rotation.'**
-  String get importedShadersSettingsSubtitle;
-
   /// Tooltip for the button that re-scans the shader folder for new files.
   ///
   /// In en, this message translates to:
@@ -3219,19 +3075,19 @@ abstract class AppLocalizations {
   /// Help text explaining where the shader folder is and when imported shaders are used.
   ///
   /// In en, this message translates to:
-  /// **'Reachable over USB or a file manager (under Android/data). Imported shaders join the ShaderToy Visualizer\'s rotation.'**
+  /// **'Reach it over USB. Uninstalling mStream deletes it.'**
   String get importedShadersReachableHint;
 
   /// Tooltip for the button that deletes an imported shader file.
   ///
   /// In en, this message translates to:
-  /// **'Remove'**
+  /// **'Delete'**
   String get importedShadersRemove;
 
   /// Empty-state title when the shader folder has no files.
   ///
   /// In en, this message translates to:
-  /// **'No shaders in the folder yet'**
+  /// **'No shaders yet'**
   String get importedShadersEmptyTitle;
 
   /// Empty-state body when the shader folder has no files.
@@ -3243,7 +3099,7 @@ abstract class AppLocalizations {
   /// Warning subtitle when an imported file does not look like a fragment shader.
   ///
   /// In en, this message translates to:
-  /// **'May not be a valid shader — no mainImage/main entry point.'**
+  /// **'May not run: no mainImage or main'**
   String get importedShadersInvalid;
 
   /// Button that copies .glsl shaders found in the device Downloads folder into the shader folder.
@@ -3255,7 +3111,7 @@ abstract class AppLocalizations {
   /// Snackbar after copying shaders in from the Downloads folder.
   ///
   /// In en, this message translates to:
-  /// **'Imported {count} shader(s) from Downloads'**
+  /// **'{count, plural, one{Imported {count} shader} other{Imported {count} shaders}}'**
   String importedShadersDownloadsImported(int count);
 
   /// Snackbar when the Downloads folder has no new shaders to import.
@@ -4524,22 +4380,16 @@ abstract class AppLocalizations {
   /// **'Ask what to do with torrents'**
   String get settingsTorrentAskTitle;
 
-  /// Subtitle for that settings switch.
-  ///
-  /// In en, this message translates to:
-  /// **'When a torrent is opened with mStream, offer to hand it to another app'**
-  String get settingsTorrentAskSub;
-
   /// Settings row opening Android per-app default-handler settings.
   ///
   /// In en, this message translates to:
   /// **'Default app for torrents'**
   String get settingsTorrentDefaultTitle;
 
-  /// Subtitle for that row.
+  /// Screen-reader label of the open-in-new icon on the Default app for torrents row.
   ///
   /// In en, this message translates to:
-  /// **'Opens Android settings, where you can choose which app handles torrents and magnet links'**
+  /// **'Opens Android settings'**
   String get settingsTorrentDefaultSub;
 
   /// Snackbar when no settings screen would open.
@@ -7152,65 +7002,35 @@ abstract class AppLocalizations {
   /// **'Recently Played'**
   String get autoRecentlyPlayed;
 
-  /// Settings section header.
-  ///
-  /// In en, this message translates to:
-  /// **'Listening history'**
-  String get settingsSectionListening;
-
   /// Settings switch.
   ///
   /// In en, this message translates to:
-  /// **'Keep listening history'**
+  /// **'Record plays'**
   String get settingsHistoryEnabled;
 
-  /// Settings switch subtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Record what this phone plays, on every server and for local files. Kept on this device only.'**
-  String get settingsHistoryEnabledSubtitle;
-
   /// Settings switch.
   ///
   /// In en, this message translates to:
-  /// **'Send plays to your servers'**
+  /// **'Send plays to servers'**
   String get settingsHistorySend;
 
-  /// Settings switch subtitle.
+  /// Settings action row title.
   ///
   /// In en, this message translates to:
-  /// **'Each play goes to the server the track lives on (a peer\'s track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.'**
-  String get settingsHistorySendSubtitle;
-
-  /// Settings action row title and its confirm button.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear listening history'**
+  /// **'Clear history'**
   String get settingsHistoryClear;
 
-  /// Settings action row subtitle; {size} is a formatted byte count like '1.2 MB'.
+  /// Clear history confirm body: the history size on this phone and how many unsent plays go with it.
   ///
   /// In en, this message translates to:
-  /// **'Removes this phone\'s record ({size}). Your servers keep theirs.'**
-  String settingsHistoryClearSubtitle(Object size);
-
-  /// Confirm dialog body.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete this phone\'s listening history? Plays already sent to a server stay there.'**
-  String get settingsHistoryClearConfirm;
+  /// **'{count, plural, =0{This deletes this phone\'s listening history ({size}). Servers keep theirs.} one{This deletes this phone\'s listening history ({size}), including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone\'s listening history ({size}), including {count} plays not synced yet. Servers keep theirs.}}'**
+  String settingsHistoryClearConfirm(String size, int count);
 
   /// Snackbar after clearing.
   ///
   /// In en, this message translates to:
   /// **'Listening history cleared'**
   String get settingsHistoryCleared;
-
-  /// Settings line under the send switch: outbox size.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{Everything is synced} =1{1 play waiting to be sent} other{{count} plays waiting to be sent}}'**
-  String settingsHistoryUnsynced(num count);
 
   /// Song Info stats line, server counts.
   ///
@@ -7613,12 +7433,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home screen widget'**
   String get settingsHomeWidget;
-
-  /// Subtitle of that row on Android, where a tap opens the size sheet.
-  ///
-  /// In en, this message translates to:
-  /// **'Add the Now Playing widget to your home screen in one of five sizes.'**
-  String get settingsHomeWidgetSubtitle;
 
   /// Subtitle of that row on iOS, where the system's gallery is the only way; no tap.
   ///
@@ -8841,6 +8655,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load this from the server. Check the connection and try again.'**
   String get browseLoadFailed;
+
+  /// Settings section header over the visualizer rows (Android only).
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer'**
+  String get settingsSectionVisualizer;
+
+  /// Note under the Playback card while Download the queue is on: Wi-Fi only and the download limit apply to the automatic queue downloads, never to songs the user downloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue downloads only. Songs you download yourself always stay.'**
+  String get settingsOfflineQueueFooter;
+
+  /// Value on the Download limit row.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} song} other{{count} songs}}'**
+  String settingsAutoDownloadCapValue(int count);
+
+  /// Helper text under the number field in the Download limit dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'0 = no limit'**
+  String get settingsAutoDownloadCapHint;
+
+  /// Hint under 'Recent' in the Startup page picker: the Recent view lists recently ADDED songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get settingsStartupRecentHint;
+
+  /// Value on the A–Z scrubber row: the list length from which the scrubber shows; 0 = on every list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Always} other{{count}+ items}}'**
+  String settingsLetterStripValue(int count);
+
+  /// Line under the A–Z scrubber slider.
+  ///
+  /// In en, this message translates to:
+  /// **'On A–Z lists. Shorter lists wrap long names instead.'**
+  String get settingsLetterStripHint;
+
+  /// Note under the Listening stats card in Settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers scrobble to Last.fm only if you linked an account there.'**
+  String get settingsHistoryFooter;
+
+  /// Value on the Clear history row when there is nothing to clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get settingsHistoryEmpty;
+
+  /// Title of the confirm shown when Record plays is switched off.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop recording plays?'**
+  String get settingsHistoryOffTitle;
+
+  /// Body of that confirm: how many unsent plays are deleted with the history.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{This deletes this phone\'s listening history. Servers keep theirs.} one{This deletes this phone\'s listening history, including {count} play not synced yet. Servers keep theirs.} other{This deletes this phone\'s listening history, including {count} plays not synced yet. Servers keep theirs.}}'**
+  String settingsHistoryOffBody(int count);
+
+  /// Red confirm button of that dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off'**
+  String get settingsHistoryOffConfirm;
+
+  /// Title of the Clear history confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear history?'**
+  String get settingsHistoryClearTitle;
+
+  /// Title of the Reset settings confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset settings?'**
+  String get settingsResetTitle;
+
+  /// Reset confirm body on Android (names the Equalizer).
+  ///
+  /// In en, this message translates to:
+  /// **'Also resets Equalizer, Transcoding and a few options outside Settings. Servers, downloads, listening history and saved presets stay.'**
+  String get settingsResetBody;
+
+  /// Reset confirm body on iPhone (no Equalizer there).
+  ///
+  /// In en, this message translates to:
+  /// **'Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.'**
+  String get settingsResetBodyIos;
 }
 
 class _AppLocalizationsDelegate

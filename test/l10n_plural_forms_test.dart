@@ -66,10 +66,23 @@ void main() {
         t.listeningDays,
         t.listeningUnsynced,
         t.songInfoDevicePlays,
+        t.settingsAutoDownloadCapValue,
+        t.importedShadersDownloadsImported,
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');
       }
+      // Counts whose zero case says something else (Always; no unsent
+      // plays) — only the 21 must carry its number.
+      for (final f in <String Function(int)>[
+        t.settingsLetterStripValue,
+        t.settingsHistoryOffBody,
+        (n) => t.settingsHistoryClearConfirm('1.2 MB', n),
+      ]) {
+        expect(f(21), contains('21'), reason: '$locale ${f(21)}');
+      }
+      expect(t.settingsHistoryClearConfirm('1.2 MB', 0), contains('1.2 MB'),
+          reason: '$locale');
     }
   });
 }
