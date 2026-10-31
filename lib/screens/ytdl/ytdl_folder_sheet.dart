@@ -36,26 +36,28 @@ import 'ytdl_result_card.dart';
 /// comes back with the pick applied — or as it was, when cancelled.
 ///
 /// The feature gone for [server] (a re-ping turned uploads or conversion
-/// off — after a menu offering it was built, or while the picker was up)
-/// opens nothing, and says why. A sheet already open stays (spec §8): the
-/// card and the lookup go on, and the action bar says why Add is off or
-/// gone.
+/// off after a menu offering it was built) opens nothing, and says why. A
+/// sheet already open stays (spec §8): the card and the lookup go on, and
+/// the action bar says why Add is off or gone. The round trip through the
+/// picker is that same sheet: gone while the picker was up, it still comes
+/// back with the pick applied.
 Future<void> showYtdlFolderSheet(
   BuildContext context,
   Server server,
   String currentPath,
 ) async {
   final st = YtdlHub().stateFor(server);
+  if (!context.mounted) return;
+  if (!st.entryAllowed) {
+    final why = ytdlEntryOffReason(AppLocalizations.of(context), server);
+    if (why != null) YtdlHub().showToast(why);
+    return;
+  }
   // A new sheet starts at Right here; the round trip through the picker
   // comes back as it left.
   st.folderDraft(currentPath).sheetOpened();
   for (;;) {
     if (!context.mounted) return;
-    if (!st.entryAllowed) {
-      final why = ytdlEntryOffReason(AppLocalizations.of(context), server);
-      if (why != null) YtdlHub().showToast(why);
-      return;
-    }
     final gone = Completer<void>();
     final exit = await showModalBottomSheet<YtdlFolderSheetExit>(
       context: context,

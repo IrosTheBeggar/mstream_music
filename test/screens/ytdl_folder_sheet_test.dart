@@ -13,11 +13,12 @@
 // by what they show — and is hidden under noMkdir; every sheet starting at
 // Right here (but an add still starting going where it was sent); the
 // name check by tier; the feature turned off by a re-ping leaving an
-// open sheet open (on either page; the lookup goes on, Add off or gone
-// with the line saying why, the field emptied too), and opening nothing
-// (a stale menu item, the picker coming back), saying why; no keyboard
-// brought back by the format menu closing; the subfolders page deaf to
-// its draft once on its way out; 360 dp at 200% without overflow.
+// open sheet open (on either page, or stepped aside for the picker and
+// back with the pick; the lookup goes on, Add off or gone with the line
+// saying why, the field emptied too), and a stale menu item opening
+// nothing, saying why; no keyboard brought back by the format
+// menu closing; the subfolders page deaf to its draft once on its way out;
+// 360 dp at 200% without overflow.
 
 import 'dart:async';
 
@@ -316,7 +317,8 @@ void main() {
     });
 
     testWidgets('gone while the picker stood in for the sheet: the sheet '
-        'doesn\'t come back, and says why', (t) async {
+        'comes back with the pick, Add off and the line saying why (the '
+        'round trip is one sheet)', (t) async {
       final d = await filled(t);
       d.setSubLayout(kYtdlLayoutAlbum);
       await ui.settle(t, YtdlDraft.kCheckAfter);
@@ -324,18 +326,49 @@ void main() {
       await t.tap(byKey('ytdl-add'));
       await ui.settle(t);
       await ui.settle(t);
-      // The picker: a re-ping lands while it is up, and it closes empty.
+      // The picker: a re-ping lands while it is up, then a folder is used.
       YtdlSheets.chooseFolder = (context, draft) async {
         s.noUpload = true;
         await h().hub.stateFor(s).rememberFormat('mp3');
-        return null;
+        return '/Music/Singles/';
       };
       await t.tap(byKey('ytdl-mkdir-choose'));
       await t.pumpAndSettle();
-      await ui.settle(t);
+      await ui.settle(t, YtdlDraft.kCheckAfter);
       await t.pumpAndSettle();
-      expect(find.byType(YtdlFolderSheet), findsNothing);
-      expect(h().toastTexts, [h().l.ytdlErrUploadsOff]);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      expect(h().toastTexts, isEmpty);
+      expect(d.attached, isTrue);
+      expect(d.justThisSong, YtdlChoice.folder('/Music/Singles/'));
+      expect(crumbsIn(t, find.byType(YtdlSavesBlock)).crumbs,
+          ['Music', 'Singles']);
+      expect(enabled(t, 'ytdl-add'), isFalse);
+      expect(shows(t, h().l.ytdlErrUploadsOff), isTrue);
+    });
+
+    testWidgets('… conversion off: back with the pick, no button, the line',
+        (t) async {
+      final d = await filled(t);
+      d.setSubLayout(kYtdlLayoutAlbum);
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      h().fake.mkdirRefusal = (500, 'EACCES');
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      YtdlSheets.chooseFolder = (context, draft) async {
+        s.transcodeAvailable = false;
+        await h().hub.stateFor(s).rememberFormat('mp3');
+        return '/Music/Singles/';
+      };
+      await t.tap(byKey('ytdl-mkdir-choose'));
+      await t.pumpAndSettle();
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      await t.pumpAndSettle();
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      expect(h().toastTexts, isEmpty);
+      expect(d.justThisSong, YtdlChoice.folder('/Music/Singles/'));
+      expect(byKey('ytdl-add'), findsNothing);
+      expect(shows(t, h().l.ytdlErrFfmpeg), isTrue);
     });
   });
 

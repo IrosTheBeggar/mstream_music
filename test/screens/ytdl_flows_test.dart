@@ -10,9 +10,10 @@
 // on NEEDS A LOOK; an account that can't make folders reaching a folder
 // through the real picker from the card, the folder sheet (stepped aside
 // and back) and a row; the feature turned off by a re-ping while a sheet,
-// menu or picker is open — nothing closes, the card says why Add is off or
-// gone and the lookup goes on, while a stale ⋮ item or the picker coming
-// back opens nothing and says why; the app paused and resumed, the screen
+// menu or picker is open — nothing closes (the folder sheet stepped aside
+// for the picker comes back with the pick), the card says why Add is off
+// or gone and the lookup goes on, while a stale ⋮ item opens nothing and
+// says why; the app paused and resumed, the screen
 // reopened over its kept draft, two servers; the Where sheet's listeners
 // across two screens and torn-down routes, and the screen going in the
 // same frame as the Where sheet or the picker over it; and the song just
@@ -1256,7 +1257,8 @@ void main() {
 
     testWidgets('the folder sheet stepped aside for Choose a folder…: the '
         'feature going off leaves the picker open; once it answers, the '
-        'sheet stays away and says why (spec §7: nothing opens)', (t) async {
+        'sheet comes back with the pick, Add off and the line saying why '
+        '(spec §7: one sheet; §8: it stays)', (t) async {
       f.setUp(server: ytdlServer(formats: const ['mp3']));
       f.watchErrors();
       f.h.fake.folder(homework);
@@ -1293,10 +1295,22 @@ void main() {
       await t.tap(byKey('ytdl-choose-use'));
       await f.drain(t);
       expect(find.byType(YtdlChooseFolderSheet), findsNothing);
+      expect(find.byType(YtdlFolderSheet), findsOneWidget);
+      expect(st().folderDraft(daftPunk).justThisSong,
+          YtdlChoice.folder(homework));
+      expect(
+          t
+              .widget<InkWell>(find.descendant(
+                  of: byKey('ytdl-add'), matching: find.byType(InkWell)))
+              .onTap,
+          isNull);
+      expect(shows(t, f.h.l.ytdlErrUploadsOff), isTrue);
+      expect(f.h.toastTexts, isNot(contains(f.h.l.ytdlErrUploadsOff)));
+      // Closed, it is gone from the toolbar: nothing opens it again.
+      await t.tap(byKey('ytdl-sheet-close'));
+      await f.drain(t);
       expect(find.byType(YtdlFolderSheet), findsNothing);
       expect(byKey('ytdl-explorer-button'), findsNothing);
-      expect(
-          f.h.toastTexts.where((m) => m == f.h.l.ytdlErrUploadsOff), hasLength(1));
       f.clean(t);
     });
 
