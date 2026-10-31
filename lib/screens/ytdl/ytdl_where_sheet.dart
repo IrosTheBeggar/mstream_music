@@ -14,7 +14,7 @@ import '../../util/ytdl_link.dart';
 import '../auto_dj_sheets.dart' show autoDjServerName;
 import '../discovery/destination_pieces.dart';
 import '../discovery/keep_copy_ui.dart';
-import 'ytdl_card_parts.dart' show YtdlGround;
+import 'ytdl_card_parts.dart' show YtdlGround, ytdlDropFocus;
 import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart';
 
@@ -34,19 +34,21 @@ import 'ytdl_draft.dart';
 /// Video_title.mp3"). A folder an empty tag leaves as brackets ("()",
 /// "Discovery ()") is warned about, with a link that closes the sheet,
 /// keeps the choice for this song and opens the card's field that fills it.
-Future<void> showYtdlWhereSheet(BuildContext context, YtdlDraft draft) =>
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: VelvetColors.surface,
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.89,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => YtdlWhereSheet(draft: draft),
-    );
+Future<void> showYtdlWhereSheet(BuildContext context, YtdlDraft draft) {
+  ytdlDropFocus();
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: VelvetColors.surface,
+    isScrollControlled: true,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.89,
+    ),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => YtdlWhereSheet(draft: draft),
+  );
+}
 
 /// The variables a layout reads ("{{ ALBUM }}" too, as the engine does).
 final RegExp _token = RegExp(r'\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}');

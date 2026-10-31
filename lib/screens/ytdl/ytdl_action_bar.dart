@@ -429,6 +429,7 @@ Future<String?> showYtdlFormatMenu(
   required String server,
   Widget? anchorFace,
 }) {
+  ytdlDropFocus();
   final nav = Navigator.of(context, rootNavigator: true);
   final overlay = nav.overlay?.context.findRenderObject();
   // The rect in the root overlay's own space (it fills the screen).

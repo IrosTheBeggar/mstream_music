@@ -33,6 +33,13 @@ abstract final class YtdlSheets {
   }
 }
 
+/// Before a sheet or a menu opens over the screen or the folder sheet:
+/// whatever holds the focus lets go of it (spec §3: nothing autofocuses).
+/// A route gives the focus back to the field that had it when another
+/// closes over it — the link field, after Back hid the keyboard and left
+/// it focused — so the keyboard would rise and the list scroll to it.
+void ytdlDropFocus() => FocusManager.instance.primaryFocus?.unfocus();
+
 /// "Choose a folder…": the picked folder, for this song only.
 Future<void> ytdlChooseFolder(BuildContext context, YtdlDraft draft) async {
   final dir = await YtdlSheets.chooseFolder(context, draft);

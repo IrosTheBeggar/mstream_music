@@ -8,6 +8,7 @@ import '../../util/discover_jobs.dart' show pathCrumbs;
 import '../../util/ytdl_api.dart';
 import '../discovery/destination_pieces.dart';
 import '../discovery/keep_copy_ui.dart';
+import 'ytdl_card_parts.dart' show ytdlDropFocus;
 import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart';
 
@@ -30,22 +31,24 @@ Future<String?> showYtdlChooseFolderSheet(
   BuildContext context,
   YtdlDraft draft, {
   String? startAt,
-}) =>
-    showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: VelvetColors.surface,
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.89,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => YtdlChooseFolderSheet(
-        draft: draft,
-        startAt: startAt ?? ytdlChooseFolderStart(draft),
-      ),
-    );
+}) {
+  ytdlDropFocus();
+  return showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: VelvetColors.surface,
+    isScrollControlled: true,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.89,
+    ),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => YtdlChooseFolderSheet(
+      draft: draft,
+      startAt: startAt ?? ytdlChooseFolderStart(draft),
+    ),
+  );
+}
 
 /// Where "Choose a folder" opens for [draft] when the caller names no
 /// folder: the deepest folder on the song's path that listed, else the

@@ -15,8 +15,9 @@
 // name check by tier; the feature turned off by a re-ping leaving an
 // open sheet open (on either page; the lookup goes on, Add off or gone
 // with the line saying why), and opening nothing (a stale menu item, the
-// picker coming back), saying why; the subfolders page deaf to its draft
-// once on its way out; 360 dp at 200% without overflow.
+// picker coming back), saying why; no keyboard brought back by the format
+// menu closing; the subfolders page deaf to its draft once on its way out;
+// 360 dp at 200% without overflow.
 
 import 'dart:async';
 
@@ -638,6 +639,29 @@ void main() {
     expect(byKey('ytdl-card'), findsOneWidget);
     expect(enabled(t, 'ytdl-add'), isFalse);
     expect(shows(t, h().l.ytdlErrUploadsOff), isTrue);
+  });
+
+  testWidgets('the format menu closing brings no keyboard back (spec §3: '
+      'nothing autofocuses)', (t) async {
+    bool fieldFocused() {
+      final ctx = FocusManager.instance.primaryFocus?.context;
+      return ctx != null &&
+          (ctx.widget is EditableText ||
+              ctx.findAncestorWidgetOfExactType<EditableText>() != null);
+    }
+
+    await filled(t);
+    await t.tap(byKey('ytdl-link'));
+    await t.pump();
+    expect(fieldFocused(), isTrue);
+    await tapIn(t, byKey('ytdl-format'));
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsOneWidget);
+    await t.tapAt(const Offset(380, 60));
+    await t.pumpAndSettle();
+    expect(byKey('ytdl-format-menu'), findsNothing);
+    expect(find.byType(YtdlFolderSheet), findsOneWidget);
+    expect(fieldFocused(), isFalse);
   });
 
   testWidgets('the subfolders page on its way out hears nothing: a surface '

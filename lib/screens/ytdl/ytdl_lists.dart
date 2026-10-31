@@ -19,6 +19,7 @@ import '../../util/stream_url.dart';
 import '../../util/ytdl_errors.dart';
 import '../../util/ytdl_formats.dart' show ytdlFormatName;
 import '../discovery/keep_copy_ui.dart';
+import 'ytdl_card_parts.dart' show ytdlDropFocus;
 import 'ytdl_choose_folder_sheet.dart';
 import 'ytdl_crumbs.dart';
 import 'ytdl_draft.dart' show YtdlDraft, ytdlGoneLibrary, ytdlServerWords;
@@ -553,6 +554,7 @@ class _RowMenu<T> extends StatelessWidget {
         side: BorderSide(color: VelvetColors.border),
       ),
       itemBuilder: items,
+      onOpened: ytdlDropFocus,
       onSelected: onSelected,
     );
   }
@@ -978,6 +980,7 @@ class _FormatRetry extends StatelessWidget {
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (box == null || overlay == null) return;
+    ytdlDropFocus();
     final rect = Rect.fromPoints(
       box.localToGlobal(Offset.zero, ancestor: overlay),
       box.localToGlobal(box.size.bottomRight(Offset.zero), ancestor: overlay),

@@ -8,12 +8,13 @@
 // tier), every lookup state (reading, slow and Enter details yourself,
 // failed and timed out with Enter details and Try again, failed after
 // manual entry, the late answer and Use them, offline, yt-dlp missing),
-// Add (the field clears and focus drops after a 200), Clear link, the
-// screen staying when a re-ping turns the feature off (the card and the
-// lookup go on, Add off or gone with the line saying why), a tag field kept in
-// view with SAVES TO above the keyboard — also when the Where sheet asks
-// for one — the iPhone's Done bar over the Year number pad, and 360 dp at
-// 200% text without overflow or a word cut off.
+// Add (the field clears and focus drops after a 200), Clear link, no
+// keyboard brought back by a sheet or a menu closing, the screen staying
+// when a re-ping turns the feature off (the card and the lookup go on, Add
+// off or gone with the line saying why), a tag field kept in view with
+// SAVES TO above the keyboard — also when the Where sheet asks for one —
+// the iPhone's Done bar over the Year number pad, and 360 dp at 200% text
+// without overflow or a word cut off.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -353,6 +354,110 @@ void main() {
       await ui.settle(t);
       expect(h().fake.count('GET', '/ytdl/metadata'), 2);
       expect(byKey('ytdl-card'), findsOneWidget);
+    });
+  });
+
+  group('a sheet or a menu closing brings no keyboard back (spec §3: '
+      'nothing autofocuses)', () {
+    /// A text field holds the focus — the link field after typing in it;
+    /// Back hides the keyboard and leaves the focus where it was.
+    bool fieldFocused() {
+      final ctx = FocusManager.instance.primaryFocus?.context;
+      return ctx != null &&
+          (ctx.widget is EditableText ||
+              ctx.findAncestorWidgetOfExactType<EditableText>() != null);
+    }
+
+    Future<YtdlDraft> typed(WidgetTester t) async {
+      final d = await ui.pumpScreen(t, s);
+      await ui.paste(t, d, kOneMoreTime);
+      await t.tap(byKey('ytdl-link'));
+      await t.pump();
+      expect(fieldFocused(), isTrue);
+      return d;
+    }
+
+    testWidgets('the Where sheet', (t) async {
+      ui.sheets.unwire();
+      h().fake.folder('/Music/Daft Punk/');
+      await typed(t);
+      await tapIn(t, byKey('ytdl-saves-change'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-where-sheet'), findsOneWidget);
+      await t.tap(byKey('ytdl-where-close'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-where-sheet'), findsNothing);
+      expect(fieldFocused(), isFalse);
+    });
+
+    testWidgets('Choose a folder', (t) async {
+      ui.sheets.unwire();
+      s = ytdlServer(noMkdir: true, formats: const ['mp3', 'm4a']);
+      h().fake.folder('/Music/Daft Punk/');
+      await typed(t);
+      await tapIn(t, byKey('ytdl-choose-folder'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-choose-sheet'), findsOneWidget);
+      await t.tap(byKey('ytdl-choose-cancel'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-choose-sheet'), findsNothing);
+      expect(fieldFocused(), isFalse);
+    });
+
+    testWidgets('the format menu', (t) async {
+      h().fake.folder('/Music/Daft Punk/Discovery/');
+      await typed(t);
+      await t.tap(byKey('ytdl-format'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-format-menu'), findsOneWidget);
+      await t.tapAt(const Offset(380, 60));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-format-menu'), findsNothing);
+      expect(fieldFocused(), isFalse);
+    });
+
+    testWidgets('a row\'s menus: Change format and retry, and ⋮', (t) async {
+      final at = h().clock.current.millisecondsSinceEpoch;
+      s.ytdlJobs = [
+        {
+          'id': 'c1',
+          'url': kOneMoreTime,
+          'directory': '/Music/Daft Punk/Discovery/',
+          'codec': 'mp3',
+          'title': 'One More Time',
+          'predictedName': 'One_More_Time.mp3',
+          'createdAt': at,
+          'endedAt': at,
+          'state': 'failedClash',
+        }
+      ];
+      h().fake.addRecord(
+          relativePath: 'Daft Punk/Homework/Da_Funk.mp3',
+          title: 'Da Funk',
+          origin: 'https://www.youtube.com/watch?v=df');
+      await ui.pumpScreen(t, s);
+      await ui.settle(t);
+      await t.tap(byKey('ytdl-link'));
+      await t.pump();
+      expect(fieldFocused(), isTrue);
+      await tapIn(t, byKey('ytdl-row-change-format-c1'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-row-format-m4a'), findsOneWidget);
+      await t.tapAt(const Offset(380, 60));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-row-format-m4a'), findsNothing);
+      expect(fieldFocused(), isFalse);
+
+      await t.tap(byKey('ytdl-link'));
+      await t.pump();
+      expect(fieldFocused(), isTrue);
+      await tapIn(t, find.byTooltip('More for Da Funk'));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-added-queue'), findsOneWidget);
+      await t.tapAt(const Offset(380, 60));
+      await t.pumpAndSettle();
+      expect(byKey('ytdl-added-queue'), findsNothing);
+      expect(fieldFocused(), isFalse);
     });
   });
 
