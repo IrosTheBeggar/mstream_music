@@ -1074,7 +1074,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moodStrict => 'Строго';
 
   @override
-  String get moodCloseMatches => 'Близкие совпадения';
+  String get moodStandard => 'Обычно';
+
+  @override
+  String get moodLoose => 'Мягко';
+
+  @override
+  String get moodStrictnessGroup => 'Строго, обычно или мягко';
+
+  @override
+  String get moodSort => 'Сортировка';
+
+  @override
+  String get moodSortRating => 'Оценка';
+
+  @override
+  String get moodSortNewest => 'Новые';
+
+  @override
+  String get moodSortMatch => 'Совпадение';
 
   @override
   String get browserRecent => 'Недавние';

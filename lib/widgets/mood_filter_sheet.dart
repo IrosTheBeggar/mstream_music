@@ -6,12 +6,11 @@
 // can filter, and before Discover's New seeds; it counts the choices set.
 // It opens a bottom sheet — the shape of Discover's "More options" — with
 // the three scales as segments (pressing the chosen one again lets it go),
-// the tags, and Clear and Done: Done applies the choices, Clear empties
-// them, and closing the sheet any other way changes nothing. While anything
-// is set, a grey strip under the bar — the File Explorer's path strip —
-// names the choices; its Strict keeps only the strong fits, and its Clear
-// lets them all go. A filtered Rated or Recent list draws its close
-// matches under a divider (MoodCloseMatches).
+// the tags, Strict | Standard | Loose (one always pressed), on Rated and
+// Recent their Sort, and Clear and Done: Done applies the choices, Clear
+// empties them, and closing the sheet any other way changes nothing. While
+// anything is set, a grey strip under the bar — the File Explorer's path
+// strip — names the choices, and its Clear lets them all go.
 
 import 'package:material_ui/material_ui.dart';
 
@@ -35,11 +34,20 @@ String moodLabel(AppLocalizations l, String value) => switch (value) {
       _ => value,
     };
 
-/// What is set, in words: the scales' values, then the tags.
+/// A level's words.
+String moodLevelLabel(AppLocalizations l, MoodLevel level) => switch (level) {
+      MoodLevel.strict => l.moodStrict,
+      MoodLevel.standard => l.moodStandard,
+      MoodLevel.loose => l.moodLoose,
+    };
+
+/// What is set, in words: the scales' values, then the tags, then the level
+/// when it is not Standard.
 List<String> moodLabels(AppLocalizations l, MoodFilter f) => [
       for (final scale in MoodScale.values)
         if (f.valueOf(scale) case final value?) moodLabel(l, value),
       for (final tag in f.tags) moodLabel(l, tag),
+      if (f.level != MoodLevel.standard) moodLevelLabel(l, f.level),
     ];
 
 /// The toolbar's Filters button, with the count of choices set.
@@ -73,26 +81,43 @@ class MoodFilterButton extends StatelessWidget {
   }
 }
 
+/// What the sheet's Done hands back: the choices, and the Sort (as it came
+/// in, where the sheet offers none).
+typedef MoodSheetChoice = ({MoodFilter filter, MoodSort sort});
+
 /// The sheet on [initial]: the choices made when Done is pressed, or null
 /// when it is closed any other way (nothing changes then). [title] replaces
 /// the browse lists' "Filters" (Auto DJ's sheet is its Mood row's).
-Future<MoodFilter?> showMoodFilterSheet(
-        BuildContext context, MoodFilter initial, {String? title}) =>
-    showModalBottomSheet<MoodFilter>(
+/// [sortFor] — Rated or Recent — offers that list's Sort, at [sort].
+Future<MoodSheetChoice?> showMoodFilterSheet(
+        BuildContext context, MoodFilter initial,
+        {String? title, MoodPage? sortFor, MoodSort sort = MoodSort.list}) =>
+    showModalBottomSheet<MoodSheetChoice>(
       context: context,
       isScrollControlled: true,
       backgroundColor: VelvetColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => MoodFilterSheet(initial: initial, title: title),
+      builder: (_) => MoodFilterSheet(
+          initial: initial, title: title, sortFor: sortFor, sort: sort),
     );
 
 class MoodFilterSheet extends StatefulWidget {
-  const MoodFilterSheet({super.key, required this.initial, this.title});
+  const MoodFilterSheet({
+    super.key,
+    required this.initial,
+    this.title,
+    this.sortFor,
+    this.sort = MoodSort.list,
+  });
 
   final MoodFilter initial;
   final String? title;
+
+  /// Rated or Recent: the list whose Sort the sheet offers. Null offers none.
+  final MoodPage? sortFor;
+  final MoodSort sort;
 
   @override
   State<MoodFilterSheet> createState() => _MoodFilterSheetState();
@@ -100,6 +125,7 @@ class MoodFilterSheet extends StatefulWidget {
 
 class _MoodFilterSheetState extends State<MoodFilterSheet> {
   late MoodFilter _draft = widget.initial;
+  late MoodSort _sort = widget.sort;
 
   String _groupLabel(AppLocalizations l, MoodScale scale) => switch (scale) {
         MoodScale.valence => l.moodValenceGroup,
@@ -129,16 +155,81 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
           showSelectedIcon: false,
           onSelectionChanged: (set) => setState(() => _draft =
               _draft.withScale(scale, set.isEmpty ? null : set.first)),
-          style: SegmentedButton.styleFrom(
-            selectedBackgroundColor: VelvetColors.primary,
-            selectedForegroundColor: VelvetColors.onPrimary,
-            foregroundColor: VelvetColors.textPrimary,
-            side: BorderSide(color: VelvetColors.border2),
-            textStyle: const TextStyle(fontSize: 13),
-          ),
+          style: _segmentStyle,
         ),
       ),
     );
+  }
+
+  ButtonStyle get _segmentStyle => SegmentedButton.styleFrom(
+        selectedBackgroundColor: VelvetColors.primary,
+        selectedForegroundColor: VelvetColors.onPrimary,
+        foregroundColor: VelvetColors.textPrimary,
+        disabledForegroundColor: VelvetColors.textTertiary,
+        side: BorderSide(color: VelvetColors.border2),
+        textStyle: const TextStyle(fontSize: 13),
+      );
+
+  // Strict | Standard | Loose: one is always pressed, so pressing it again
+  // does nothing.
+  Widget _level(AppLocalizations l) => Semantics(
+        label: l.moodStrictnessGroup,
+        child: SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<MoodLevel>(
+            key: const ValueKey('mood-level'),
+            segments: [
+              for (final v in MoodLevel.values)
+                ButtonSegment(
+                  value: v,
+                  label: Text(moodLevelLabel(l, v),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            selected: {_draft.level},
+            showSelectedIcon: false,
+            onSelectionChanged: (set) =>
+                setState(() => _draft = _draft.withLevel(set.first)),
+            style: _segmentStyle,
+          ),
+        ),
+      );
+
+  // A song list's Sort: its own order (named for it) or best match first,
+  // one always pressed. Match needs a mood to rank by: with none set it
+  // rests, and the list's own order shows pressed — Match comes back with
+  // the filter.
+  Widget _sortRow(AppLocalizations l, MoodPage list) {
+    final filtered = !_draft.isEmpty;
+    return Row(children: [
+      Text(l.moodSort,
+          style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: SegmentedButton<MoodSort>(
+          key: const ValueKey('mood-sort'),
+          segments: [
+            ButtonSegment(
+              value: MoodSort.list,
+              label: Text(
+                  list == MoodPage.rated ? l.moodSortRating : l.moodSortNewest,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
+            ButtonSegment(
+              value: MoodSort.match,
+              enabled: filtered,
+              label: Text(l.moodSortMatch,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+          selected: {filtered ? _sort : MoodSort.list},
+          showSelectedIcon: false,
+          onSelectionChanged: (set) => setState(() => _sort = set.first),
+          style: _segmentStyle,
+        ),
+      ),
+    ]);
   }
 
   Widget _tag(AppLocalizations l, String tag) {
@@ -222,6 +313,12 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
                         for (final t in kMoodTags) _tag(l, t),
                       ]),
                     ),
+                    const SizedBox(height: 10),
+                    _level(l),
+                    if (widget.sortFor case final list?) ...[
+                      const SizedBox(height: 10),
+                      _sortRow(l, list),
+                    ],
                   ],
                 ),
               ),
@@ -235,7 +332,7 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
                     key: const ValueKey('mood-sheet-clear'),
                     kind: FedButtonKind.muted,
                     height: 44,
-                    onPressed: _draft.isEmpty
+                    onPressed: _draft == MoodFilter.empty
                         ? null
                         : () => setState(() => _draft = MoodFilter.empty),
                   ),
@@ -247,7 +344,8 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
                     l.done,
                     key: const ValueKey('mood-sheet-done'),
                     height: 44,
-                    onPressed: () => Navigator.of(context).pop(_draft),
+                    onPressed: () => Navigator.of(context)
+                        .pop<MoodSheetChoice>((filter: _draft, sort: _sort)),
                   ),
                 ),
               ]),
@@ -260,13 +358,12 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
 }
 
 /// While anything is set: the File Explorer's path strip under the bar,
-/// naming the choices, with Strict and Clear at its end.
+/// naming the choices, with Clear at its end.
 class MoodFilterStrip extends StatelessWidget {
   const MoodFilterStrip({
     super.key,
     required this.filter,
     required this.onClear,
-    required this.onStrict,
   });
 
   final MoodFilter filter;
@@ -274,14 +371,9 @@ class MoodFilterStrip extends StatelessWidget {
   /// Null draws Clear off (Discover while its route refuses).
   final VoidCallback? onClear;
 
-  /// Strict pressed (the caller flips [MoodFilter.strict]); null draws it
-  /// off, as Clear.
-  final VoidCallback? onStrict;
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final strict = filter.strict;
     return Container(
       key: const ValueKey('mood-strip'),
       width: double.infinity,
@@ -302,26 +394,6 @@ class MoodFilterStrip extends StatelessWidget {
             style: TextStyle(fontSize: 11.5, color: VelvetColors.textSecondary),
           ),
         ),
-        FilterChip(
-          key: const ValueKey('mood-strip-strict'),
-          label: Text(l.moodStrict),
-          selected: strict,
-          showCheckmark: false,
-          onSelected: onStrict == null ? null : (_) => onStrict!(),
-          visualDensity: VisualDensity.compact,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-          shape: const StadiumBorder(),
-          selectedColor: VelvetColors.primary,
-          backgroundColor: Colors.transparent,
-          side: BorderSide(
-              color: strict ? VelvetColors.primary : VelvetColors.border2),
-          labelStyle: TextStyle(
-            fontSize: 12,
-            color: strict ? VelvetColors.onPrimary : VelvetColors.textPrimary,
-            fontWeight: strict ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
         TextButton(
           key: const ValueKey('mood-strip-clear'),
           onPressed: onClear,
@@ -336,46 +408,6 @@ class MoodFilterStrip extends StatelessWidget {
           child: Text(l.clear),
         ),
       ]),
-    );
-  }
-}
-
-/// Over a filtered Rated or Recent list's close matches (the
-/// [kMoodCloseMatches] item): the strong fits run above it.
-class MoodCloseMatches extends StatelessWidget {
-  const MoodCloseMatches({super.key});
-
-  /// Its height in the browser's list, whose rows have fixed extents: more
-  /// with larger text, never less.
-  static double extentFor(TextScaler ts) {
-    const base = 40.0;
-    final scaled = ts.scale(base);
-    return scaled > base ? scaled : base;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Align(
-      key: const ValueKey('mood-close-matches'),
-      alignment: Alignment.bottomLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-        child: Row(children: [
-          Text(
-            l.moodCloseMatches.toUpperCase(),
-            maxLines: 1,
-            style: TextStyle(
-              color: VelvetColors.textSecondary,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Container(height: 1, color: VelvetColors.border)),
-        ]),
-      ),
     );
   }
 }

@@ -946,11 +946,35 @@
   },
   "moodStrict": "Strict",
   "@moodStrict": {
-    "description": "Mood filter strip: the switch that keeps only the songs that fit the filter strongly."
+    "description": "Mood filter sheet: the level that keeps only the songs the mood scores are surest about (also named on the strip when picked)."
   },
-  "moodCloseMatches": "Close matches",
-  "@moodCloseMatches": {
-    "description": "Rated and Recent under a mood filter: the header over the songs that fit it, but not strongly. Shown in capitals."
+  "moodStandard": "Standard",
+  "@moodStandard": {
+    "description": "Mood filter sheet: the default level, between Strict and Loose."
+  },
+  "moodLoose": "Loose",
+  "@moodLoose": {
+    "description": "Mood filter sheet: the level that also keeps songs the mood scores are less sure about (also named on the strip when picked)."
+  },
+  "moodStrictnessGroup": "Strict, standard or loose",
+  "@moodStrictnessGroup": {
+    "description": "Mood filter sheet: the screen-reader name of the Strict / Standard / Loose row."
+  },
+  "moodSort": "Sort",
+  "@moodSort": {
+    "description": "Mood filter sheet on Rated and Recent: the label before the list's order choice."
+  },
+  "moodSortRating": "Rating",
+  "@moodSortRating": {
+    "description": "Mood filter sheet on Rated: the Sort choice that keeps the list in rating order."
+  },
+  "moodSortNewest": "Newest",
+  "@moodSortNewest": {
+    "description": "Mood filter sheet on Recent: the Sort choice that keeps the newest songs first."
+  },
+  "moodSortMatch": "Match",
+  "@moodSortMatch": {
+    "description": "Mood filter sheet on Rated and Recent: the Sort choice that puts the songs that fit the mood best first."
   },
   "browserRecent": "Recent",
   "browserRated": "Rated",

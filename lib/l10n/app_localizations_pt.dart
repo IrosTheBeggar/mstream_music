@@ -1059,7 +1059,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get moodStrict => 'Estrito';
 
   @override
-  String get moodCloseMatches => 'Correspondências próximas';
+  String get moodStandard => 'Padrão';
+
+  @override
+  String get moodLoose => 'Flexível';
+
+  @override
+  String get moodStrictnessGroup => 'Estrito, padrão ou flexível';
+
+  @override
+  String get moodSort => 'Ordenar';
+
+  @override
+  String get moodSortRating => 'Avaliação';
+
+  @override
+  String get moodSortNewest => 'Mais recentes';
+
+  @override
+  String get moodSortMatch => 'Correspondência';
 
   @override
   String get browserRecent => 'Recentes';

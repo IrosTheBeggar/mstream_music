@@ -844,8 +844,8 @@ void main() {
     });
 
     testWidgets('Filters on Discover: Done asks again under the choices and '
-        'the strip under the bar names them; its Strict asks for strong fits '
-        'only; its Clear lets them go',
+        'the strip under the bar names them; Strict asks with the threshold; '
+        'the strip\'s Clear lets them go; a level alone asks nothing',
         (tester) async {
       MoodFilters().reset();
       addTearDown(MoodFilters().reset);
@@ -875,16 +875,20 @@ void main() {
           tester.getRect(find.byType(DiscoveryConfigBar)).bottom,
           reason: 'right under the bar');
 
-      final strict = find.byKey(const ValueKey('mood-strip-strict'));
-      expect(tester.widget<FilterChip>(strict).selected, isFalse);
-      await tester.tap(strict);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('mood-sort')), findsNothing,
+          reason: 'Discover has no Sort');
+      await tester.tap(find.text('Strict'));
+      await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
       await tester.pumpAndSettle();
       expect(asked.where((r) => !isPeersCall(r)).last.toJson()['moods'],
-          {'energy': 'relaxed', 'strict': true});
-      expect(tester.widget<FilterChip>(strict).selected, isTrue);
+          {'energy': 'relaxed', 'threshold': 0.7});
+      expect(find.descendant(of: strip, matching: find.text('Relaxed · Strict')),
+          findsOneWidget);
       expect(find.descendant(of: button, matching: find.text('1')),
           findsOneWidget,
-          reason: 'Strict is not a choice');
+          reason: 'the level is not a choice');
 
       await tester.tap(find.byKey(const ValueKey('mood-strip-clear')));
       await tester.pumpAndSettle();
@@ -892,6 +896,17 @@ void main() {
       expect(
           asked.where((r) => !isPeersCall(r)).last.toJson().containsKey('moods'),
           isFalse);
+
+      // With no mood set the calls would be the same: none is made.
+      final cleared = asked.length;
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Loose'));
+      await tester.tap(find.byKey(const ValueKey('mood-sheet-done')));
+      await tester.pumpAndSettle();
+      expect(asked, hasLength(cleared));
+      expect(MoodFilters().of(MoodPage.discover).level, MoodLevel.loose);
+      expect(strip, findsNothing);
     });
 
     testWidgets('pull to refresh asks again', (tester) async {

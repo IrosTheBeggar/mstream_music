@@ -21,10 +21,11 @@
 // session inside the mood and echoes the filter it picked under.
 //
 // A score is the model's confidence, not how strongly a song is relaxed.
-// `strict: true` (the strip's Strict) keeps only strong fits — 0.7 rather
-// than 0.5. Without it, a filtered song list's songs each carry `moodFit`,
-// 'strong' or 'close', and the list shows the strong fits first, the close
-// ones under a divider (strongFirst).
+// `threshold` (mStream #1099) says how sure every group must be: a number
+// the server takes, 0.5 when left out. The sheet's Strict | Standard |
+// Loose are the phone's names for three of them (MoodLevel). A filtered
+// song list's songs each carry `moodMatch`, 0 to 1, how surely the song
+// fits; the list's Sort can draw the best first (byMoodMatch).
 
 import 'display_item.dart';
 import 'server.dart';
@@ -44,6 +45,29 @@ enum MoodScale {
 /// The multi-choice tags, in the sheet's (and the wire's) order.
 const List<String> kMoodTags = ['acoustic', 'party', 'danceable'];
 
+/// How sure every group must be: the sheet's words for the server's
+/// `threshold`. Standard is the server's default, so it sends nothing.
+enum MoodLevel {
+  strict(0.7),
+  standard(0.5),
+  loose(0.3);
+
+  const MoodLevel(this.threshold);
+
+  final double threshold;
+
+  /// The level a `threshold` names: Standard for none, or for one the
+  /// phone does not offer.
+  static MoodLevel of(Object? threshold) {
+    if (threshold is! num) return standard;
+    final t = (threshold * 100).round();
+    for (final level in values) {
+      if ((level.threshold * 100).round() == t) return level;
+    }
+    return standard;
+  }
+}
+
 /// One page's filter. Immutable: every change makes a new one.
 class MoodFilter {
   final String? valence;
@@ -53,16 +77,16 @@ class MoodFilter {
   /// Picked tags, always in [kMoodTags] order.
   final List<String> tags;
 
-  /// Strong fits only. It belongs to a filter that filters: an empty one
-  /// drops it.
-  final bool strict;
+  /// How sure every group must be. Kept with nothing set (the sheet shows
+  /// it either way), but sent only beside a group.
+  final MoodLevel level;
 
   const MoodFilter(
       {this.valence,
       this.energy,
       this.voice,
       this.tags = const [],
-      this.strict = false});
+      this.level = MoodLevel.standard});
 
   static const empty = MoodFilter();
 
@@ -82,14 +106,14 @@ class MoodFilter {
         f = f.toggleTag(t);
       }
     }
-    return f;
+    return f.withLevel(MoodLevel.of(json['threshold']));
   }
 
   bool get isEmpty =>
       valence == null && energy == null && voice == null && tags.isEmpty;
 
   /// How many choices are set: the scales that filter, plus the tags (the
-  /// Filters button's badge). Strict is not a choice.
+  /// Filters button's badge). The level is not a choice.
   int get count =>
       [valence, energy, voice].where((v) => v != null).length + tags.length;
 
@@ -108,8 +132,8 @@ class MoodFilter {
       energy: scale == MoodScale.energy ? value : energy,
       voice: scale == MoodScale.voice ? value : voice,
       tags: tags,
-      strict: strict,
-    )._settled;
+      level: level,
+    );
   }
 
   /// [tag] picked if it was not, let go if it was. An unknown tag changes
@@ -125,22 +149,15 @@ class MoodFilter {
         for (final t in kMoodTags)
           if (t == tag ? !on : tags.contains(t)) t
       ],
-      strict: strict,
-    )._settled;
+      level: level,
+    );
   }
 
-  /// Strict on or off. A filter with nothing set stays as it is.
-  MoodFilter withStrict(bool on) => isEmpty || on == strict
+  /// [to] as the level, the choices as they are.
+  MoodFilter withLevel(MoodLevel to) => to == level
       ? this
       : MoodFilter(
-          valence: valence,
-          energy: energy,
-          voice: voice,
-          tags: tags,
-          strict: on);
-
-  /// Strict goes with the last choice.
-  MoodFilter get _settled => strict && isEmpty ? MoodFilter.empty : this;
+          valence: valence, energy: energy, voice: voice, tags: tags, level: to);
 
   /// The wire form: only the groups that filter, tags in a fixed order —
   /// or null when nothing filters, so no `moods` key is sent at all.
@@ -151,8 +168,14 @@ class MoodFilter {
           if (energy != null) 'energy': energy,
           if (voice != null) 'voice': voice,
           if (tags.isNotEmpty) 'tags': List.of(tags),
-          if (strict) 'strict': true,
+          if (level != MoodLevel.standard) 'threshold': level.threshold,
         };
+
+  /// The saved form (Auto DJ's file): the wire form, and a level picked
+  /// with nothing set yet, which the wire form leaves out.
+  Map<String, dynamic>? toSavedJson() =>
+      toJson() ??
+      (level == MoodLevel.standard ? null : {'threshold': level.threshold});
 
   @override
   bool operator ==(Object other) =>
@@ -162,11 +185,11 @@ class MoodFilter {
       other.voice == voice &&
       other.tags.length == tags.length &&
       other.tags.every(tags.contains) &&
-      other.strict == strict;
+      other.level == level;
 
   @override
   int get hashCode =>
-      Object.hash(valence, energy, voice, Object.hashAll(tags), strict);
+      Object.hash(valence, energy, voice, Object.hashAll(tags), level);
 }
 
 /// Whether a random-songs answer's [echo] (its `moods`) is the filter it was
@@ -177,32 +200,70 @@ bool moodEchoFits(Object? echo, MoodFilter asked) =>
     echo is Map && MoodFilter.fromJson(echo) == asked;
 
 /// The pages that filter by mood. Each keeps its own filter.
-enum MoodPage { albums, artists, rated, recent, discover }
+enum MoodPage {
+  albums,
+  artists,
+  rated,
+  recent,
+  discover;
 
-/// Each page's filter for as long as the app runs (as in the webapp: a
-/// filter set on Albums is there on the next visit, and does not filter
-/// Artists). Not saved. [generation] counts each page's changes, so a list
-/// asked for under an older filter can tell its answer is stale.
+  /// Rated and Recent: song lists, which the sheet offers a Sort on.
+  bool get sorts => this == rated || this == recent;
+}
+
+/// A song list's order under a mood filter: its own (Rated by rating,
+/// Recent newest first), or the best `moodMatch` first.
+enum MoodSort { list, match }
+
+/// Each page's filter, and a song list's Sort, for as long as the app runs
+/// (as in the webapp: a filter set on Albums is there on the next visit, and
+/// does not filter Artists). Not saved. [generation] counts each page's
+/// changes, so a list asked for under an older filter can tell its answer
+/// is stale.
 class MoodFilters {
   static final MoodFilters _instance = MoodFilters._();
   factory MoodFilters() => _instance;
   MoodFilters._();
 
   final Map<MoodPage, MoodFilter> _filters = {};
+  final Map<MoodPage, MoodSort> _sorts = {};
   final Map<MoodPage, int> _generations = {};
 
   MoodFilter of(MoodPage page) => _filters[page] ?? MoodFilter.empty;
 
+  /// The page's Sort as last picked, which rests while no mood is set.
+  MoodSort sortOf(MoodPage page) => _sorts[page] ?? MoodSort.list;
+
+  /// The order the page's list shows: its Sort while a mood is set, its
+  /// own otherwise (Match has nothing to rank by).
+  MoodSort orderOf(MoodPage page) =>
+      of(page).isEmpty ? MoodSort.list : sortOf(page);
+
   int generation(MoodPage page) => _generations[page] ?? 0;
 
-  void set(MoodPage page, MoodFilter filter) {
+  /// [filter], and a song list's [sort] when given, become the page's.
+  /// True when its list has to be asked again: what it sends or the order
+  /// it shows changed — a level picked with no mood set changes neither,
+  /// and neither does the same choice made again. Only those count as a
+  /// [generation].
+  bool set(MoodPage page, MoodFilter filter, {MoodSort? sort}) {
+    final before = _asked(page);
     _filters[page] = filter;
+    if (sort != null) _sorts[page] = sort;
+    if (_asked(page) == before) return false;
     _generations[page] = generation(page) + 1;
+    return true;
   }
+
+  /// What the page's list is asked with and shown in.
+  (MoodFilter, MoodSort) _asked(MoodPage page) => of(page).isEmpty
+      ? (MoodFilter.empty, MoodSort.list)
+      : (of(page), orderOf(page));
 
   /// Every page back to no filter (tests).
   void reset() {
     _filters.clear();
+    _sorts.clear();
     _generations.clear();
   }
 }
@@ -223,38 +284,23 @@ class MoodListFrame {
       res is Map && res['moods'] is Map ? MoodListFrame(server, page) : null;
 }
 
-/// A song row's fit in a filtered song list's answer, or null.
-String? moodFitOf(Object? song) => song is Map &&
-        (song['moodFit'] == 'strong' || song['moodFit'] == 'close')
-    ? song['moodFit'] as String
-    : null;
+/// A song row's match in a filtered song list's answer (0 to 1), or null.
+double? moodMatchOf(Object? song) =>
+    song is Map && song['moodMatch'] is num
+        ? (song['moodMatch'] as num).toDouble()
+        : null;
 
-/// The browser item over a filtered song list's close matches.
-const String kMoodCloseMatches = 'moodCloseMatches';
-
-/// A filtered Rated or Recent list, strong fits first: the songs the
-/// server marked 'strong', in the list's own order, then — under a
-/// [kMoodCloseMatches] item — the 'close' ones. A list with no close match
-/// (unfiltered, or strict) comes back as it is.
-List<DisplayItem> strongFirst(List<DisplayItem> songs) {
-  if (!songs.any((s) => s.moodFit == 'close')) return songs;
-  return [
-    for (final s in songs)
-      if (s.moodFit != 'close') s,
-    DisplayItem(null, '', kMoodCloseMatches, null, null, null),
-    for (final s in songs)
-      if (s.moodFit == 'close') s,
-  ];
-}
-
-/// [items] narrowed to the ones [keep] passes (a search), the close
-/// matches' item kept while a close match stays under it.
-List<DisplayItem> narrowKeepingCloseMatches(
-    List<DisplayItem> items, bool Function(DisplayItem) keep) {
-  final out = [
-    for (final it in items)
-      if (it.type == kMoodCloseMatches || keep(it)) it
-  ];
-  if (out.isNotEmpty && out.last.type == kMoodCloseMatches) out.removeLast();
-  return out;
+/// A filtered Rated or Recent list, best match first. Equal matches keep
+/// the list's own order, and a song with none goes last; a list with no
+/// matches (unfiltered) comes back as it is.
+List<DisplayItem> byMoodMatch(List<DisplayItem> songs) {
+  if (!songs.any((s) => s.moodMatch != null)) return songs;
+  final order = [for (var i = 0; i < songs.length; i++) i];
+  double m(int i) => songs[i].moodMatch ?? -1;
+  // List.sort is not stable: the index breaks the ties.
+  order.sort((a, b) {
+    final by = m(b).compareTo(m(a));
+    return by != 0 ? by : a.compareTo(b);
+  });
+  return [for (final i in order) songs[i]];
 }

@@ -1020,7 +1020,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moodStrict => '严格';
 
   @override
-  String get moodCloseMatches => '相近匹配';
+  String get moodStandard => '标准';
+
+  @override
+  String get moodLoose => '宽松';
+
+  @override
+  String get moodStrictnessGroup => '严格、标准或宽松';
+
+  @override
+  String get moodSort => '排序';
+
+  @override
+  String get moodSortRating => '评分';
+
+  @override
+  String get moodSortNewest => '最新';
+
+  @override
+  String get moodSortMatch => '匹配度';
 
   @override
   String get browserRecent => '最近添加';

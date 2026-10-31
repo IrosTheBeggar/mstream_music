@@ -1064,7 +1064,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moodStrict => 'Estricto';
 
   @override
-  String get moodCloseMatches => 'Coincidencias cercanas';
+  String get moodStandard => 'Estándar';
+
+  @override
+  String get moodLoose => 'Flexible';
+
+  @override
+  String get moodStrictnessGroup => 'Estricto, estándar o flexible';
+
+  @override
+  String get moodSort => 'Ordenar';
+
+  @override
+  String get moodSortRating => 'Valoración';
+
+  @override
+  String get moodSortNewest => 'Más recientes';
+
+  @override
+  String get moodSortMatch => 'Coincidencia';
 
   @override
   String get browserRecent => 'Recientes';

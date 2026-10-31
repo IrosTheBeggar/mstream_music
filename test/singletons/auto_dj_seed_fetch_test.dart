@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mstream_music/objects/genre_source.dart';
+import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/api.dart';
 import 'package:mstream_music/singletons/auto_dj_manager.dart';
@@ -28,6 +29,12 @@ void main() {
     AutoDJManager()
       ..durationFilterEnabled = false
       ..moodFilterEnabled = false;
+  });
+  tearDown(() {
+    server.moodFiltersAvailable = null;
+    AutoDJManager()
+      ..moodFilterEnabled = false
+      ..moodFilter = MoodFilter.empty;
   });
 
   Future<({dynamic item, bool noMatch})> fetch(
@@ -71,10 +78,26 @@ void main() {
     expect(bodies, hasLength(1));
   });
 
-  test('a server that refuses whatever it is sent stops after one try per '
-      'key', () async {
+  test("a refused key inside `moods` (a server from before `threshold`) is "
+      'asked once: the next body would be the same', () async {
+    server.moodFiltersAvailable = true;
+    AutoDJManager()
+      ..moodFilterEnabled = true
+      ..moodFilter =
+          const MoodFilter(energy: 'relaxed', level: MoodLevel.strict);
+    final r = await fetch((_) => refuse('threshold'));
+    expect(r.item, isNull);
+    expect(bodies, hasLength(1));
+    expect(bodies.single['moods'], {'energy': 'relaxed', 'threshold': 0.7});
+  });
+
+  test('a server that refuses a key it was not sent is not asked again',
+      () async {
     final r = await fetch((_) => refuse('genreSource'));
     expect(r.item, isNull);
-    expect(bodies, hasLength(1 + bodies.first.length));
+    expect(bodies, hasLength(2),
+        reason: 'once with genreSource, once without; then the same body '
+            'would only get the same answer');
+    expect(bodies.last, isNot(contains('genreSource')));
   });
 }

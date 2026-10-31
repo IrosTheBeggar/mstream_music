@@ -75,6 +75,19 @@ class ServerCapabilities {
     return key;
   }
 
+  /// [noteRejection] for a retry loop that just sent [sent]: the key to go
+  /// again without, or null when going again would not help — not a
+  /// not-allowed rejection, or one naming a key inside a value (a `moods`
+  /// object's `threshold`, refused by a server from before it), which
+  /// [filter] cannot drop, so the next body would be the same and get the
+  /// same answer. A loop that retries only on a key its body carried drops
+  /// one key per pass, so it ends.
+  String? retryWithout(
+      Server server, String? errorBody, Map<String, dynamic> sent) {
+    final key = noteRejection(server, errorBody);
+    return key != null && sent.containsKey(key) ? key : null;
+  }
+
   /// Stop sending [keys] to [server] for the rest of this session, for a
   /// reason other than the schema rejecting them.
   ///

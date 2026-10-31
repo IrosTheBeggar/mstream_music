@@ -1050,7 +1050,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moodStrict => 'Strict';
 
   @override
-  String get moodCloseMatches => 'Close matches';
+  String get moodStandard => 'Standard';
+
+  @override
+  String get moodLoose => 'Loose';
+
+  @override
+  String get moodStrictnessGroup => 'Strict, standard or loose';
+
+  @override
+  String get moodSort => 'Sort';
+
+  @override
+  String get moodSortRating => 'Rating';
+
+  @override
+  String get moodSortNewest => 'Newest';
+
+  @override
+  String get moodSortMatch => 'Match';
 
   @override
   String get browserRecent => 'Recent';

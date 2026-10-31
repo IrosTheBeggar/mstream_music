@@ -1914,17 +1914,53 @@ abstract class AppLocalizations {
   /// **'Danceable'**
   String get moodDanceable;
 
-  /// Mood filter strip: the switch that keeps only the songs that fit the filter strongly.
+  /// Mood filter sheet: the level that keeps only the songs the mood scores are surest about (also named on the strip when picked).
   ///
   /// In en, this message translates to:
   /// **'Strict'**
   String get moodStrict;
 
-  /// Rated and Recent under a mood filter: the header over the songs that fit it, but not strongly. Shown in capitals.
+  /// Mood filter sheet: the default level, between Strict and Loose.
   ///
   /// In en, this message translates to:
-  /// **'Close matches'**
-  String get moodCloseMatches;
+  /// **'Standard'**
+  String get moodStandard;
+
+  /// Mood filter sheet: the level that also keeps songs the mood scores are less sure about (also named on the strip when picked).
+  ///
+  /// In en, this message translates to:
+  /// **'Loose'**
+  String get moodLoose;
+
+  /// Mood filter sheet: the screen-reader name of the Strict / Standard / Loose row.
+  ///
+  /// In en, this message translates to:
+  /// **'Strict, standard or loose'**
+  String get moodStrictnessGroup;
+
+  /// Mood filter sheet on Rated and Recent: the label before the list's order choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get moodSort;
+
+  /// Mood filter sheet on Rated: the Sort choice that keeps the list in rating order.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get moodSortRating;
+
+  /// Mood filter sheet on Recent: the Sort choice that keeps the newest songs first.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get moodSortNewest;
+
+  /// Mood filter sheet on Rated and Recent: the Sort choice that puts the songs that fit the mood best first.
+  ///
+  /// In en, this message translates to:
+  /// **'Match'**
+  String get moodSortMatch;
 
   /// No description provided for @browserRecent.
   ///

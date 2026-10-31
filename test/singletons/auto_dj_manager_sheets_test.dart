@@ -96,6 +96,24 @@ void main() {
       await mgr.setMood(const MoodFilter(tags: ['party']));
       expect(mgr.moodFilterEnabled, isTrue);
     });
+
+    test('a level is saved and sent beside the choices', () async {
+      await mgr.setMood(relaxed.withLevel(MoodLevel.loose));
+      expect(saved()['moodFilter'],
+          {'energy': 'relaxed', 'voice': 'instrumental', 'threshold': 0.3});
+      expect(mgr.activeMoodFilter?.toJson()?['threshold'], 0.3);
+    });
+
+    test('a level picked with nothing chosen is kept for the sheet, the '
+        'filter off', () async {
+      await mgr.setMood(const MoodFilter(level: MoodLevel.strict));
+      expect(mgr.moodFilterEnabled, isFalse);
+      expect(mgr.activeMoodFilter, isNull, reason: 'nothing to send');
+      expect(mgr.moodFilter.level, MoodLevel.strict);
+      expect(saved()['moodFilter'], {'threshold': 0.7});
+      expect(MoodFilter.fromJson(saved()['moodFilter']),
+          const MoodFilter(level: MoodLevel.strict));
+    });
   });
 
   group('setDurationFilter', () {

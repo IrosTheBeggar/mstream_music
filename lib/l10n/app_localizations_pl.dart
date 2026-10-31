@@ -1070,7 +1070,25 @@ class AppLocalizationsPl extends AppLocalizations {
   String get moodStrict => 'Ścisły';
 
   @override
-  String get moodCloseMatches => 'Bliskie dopasowania';
+  String get moodStandard => 'Standardowy';
+
+  @override
+  String get moodLoose => 'Luźny';
+
+  @override
+  String get moodStrictnessGroup => 'Ścisły, standardowy lub luźny';
+
+  @override
+  String get moodSort => 'Sortuj';
+
+  @override
+  String get moodSortRating => 'Ocena';
+
+  @override
+  String get moodSortNewest => 'Najnowsze';
+
+  @override
+  String get moodSortMatch => 'Dopasowanie';
 
   @override
   String get browserRecent => 'Ostatnie';

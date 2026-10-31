@@ -1,7 +1,8 @@
 // The mood filter's model (mStream #1092): the wire form a page's filter is
-// sent in, the one-value-per-scale and toggling-tag choices, Strict, the
-// answer's echo that says a list can filter, each page's own filter, and a
-// filtered song list's strong fits first.
+// sent in, the one-value-per-scale and toggling-tag choices, the level sent
+// as `threshold` (#1099), the answer's echo that says a list can filter,
+// each page's own filter and Sort, and a filtered song list's best match
+// first.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/display_item.dart';
@@ -86,6 +87,19 @@ void main() {
       expect(moodEchoFits('relaxed', asked), isFalse);
       expect(moodEchoFits({'energy': 'relaxed'}, asked), isFalse);
     });
+
+    test('the level is part of it', () {
+      final strict = asked.withLevel(MoodLevel.strict);
+      expect(
+          moodEchoFits(
+              {'energy': 'relaxed', 'voice': 'instrumental', 'threshold': 0.7},
+              strict),
+          isTrue);
+      expect(
+          moodEchoFits({'energy': 'relaxed', 'voice': 'instrumental'}, strict),
+          isFalse,
+          reason: 'picked at the default bar, not the strict one');
+    });
   });
 
   group('choices', () {
@@ -124,76 +138,94 @@ void main() {
     });
   });
 
-  group('strict', () {
-    test('sent beside the choices; never on its own', () {
-      final f = const MoodFilter(energy: 'relaxed').withStrict(true);
-      expect(f.toJson(), {'energy': 'relaxed', 'strict': true});
-      expect(f.withStrict(false).toJson(), {'energy': 'relaxed'});
-      expect(MoodFilter.empty.withStrict(true), MoodFilter.empty,
+  group('the level', () {
+    test('sent as `threshold` beside the choices, never on its own; '
+        'Standard sends nothing', () {
+      final f = const MoodFilter(energy: 'relaxed').withLevel(MoodLevel.strict);
+      expect(f.toJson(), {'energy': 'relaxed', 'threshold': 0.7});
+      expect(f.withLevel(MoodLevel.loose).toJson(),
+          {'energy': 'relaxed', 'threshold': 0.3});
+      expect(f.withLevel(MoodLevel.standard).toJson(), {'energy': 'relaxed'});
+      const lone = MoodFilter(level: MoodLevel.strict);
+      expect(lone.isEmpty, isTrue);
+      expect(lone.toJson(), isNull,
           reason: 'nothing set: nothing to be strict about');
+      expect(lone == MoodFilter.empty, isFalse,
+          reason: 'kept for the sheet, which shows it either way');
       expect(f.count, 1, reason: 'not a choice: the badge does not count it');
-      expect(f == const MoodFilter(energy: 'relaxed'), isFalse);
-      expect(f, const MoodFilter(energy: 'relaxed', strict: true));
+      expect(f, const MoodFilter(energy: 'relaxed', level: MoodLevel.strict));
     });
 
-    test('kept while a choice stays; gone with the last one', () {
-      final f = const MoodFilter(energy: 'relaxed', strict: true);
-      expect(f.toggleTag('party').strict, isTrue);
-      expect(f.withScale(MoodScale.voice, 'vocals').strict, isTrue);
-      final none = f.withScale(MoodScale.energy, null);
-      expect(none, MoodFilter.empty);
-      expect(none.toggleTag('party').strict, isFalse,
-          reason: 'not left behind for the next choice');
+    test('kept through the choices, and with the last one gone', () {
+      const f = MoodFilter(energy: 'relaxed', level: MoodLevel.loose);
+      expect(f.toggleTag('party').level, MoodLevel.loose);
+      expect(f.withScale(MoodScale.voice, 'vocals').level, MoodLevel.loose);
+      expect(f.withScale(MoodScale.energy, null),
+          const MoodFilter(level: MoodLevel.loose));
+    });
+
+    test('read back: a threshold names its level; another, or none, is '
+        'Standard', () {
+      expect(MoodFilter.fromJson({'energy': 'relaxed', 'threshold': 0.7}),
+          const MoodFilter(energy: 'relaxed', level: MoodLevel.strict));
+      expect(MoodFilter.fromJson({'energy': 'relaxed', 'threshold': 0.3}).level,
+          MoodLevel.loose);
+      expect(
+          MoodFilter.fromJson({'energy': 'relaxed', 'threshold': 0.45}).level,
+          MoodLevel.standard,
+          reason: 'not one the sheet offers');
+      expect(
+          MoodFilter.fromJson({'energy': 'relaxed', 'threshold': '0.7'}).level,
+          MoodLevel.standard);
+      expect(MoodLevel.of(0.7000001), MoodLevel.strict);
+      expect(MoodLevel.of(null), MoodLevel.standard);
+    });
+
+    test('the saved form keeps a level picked with nothing set', () {
+      const lone = MoodFilter(level: MoodLevel.strict);
+      expect(lone.toSavedJson(), {'threshold': 0.7});
+      expect(MoodFilter.fromJson(lone.toSavedJson()), lone);
+      expect(MoodFilter.empty.toSavedJson(), isNull);
+      const f = MoodFilter(energy: 'relaxed', level: MoodLevel.loose);
+      expect(f.toSavedJson(), f.toJson());
+      expect(MoodFilter.fromJson(f.toSavedJson()), f);
     });
   });
 
-  group('strong fits first', () {
-    DisplayItem song(String name, String? fit) =>
-        DisplayItem(null, name, 'file', '/$name', null, null)..moodFit = fit;
-    List<String> shown(List<DisplayItem> l) =>
-        [for (final e in l) e.type == kMoodCloseMatches ? '—' : e.name];
+  group('best match first', () {
+    DisplayItem song(String name, double? match) =>
+        DisplayItem(null, name, 'file', '/$name', null, null)
+          ..moodMatch = match;
+    List<String> names(List<DisplayItem> l) => [for (final e in l) e.name];
 
-    test("the strong fits in the list's own order, then the close ones "
-        'under one divider', () {
-      final list = [
-        song('a', 'close'),
-        song('b', 'strong'),
-        song('c', 'close'),
-        song('d', 'strong'),
-      ];
-      expect(shown(strongFirst(list)), ['b', 'd', '—', 'a', 'c']);
-      expect(shown(strongFirst([song('a', 'close')])), ['—', 'a'],
-          reason: 'none strong: the divider leads');
-      final plain = [song('a', null), song('b', null)];
-      expect(identical(strongFirst(plain), plain), isTrue,
-          reason: 'unfiltered: as it came');
-      final strict = [song('a', 'strong'), song('b', 'strong')];
-      expect(identical(strongFirst(strict), strict), isTrue);
-    });
-
-    test('a search keeps the divider while a close match stays under it',
+    test("best first; equal matches keep the list's order; none goes last",
         () {
-      final list = strongFirst([
-        song('alpha', 'strong'),
-        song('beta', 'close'),
-        song('gamma', 'close'),
-      ]);
-      bool has(DisplayItem e, String q) => e.name.contains(q);
-      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'a'))),
-          ['alpha', '—', 'beta', 'gamma']);
-      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'alpha'))),
-          ['alpha']);
-      expect(shown(narrowKeepingCloseMatches(list, (e) => has(e, 'beta'))),
-          ['—', 'beta']);
-      expect(narrowKeepingCloseMatches(list, (e) => false), isEmpty);
+      final list = [
+        song('a', 0.6),
+        song('b', 0.9),
+        song('c', 0.6),
+        song('d', null),
+        song('e', 0.75),
+      ];
+      expect(names(byMoodMatch(list)), ['b', 'e', 'a', 'c', 'd']);
+      expect(names(list), ['a', 'b', 'c', 'd', 'e'],
+          reason: 'a new list: the answer as it came is left alone');
+      final plain = [song('a', null), song('b', null)];
+      expect(identical(byMoodMatch(plain), plain), isTrue,
+          reason: 'unfiltered: as it came');
     });
 
-    test("a song's fit from the answer: strong, close or nothing", () {
-      expect(moodFitOf({'moodFit': 'strong'}), 'strong');
-      expect(moodFitOf({'moodFit': 'close'}), 'close');
-      expect(moodFitOf({'moodFit': 'loose'}), isNull);
-      expect(moodFitOf({'filepath': 'x'}), isNull);
-      expect(moodFitOf('junk'), isNull);
+    test('a long run of equal matches stays in order', () {
+      final list = [for (var i = 0; i < 100; i++) song('s$i', 0.5)];
+      expect(names(byMoodMatch(list)), names(list));
+    });
+
+    test("a song's match from the answer: a number, or nothing", () {
+      expect(moodMatchOf({'moodMatch': 0.85}), 0.85);
+      expect(moodMatchOf({'moodMatch': 1}), 1.0);
+      expect(moodMatchOf({'moodMatch': '0.8'}), isNull);
+      expect(moodMatchOf({'filepath': 'x'}), isNull);
+      expect(moodMatchOf('junk'), isNull);
     });
   });
 
@@ -230,6 +262,45 @@ void main() {
       expect(MoodFilters().of(MoodPage.discover).isEmpty, isTrue);
       expect(MoodFilters().generation(MoodPage.albums), 1);
       expect(MoodFilters().generation(MoodPage.artists), 0);
+    });
+
+    test('a level picked with no mood set, or the same choice again, asks '
+        'nothing', () {
+      expect(
+          MoodFilters()
+              .set(MoodPage.rated, const MoodFilter(level: MoodLevel.strict)),
+          isFalse);
+      expect(MoodFilters().of(MoodPage.rated).level, MoodLevel.strict,
+          reason: 'kept for the sheet');
+      expect(MoodFilters().generation(MoodPage.rated), 0);
+      const relaxed = MoodFilter(energy: 'relaxed', level: MoodLevel.strict);
+      expect(MoodFilters().set(MoodPage.rated, relaxed), isTrue);
+      expect(MoodFilters().set(MoodPage.rated, relaxed), isFalse);
+      expect(MoodFilters().generation(MoodPage.rated), 1);
+      expect(
+          MoodFilters()
+              .set(MoodPage.rated, relaxed.withLevel(MoodLevel.loose)),
+          isTrue);
+      expect(MoodFilters().generation(MoodPage.rated), 2);
+    });
+
+    test("a song list's Sort: Match rests while no mood is set, and comes "
+        'back with one', () {
+      const relaxed = MoodFilter(energy: 'relaxed');
+      expect(MoodFilters().orderOf(MoodPage.rated), MoodSort.list);
+      expect(MoodFilters().set(MoodPage.rated, MoodFilter.empty,
+              sort: MoodSort.match),
+          isFalse, reason: 'nothing to rank by: the list is the same');
+      expect(MoodFilters().sortOf(MoodPage.rated), MoodSort.match);
+      expect(MoodFilters().orderOf(MoodPage.rated), MoodSort.list);
+      expect(MoodFilters().set(MoodPage.rated, relaxed), isTrue);
+      expect(MoodFilters().orderOf(MoodPage.rated), MoodSort.match);
+      expect(MoodFilters().set(MoodPage.rated, relaxed, sort: MoodSort.list),
+          isTrue, reason: 'the order shown changed');
+      expect(MoodFilters().orderOf(MoodPage.recent), MoodSort.list,
+          reason: 'each list keeps its own');
+      expect(MoodPage.values.where((p) => p.sorts),
+          [MoodPage.rated, MoodPage.recent]);
     });
   });
 }
