@@ -8607,6 +8607,1074 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.'**
   String get settingsResetBodyIos;
+
+  /// Home card in the SERVER section (beside Add torrent), the title of the screen it opens, and the title of the File Explorer's folder sheet. The user's server fetches a YouTube video's audio into their library. Use 'add', never 'download': everywhere else in the app Download means saving to this phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from YouTube'**
+  String get ytdlTitle;
+
+  /// Second line of the Add from YouTube home card while songs are being added on the server; {count} is how many. Must fit about 81 px at 360 dp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{Adding {count}}}'**
+  String ytdlHomeAdding(int count);
+
+  /// Second line of the Add from YouTube home card for up to an hour after songs finished, until the screen is opened; {count} is how many. Must fit about 81 px at 360 dp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{Added {count}}}'**
+  String ytdlHomeAdded(int count);
+
+  /// Placeholder in the link field at the top of the Add from YouTube screen and of the folder sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a YouTube link'**
+  String get ytdlPasteHint;
+
+  /// Chip under the empty link field: fills the field from the clipboard (on iPhone the system then asks to allow pasting).
+  ///
+  /// In en, this message translates to:
+  /// **'Paste from clipboard'**
+  String get ytdlPasteFromClipboard;
+
+  /// Line under the link field naming where new songs go; {path} is the library and folders joined with ' › ' (like 'Music › Artist › Album', with sample words before a link is pasted). The format (like ' · MP3') and a Change link follow it.
+  ///
+  /// In en, this message translates to:
+  /// **'Lands in {path}'**
+  String ytdlLandsIn(String path);
+
+  /// Quiet line under the paste card (servers on mStream 6.30 or later): the limits the server applies to every add.
+  ///
+  /// In en, this message translates to:
+  /// **'One video per link · the server stops at 500 MB or after an hour · no live streams or playlists'**
+  String get ytdlLimits;
+
+  /// Empty state of the Add from YouTube screen, before anything was added.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a link to add a song to your library.'**
+  String get ytdlEmptyTitle;
+
+  /// Line under the empty state (servers on 6.30 or later): the Added list also shows songs added from the server's web app.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs added from the web app show up here too.'**
+  String get ytdlEmptyWebApp;
+
+  /// Helper under the link field when a youtu.be, Shorts, live or embed link was rewritten; {link} is the link the server gets, like 'youtube.com/watch?v=FGBhQbmPwH8'.
+  ///
+  /// In en, this message translates to:
+  /// **'Short link: sent as {link}'**
+  String ytdlLinkShortSent(String link);
+
+  /// Helper under the link field when a link typed without https:// was completed; {link} is the link the server gets, like 'youtube.com/watch?v=FGBhQbmPwH8'.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent as {link}'**
+  String ytdlLinkSentAs(String link);
+
+  /// Error under the link field: the pasted text has no YouTube link. Keep youtube.com and youtu.be as they are.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s not a YouTube link. Paste one from youtube.com or youtu.be.'**
+  String get ytdlLinkNotYoutube;
+
+  /// Error under the link field: the link is a playlist, and only one video per link can be added.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s a playlist. Open one video in it and copy that link.'**
+  String get ytdlLinkPlaylist;
+
+  /// Note on the result card when the video link also names a playlist: only the video is added.
+  ///
+  /// In en, this message translates to:
+  /// **'Just this video, not the playlist.'**
+  String get ytdlLinkInPlaylist;
+
+  /// Note on the result card for a /live/ link, on servers that refuse live streams (6.30 or later).
+  ///
+  /// In en, this message translates to:
+  /// **'Live streams can\'t be saved. If this one has ended, it may still work.'**
+  String get ytdlLinkLive;
+
+  /// Note on the result card for a /live/ link, on servers before 6.30 (or before the version check answered), which would try to record a stream still running.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t stop live streams. Add this only if the stream has ended.'**
+  String get ytdlLinkLiveOlder;
+
+  /// Caption beside a spinner on the result card while the server looks the video up.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the video…'**
+  String get ytdlLookupReading;
+
+  /// Caption on the result card when the lookup has run for 8 seconds; an 'Enter details yourself' link follows it.
+  ///
+  /// In en, this message translates to:
+  /// **'Still looking — YouTube can be slow.'**
+  String get ytdlLookupSlow;
+
+  /// Link on a slow lookup: opens the tag fields so the user can type them while the lookup carries on.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter details yourself'**
+  String get ytdlLookupEnterYourself;
+
+  /// Result card when the server could not look the video up; 'Enter details' and 'Try again' buttons follow it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read this video\'s details. It may be private, age-restricted or blocked for the server.'**
+  String get ytdlLookupFailed;
+
+  /// Result card when the lookup got no answer in time (a fresh server can fetch its YouTube downloader during the first lookup); 'Enter details' and 'Try again' buttons follow it.
+  ///
+  /// In en, this message translates to:
+  /// **'The server took too long — it may still be setting up its downloader. Try again in a minute.'**
+  String get ytdlLookupTimedOut;
+
+  /// Button on a failed or timed-out lookup: opens the tag fields to type the title, artist, album and year by hand.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter details'**
+  String get ytdlLookupEnterDetails;
+
+  /// Note under the Saves to path after a failed lookup: with no artist or album there are no folders to make.
+  ///
+  /// In en, this message translates to:
+  /// **'No tags yet, so it goes into the library\'s top folder.'**
+  String get ytdlLookupNoTags;
+
+  /// Strip on the result card when the lookup failed after the user chose to enter the details themselves: what they typed is kept and sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read this video\'s details · Your details will be used.'**
+  String get ytdlLookupFailedUsingYours;
+
+  /// Strip on the result card when the lookup answered after the user typed some tags; a 'Use them' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Details found for this video'**
+  String get ytdlLateFound;
+
+  /// Link on that strip: fills only the tag fields the user has not edited from the lookup.
+  ///
+  /// In en, this message translates to:
+  /// **'Use them'**
+  String get ytdlLateUseThem;
+
+  /// Second line of that strip: fields the user typed in are not overwritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Your edits stay.'**
+  String get ytdlLateEditsStay;
+
+  /// Banner on the Add from YouTube screen while the phone has no connection.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline — the lookup runs when you\'re back.'**
+  String get ytdlOffline;
+
+  /// Panel in place of the result card when the server has no YouTube downloader; a 'Try again' button follows. Keep 'yt-dlp' (the program's name) as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'This server can\'t download from YouTube yet. Ask its admin to set up yt-dlp.'**
+  String get ytdlYtdlpMissing;
+
+  /// Third line of the result card (under title and artist) when the song has no album.
+  ///
+  /// In en, this message translates to:
+  /// **'No album'**
+  String get ytdlCardNoAlbum;
+
+  /// Source line on the result card, beside a tick: YouTube returned an album, so the tags came from YouTube Music and are reliable.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags from YouTube Music'**
+  String get ytdlSourceMusic;
+
+  /// Source line on the result card: the phone split a title like 'Gorillaz - Feel Good Inc.' into artist and title.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist and title from the video title'**
+  String get ytdlSourceSplit;
+
+  /// The same source line when the artist split from the title also matches YouTube's own artist field.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist and title from the video title · matches the artist YouTube lists'**
+  String get ytdlSourceSplitAgrees;
+
+  /// Source line on the result card, beside a warning icon: the artist is YouTube's artist field, which is often just the uploading channel's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist may be the channel name — check it'**
+  String get ytdlSourceChannel;
+
+  /// Line on the result card when words like '(Official Video)' were removed from the title; {title} is the video's original title. An 'Undo all' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaned from “{title}”'**
+  String ytdlCleanedFrom(String title);
+
+  /// Link after 'Cleaned from …': puts every removed piece back into the title (and undoes an artist split).
+  ///
+  /// In en, this message translates to:
+  /// **'Undo all'**
+  String get ytdlUndoAll;
+
+  /// Text button on the result card that opens the title, artist, album and year fields inside the card; also the link on a folder warning that opens those fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit tags'**
+  String get ytdlEditTags;
+
+  /// Label of the song title text field on the result card (drawn in capitals). The artist, album and year fields reuse torrentArtistLabel, torrentAlbumLabel and torrentYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get ytdlFieldTitle;
+
+  /// Helper under a tag field: its value came from YouTube Music's tags.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube Music'**
+  String get ytdlHelpMusic;
+
+  /// Helper under the title or artist field: its value was read from the video's title.
+  ///
+  /// In en, this message translates to:
+  /// **'From the video title'**
+  String get ytdlHelpVideoTitle;
+
+  /// Helper under the title field: read from the video's title with words like '(Official Video)' removed (each one can be put back with the chips under it).
+  ///
+  /// In en, this message translates to:
+  /// **'From the video title, cleaned'**
+  String get ytdlHelpVideoTitleCleaned;
+
+  /// Helper under the artist field after an artist/title split was undone: the artist is YouTube's own artist field again.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube\'s artist field'**
+  String get ytdlHelpYoutubeArtist;
+
+  /// Helper under the artist field when the only artist is YouTube's artist field (often the channel name) and nothing was removed from it.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube\'s artist field — check it'**
+  String get ytdlHelpYoutubeArtistCheck;
+
+  /// Helper under the artist field when the phone removed a channel suffix from YouTube's artist field; {removed} is what it removed, kept as is: 'VEVO', '- Topic' or 'Official'.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube\'s artist field, “{removed}” removed — check it'**
+  String ytdlHelpYoutubeArtistStripped(String removed);
+
+  /// Helper under a tag field once the user has typed in it.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get ytdlHelpEdited;
+
+  /// Helper under the title field when it is empty: the server then tags the file with the video's original title.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank: the file gets the video\'s own title.'**
+  String get ytdlBlankTitle;
+
+  /// Helper under an empty artist field when the tags came from YouTube Music.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank: the file keeps YouTube Music\'s artist.'**
+  String get ytdlBlankArtistMusic;
+
+  /// Helper under an empty artist field when the tags did not come from YouTube Music; {name} is YouTube's artist field as YouTube gave it, like 'TheNeighbourhoodVEVO'.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank: the file gets YouTube\'s own artist guess, often the raw channel name (here “{name}”).'**
+  String ytdlBlankArtistGuess(String name);
+
+  /// The same helper as ytdlBlankArtistGuess when the phone does not know YouTube's artist field (no lookup answer).
+  ///
+  /// In en, this message translates to:
+  /// **'Blank: the file gets YouTube\'s own artist guess, often the raw channel name.'**
+  String get ytdlBlankArtistGuessUnnamed;
+
+  /// Helper under the album field when YouTube gave no album.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank for a single'**
+  String get ytdlBlankAlbumSingle;
+
+  /// Helper under an emptied album field when YouTube gave an album: the server only overwrites the tags you fill in.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank keeps YouTube\'s album tag'**
+  String get ytdlBlankAlbumKeeps;
+
+  /// Helper under an empty year field: the server then tags the file with the year the video was uploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank: the file gets YouTube\'s upload year.'**
+  String get ytdlBlankYear;
+
+  /// Error under the year field when it is not four digits.
+  ///
+  /// In en, this message translates to:
+  /// **'A year is 4 digits, like 2001'**
+  String get ytdlYearInvalid;
+
+  /// Chip under the title field (after an undo arrow) that undoes the artist/title split; {separator} is the character the title was split at, like '-' or ':'.
+  ///
+  /// In en, this message translates to:
+  /// **'Split at {separator}'**
+  String ytdlRestoreSplit(String separator);
+
+  /// Line under the artist field when the artist split from the title differs from YouTube's artist field; {name} is YouTube's artist (channel suffixes like VEVO removed).
+  ///
+  /// In en, this message translates to:
+  /// **'Or YouTube\'s artist: {name}'**
+  String ytdlOrYoutubeArtist(String name);
+
+  /// Text button under the tag fields after an artist/title split: exchanges the two, for titles written 'Title - Artist'.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap artist and title'**
+  String get ytdlSwap;
+
+  /// Label (drawn in capitals) above the path on the result card where the song will land.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves to'**
+  String get ytdlSavesTo;
+
+  /// The same label in the File Explorer's folder sheet while the song goes into the folder on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves here'**
+  String get ytdlSavesHere;
+
+  /// Small outlined tag after a folder in a path: that folder doesn't exist yet and will be made.
+  ///
+  /// In en, this message translates to:
+  /// **'new'**
+  String get ytdlNewTag;
+
+  /// Stand-in word after the library in a path when there are no tags yet ('Music › file'), drawn in italics.
+  ///
+  /// In en, this message translates to:
+  /// **'file'**
+  String get ytdlSampleFile;
+
+  /// Stand-in file name in a sample path before a link is pasted ('Music › Artist › Album › Video_title.mp3'), drawn in italics. The server's file names use only A–Z, digits and underscores, so write it the same way.
+  ///
+  /// In en, this message translates to:
+  /// **'Video_title'**
+  String get ytdlSampleFileStem;
+
+  /// Line under the Saves to path: the file name the server will most likely give the song (the phone can only predict it); {name} is that file name, drawn in a monospace font, like 'One_More_Time.mp3'.
+  ///
+  /// In en, this message translates to:
+  /// **'about {name}'**
+  String ytdlFileAbout(String name);
+
+  /// The same line when the video title has letters outside A–Z that the server's file-name rule drops (a title in Cyrillic becomes '_.mp3'); {name} is the predicted file name, drawn in a monospace font.
+  ///
+  /// In en, this message translates to:
+  /// **'about {name} · letters outside A–Z are dropped from file names'**
+  String ytdlFileAboutLettersDropped(String name);
+
+  /// Quiet line under the Saves to path when the phone could not tell which folders already exist.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check this folder'**
+  String get ytdlCheckFailed;
+
+  /// Small outlined tag (and caption) on a destination chosen for the current song only; the remembered one comes back for the next song.
+  ///
+  /// In en, this message translates to:
+  /// **'Just this song'**
+  String get ytdlJustThisSong;
+
+  /// Link after the 'Just this song' tag: goes back to the remembered destination.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get ytdlUndo;
+
+  /// Warning above the add button (servers on 6.30 or later) when the folder already seems to hold a file with the predicted name; {name} is that file name.
+  ///
+  /// In en, this message translates to:
+  /// **'Something like “{name}” looks to be in this folder already. The server won\'t replace it, so this would likely fail.'**
+  String ytdlClash(String name);
+
+  /// Link under that warning: opens the format menu (another format gives the file another extension).
+  ///
+  /// In en, this message translates to:
+  /// **'Change format — a different format makes a different file'**
+  String get ytdlClashChangeFormat;
+
+  /// Warning on servers before 6.30 when the folder already holds a file with the predicted name; adding is blocked. {name} is that file name.
+  ///
+  /// In en, this message translates to:
+  /// **'A file named “{name}” is already in this folder. This server would re-tag that file instead of adding a new one.'**
+  String ytdlClashOlder(String name);
+
+  /// Link under the older-server name warning: opens the format menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Change format'**
+  String get ytdlChangeFormat;
+
+  /// Main button at the bottom of the Add from YouTube screen (and of the folder sheet once subfolders are chosen): the server fetches the song into the library. Not 'Download', which means saving to this phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to library'**
+  String get ytdlAddToLibrary;
+
+  /// Main button of the File Explorer's folder sheet: the server fetches the song into the folder on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add here'**
+  String get ytdlAddHere;
+
+  /// Outlined main button when the folder already seems to hold a file with that name.
+  ///
+  /// In en, this message translates to:
+  /// **'Add anyway'**
+  String get ytdlAddAnyway;
+
+  /// Caption by the disabled add button: the same video is already being added to the same folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Already adding to this folder'**
+  String get ytdlAlreadyAdding;
+
+  /// Header of the format menu opened from the format chip (MP3 ▾); the formats follow it.
+  ///
+  /// In en, this message translates to:
+  /// **'Best audio the video has, saved as'**
+  String get ytdlFormatMenuTitle;
+
+  /// Footer of the format menu: the choice is kept on this phone for this server; {server} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'Remembered for {server}'**
+  String ytdlFormatRemembered(String server);
+
+  /// Helper under MP3 in the format menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays everywhere'**
+  String get ytdlFormatMp3Help;
+
+  /// Helper under M4A in the format menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Good for Apple devices'**
+  String get ytdlFormatM4aHelp;
+
+  /// Helper under Opus in the format menu: YouTube usually streams Opus, so it is saved without converting.
+  ///
+  /// In en, this message translates to:
+  /// **'Usually YouTube\'s own audio, no re-encode'**
+  String get ytdlFormatOpusHelp;
+
+  /// Helper under FLAC in the format menu: lossless only keeps the video's sound, it can't improve it.
+  ///
+  /// In en, this message translates to:
+  /// **'Bigger, not better than the video\'s sound'**
+  String get ytdlFormatFlacHelp;
+
+  /// Helper under WAV in the format menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Biggest, no cover art'**
+  String get ytdlFormatWavHelp;
+
+  /// Line above the add button when the server answered that its audio converter is not ready.
+  ///
+  /// In en, this message translates to:
+  /// **'The server can\'t convert audio right now. Try again later, or ask its admin.'**
+  String get ytdlErrFfmpeg;
+
+  /// Error when the server refused the add because the account may not upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t add files to this server.'**
+  String get ytdlErrUploadsOff;
+
+  /// Error on the Add from YouTube screen when the server no longer lets the account into that library; {library} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t add files to “{library}” any more. Pick another library.'**
+  String ytdlErrLibraryGone(String library);
+
+  /// The same error in the File Explorer's folder sheet, where picking another library makes no sense; {library} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t add files to “{library}” any more.'**
+  String ytdlErrLibraryGoneSheet(String library);
+
+  /// Error when the server has no YouTube route at all.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t offer YouTube downloads.'**
+  String get ytdlErrNoRoute;
+
+  /// Error when the server refused the chosen format; {format} is its name, like 'Opus'. A 'pick another' link follows after ' · '.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t save {format} any more'**
+  String ytdlErrFormatOff(String format);
+
+  /// Link after ytdlErrFormatOff (lower case, it continues the line): opens the format menu.
+  ///
+  /// In en, this message translates to:
+  /// **'pick another'**
+  String get ytdlErrPickAnother;
+
+  /// Error when the server refused the request as invalid (its own wording is never shown).
+  ///
+  /// In en, this message translates to:
+  /// **'Something about this link didn\'t suit the server. Try again.'**
+  String get ytdlErrBadRequest;
+
+  /// Error when the server answered with a bare server error.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong on the server.'**
+  String get ytdlErrServer;
+
+  /// Error for any other refusal; {message} is the server's own text, untranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'The server said: “{message}”'**
+  String ytdlErrOther(String message);
+
+  /// Error when making a new folder for the song failed; {folder} is its name. 'Try again' and 'Choose a folder…' follow.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t make the folder “{folder}”.'**
+  String ytdlErrMkdir(String folder);
+
+  /// Section header (drawn in capitals) over the songs the server is adding now.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding'**
+  String get ytdlSectionAdding;
+
+  /// Quiet line beside the Adding header.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs on the server · can\'t be stopped from the app'**
+  String get ytdlSectionAddingNote;
+
+  /// Section header (drawn in capitals) over adds that failed or whose outcome is unsure.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a look'**
+  String get ytdlSectionNeedsLook;
+
+  /// Section header (drawn in capitals) over songs already added to the library.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get ytdlSectionAdded;
+
+  /// Status of a row in the Adding section; {minutes} is how long it has been running (at least 1), {format} the format's name, like 'MP3'.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, other{Adding · {minutes} min · {format}}}'**
+  String ytdlRowAdding(int minutes, String format);
+
+  /// Status of a row whose add request got no answer in time; the phone keeps looking for it on the server for two minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting… the server hasn\'t answered yet'**
+  String get ytdlRowStartUnsure;
+
+  /// Status of a row whose add request never answered and that the phone could not find on the server; a 'Check again' button follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure it started'**
+  String get ytdlRowNotSureStarted;
+
+  /// Status after Check again found nothing; an 'Add again' button follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found on the server'**
+  String get ytdlRowNotFound;
+
+  /// Status of a failed row (servers on 6.30 or later) when the folder holds a file with the predicted name.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed · a file with this name looks to be there already. Nothing was replaced.'**
+  String get ytdlRowClash;
+
+  /// Status of a failed row on servers on 6.30 or later, which give no reason; the last two causes are the server's size and time limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed · the server didn\'t say why. Common causes: a live stream, YouTube refusing the server, 500 MB, or an hour.'**
+  String get ytdlRowFailed;
+
+  /// Status of a failed row on servers before 6.30.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed · the server didn\'t say why. YouTube may have refused the server.'**
+  String get ytdlRowFailedOlder;
+
+  /// Status of a row whose job ended while the app was closed or in the background, with nothing on the server saying how.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure it finished · it ended while the app was away and the server has no record of it'**
+  String get ytdlRowNotSureFinished;
+
+  /// Status of a row while the phone is offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for connection'**
+  String get ytdlRowWaiting;
+
+  /// Status of a greyed row in the Added section: the added file is no longer in the library. The date it was added follows after ' · '.
+  ///
+  /// In en, this message translates to:
+  /// **'File missing'**
+  String get ytdlRowFileMissing;
+
+  /// Menu item on a row in the Adding section: removes the row; the server carries on (it can't be stopped from the app).
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from this list'**
+  String get ytdlRowHide;
+
+  /// Button on a row that failed on a file-name clash: opens the format menu and adds the song again in the chosen format.
+  ///
+  /// In en, this message translates to:
+  /// **'Change format and retry'**
+  String get ytdlRowChangeFormatRetry;
+
+  /// Button on a row that needs a look: opens the target folder in the File Explorer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show folder'**
+  String get ytdlRowShowFolder;
+
+  /// Menu item on an Added row: opens the folder holding the song in the File Explorer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in folder'**
+  String get ytdlRowShowInFolder;
+
+  /// Text button under the Added section: loads older added songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Show earlier'**
+  String get ytdlShowEarlier;
+
+  /// Title of the sheet that picks the library and folder layout for songs added from YouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'Where new songs land'**
+  String get ytdlWhereTitle;
+
+  /// Subtitle of that sheet: the choice is stored on this phone for this server ({server} is its name) and doesn't change where Discover copies go.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on this phone for {server} · Discover copies keep their own setting.'**
+  String ytdlWhereSub(String server);
+
+  /// Label above the preview path in that sheet; {title} is the song's title. The path follows on the next line.
+  ///
+  /// In en, this message translates to:
+  /// **'“{title}” lands at'**
+  String ytdlWhereLandsAt(String title);
+
+  /// The same label before any link was pasted; the path below it uses sample words.
+  ///
+  /// In en, this message translates to:
+  /// **'A song lands at'**
+  String get ytdlWhereLandsAtSample;
+
+  /// Note under that sample path.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown with sample words until you paste a link.'**
+  String get ytdlWhereSampleNote;
+
+  /// Note under the preview path: the file is named after the original video title, but its tags carry the edited title {title}.
+  ///
+  /// In en, this message translates to:
+  /// **'The file name comes from the video title; your library shows “{title}”.'**
+  String ytdlWhereFileNote(String title);
+
+  /// Note under the preview path: the layout's variables that never have a value for a song from YouTube (genre, server name, server folder); {vars} lists them as typed, like {{GENRE}}.
+  ///
+  /// In en, this message translates to:
+  /// **'Always empty for YouTube songs, so left out: {vars}'**
+  String ytdlWhereAlwaysEmpty(String vars);
+
+  /// Caption under the single locked library chip while 'Same as Discover' is chosen: Discover's destination decides the library.
+  ///
+  /// In en, this message translates to:
+  /// **'Set by Discover'**
+  String get ytdlWhereSetByDiscover;
+
+  /// Layout choice (and button): songs go straight into the library with no folders.
+  ///
+  /// In en, this message translates to:
+  /// **'Top of the library'**
+  String get ytdlLayoutTop;
+
+  /// Line under the 'Top of the library' choice.
+  ///
+  /// In en, this message translates to:
+  /// **'No folders'**
+  String get ytdlLayoutTopSub;
+
+  /// Layout choice: use the destination set for Discover copies (its library, folders and layout), read only.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as Discover'**
+  String get ytdlLayoutDiscover;
+
+  /// Text button in the sheet footer beside Save: applies the choice to the current song only, without remembering it.
+  ///
+  /// In en, this message translates to:
+  /// **'Use for this song'**
+  String get ytdlWhereUseForSong;
+
+  /// Note in that sheet when the account may not make folders.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t make folders, so only folders that already exist work. Top of the library always does.'**
+  String get ytdlWhereNoMkdir;
+
+  /// Help under the custom layout field: '/' makes folders; there is no TITLE variable because the server always names the file after the video. Keep TITLE as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Use / between folders. There\'s no TITLE — the file name always comes from the video title.'**
+  String get ytdlCustomHelp;
+
+  /// Error under the custom layout field: it names a variable that never has a value for a YouTube song; {name} is it in its braces (like {{GENRE}}), {vars} the variables that work (ARTIST, ALBUMARTIST, ALBUM, YEAR).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is always empty for YouTube songs. Use {vars}.'**
+  String ytdlErrNeverVar(String name, String vars);
+
+  /// Error under the custom layout field: the typed folder name has a character the server's disk may refuse. Keep the characters as they are.
+  ///
+  /// In en, this message translates to:
+  /// **'A folder name can\'t contain : * ? \" < > or |.'**
+  String get ytdlErrBadChars;
+
+  /// Warning under the preview path when the layout's variables for one folder are all empty, leaving only brackets; {folder} is the folder as it would be named, like '()'. An 'Edit tags' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to fill this folder, so it\'s named “{folder}”. Add an album and year, or pick another layout.'**
+  String ytdlTrapEmpty(String folder);
+
+  /// Warning under the preview path when the layout puts the year in a folder name and the year is empty; {folder} is the folder as it would be named, like 'Discovery ()'. An 'Add a year' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'No year for this song, so the folder reads “{folder}”. The file still gets YouTube\'s upload year as its tag.'**
+  String ytdlTrapNoYear(String folder);
+
+  /// Warning under the preview path when an empty variable leaves a folder ending in a dangling separator or empty brackets for another reason; {folder} is the folder as it would be named, like 'Gorillaz -'. An 'Edit tags' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag is empty, so the folder reads “{folder}”. Fill in the tags, or pick another layout.'**
+  String ytdlTrapOther(String folder);
+
+  /// Link after the missing-year warning: closes the sheet and opens the year field.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a year'**
+  String get ytdlTrapAddYear;
+
+  /// Warning under the Saves to path when the target folder is new but the account may not make folders; {folder} is the first missing folder. Three choices follow.
+  ///
+  /// In en, this message translates to:
+  /// **'“{folder}” doesn\'t exist yet and your account can\'t make folders.'**
+  String ytdlNoMkdirNew(String folder);
+
+  /// The same warning when the phone could not tell whether the folder exists; the app never adds into an unchecked folder for this account.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t make folders and this folder couldn\'t be checked.'**
+  String get ytdlNoMkdirUnchecked;
+
+  /// Choice under the no-folders warning: use the deepest folder that exists; {path} is it, like 'Music › Daft Punk'. Applies to this song only.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to {path} instead'**
+  String ytdlSaveToInstead(String path);
+
+  /// Button after a folder warning (the account can't make folders, or making one failed): opens a picker of folders that already exist, for this song only.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a folder…'**
+  String get ytdlChooseFolderLink;
+
+  /// Title of the sheet that picks a folder that already exists, for this song only.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a folder'**
+  String get ytdlChooseTitle;
+
+  /// Subtitle of that sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t make folders, so pick one that already exists.'**
+  String get ytdlChooseSub;
+
+  /// Shown in that sheet when the folder on screen has no subfolders.
+  ///
+  /// In en, this message translates to:
+  /// **'No folders here.'**
+  String get ytdlChooseEmpty;
+
+  /// File Explorer: the first item of a folder's ⋮ menu, and the tooltip of the top-bar button in folders without songs. Opens the sheet that adds a song into this folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from YouTube here'**
+  String get ytdlExplorerEntry;
+
+  /// Subtitle of the File Explorer's Add from YouTube sheet; {path} is the folder on screen, like 'Music › Daft Punk'.
+  ///
+  /// In en, this message translates to:
+  /// **'Into {path}'**
+  String ytdlSheetInto(String path);
+
+  /// Link in the folder sheet: turns the sheet to a page that picks subfolders (like Album) under the folder on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort into subfolders…'**
+  String get ytdlSortSubfolders;
+
+  /// Header of that page of the folder sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort into subfolders'**
+  String get ytdlSubfoldersTitle;
+
+  /// Caption under the locked path at the top of that page: subfolders go under this folder.
+  ///
+  /// In en, this message translates to:
+  /// **'The folder you\'re in'**
+  String get ytdlSubfoldersHere;
+
+  /// Choice on that page: put the song in the folder on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Right here'**
+  String get ytdlSubfoldersRightHere;
+
+  /// Line under the 'Right here' choice.
+  ///
+  /// In en, this message translates to:
+  /// **'No subfolders'**
+  String get ytdlSubfoldersNone;
+
+  /// Note under the preview on that page; {count} is how many folders are missing, {folders} their names joined with ', ' (like 'Discovery').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} new folder will be made: {folders}} other{{count} new folders will be made: {folders}}}'**
+  String ytdlSubfoldersNew(int count, String folders);
+
+  /// Strip above a File Explorer folder while one song is being added into it (or below it); {title} is the song. A 'See all' link follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding “{title}”…'**
+  String ytdlStripAdding(String title);
+
+  /// The same strip while several songs are being added; {count} is how many.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Adding {count} video…} other{Adding {count} videos…}}'**
+  String ytdlStripAddingCount(int count);
+
+  /// Link on that strip: opens the Add from YouTube screen.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get ytdlStripSeeAll;
+
+  /// Link on a failed strip: opens the Add from YouTube screen at the songs that need a look.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get ytdlStripDetails;
+
+  /// Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery'.
+  ///
+  /// In en, this message translates to:
+  /// **'Added “{title}” to {path}'**
+  String ytdlToastAdded(String title, String path);
+
+  /// Toast when adding a song failed, and the File Explorer strip that says so (a 'Details' link follows there); {title} is the song.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add “{title}”'**
+  String ytdlCouldntAdd(String title);
+
+  /// Toast after Save in Where new songs land; {path} is the library and layout, like 'Music › Artist › Album'.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved · new songs land in {path}'**
+  String ytdlToastSaved(String path);
+
+  /// Toast after 'Hide from this list' on a song still being added.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden. The server keeps going.'**
+  String get ytdlToastHidden;
+
+  /// Accessible name of the link field.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube link'**
+  String get ytdlA11yLinkField;
+
+  /// Accessible name of the ✕ button in the link field.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear link'**
+  String get ytdlA11yClearLink;
+
+  /// Accessible name of the format chip (MP3 ▾); {format} is the chosen format's name, like 'MP3'.
+  ///
+  /// In en, this message translates to:
+  /// **'Format, {format}'**
+  String ytdlA11yFormat(String format);
+
+  /// Accessible name of a chip under the title or artist field that restores a removed piece; {fragment} is that piece as it was, like '(Official Video)' or 'VEVO'.
+  ///
+  /// In en, this message translates to:
+  /// **'Put back {fragment}'**
+  String ytdlA11yPutBack(String fragment);
+
+  /// Accessible name of the 'Split at -' chip (the title was split at a dash).
+  ///
+  /// In en, this message translates to:
+  /// **'Undo the split at the dash'**
+  String get ytdlA11yUndoSplit;
+
+  /// Accessible name of the 'Split at :' chip (the title was split at a colon).
+  ///
+  /// In en, this message translates to:
+  /// **'Undo the split at the colon'**
+  String get ytdlA11yUndoSplitColon;
+
+  /// Accessible name of a row's ⋮ menu button; {title} is the song.
+  ///
+  /// In en, this message translates to:
+  /// **'More for {title}'**
+  String ytdlA11yMoreFor(String title);
+
+  /// Accessible name of the spinning ring on a row being added.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding'**
+  String get ytdlA11yAdding;
+
+  /// Accessible name of the 'new' tag after a folder that will be made (lower case: it is read after the folder's name).
+  ///
+  /// In en, this message translates to:
+  /// **'a new folder'**
+  String get ytdlA11yNewFolder;
+
+  /// How a path is read aloud, one folder at a time: 'Music, then Daft Punk, then Discovery'. {previous} is the path read so far, {next} the next folder.
+  ///
+  /// In en, this message translates to:
+  /// **'{previous}, then {next}'**
+  String ytdlCrumbThen(String previous, String next);
+
+  /// How a folder that will be made is read aloud inside a path ('Discovery, a new folder'); {folder} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'{folder}, a new folder'**
+  String ytdlCrumbNew(String folder);
+
+  /// How a preview path that ends in a file name is read aloud ('Music, then Daft Punk, file One_More_Time.mp3'); {path} is the folders read with ytdlCrumbThen, {file} the full file name.
+  ///
+  /// In en, this message translates to:
+  /// **'{path}, file {file}'**
+  String ytdlCrumbFile(String path, String file);
+
+  /// How a folder named only '()' is read aloud inside a path.
+  ///
+  /// In en, this message translates to:
+  /// **'empty brackets'**
+  String get ytdlCrumbEmptyBrackets;
+
+  /// How a folder ending in '()' is read aloud inside a path ('Discovery with empty brackets'); {folder} is the name before the brackets.
+  ///
+  /// In en, this message translates to:
+  /// **'{folder} with empty brackets'**
+  String ytdlCrumbWithEmptyBrackets(String folder);
+
+  /// Accessible name of a variable chip whose variable is already in the custom layout; {name} is the chip's own name, like 'Insert album'.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, used'**
+  String ytdlA11yVarUsed(String name);
+
+  /// Accessible name of the group of variable chips under the custom layout field.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert a variable'**
+  String get ytdlA11yInsertVariable;
+
+  /// Accessible name of the lock icon on a path or library chip that can't be changed here.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get ytdlA11yLocked;
+
+  /// Accessible name of the path row at the top of the Choose a folder sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder path'**
+  String get ytdlA11yFolderPath;
+
+  /// Accessible name of a folder in that path row: tapping it goes up to that folder; {folder} is its name.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {folder}'**
+  String ytdlA11yUpTo(String folder);
+
+  /// Accessible name of the video's cover picture on the result card and on rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get ytdlA11yCover;
+
+  /// Start of the result card's spoken summary when there is an artist: 'One More Time, by Daft Punk'.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}, by {artist}'**
+  String ytdlSummaryBy(String title, String artist);
+
+  /// Part of the result card's spoken summary: 'album Discovery' (lower case, it follows ', ').
+  ///
+  /// In en, this message translates to:
+  /// **'album {album}'**
+  String ytdlSummaryAlbum(String album);
+
+  /// Part of the result card's spoken summary when there is no album (lower case, it follows ', ').
+  ///
+  /// In en, this message translates to:
+  /// **'no album'**
+  String get ytdlSummaryNoAlbum;
+
+  /// The result card read aloud as one sentence: 'One More Time, by Daft Punk, album Discovery, 2001. Tags from YouTube Music. Saves to Music, then Daft Punk, then Discovery, a new folder.' {details} is the title, artist, album and year joined with ', '; {source} the source line; {path} the path read aloud.
+  ///
+  /// In en, this message translates to:
+  /// **'{details}. {source}. Saves to {path}.'**
+  String ytdlSummary(String details, String source, String path);
 }
 
 class _AppLocalizationsDelegate

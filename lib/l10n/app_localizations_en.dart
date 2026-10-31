@@ -5401,4 +5401,696 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsResetBodyIos =>
       'Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.';
+
+  @override
+  String get ytdlTitle => 'Add from YouTube';
+
+  @override
+  String ytdlHomeAdding(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Adding $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytdlHomeAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Added $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlPasteHint => 'Paste a YouTube link';
+
+  @override
+  String get ytdlPasteFromClipboard => 'Paste from clipboard';
+
+  @override
+  String ytdlLandsIn(String path) {
+    return 'Lands in $path';
+  }
+
+  @override
+  String get ytdlLimits =>
+      'One video per link · the server stops at 500 MB or after an hour · no live streams or playlists';
+
+  @override
+  String get ytdlEmptyTitle => 'Paste a link to add a song to your library.';
+
+  @override
+  String get ytdlEmptyWebApp =>
+      'Songs added from the web app show up here too.';
+
+  @override
+  String ytdlLinkShortSent(String link) {
+    return 'Short link: sent as $link';
+  }
+
+  @override
+  String ytdlLinkSentAs(String link) {
+    return 'Sent as $link';
+  }
+
+  @override
+  String get ytdlLinkNotYoutube =>
+      'That\'s not a YouTube link. Paste one from youtube.com or youtu.be.';
+
+  @override
+  String get ytdlLinkPlaylist =>
+      'That\'s a playlist. Open one video in it and copy that link.';
+
+  @override
+  String get ytdlLinkInPlaylist => 'Just this video, not the playlist.';
+
+  @override
+  String get ytdlLinkLive =>
+      'Live streams can\'t be saved. If this one has ended, it may still work.';
+
+  @override
+  String get ytdlLinkLiveOlder =>
+      'This server doesn\'t stop live streams. Add this only if the stream has ended.';
+
+  @override
+  String get ytdlLookupReading => 'Reading the video…';
+
+  @override
+  String get ytdlLookupSlow => 'Still looking — YouTube can be slow.';
+
+  @override
+  String get ytdlLookupEnterYourself => 'Enter details yourself';
+
+  @override
+  String get ytdlLookupFailed =>
+      'Couldn\'t read this video\'s details. It may be private, age-restricted or blocked for the server.';
+
+  @override
+  String get ytdlLookupTimedOut =>
+      'The server took too long — it may still be setting up its downloader. Try again in a minute.';
+
+  @override
+  String get ytdlLookupEnterDetails => 'Enter details';
+
+  @override
+  String get ytdlLookupNoTags =>
+      'No tags yet, so it goes into the library\'s top folder.';
+
+  @override
+  String get ytdlLookupFailedUsingYours =>
+      'Couldn\'t read this video\'s details · Your details will be used.';
+
+  @override
+  String get ytdlLateFound => 'Details found for this video';
+
+  @override
+  String get ytdlLateUseThem => 'Use them';
+
+  @override
+  String get ytdlLateEditsStay => 'Your edits stay.';
+
+  @override
+  String get ytdlOffline =>
+      'You\'re offline — the lookup runs when you\'re back.';
+
+  @override
+  String get ytdlYtdlpMissing =>
+      'This server can\'t download from YouTube yet. Ask its admin to set up yt-dlp.';
+
+  @override
+  String get ytdlCardNoAlbum => 'No album';
+
+  @override
+  String get ytdlSourceMusic => 'Tags from YouTube Music';
+
+  @override
+  String get ytdlSourceSplit => 'Artist and title from the video title';
+
+  @override
+  String get ytdlSourceSplitAgrees =>
+      'Artist and title from the video title · matches the artist YouTube lists';
+
+  @override
+  String get ytdlSourceChannel => 'Artist may be the channel name — check it';
+
+  @override
+  String ytdlCleanedFrom(String title) {
+    return 'Cleaned from “$title”';
+  }
+
+  @override
+  String get ytdlUndoAll => 'Undo all';
+
+  @override
+  String get ytdlEditTags => 'Edit tags';
+
+  @override
+  String get ytdlFieldTitle => 'Title';
+
+  @override
+  String get ytdlHelpMusic => 'From YouTube Music';
+
+  @override
+  String get ytdlHelpVideoTitle => 'From the video title';
+
+  @override
+  String get ytdlHelpVideoTitleCleaned => 'From the video title, cleaned';
+
+  @override
+  String get ytdlHelpYoutubeArtist => 'From YouTube\'s artist field';
+
+  @override
+  String get ytdlHelpYoutubeArtistCheck =>
+      'From YouTube\'s artist field — check it';
+
+  @override
+  String ytdlHelpYoutubeArtistStripped(String removed) {
+    return 'From YouTube\'s artist field, “$removed” removed — check it';
+  }
+
+  @override
+  String get ytdlHelpEdited => 'Edited';
+
+  @override
+  String get ytdlBlankTitle => 'Blank: the file gets the video\'s own title.';
+
+  @override
+  String get ytdlBlankArtistMusic =>
+      'Blank: the file keeps YouTube Music\'s artist.';
+
+  @override
+  String ytdlBlankArtistGuess(String name) {
+    return 'Blank: the file gets YouTube\'s own artist guess, often the raw channel name (here “$name”).';
+  }
+
+  @override
+  String get ytdlBlankArtistGuessUnnamed =>
+      'Blank: the file gets YouTube\'s own artist guess, often the raw channel name.';
+
+  @override
+  String get ytdlBlankAlbumSingle => 'Leave blank for a single';
+
+  @override
+  String get ytdlBlankAlbumKeeps => 'Blank keeps YouTube\'s album tag';
+
+  @override
+  String get ytdlBlankYear => 'Blank: the file gets YouTube\'s upload year.';
+
+  @override
+  String get ytdlYearInvalid => 'A year is 4 digits, like 2001';
+
+  @override
+  String ytdlRestoreSplit(String separator) {
+    return 'Split at $separator';
+  }
+
+  @override
+  String ytdlOrYoutubeArtist(String name) {
+    return 'Or YouTube\'s artist: $name';
+  }
+
+  @override
+  String get ytdlSwap => 'Swap artist and title';
+
+  @override
+  String get ytdlSavesTo => 'Saves to';
+
+  @override
+  String get ytdlSavesHere => 'Saves here';
+
+  @override
+  String get ytdlNewTag => 'new';
+
+  @override
+  String get ytdlSampleFile => 'file';
+
+  @override
+  String get ytdlSampleFileStem => 'Video_title';
+
+  @override
+  String ytdlFileAbout(String name) {
+    return 'about $name';
+  }
+
+  @override
+  String ytdlFileAboutLettersDropped(String name) {
+    return 'about $name · letters outside A–Z are dropped from file names';
+  }
+
+  @override
+  String get ytdlCheckFailed => 'Couldn\'t check this folder';
+
+  @override
+  String get ytdlJustThisSong => 'Just this song';
+
+  @override
+  String get ytdlUndo => 'Undo';
+
+  @override
+  String ytdlClash(String name) {
+    return 'Something like “$name” looks to be in this folder already. The server won\'t replace it, so this would likely fail.';
+  }
+
+  @override
+  String get ytdlClashChangeFormat =>
+      'Change format — a different format makes a different file';
+
+  @override
+  String ytdlClashOlder(String name) {
+    return 'A file named “$name” is already in this folder. This server would re-tag that file instead of adding a new one.';
+  }
+
+  @override
+  String get ytdlChangeFormat => 'Change format';
+
+  @override
+  String get ytdlAddToLibrary => 'Add to library';
+
+  @override
+  String get ytdlAddHere => 'Add here';
+
+  @override
+  String get ytdlAddAnyway => 'Add anyway';
+
+  @override
+  String get ytdlAlreadyAdding => 'Already adding to this folder';
+
+  @override
+  String get ytdlFormatMenuTitle => 'Best audio the video has, saved as';
+
+  @override
+  String ytdlFormatRemembered(String server) {
+    return 'Remembered for $server';
+  }
+
+  @override
+  String get ytdlFormatMp3Help => 'Plays everywhere';
+
+  @override
+  String get ytdlFormatM4aHelp => 'Good for Apple devices';
+
+  @override
+  String get ytdlFormatOpusHelp => 'Usually YouTube\'s own audio, no re-encode';
+
+  @override
+  String get ytdlFormatFlacHelp => 'Bigger, not better than the video\'s sound';
+
+  @override
+  String get ytdlFormatWavHelp => 'Biggest, no cover art';
+
+  @override
+  String get ytdlErrFfmpeg =>
+      'The server can\'t convert audio right now. Try again later, or ask its admin.';
+
+  @override
+  String get ytdlErrUploadsOff =>
+      'Your account can\'t add files to this server.';
+
+  @override
+  String ytdlErrLibraryGone(String library) {
+    return 'You can\'t add files to “$library” any more. Pick another library.';
+  }
+
+  @override
+  String ytdlErrLibraryGoneSheet(String library) {
+    return 'You can\'t add files to “$library” any more.';
+  }
+
+  @override
+  String get ytdlErrNoRoute => 'This server doesn\'t offer YouTube downloads.';
+
+  @override
+  String ytdlErrFormatOff(String format) {
+    return 'This server doesn\'t save $format any more';
+  }
+
+  @override
+  String get ytdlErrPickAnother => 'pick another';
+
+  @override
+  String get ytdlErrBadRequest =>
+      'Something about this link didn\'t suit the server. Try again.';
+
+  @override
+  String get ytdlErrServer => 'Something went wrong on the server.';
+
+  @override
+  String ytdlErrOther(String message) {
+    return 'The server said: “$message”';
+  }
+
+  @override
+  String ytdlErrMkdir(String folder) {
+    return 'Couldn\'t make the folder “$folder”.';
+  }
+
+  @override
+  String get ytdlSectionAdding => 'Adding';
+
+  @override
+  String get ytdlSectionAddingNote =>
+      'Runs on the server · can\'t be stopped from the app';
+
+  @override
+  String get ytdlSectionNeedsLook => 'Needs a look';
+
+  @override
+  String get ytdlSectionAdded => 'Added';
+
+  @override
+  String ytdlRowAdding(int minutes, String format) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Adding · $minutes min · $format',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlRowStartUnsure => 'Starting… the server hasn\'t answered yet';
+
+  @override
+  String get ytdlRowNotSureStarted => 'Not sure it started';
+
+  @override
+  String get ytdlRowNotFound => 'Not found on the server';
+
+  @override
+  String get ytdlRowClash =>
+      'Failed · a file with this name looks to be there already. Nothing was replaced.';
+
+  @override
+  String get ytdlRowFailed =>
+      'Failed · the server didn\'t say why. Common causes: a live stream, YouTube refusing the server, 500 MB, or an hour.';
+
+  @override
+  String get ytdlRowFailedOlder =>
+      'Failed · the server didn\'t say why. YouTube may have refused the server.';
+
+  @override
+  String get ytdlRowNotSureFinished =>
+      'Not sure it finished · it ended while the app was away and the server has no record of it';
+
+  @override
+  String get ytdlRowWaiting => 'Waiting for connection';
+
+  @override
+  String get ytdlRowFileMissing => 'File missing';
+
+  @override
+  String get ytdlRowHide => 'Hide from this list';
+
+  @override
+  String get ytdlRowChangeFormatRetry => 'Change format and retry';
+
+  @override
+  String get ytdlRowShowFolder => 'Show folder';
+
+  @override
+  String get ytdlRowShowInFolder => 'Show in folder';
+
+  @override
+  String get ytdlShowEarlier => 'Show earlier';
+
+  @override
+  String get ytdlWhereTitle => 'Where new songs land';
+
+  @override
+  String ytdlWhereSub(String server) {
+    return 'Kept on this phone for $server · Discover copies keep their own setting.';
+  }
+
+  @override
+  String ytdlWhereLandsAt(String title) {
+    return '“$title” lands at';
+  }
+
+  @override
+  String get ytdlWhereLandsAtSample => 'A song lands at';
+
+  @override
+  String get ytdlWhereSampleNote =>
+      'Shown with sample words until you paste a link.';
+
+  @override
+  String ytdlWhereFileNote(String title) {
+    return 'The file name comes from the video title; your library shows “$title”.';
+  }
+
+  @override
+  String ytdlWhereAlwaysEmpty(String vars) {
+    return 'Always empty for YouTube songs, so left out: $vars';
+  }
+
+  @override
+  String get ytdlWhereSetByDiscover => 'Set by Discover';
+
+  @override
+  String get ytdlLayoutTop => 'Top of the library';
+
+  @override
+  String get ytdlLayoutTopSub => 'No folders';
+
+  @override
+  String get ytdlLayoutDiscover => 'Same as Discover';
+
+  @override
+  String get ytdlWhereUseForSong => 'Use for this song';
+
+  @override
+  String get ytdlWhereNoMkdir =>
+      'Your account can\'t make folders, so only folders that already exist work. Top of the library always does.';
+
+  @override
+  String get ytdlCustomHelp =>
+      'Use / between folders. There\'s no TITLE — the file name always comes from the video title.';
+
+  @override
+  String ytdlErrNeverVar(String name, String vars) {
+    return '$name is always empty for YouTube songs. Use $vars.';
+  }
+
+  @override
+  String get ytdlErrBadChars =>
+      'A folder name can\'t contain : * ? \" < > or |.';
+
+  @override
+  String ytdlTrapEmpty(String folder) {
+    return 'Nothing to fill this folder, so it\'s named “$folder”. Add an album and year, or pick another layout.';
+  }
+
+  @override
+  String ytdlTrapNoYear(String folder) {
+    return 'No year for this song, so the folder reads “$folder”. The file still gets YouTube\'s upload year as its tag.';
+  }
+
+  @override
+  String ytdlTrapOther(String folder) {
+    return 'A tag is empty, so the folder reads “$folder”. Fill in the tags, or pick another layout.';
+  }
+
+  @override
+  String get ytdlTrapAddYear => 'Add a year';
+
+  @override
+  String ytdlNoMkdirNew(String folder) {
+    return '“$folder” doesn\'t exist yet and your account can\'t make folders.';
+  }
+
+  @override
+  String get ytdlNoMkdirUnchecked =>
+      'Your account can\'t make folders and this folder couldn\'t be checked.';
+
+  @override
+  String ytdlSaveToInstead(String path) {
+    return 'Save to $path instead';
+  }
+
+  @override
+  String get ytdlChooseFolderLink => 'Choose a folder…';
+
+  @override
+  String get ytdlChooseTitle => 'Choose a folder';
+
+  @override
+  String get ytdlChooseSub =>
+      'Your account can\'t make folders, so pick one that already exists.';
+
+  @override
+  String get ytdlChooseEmpty => 'No folders here.';
+
+  @override
+  String get ytdlExplorerEntry => 'Add from YouTube here';
+
+  @override
+  String ytdlSheetInto(String path) {
+    return 'Into $path';
+  }
+
+  @override
+  String get ytdlSortSubfolders => 'Sort into subfolders…';
+
+  @override
+  String get ytdlSubfoldersTitle => 'Sort into subfolders';
+
+  @override
+  String get ytdlSubfoldersHere => 'The folder you\'re in';
+
+  @override
+  String get ytdlSubfoldersRightHere => 'Right here';
+
+  @override
+  String get ytdlSubfoldersNone => 'No subfolders';
+
+  @override
+  String ytdlSubfoldersNew(int count, String folders) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new folders will be made: $folders',
+      one: '$count new folder will be made: $folders',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytdlStripAdding(String title) {
+    return 'Adding “$title”…';
+  }
+
+  @override
+  String ytdlStripAddingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Adding $count videos…',
+      one: 'Adding $count video…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlStripSeeAll => 'See all';
+
+  @override
+  String get ytdlStripDetails => 'Details';
+
+  @override
+  String ytdlToastAdded(String title, String path) {
+    return 'Added “$title” to $path';
+  }
+
+  @override
+  String ytdlCouldntAdd(String title) {
+    return 'Couldn\'t add “$title”';
+  }
+
+  @override
+  String ytdlToastSaved(String path) {
+    return 'Saved · new songs land in $path';
+  }
+
+  @override
+  String get ytdlToastHidden => 'Hidden. The server keeps going.';
+
+  @override
+  String get ytdlA11yLinkField => 'YouTube link';
+
+  @override
+  String get ytdlA11yClearLink => 'Clear link';
+
+  @override
+  String ytdlA11yFormat(String format) {
+    return 'Format, $format';
+  }
+
+  @override
+  String ytdlA11yPutBack(String fragment) {
+    return 'Put back $fragment';
+  }
+
+  @override
+  String get ytdlA11yUndoSplit => 'Undo the split at the dash';
+
+  @override
+  String get ytdlA11yUndoSplitColon => 'Undo the split at the colon';
+
+  @override
+  String ytdlA11yMoreFor(String title) {
+    return 'More for $title';
+  }
+
+  @override
+  String get ytdlA11yAdding => 'Adding';
+
+  @override
+  String get ytdlA11yNewFolder => 'a new folder';
+
+  @override
+  String ytdlCrumbThen(String previous, String next) {
+    return '$previous, then $next';
+  }
+
+  @override
+  String ytdlCrumbNew(String folder) {
+    return '$folder, a new folder';
+  }
+
+  @override
+  String ytdlCrumbFile(String path, String file) {
+    return '$path, file $file';
+  }
+
+  @override
+  String get ytdlCrumbEmptyBrackets => 'empty brackets';
+
+  @override
+  String ytdlCrumbWithEmptyBrackets(String folder) {
+    return '$folder with empty brackets';
+  }
+
+  @override
+  String ytdlA11yVarUsed(String name) {
+    return '$name, used';
+  }
+
+  @override
+  String get ytdlA11yInsertVariable => 'Insert a variable';
+
+  @override
+  String get ytdlA11yLocked => 'Locked';
+
+  @override
+  String get ytdlA11yFolderPath => 'Folder path';
+
+  @override
+  String ytdlA11yUpTo(String folder) {
+    return 'Up to $folder';
+  }
+
+  @override
+  String get ytdlA11yCover => 'Cover';
+
+  @override
+  String ytdlSummaryBy(String title, String artist) {
+    return '$title, by $artist';
+  }
+
+  @override
+  String ytdlSummaryAlbum(String album) {
+    return 'album $album';
+  }
+
+  @override
+  String get ytdlSummaryNoAlbum => 'no album';
+
+  @override
+  String ytdlSummary(String details, String source, String path) {
+    return '$details. $source. Saves to $path.';
+  }
 }
