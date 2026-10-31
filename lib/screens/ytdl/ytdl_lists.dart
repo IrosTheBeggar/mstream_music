@@ -744,7 +744,7 @@ class _AddingRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const _AddingRing(),
+          _AddingRing(),
           if (hideable)
             _RowMenu<int>(
               key: ValueKey('ytdl-row-more-${job.id}'),

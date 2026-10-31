@@ -166,7 +166,7 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
         ),
       );
     } else if (listing == null) {
-      body = const _Skeleton();
+      body = _Skeleton();
     } else {
       final folders = [...listing.directories]
         ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

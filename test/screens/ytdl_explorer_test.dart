@@ -11,9 +11,11 @@
 // below: the frame replaced in place (the scroll offset kept), the new
 // subfolder or file tinted for 2 s with its row's height unchanged, nothing
 // for a subfolder that was already there, another folder or once the user
-// has left. And a row's Show folder with the real wiring: the screen popped
-// back to the browser, its search and album closed, the folder listed on
-// the row's own server.
+// has left. The rows on screen as the folder sheet's name check reads
+// them (an older server's same-name file blocked even when the sheet's own
+// listing fails), and the strip's ring taking a theme switch. And a row's
+// Show folder with the real wiring: the screen popped back to the browser,
+// its search and album closed, the folder listed on the row's own server.
 
 import 'dart:async';
 import 'dart:convert';
@@ -28,6 +30,7 @@ import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/browser.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_ui.dart' show keepInkOn;
 import 'package:mstream_music/screens/ytdl/ytdl_folder_strip.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_lists.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_screen.dart';
@@ -242,6 +245,34 @@ void main() {
       final screen = t.widget<YtdlScreen>(find.byType(YtdlScreen));
       expect(identical(screen.server, s), isTrue);
       expect(screen.openNeedsLook, isFalse);
+    });
+
+    testWidgets('the ring takes a theme switch while the browser stays '
+        '(never const: it reads the palette)', (t) async {
+      final dark = paletteFor(AppTheme.dark);
+      final light = paletteFor(AppTheme.light);
+      addTearDown(() => VelvetColors.setActive(dark));
+      Widget app(VelvetPalette p) {
+        VelvetColors.setActive(p);
+        return MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: appSupportedLocales,
+          // As the app builds it: the browser itself is not const.
+          home: Scaffold(appBar: const BrowserToolbar(), body: Browser()),
+        );
+      }
+
+      open(daftPunk, daftPunkRows());
+      await t.pumpWidget(app(dark));
+      await start(t);
+      final ring = find.descendant(
+          of: strip, matching: find.byType(CircularProgressIndicator));
+      expect(t.widget<CircularProgressIndicator>(ring).color,
+          keepInkOn(dark.raised));
+      await t.pumpWidget(app(light));
+      await t.pump();
+      expect(t.widget<CircularProgressIndicator>(ring).color,
+          keepInkOn(light.raised));
     });
 
     testWidgets('two adds: "Adding 2 videos…"', (t) async {

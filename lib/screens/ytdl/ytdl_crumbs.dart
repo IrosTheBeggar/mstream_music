@@ -127,7 +127,7 @@ class YtdlCrumbs extends StatelessWidget {
               children: [
                 Flexible(child: Text(ytdlIsolate(destHold(c)), style: s)),
                 const SizedBox(width: 5),
-                const YtdlNewTag(),
+                YtdlNewTag(),
               ],
             ),
           ),

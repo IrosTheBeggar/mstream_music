@@ -260,7 +260,7 @@ class YtdlResultCard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const YtdlCover(),
+            YtdlCover(),
             const SizedBox(width: 12),
             Expanded(
               child: YtdlStatusLine(

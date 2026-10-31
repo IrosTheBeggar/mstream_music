@@ -242,7 +242,9 @@ class _YtdlFolderStripState extends State<YtdlFolderStrip> {
         if (open.isNotEmpty) {
           return _Strip(
             key: const ValueKey('ytdl-strip'),
-            lead: const _StripRing(),
+            // Not const: it reads the palette, and the strip outlives a
+            // theme switch (analysis_options.yaml).
+            lead: _StripRing(),
             text: open.length == 1
                 ? l.ytdlStripAdding(_titleOf(open.single))
                 : l.ytdlStripAddingCount(open.length),

@@ -1303,7 +1303,7 @@ class _PreviewPath extends StatelessWidget {
                 children: [
                   Flexible(child: Text(text, style: style)),
                   const SizedBox(width: 5),
-                  const YtdlNewTag(),
+                  YtdlNewTag(),
                 ],
               ),
             ),
