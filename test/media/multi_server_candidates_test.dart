@@ -133,5 +133,44 @@ void main() {
       expect(AudioPlayerHandler.canJoinMultiServer(_peer(missing: true), {}),
           isFalse);
     });
+
+    // A mood (mStream #1096) only means something on a server that can
+    // filter by it; any other would answer from outside the mood.
+    group('while a mood is set', () {
+      test('only a server that can filter by it joins', () {
+        final can = _server('a')..moodFiltersAvailable = true;
+        final cannot = _server('b')..moodFiltersAvailable = false;
+        expect(AudioPlayerHandler.canJoinMultiServer(can, {}, moodSet: true),
+            isTrue);
+        expect(
+            AudioPlayerHandler.canJoinMultiServer(cannot, {}, moodSet: true),
+            isFalse);
+        expect(AudioPlayerHandler.canJoinMultiServer(cannot, {}), isTrue,
+            reason: 'without a mood the flag does not matter');
+      });
+
+      test('a peer, whose flag the app pins off, sits out', () {
+        final peer = _peer()..moodFiltersAvailable = false;
+        expect(AudioPlayerHandler.canJoinMultiServer(peer, {}, moodSet: true),
+            isFalse);
+        expect(
+            AudioPlayerHandler.canJoinMultiServer(peer, {},
+                moodSet: true, allowUnknownDiscovery: true),
+            isFalse,
+            reason: 'a known "cannot" is not dialed either');
+      });
+
+      test('an unreported server waits for its flags — except as a tunnel '
+          'target, where reaching it is what fills them in', () {
+        final unknown = _server('a'); // moodFiltersAvailable: null
+        expect(
+            AudioPlayerHandler.canJoinMultiServer(unknown, {}, moodSet: true),
+            isFalse);
+        expect(
+            AudioPlayerHandler.canJoinMultiServer(unknown, {},
+                moodSet: true, allowUnknownDiscovery: true),
+            isTrue);
+      });
+    });
   });
 }

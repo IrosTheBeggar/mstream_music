@@ -977,6 +977,15 @@ class AppLocalizationsIt extends AppLocalizations {
       'I brani di cui il server non ha letto la durata vengono altrimenti saltati';
 
   @override
+  String get autoDjMoodTitle => 'Atmosfera';
+
+  @override
+  String get autoDjMoodSubtitle => 'Scegli solo brani adatti a un’atmosfera';
+
+  @override
+  String get autoDjMoodChoose => 'Scegli un’atmosfera';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ è attivo';
 
   @override

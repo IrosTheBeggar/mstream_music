@@ -979,6 +979,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'De lo contrario, se omiten las pistas cuya duración tu servidor no ha leído';
 
   @override
+  String get autoDjMoodTitle => 'Estado de ánimo';
+
+  @override
+  String get autoDjMoodSubtitle =>
+      'Elegir solo canciones que encajen con un estado de ánimo';
+
+  @override
+  String get autoDjMoodChoose => 'Elige un estado de ánimo';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ está activado';
 
   @override
