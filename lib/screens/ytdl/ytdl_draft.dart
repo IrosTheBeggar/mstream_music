@@ -1009,8 +1009,11 @@ class YtdlDraft extends ChangeNotifier {
   /// folder below the one that listed is new when that listing has no
   /// folder of its name (ignoring case) — and every folder after it too; a
   /// file of that name, or a folder that would not list, or no listing at
-  /// all, is unknown. The target's own listing feeds the name check. Null
-  /// once [stale] says the answer is no longer wanted.
+  /// all, is unknown. The target's own listing feeds the name check — and
+  /// when the target won't list but the explorer is showing it (the folder
+  /// sheet's Right here), the rows already loaded do (spec §7): an older
+  /// server would re-tag the same-name file they show. Null once [stale]
+  /// says the answer is no longer wanted.
   Future<YtdlFolderCheck?> _walk(YtdlTarget t, bool Function() stale) async {
     final segments = t.segments;
     for (var depth = segments.length; depth >= 0; depth--) {
@@ -1020,6 +1023,13 @@ class YtdlDraft extends ChangeNotifier {
         listing = await owner.api.list(dir);
       } catch (_) {
         if (stale()) return null;
+        final shown = depth == segments.length
+            ? _hub.explorerFiles(owner.server, dir)
+            : null;
+        if (shown != null) {
+          return YtdlFolderCheck(
+              state: YtdlCheckState.known, deepest: dir, files: shown);
+        }
         continue;
       }
       if (stale()) return null;

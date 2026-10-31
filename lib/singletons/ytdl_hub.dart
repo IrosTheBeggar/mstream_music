@@ -249,6 +249,13 @@ class YtdlHub with WidgetsBindingObserver {
   Future<Map<String, dynamic>> Function(Server server) pathTemplatesOf =
       _defaultPathTemplates;
 
+  /// The file names the File Explorer shows for [directory] on [server]
+  /// right now — a listing already loaded, which the explorer sheet's name
+  /// check reads when the folder won't list again (spec §7) — or null when
+  /// it isn't showing that folder.
+  List<String>? Function(Server server, String directory) explorerFiles =
+      _defaultExplorerFiles;
+
   /// False leaves the app lifecycle to the caller
   /// ([didChangeAppLifecycleState]; tests).
   bool watchLifecycle = true;
@@ -291,6 +298,29 @@ class YtdlHub with WidgetsBindingObserver {
 
   static Future<Map<String, dynamic>> _defaultPathTemplates(Server server) =>
       ApiManager().torrentPathTemplates(server: server);
+
+  /// The top frame's file rows when it is [directory] on [server] (a
+  /// frame's rows carry its server; an empty folder's, the current one).
+  static List<String>? _defaultExplorerFiles(Server server, String directory) {
+    final bm = BrowserManager();
+    final path = bm.currentPath;
+    if (path == null ||
+        bm.browserCache.isEmpty ||
+        _bare(path).toLowerCase() != _bare(directory).toLowerCase()) {
+      return null;
+    }
+    final rows = bm.browserCache.last;
+    final shownOn = (rows.isNotEmpty ? rows.first.server : null) ??
+        ServerManager().currentServer;
+    if (shownOn == null ||
+        !identical(ownServerOf(shownOn) ?? shownOn, server)) {
+      return null;
+    }
+    return [
+      for (final r in rows)
+        if (r.type == 'file') r.name,
+    ];
+  }
 
   // ── state ───────────────────────────────────────────────────────────────
 
@@ -339,6 +369,7 @@ class YtdlHub with WidgetsBindingObserver {
     awaitTunnel = _defaultAwaitTunnel;
     destinationOf = _defaultDestination;
     pathTemplatesOf = _defaultPathTemplates;
+    explorerFiles = _defaultExplorerFiles;
     watchLifecycle = true;
     buildShowsEntry = _defaultBuildShowsEntry;
   }

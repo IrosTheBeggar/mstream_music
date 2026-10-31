@@ -520,6 +520,51 @@ void main() {
       expect(d.subLayout, kYtdlLayoutTop);
     });
 
+    test('an older server, the file already in the rows on screen: Add here '
+        'stays blocked when the folder won\'t list again (spec §7 name check, '
+        '§10)', () async {
+      const here = '/Music/Daft Punk/';
+      h.fake.hasRecords = false;
+      h.fake.file(here, 'One_More_Time.mp3');
+      final shownFor = <String>[];
+      h.hub.explorerFiles = (server, dir) {
+        shownFor.add(dir);
+        return identical(server, s) && dir == here
+            ? const ['Da Funk.mp3', 'One_More_Time.mp3']
+            : null;
+      };
+      final d = st().folderDraft(here)..attach();
+      await ytdlSettle();
+      expect(st().tier, YtdlServerTier.older);
+      // Listing: the clash blocks.
+      await ready(kOneMoreTime, d);
+      expect(d.block, YtdlBlock.clashOlder);
+      expect(shownFor, isEmpty, reason: 'a listing that answers wins');
+      d.clear();
+      // The listing fails (a flaky tunnel): the rows already loaded say it.
+      h.fake.listFails.add(here);
+      await ready(kOneMoreTime, d);
+      expect(shownFor, contains(here));
+      expect(d.check, YtdlCheckState.known);
+      expect(d.clash, isTrue);
+      expect(d.block, YtdlBlock.clashOlder);
+      expect(await d.add(), isFalse);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+    });
+
+    test('… and with no rows on screen for it, the check stays unknown', () async {
+      const here = '/Music/Daft Punk/';
+      h.fake.hasRecords = false;
+      h.fake.file(here, 'One_More_Time.mp3');
+      h.fake.listFails.add(here);
+      h.hub.explorerFiles = (server, dir) => null;
+      final d = st().folderDraft(here)..attach();
+      await ytdlSettle();
+      await ready(kOneMoreTime, d);
+      expect(d.check, YtdlCheckState.unknown);
+      expect(d.clash, isFalse);
+    });
+
     test('subfolders that are new are made first', () async {
       h.fake.folder('/Music/Daft Punk/');
       final d = st().folderDraft('/Music/Daft Punk/');

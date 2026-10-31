@@ -287,6 +287,51 @@ void main() {
     });
   });
 
+  group('the rows on screen (the folder sheet\'s name check)', () {
+    testWidgets('the folder on screen: its file names; any other folder, '
+        'another server: none', (t) async {
+      open(daftPunk, [
+        folder(daftPunk, 'Homework'),
+        file(daftPunk, 'One_More_Time.mp3'),
+        file(daftPunk, 'Da Funk.mp3'),
+      ]);
+      await pump(t);
+      expect(h.hub.explorerFiles(s, daftPunk),
+          ['One_More_Time.mp3', 'Da Funk.mp3']);
+      expect(h.hub.explorerFiles(s, '/music/daft punk'),
+          ['One_More_Time.mp3', 'Da Funk.mp3'],
+          reason: 'compared without slashes, ignoring case');
+      expect(h.hub.explorerFiles(s, discovery), isNull);
+      expect(h.hub.explorerFiles(ytdlServer(), daftPunk), isNull);
+      // An empty folder: none of its own, but it is on screen.
+      open(discovery, []);
+      await drain(t);
+      expect(h.hub.explorerFiles(s, discovery), isEmpty);
+    });
+
+    testWidgets('an older server, the sheet\'s own listing failing: the rows '
+        'on screen still block a same-name add (spec §7, §10)', (t) async {
+      h.fake
+        ..hasRecords = false
+        ..file(daftPunk, 'One_More_Time.mp3')
+        ..listFails.add(daftPunk);
+      open(daftPunk, [file(daftPunk, 'One_More_Time.mp3')]);
+      await pump(t);
+      final d = h.hub.stateFor(s).folderDraft(daftPunk);
+      await t.runAsync(() async {
+        d.attach();
+        await ytdlSettle();
+        d.link.text = kOneMoreTime;
+        await h.timers.elapse(const Duration(milliseconds: 400));
+        await h.timers.elapse(const Duration(milliseconds: 600));
+      });
+      expect(h.hub.stateFor(s).tier, YtdlServerTier.older);
+      expect(d.clash, isTrue);
+      expect(d.clashBlocks, isTrue);
+      d.detach();
+    });
+  });
+
   group('the re-list', () {
     Future<void> finishAll(WidgetTester t) async {
       await t.runAsync(() async {
