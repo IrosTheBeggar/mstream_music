@@ -39,10 +39,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get languageSystemDefault => 'システムのデフォルト';
 
   @override
-  String get settingsLanguageSubtitle =>
-      'アプリの表示言語です。「システムのデフォルト」を選ぶと端末の設定に従います。';
-
-  @override
   String couldNotOpen(String url) {
     return '$url を開けませんでした';
   }
@@ -325,23 +321,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsSectionPlayback => '再生';
 
   @override
-  String get settingsSectionBrowse => 'ブラウズ';
-
-  @override
-  String get settingsSectionAbout => '情報';
+  String get settingsSectionBrowse => 'ライブラリ';
 
   @override
   String get settingsTheme => 'テーマ';
-
-  @override
-  String get themeSubtitleVelvet => 'ネイビーとパープル — 定番のダークテーマです。';
-
-  @override
-  String get themeSubtitleDark => 'アンバーのアクセントを添えたニュートラルなダークです。';
-
-  @override
-  String get themeSubtitleLight =>
-      '明るい本体にダークなアプリバーとアンバーのアクセント — 以前のテーマに合わせています。';
 
   @override
   String get settingsTranscode => '音声をトランスコード';
@@ -380,58 +363,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsStartupPage => '起動画面';
 
   @override
-  String get settingsStartupPageSubtitle =>
-      'アプリをこのブラウザー画面で開きます。「戻る」でブラウザーに戻ります。';
+  String get tapSubtitleAddToQueue => 'キューの最後に追加';
 
   @override
-  String get tapSubtitleAddToQueue =>
-      '曲をタップするとキューに追加されます。キューが空の場合は自動的に再生が始まります。';
+  String get tapSubtitlePlayFromHere => 'キューを置き換えて、その曲から再生';
 
   @override
-  String get tapSubtitlePlayFromHere =>
-      '曲をタップすると、現在のビューにある曲でキューを置き換え、タップした曲から再生を開始します。';
+  String get tapSubtitleAppendAndJump => 'キューの最後に追加して、すぐに再生';
 
   @override
-  String get tapSubtitleAppendAndJump =>
-      '曲をタップするとキューに追加し、再生中の曲を中断してその曲へ再生を移します。';
+  String get settingsVisualizerSource => '音声ソース';
 
   @override
-  String get settingsVisualizerSource => 'ビジュアライザーの音声ソース';
+  String get visualizerSourceSubtitleSynthesized => '権限は不要';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'デフォルト。ビジュアライザーは再生タイミングのみに反応します — マイクの権限は不要です。';
+  String get visualizerSourceSubtitleReal => 'マイクの権限が必要ですが、マイクは使用しません';
 
   @override
-  String get visualizerSourceSubtitleReal =>
-      'ビジュアライザーが実際の音声出力に反応します。Android では RECORD_AUDIO 権限が必要です。';
+  String get settingsAlbumGrid => 'アルバムをグリッド表示';
 
   @override
-  String get settingsAlbumGrid => 'アルバムのグリッド表示';
+  String get settingsFileMetadata => 'ファイルエクスプローラーの曲情報';
 
   @override
-  String get settingsAlbumGridSubtitle =>
-      'アルバムを単純なリストではなく、ジャケット付きのカードのグリッドで表示します。';
+  String get settingsLetterStrip => 'A–Z スクラバー';
 
   @override
-  String get settingsFileMetadata => 'ファイルエクスプローラーで曲のメタデータを読み取る';
-
-  @override
-  String get settingsFileMetadataSubtitle =>
-      'サーバーのファイルを閲覧する際、各曲のタイトル・アーティスト・ジャケットを取得します。オフのときは生のファイル名を表示します（大きなフォルダでは高速）。';
-
-  @override
-  String get settingsLetterStrip => '頭文字スクラバーのしきい値';
-
-  @override
-  String get settingsLetterStripSubtitle =>
-      'リストの項目数がこの値以上のとき、A〜Z のクイックスクラブ用ストリップを表示します。これより少ない場合はストリップを隠し、長いフォルダ名やファイル名を省略せず複数行に折り返します。0 に設定すると常にストリップを表示します。';
-
-  @override
-  String get settingsLetterStripSide => '頭文字スクラバーの位置';
-
-  @override
-  String get settingsLetterStripSideSubtitle => 'A〜Z バーをどちらの端に置くか。';
+  String get settingsLetterStripSide => '位置';
 
   @override
   String get settingsLetterStripLeft => '左';
@@ -440,14 +399,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsLetterStripRight => '右';
 
   @override
-  String get settingsReset => 'デフォルトにリセット';
+  String get settingsReset => '設定をリセット';
 
   @override
-  String get settingsResetSubtitle =>
-      'この画面のすべての設定をデフォルト値に戻します。サーバーとダウンロードには影響しません。';
-
-  @override
-  String get settingsResetDone => '設定をデフォルトに戻しました';
+  String get settingsResetDone => '設定をリセットしました';
 
   @override
   String get realAudioDialogTitle => '実音声を使用しますか？';
@@ -1288,11 +1243,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserWelcomeSubtitle => 'ここをタップしてサーバーを追加';
 
   @override
-  String get settingsVisualizerKnobs => 'ビジュアライザーの調整つまみ';
+  String get settingsVisualizerKnobs => '調整スライダー';
 
   @override
-  String get settingsVisualizerKnobsSubtitle =>
-      '各シェーダーの音声反応をその場で調整できるスライダーをビジュアライザー上に表示します。ShaderToy ビジュアライザーのみ。';
+  String get settingsVisualizerKnobsSubtitle => 'ShaderToy のみ';
 
   @override
   String get visualizerTuningTitle => '調整';
@@ -1347,19 +1301,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonOff => 'オフ';
 
   @override
-  String get settingsCastQuality => 'キャストするビジュアライザーの画質';
-
-  @override
-  String get settingsCastQualitySubtitle720 =>
-      'ビジュアライザーをテレビにストリーミングする解像度です。720p — スマートフォンへの負荷が最も軽くなります。';
-
-  @override
-  String get settingsCastQualitySubtitle1080 =>
-      'ビジュアライザーをテレビにストリーミングする解像度です。1080p — どの Chromecast でも鮮明（デフォルト）。';
-
-  @override
-  String get settingsCastQualitySubtitle4k =>
-      'ビジュアライザーをテレビにストリーミングする解像度です。4K — 4K 対応の Chromecast が必要で、スマートフォンへの負荷がはるかに重くなります。';
+  String get settingsCastQualitySubtitle4k => '4K 対応の Chromecast が必要。端末の負荷が最大';
 
   @override
   String get eqCasting =>
@@ -1590,13 +1532,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get castVisualizer => 'ビジュアライザーをキャスト';
 
   @override
-  String get castVisualizerSubtitle => 'ビジュアライザーをテレビにストリーミング · Chromecast のみ';
+  String get castVisualizerSubtitle => 'Chromecast のみ';
 
   @override
   String get castThisDevice => 'この端末';
 
   @override
-  String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
+  String get visualizerNoKnobs => 'このシェーダーにはスライダーがありません。';
 
   @override
   String get nowPlaying => '再生中';
@@ -1617,18 +1559,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => '細いバー — キューを最大化';
-
-  @override
-  String get playerLayoutMediumDesc => 'バナー — バランス型（デフォルト）';
-
-  @override
-  String get playerLayoutLargeDesc => 'コンパクト — 中央寄せのアートワーク';
-
-  @override
-  String get playerLayoutXlDesc => '特大 — フルサイズのアートワーク';
-
-  @override
   String get queueNothingToDownloadEmpty => 'キューが空です — ダウンロードするものがありません';
 
   @override
@@ -1636,9 +1566,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAccentColor => 'アクセントカラー';
-
-  @override
-  String get settingsAccentColorSubtitle => 'アプリ全体で使用される強調表示の色。';
 
   @override
   String get accentThemeDefault => 'テーマのデフォルト';
@@ -1676,31 +1603,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsResumeQueue => '起動時にキューを復元';
 
   @override
-  String get settingsResumeQueueSubtitle => 'キューと再生位置を保存し、アプリを再び開いたときに復元します。';
+  String get settingsOfflineQueue => 'キューをダウンロード';
 
   @override
-  String get settingsOfflineQueue => 'キューをオフラインで利用可能にする';
+  String get settingsOfflineQueueSubtitle => '接続が切れても再生が続きます。';
 
   @override
-  String get settingsOfflineQueueSubtitle =>
-      'キュー内の曲を自動的にこの端末にダウンロードし、接続が切れても再生を続けられるようにします。';
+  String get settingsOfflineQueueWifiOnly => 'Wi-Fi のみ';
 
   @override
-  String get settingsOfflineQueueWifiOnly => 'Wi-Fi 接続時のみダウンロード';
-
-  @override
-  String get settingsOfflineQueueWifiOnlySubtitle =>
-      'キュー内の曲のダウンロードを Wi-Fi 接続まで待機します。';
-
-  @override
-  String get settingsAutoDownloadCap => '自動ダウンロードの上限';
-
-  @override
-  String get settingsAutoDownloadCapSubtitle =>
-      '再生中の曲から先、この曲数だけを保存します。通り過ぎた曲は順に削除されます。';
-
-  @override
-  String get settingsAutoDownloadCapSubtitleUnlimited => 'キュー全体を保存します（制限なし）。';
+  String get settingsAutoDownloadCap => 'ダウンロードの上限';
 
   @override
   String get settingsAutoDownloadCapUnlimited => '無制限';
@@ -1710,7 +1622,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      '再生中の曲から数えて、キューの何曲をダウンロード済みのまま保つか。再生が進むと、通り過ぎた曲は削除されます。0 でキュー全体。';
+      '再生中の曲から数えて、何曲をダウンロードしたまま保つか。範囲外の古い曲は、新しい曲が届くと削除されます。';
 
   @override
   String get downloadWaitingWifi => 'Wi-Fi 接続を待機中';
@@ -1719,7 +1631,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsRatingHalf => '半星評価';
 
   @override
-  String get settingsRatingHalfSubtitle => '曲を半星単位で評価（星を長押し）。';
+  String get settingsRatingHalfSubtitle => '星を長押し';
 
   @override
   String get ratingTitle => '評価';
@@ -1775,10 +1687,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get importedShadersTitle => 'インポートしたシェーダー';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      '独自の .glsl ファイルを ShaderToy ビジュアライザーのローテーションに追加します。';
-
-  @override
   String get importedShadersRescan => 'フォルダを再スキャン';
 
   @override
@@ -1789,28 +1697,32 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーは ShaderToy ビジュアライザーのローテーションに加わります。';
+      'USB からアクセスできます。mStream をアンインストールすると削除されます。';
 
   @override
   String get importedShadersRemove => '削除';
 
   @override
-  String get importedShadersEmptyTitle => 'フォルダにはまだシェーダーがありません';
+  String get importedShadersEmptyTitle => 'シェーダーはまだありません';
 
   @override
   String get importedShadersEmptyBody =>
       'Shadertoy スタイルの .glsl ファイルを上のフォルダにコピーし、再スキャンをタップしてください。';
 
   @override
-  String get importedShadersInvalid =>
-      '有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。';
+  String get importedShadersInvalid => '動作しない可能性あり：mainImage も main もなし';
 
   @override
   String get importedShadersImportDownloads => 'ダウンロードから .glsl をインポート';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'ダウンロードから $count 個のシェーダーをインポートしました';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'シェーダーを $count 個インポートしました',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2520,14 +2432,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTorrentAskTitle => 'トレントの処理方法を確認する';
 
   @override
-  String get settingsTorrentAskSub => 'mStream でトレントを開いたとき、別のアプリに渡す選択肢を表示します';
-
-  @override
   String get settingsTorrentDefaultTitle => 'トレントのデフォルトアプリ';
 
   @override
-  String get settingsTorrentDefaultSub =>
-      'Android の設定を開き、トレントとマグネットリンクを開くアプリを選べます';
+  String get settingsTorrentDefaultSub => 'Android の設定を開きます';
 
   @override
   String get settingsTorrentDefaultFailed => 'Android の設定を開けませんでした';
@@ -4130,47 +4038,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoRecentlyPlayed => '最近再生した曲';
 
   @override
-  String get settingsSectionListening => '再生履歴';
-
-  @override
-  String get settingsHistoryEnabled => '再生履歴を保存';
-
-  @override
-  String get settingsHistoryEnabledSubtitle =>
-      'この端末が再生したものを、すべてのサーバーとローカルファイルについて記録します。この端末にのみ保存されます。';
+  String get settingsHistoryEnabled => '再生を記録';
 
   @override
   String get settingsHistorySend => '再生をサーバーに送信';
 
   @override
-  String get settingsHistorySendSubtitle =>
-      '各再生は、曲のあるサーバー（ピアの曲はその親サーバー）に送られ、この端末の分も統計に含まれます。サーバーは、Last.fm アカウントを連携している場合にのみ転送します。';
+  String get settingsHistoryClear => '履歴を消去';
 
   @override
-  String get settingsHistoryClear => '再生履歴を消去';
-
-  @override
-  String settingsHistoryClearSubtitle(Object size) {
-    return 'この端末の記録（$size）を削除します。サーバー側の記録は残ります。';
-  }
-
-  @override
-  String get settingsHistoryClearConfirm =>
-      'この端末の再生履歴を削除しますか？すでにサーバーに送信した再生はそのまま残ります。';
-
-  @override
-  String get settingsHistoryCleared => '再生履歴を消去しました';
-
-  @override
-  String settingsHistoryUnsynced(num count) {
+  String settingsHistoryClearConfirm(String size, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '送信待ちの再生 $count 件',
-      zero: 'すべて同期済み',
+      other: 'この端末の再生履歴（$size）を削除します。未同期の再生 $count 件も含まれます。サーバーの履歴は残ります。',
+      zero: 'この端末の再生履歴（$size）を削除します。サーバーの履歴は残ります。',
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHistoryCleared => '再生履歴を消去しました';
 
   @override
   String songInfoServerPlays(num count, Object server) {
@@ -4463,10 +4351,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsHomeWidget => 'ホーム画面ウィジェット';
-
-  @override
-  String get settingsHomeWidgetSubtitle =>
-      '「再生中」ウィジェットを 5 種類のサイズからホーム画面に追加します。';
 
   @override
   String get settingsHomeWidgetSubtitleIos =>
@@ -5317,4 +5201,79 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'プレイリストを共有';
+
+  @override
+  String get settingsSectionVisualizer => 'ビジュアライザー';
+
+  @override
+  String get settingsOfflineQueueFooter =>
+      'キューのダウンロードのみが対象です。自分でダウンロードした曲は常に残ります。';
+
+  @override
+  String settingsAutoDownloadCapValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoDownloadCapHint => '0 = 無制限';
+
+  @override
+  String get settingsStartupRecentHint => '最近追加された曲';
+
+  @override
+  String settingsLetterStripValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件以上',
+      zero: '常に表示',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLetterStripHint => 'A–Z 順のリストで表示。短いリストでは長い名前を折り返します。';
+
+  @override
+  String get settingsHistoryFooter =>
+      'Last.fm への Scrobble は、サーバーでアカウントを連携した場合のみ行われます。';
+
+  @override
+  String get settingsHistoryEmpty => 'なし';
+
+  @override
+  String get settingsHistoryOffTitle => '再生の記録を停止しますか？';
+
+  @override
+  String settingsHistoryOffBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この端末の再生履歴を削除します。未同期の再生 $count 件も含まれます。サーバーの履歴は残ります。',
+      zero: 'この端末の再生履歴を削除します。サーバーの履歴は残ります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHistoryOffConfirm => 'オフにする';
+
+  @override
+  String get settingsHistoryClearTitle => '履歴を消去しますか？';
+
+  @override
+  String get settingsResetTitle => '設定をリセットしますか？';
+
+  @override
+  String get settingsResetBody =>
+      'イコライザーとトランスコードのほか、設定画面以外のいくつかのオプションもリセットされます。サーバー、ダウンロード、再生履歴、保存したプリセットは残ります。';
+
+  @override
+  String get settingsResetBodyIos =>
+      'トランスコードのほか、設定画面以外のいくつかのオプションもリセットされます。サーバー、ダウンロード、再生履歴は残ります。';
 }
