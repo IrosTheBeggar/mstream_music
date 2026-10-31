@@ -497,13 +497,17 @@ class DestSaveButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(
-                  color: fg,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              // A long label at large text sizes is cut, not overflowed.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
