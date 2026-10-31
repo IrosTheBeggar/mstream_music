@@ -5228,4 +5228,8 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => '分享播放列表';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
 }

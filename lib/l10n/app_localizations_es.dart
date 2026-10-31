@@ -5586,4 +5586,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'Compartir lista de reproducción';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
 }

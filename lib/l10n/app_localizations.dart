@@ -8829,6 +8829,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share playlist'**
   String get queueSharePlaylist;
+
+  /// Snackbar when a browse request (Albums, Artists, a folder, a playlist, a search…) fails for any reason other than the user backing out. Generic on purpose: the tunnel status strip explains a Quick Connect state; this is the one line for the request itself.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this from the server. Check the connection and try again.'**
+  String get browseLoadFailed;
 }
 
 class _AppLocalizationsDelegate

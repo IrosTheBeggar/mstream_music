@@ -5317,4 +5317,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queueSharePlaylist => 'プレイリストを共有';
+
+  @override
+  String get browseLoadFailed =>
+      'Couldn\'t load this from the server. Check the connection and try again.';
 }

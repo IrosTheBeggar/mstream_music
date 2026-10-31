@@ -6092,5 +6092,9 @@
   "queueSharePlaylist": "Share playlist",
   "@queueSharePlaylist": {
     "description": "Now-playing queue ⋮ menu: opens the Share Playlist dialog for the queue. Sentence case like the menu's other rows."
+  },
+  "browseLoadFailed": "Couldn't load this from the server. Check the connection and try again.",
+  "@browseLoadFailed": {
+    "description": "Snackbar when a browse request (Albums, Artists, a folder, a playlist, a search…) fails for any reason other than the user backing out. Generic on purpose: the tunnel status strip explains a Quick Connect state; this is the one line for the request itself."
   }
 }
