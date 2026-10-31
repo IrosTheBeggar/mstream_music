@@ -11,11 +11,13 @@
 // Add (the field clears and focus drops after a 200), Clear link, the
 // screen closing when a re-ping turns the feature off, a tag field kept in
 // view with SAVES TO above the keyboard — also when the Where sheet asks
-// for one — and 360 dp at 200% text without overflow.
+// for one — the iPhone's Done bar over the Year number pad, and 360 dp at
+// 200% text without overflow.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/server.dart';
@@ -376,6 +378,36 @@ void main() {
       expect(byKey('ytdl-field-album'), findsOneWidget);
       expect(d.focusFor(YtdlField.album).hasFocus, isTrue);
     });
+  });
+
+  testWidgets('iPhone (the iPhone board): the Year number pad gets a Done bar',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    h().fake.folder('/Music/Daft Punk/');
+    final d = await ui.pumpScreen(t, s);
+    await ui.paste(t, d, kOneMoreTime);
+    expect(byKey('ytdl-ios-done'), findsNothing);
+    d.openTags(focus: YtdlField.year);
+    await t.pump();
+    await t.pump();
+    expect(d.focusFor(YtdlField.year).hasFocus, isTrue);
+    expect(byKey('ytdl-ios-done'), findsOneWidget);
+    await t.tap(byKey('ytdl-ios-done'));
+    await t.pump();
+    expect(d.focusFor(YtdlField.year).hasFocus, isFalse);
+    expect(byKey('ytdl-ios-done'), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('Android: no Done bar over the Year field', (t) async {
+    h().fake.folder('/Music/Daft Punk/');
+    final d = await ui.pumpScreen(t, s);
+    await ui.paste(t, d, kOneMoreTime);
+    d.openTags(focus: YtdlField.year);
+    await t.pump();
+    await t.pump();
+    expect(d.focusFor(YtdlField.year).hasFocus, isTrue);
+    expect(byKey('ytdl-ios-done'), findsNothing);
   });
 
   group('narrow and large text (the Narrow360 board)', () {
