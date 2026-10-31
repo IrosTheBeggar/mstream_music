@@ -137,6 +137,30 @@ void main() {
       expect(h.fake.count('GET', '/discovery/downloads'), 2);
     });
 
+    test('a probe with no answer while a screen shows asks again shortly, once',
+        () async {
+      final d = state().screenDraft..attach();
+      h.fake.recordsThrows = http.ClientException('Connection closed');
+      await state().probeTier();
+      expect(state().tier, YtdlServerTier.unknown);
+      final asked = h.fake.count('GET', '/discovery/downloads');
+      h.fake.recordsThrows = null;
+      await h.timers.elapse(YtdlServerState.kReprobeAfter);
+      expect(state().tier, YtdlServerTier.full);
+      expect(h.fake.count('GET', '/discovery/downloads'), asked + 1);
+      d.detach();
+    });
+
+    test('… but not with nothing showing: the next ask probes', () async {
+      h.fake.recordsThrows = http.ClientException('Connection closed');
+      await state().probeTier();
+      final asked = h.fake.count('GET', '/discovery/downloads');
+      h.fake.recordsThrows = null;
+      await h.timers.elapse(YtdlServerState.kReprobeAfter * 2);
+      expect(h.fake.count('GET', '/discovery/downloads'), asked);
+      expect(state().tier, YtdlServerTier.unknown);
+    });
+
     test('a 404 that carries the server\'s words is not an older server', () async {
       h.fake.recordsRefusal = (404, 'not available');
       await state().probeTier();

@@ -4,20 +4,21 @@
 // download record narrowed to the ytdl rows), the status and the server's
 // words kept on every failure (a JSON 404 told from Express's HTML one), a
 // client bound that runs out read as status 0 + timedOut, and the retry
-// rule: a call with no answer over a tunnel is sent once more after the
-// tunnel is back, and mkdir (15 s a try) once more on any transport —
+// rule: a read or a mkdir (15 s a try) with no answer is sent once more on
+// a fresh connection — over a tunnel after the tunnel is back — but not a
+// connection the phone could not open, nor a lookup that ran out of time;
 // never the add, which would start a second download. mkdir and the add
 // each go out on a fresh connection closed after it, never a pooled
-// socket the server may have dropped; the reads use the pool.
+// socket the server may have dropped; the reads use their own pool.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mstream_music/objects/server.dart';
-import 'package:mstream_music/singletons/api.dart';
 import 'package:mstream_music/util/ytdl_api.dart';
 
 final home = Server('http://music.example', null, null, 'JWT', 'home')
@@ -547,11 +548,49 @@ void main() {
   });
 
   group('retries', () {
-    test('plain HTTP never retries, a GET included', () async {
-      handler = (_) async => throw http.ClientException('reset');
-      await expectLater(api().metadata(link), throwsA(isA<YtdlApiException>()));
-      expect(seen, hasLength(1));
+    test('plain HTTP: a read whose connection drops is sent once more', () async {
+      var calls = 0;
+      handler = (_) async {
+        if (calls++ == 0) throw http.ClientException('Connection closed');
+        return json({'downloads': []});
+      };
+      expect(await api().jobs(), isEmpty);
+      expect(seen, hasLength(2));
       expect(tunnelWaits, 0);
+    });
+
+    test('plain HTTP: a quick read that hangs is retried after readTry', () async {
+      var calls = 0;
+      handler = (_) async {
+        if (calls++ == 0) return Completer<http.Response>().future;
+        return json({'downloads': []});
+      };
+      final a = YtdlApi(home,
+          client: MockClient((req) async {
+            seen.add(req);
+            return handler(req);
+          }),
+          readTry: const Duration(milliseconds: 20));
+      expect(await a.jobs(), isEmpty);
+      expect(seen, hasLength(2));
+    });
+
+    test('plain HTTP: a connection the phone could not open is not sent again',
+        () async {
+      handler = (_) async =>
+          throw const SocketException('Network is unreachable');
+      await expectLater(api().jobs(), throwsA(isA<YtdlApiException>()));
+      expect(seen, hasLength(1));
+    });
+
+    test('the lookup running out of time is the answer: not sent again',
+        () async {
+      handler = (_) => Completer<http.Response>().future; // never answers
+      await expectLater(
+          api(null, const Duration(milliseconds: 20)).metadata(link),
+          throwsA(isA<YtdlApiException>()
+              .having((e) => e.timedOut, 'timedOut', isTrue)));
+      expect(seen, hasLength(1));
     });
 
     test('over a tunnel: a GET with no answer is sent once more, on the '
@@ -761,8 +800,14 @@ void main() {
       final asked = <String>[];
       try {
         await http.runWithClient(() async {
-          ApiManager().resetDirectClient();
-          final pool = made.last;
+          final pool = _Counted((req) async {
+            asked.add(req.url.path);
+            return req.url.path.endsWith('/file-explorer')
+                ? json({'path': '/Music/', 'directories': [], 'files': []})
+                : json({'downloads': []});
+          });
+          YtdlApi.resetPool();
+          YtdlApi.makePool = () => pool;
           final before = made.length;
           final a = YtdlApi(home);
           await a.jobs();
@@ -792,7 +837,7 @@ void main() {
           return c;
         });
       } finally {
-        ApiManager().resetDirectClient();
+        YtdlApi.resetPool();
       }
       expect(asked, hasLength(5));
     });
@@ -803,7 +848,6 @@ void main() {
       var before = 0;
       try {
         await http.runWithClient(() async {
-          ApiManager().resetDirectClient();
           before = made.length;
           await YtdlApi(home).mkdir('/Music/New/');
         }, () {
@@ -815,7 +859,7 @@ void main() {
           return c;
         });
       } finally {
-        ApiManager().resetDirectClient();
+        YtdlApi.resetPool();
       }
       expect(made.skip(before).map((c) => c.paths), [
         ['/api/v1/file-explorer/mkdir'],
@@ -824,21 +868,26 @@ void main() {
       expect(made.skip(before).every((c) => c.closed), isTrue);
     });
 
-    test("ApiManager's pooled client by default", () async {
+    test('the reads share one pool of their own across apis', () async {
+      var pools = 0;
       final pooled = <http.Request>[];
+      YtdlApi.resetPool();
+      YtdlApi.makePool = () {
+        pools++;
+        return MockClient((req) async {
+          pooled.add(req);
+          return json({'downloads': []});
+        });
+      };
       try {
-        await http.runWithClient(() async {
-          ApiManager().resetDirectClient();
-          await YtdlApi(home).jobs();
-        }, () => MockClient((req) async {
-              pooled.add(req);
-              return json({'downloads': []});
-            }));
+        await YtdlApi(home).jobs();
+        await YtdlApi(home).records();
       } finally {
-        ApiManager().resetDirectClient();
+        YtdlApi.resetPool();
       }
-      expect(pooled.single.url.toString(),
-          'http://music.example/api/v1/ytdl/downloads');
+      expect(pools, 1);
+      expect(pooled.map((r) => r.url.path),
+          ['/api/v1/ytdl/downloads', '/api/v1/discovery/downloads']);
     });
   });
 }

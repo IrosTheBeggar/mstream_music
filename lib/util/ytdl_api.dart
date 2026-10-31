@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show HttpClient, SocketException;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart' show IOClient;
 
 import '../objects/server.dart';
-import '../singletons/api.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/server_list.dart';
 
@@ -266,6 +268,22 @@ class YtdlRecordPage {
   bool get end => count == 0 || count < limit;
 }
 
+/// [cause] is a connection the phone could not even open — no route,
+/// refused, no such host — so the request never left it: offline, never
+/// retried off a tunnel, and a POST with this cause certainly started
+/// nothing.
+bool ytdlNeverConnected(Object cause) {
+  final e = cause is YtdlApiException ? cause.cause : cause;
+  if (e is! SocketException) return false;
+  final words = '$e';
+  return const [
+    'Failed host lookup',
+    'Connection refused',
+    'Network is unreachable',
+    'No route to host',
+  ].any(words.contains);
+}
+
 /// The record's plug-in name for a POST /ytdl add.
 const String kYtdlRecordPlugin = 'ytdl';
 
@@ -278,35 +296,42 @@ const List<String> kYtdlTagKeys = ['title', 'artist', 'album', 'year'];
 ///
 /// Spoken to the server it is given — unlike DiscoveryPluginsApi, never a
 /// connected server's parent: the feature is hidden on peers (/ytdl is off
-/// the federation allowlist). The reads go over ApiManager's pooled direct
-/// client; mkdir and the add each go out on a fresh connection, closed
-/// after it — a pooled keep-alive socket the server has already dropped
-/// (Node closes idle ones after 5 s) can swallow the answer to a request
-/// the server did carry out. An injected client (tests) carries everything.
-/// Headless, so it never drives the browser's loading bar. Bounded by
-/// [timeout], or [irohTry] when the server rides a tunnel, and mkdir by
-/// [mkdirTry] on either; every failure throws [YtdlApiException] with the
-/// status and the server's words.
+/// the federation allowlist). The reads go over a pool of their own whose
+/// idle sockets close after 4 s, inside the 5 s a Node server keeps one;
+/// mkdir and the add each go out on a fresh connection, closed after it —
+/// a pooled keep-alive socket the server has already dropped can swallow
+/// the answer to a request the server did carry out (seen on the
+/// emulator: no answer for 30 s, then a wrong state). An injected client
+/// (tests) carries everything. Headless, so it never drives the browser's
+/// loading bar. Bounded by [timeout] (the quick reads by [readTry]), or
+/// [irohTry] when the server rides a tunnel, and mkdir by [mkdirTry] on
+/// either; every failure throws [YtdlApiException] with the status and the
+/// server's words.
 ///
-/// Like makeServerCall, a call that gets no answer over a tunnel waits for
-/// the tunnel and is sent once more, and mkdir — recursive and fine when
-/// the folder is there — once more on any transport. Never the add. POST
-/// /ytdl starts a yt-dlp job and answers before it runs; sent twice it
-/// starts two, which on 6.30+ ends in a name-clash failure for the second
-/// and before that in a re-tag. So the add is never retried, over a tunnel
-/// included: a lost answer is the hub's to resolve against the server's
-/// own lists.
+/// A read that gets no answer is sent once more on a fresh connection —
+/// over a tunnel after waiting for the tunnel, as makeServerCall does —
+/// and so is mkdir, recursive and fine when the folder is there. Never the
+/// add. POST /ytdl starts a yt-dlp job and answers before it runs; sent
+/// twice it starts two, which on 6.30+ ends in a name-clash failure for
+/// the second and before that in a re-tag. So the add is never retried,
+/// over a tunnel included: a lost answer is the hub's to resolve against
+/// the server's own lists.
 class YtdlApi {
   final Server server;
 
-  /// An injected client (tests) for every call; null = ApiManager's pooled
-  /// one for the reads and a one-shot client for mkdir and the add.
+  /// An injected client (tests) for every call; null = the reads' own pool
+  /// and a one-shot client for mkdir, the add and every retry.
   final http.Client? client;
   final Duration timeout;
   final Duration irohTry;
 
   /// Each mkdir try's bound, on any transport (spec §6: it may retry once).
   final Duration mkdirTry;
+
+  /// Each try's bound for the quick reads — the job list, a folder's
+  /// listing, the record — off a tunnel; they answer in milliseconds, so
+  /// one that hangs is retried instead of waited out.
+  final Duration readTry;
 
   /// Waits for [server]'s tunnel before the one retry; null =
   /// ServerManager.awaitTunnelReady (true at once where there is no tunnel
@@ -318,6 +343,7 @@ class YtdlApi {
       this.timeout = const Duration(seconds: 30),
       this.irohTry = const Duration(seconds: 20),
       this.mkdirTry = const Duration(seconds: 15),
+      this.readTry = const Duration(seconds: 10),
       this.awaitTunnel});
 
   // ── the lookup and the add ──────────────────────────────────────────
@@ -326,7 +352,10 @@ class YtdlApi {
   /// route has no bound of its own (and a fresh server may fetch yt-dlp
   /// during the first one), so [timeout] is the only limit.
   Future<YtdlMetadata> metadata(String url) async => YtdlMetadata.fromServerMap(
-      _map(await _get('/api/v1/ytdl/metadata?url=${Uri.encodeQueryComponent(url)}')));
+      _map(await _get(
+          '/api/v1/ytdl/metadata?url=${Uri.encodeQueryComponent(url)}',
+          quick: false,
+          retryLate: false)));
 
   /// `POST /api/v1/ytdl/` (the route's own trailing slash): starts the
   /// download into [directory], which must exist. The 200 says only that it
@@ -373,7 +402,8 @@ class YtdlApi {
   /// 6.26–6.28.0).
   Future<YtdlListing> list(String directory) async => YtdlListing.fromServerMap(
       _map(await _post('/api/v1/file-explorer',
-          {'directory': directory, 'pullMetadata': false})),
+          {'directory': directory, 'pullMetadata': false},
+          anyTransport: true, bound: _quick)),
       asked: directory);
 
   /// `POST /api/v1/file-explorer/mkdir` {directory}: recursive, and fine
@@ -458,11 +488,23 @@ class YtdlApi {
         'x-access-token': server.authToken ?? '',
       };
 
-  Future<dynamic> _get(String location) async => _decode(await _call(
-      (http, uri) =>
-          http.get(uri, headers: {'x-access-token': server.authToken ?? ''}),
-      location,
-      retry: true));
+  /// A read: sent once more on a fresh connection when it gets no answer,
+  /// on any transport (spec §6: the GETs may retry once). [quick]: bounded
+  /// by [readTry] off a tunnel. [retryLate]: false when running out of
+  /// time is itself the answer — the lookup's "The server took too long".
+  Future<dynamic> _get(String location,
+          {bool quick = true, bool retryLate = true}) async =>
+      _decode(await _call(
+          (http, uri) => http
+              .get(uri, headers: {'x-access-token': server.authToken ?? ''}),
+          location,
+          retry: true,
+          anyTransport: true,
+          retryLate: retryLate,
+          bound: quick ? _quick : null));
+
+  /// The quick reads' bound: [readTry] off a tunnel, [irohTry] over one.
+  Duration? get _quick => server.isIrohTransport ? null : readTry;
 
   /// [fresh]: on a one-shot connection (mkdir, the add). [anyTransport]:
   /// its one retry is not kept for a tunnel. [bound]: each try's limit, in
@@ -485,23 +527,32 @@ class YtdlApi {
         needBody: needBody);
   }
 
-  /// One send, bounded; when [retry] allows, one more — over a tunnel
-  /// after the tunnel says it is back, elsewhere at once when
-  /// [anyTransport]. Only a call that got NO answer is retried — an HTTP
-  /// error is the server's answer, and stands.
+  /// One send, bounded; when [retry] allows, one more on a fresh
+  /// connection — over a tunnel after the tunnel says it is back,
+  /// elsewhere at once when [anyTransport]. Only a call that got NO answer
+  /// is retried — an HTTP error is the server's answer, and stands — and
+  /// not one that ran out of time unless [retryLate].
   Future<http.Response> _call(
       Future<http.Response> Function(http.Client http, Uri uri) send,
       String location,
       {required bool retry,
       bool fresh = false,
       bool anyTransport = false,
+      bool retryLate = true,
       Duration? bound}) async {
     final overTunnel = server.isIrohTransport;
+    final limit = bound ?? (overTunnel ? irohTry : timeout);
     try {
-      return await _try(
-          send, location, fresh, bound ?? (overTunnel ? irohTry : timeout));
+      return await _try(send, location, fresh, limit);
     } catch (e) {
-      if (!retry || !(overTunnel || anyTransport)) throw _noAnswer(e);
+      if (!retry ||
+          !(overTunnel || anyTransport) ||
+          (!retryLate && e is TimeoutException) ||
+          // Refused before it could connect: sending again finds the same.
+          // (A tunnel's loopback refuses while it re-dials: that one waits.)
+          (!overTunnel && ytdlNeverConnected(e))) {
+        throw _noAnswer(e);
+      }
       final route = location.split('?').first;
       if (overTunnel) {
         final ready = await (awaitTunnel ?? _awaitTunnel)(server);
@@ -516,7 +567,7 @@ class YtdlApi {
     }
     try {
       // The URI again: a re-dialled tunnel has a new port and token.
-      return await _try(send, location, fresh, bound ?? irohTry);
+      return await _try(send, location, true, bound ?? irohTry);
     } catch (e) {
       throw _noAnswer(e);
     }
@@ -524,8 +575,7 @@ class YtdlApi {
 
   /// One try within [limit]: on the injected client, else on a one-shot
   /// client when [fresh] (closed after, which also drops a request that
-  /// ran out of time), else on the pool — read per call, since
-  /// ApiManager.resetDirectClient replaces it.
+  /// ran out of time), else on the reads' pool.
   Future<http.Response> _try(
       Future<http.Response> Function(http.Client http, Uri uri) send,
       String location,
@@ -536,8 +586,7 @@ class YtdlApi {
       return send(injected, server.apiUri(location)).timeout(limit);
     }
     if (!fresh) {
-      return send(ApiManager().directClient, server.apiUri(location))
-          .timeout(limit);
+      return send(_pool ??= makePool(), server.apiUri(location)).timeout(limit);
     }
     final once = http.Client();
     try {
@@ -545,6 +594,25 @@ class YtdlApi {
     } finally {
       once.close();
     }
+  }
+
+  /// The reads' keep-alive pool, shared by every server's api: an idle
+  /// socket closes after 4 s, before the server's own 5 s can leave one
+  /// half dead in the pool.
+  static http.Client? _pool;
+
+  @visibleForTesting
+  static http.Client Function() makePool = _newPool;
+
+  static http.Client _newPool() =>
+      IOClient(HttpClient()..idleTimeout = const Duration(seconds: 4));
+
+  /// Drops the pool (tests; the next read makes one with [makePool]).
+  @visibleForTesting
+  static void resetPool() {
+    _pool?.close();
+    _pool = null;
+    makePool = _newPool;
   }
 
   static Future<bool> _awaitTunnel(Server server) => ServerManager()

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show SocketException;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -495,6 +494,10 @@ class YtdlServerState extends ChangeNotifier {
   /// ([YtdlJob.recordFloor]); past it the last one read stands in.
   static const Duration kFloorWait = Duration(seconds: 5);
 
+  /// A version probe that got no answer is asked again this long after,
+  /// while a screen or sheet shows (once per failure).
+  static const Duration kReprobeAfter = Duration(seconds: 3);
+
   final List<YtdlJob> _jobs = [];
   final Map<String, DateTime> _sentAt = {};
   final Map<String, String> _origins = {};
@@ -538,6 +541,7 @@ class YtdlServerState extends ChangeNotifier {
   final Map<String, YtdlDraft> _folderDrafts = {};
 
   Timer? _poll;
+  Timer? _reprobe;
   Future<void>? _polling;
   bool _disposed = false;
 
@@ -958,6 +962,18 @@ class YtdlServerState extends ChangeNotifier {
   /// been seen.
   bool get _screenShowing => _screenDraft?.attached == true;
 
+  /// The screen or any explorer sheet is showing.
+  bool get _surfaceShowing =>
+      _screenShowing || _folderDrafts.values.any((d) => d.attached);
+
+  void _reprobeSoon() {
+    if (_reprobe != null || _disposed || !_surfaceShowing) return;
+    _reprobe = hub.timer(kReprobeAfter, () {
+      _reprobe = null;
+      if (!_disposed) unawaited(probeTier());
+    });
+  }
+
   /// [job] is the screen card's own add, still waiting on its POST: the
   /// card shows "Starting…" and collapses into its ADDING row only on 200
   /// (spec §6), so the screen's lists leave the row out until then.
@@ -996,7 +1012,10 @@ class YtdlServerState extends ChangeNotifier {
         _attribute();
       }
     } catch (_) {
-      // Unknown still: the older rules, and the next ask probes again.
+      // Unknown still: the older rules until it answers. One lost answer
+      // shouldn't hold them for a whole visit, so while a screen or sheet
+      // shows, ask again shortly.
+      _reprobeSoon();
     } finally {
       _addedLoading = false;
       _notify();
@@ -1462,20 +1481,8 @@ class YtdlServerState extends ChangeNotifier {
   static bool _wentOut(Object e) {
     if (e is! YtdlApiException || e.status != 0) return false;
     if (e.timedOut) return true;
-    final cause = e.cause;
-    if (cause is SocketException) {
-      final words = '$cause';
-      return !_neverConnected.any(words.contains);
-    }
-    return true;
+    return !ytdlNeverConnected(e);
   }
-
-  static const List<String> _neverConnected = [
-    'Failed host lookup',
-    'Connection refused',
-    'Network is unreachable',
-    'No route to host',
-  ];
 
   /// A start that failed before the server took it: its surface's to show
   /// when [inline] says so, else a "Couldn't add" row and toast. A lost
@@ -1945,6 +1952,8 @@ class YtdlServerState extends ChangeNotifier {
     _disposed = true;
     _poll?.cancel();
     _poll = null;
+    _reprobe?.cancel();
+    _reprobe = null;
     _screenDraft?.dispose();
     for (final d in _folderDrafts.values) {
       d.dispose();
