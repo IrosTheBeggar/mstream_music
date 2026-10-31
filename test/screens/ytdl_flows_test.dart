@@ -12,12 +12,12 @@
 // and back) and a row; the feature turned off by a re-ping while a sheet,
 // menu or picker is open — nothing closes, the card says why Add is off or
 // gone and the lookup goes on, while a stale ⋮ item or the picker coming
-// back opens nothing and says why; the
-// app paused and resumed, the screen reopened over its kept draft, two
-// servers; the Where sheet's listeners across two screens and torn-down
-// routes; and the song just added never dropping out of every list while
-// ADDED reads its record (spec §6). Every test ends with no exception and
-// no FlutterError.
+// back opens nothing and says why; the app paused and resumed, the screen
+// reopened over its kept draft, two servers; the Where sheet's listeners
+// across two screens and torn-down routes, and the screen going in the
+// same frame as the Where sheet or the picker over it; and the song just
+// added never dropping out of every list while ADDED reads its record
+// (spec §6). Every test ends with no exception and no FlutterError.
 
 import 'dart:async';
 
@@ -1438,7 +1438,7 @@ void main() {
     });
 
     testWidgets('the Where sheet open as the screen goes in one call '
-        '(popUntil, then pop — what a re-ping does)', (t) async {
+        '(popUntil, then pop)', (t) async {
       f.watchErrors();
       f.h.fake.folder(daftPunk);
       await f.pumpHome(t);
@@ -1456,5 +1456,38 @@ void main() {
       expect(find.byType(YtdlWhereSheet), findsNothing);
       f.clean(t);
     });
+
+    // The screen goes first in the frame both leave (its route is below the
+    // sheet's), and its draft tells its listeners as it lets go: a sheet
+    // still deactivated must not hear it, or it looks up a deactivated
+    // ancestor (its localizations, its route).
+    for (final sheet in ['Where', 'Choose a folder']) {
+      testWidgets('the screen and the $sheet sheet torn down in one frame: '
+          'nothing reaches the sheet on its way out', (t) async {
+        if (sheet == 'Choose a folder') {
+          f.setUp(server: ytdlServer(noMkdir: true, formats: const ['mp3']));
+        }
+        f.watchErrors();
+        f.h.fake.folder(daftPunk);
+        await f.pumpHome(t);
+        await f.openFromHome(t);
+        await f.typeLink(t, kOneMoreTime);
+        await tapIn(
+            t,
+            byKey(sheet == 'Where'
+                ? 'ytdl-saves-change'
+                : 'ytdl-choose-folder'));
+        await f.drain(t);
+        expect(
+            find.byType(
+                sheet == 'Where' ? YtdlWhereSheet : YtdlChooseFolderSheet),
+            findsOneWidget);
+        expect(find.byType(YtdlScreen), findsOneWidget);
+        await t.pumpWidget(const SizedBox());
+        expect(find.byType(YtdlScreen), findsNothing);
+        expect(st().screenDraft.attached, isFalse);
+        f.clean(t);
+      });
+    }
   });
 }

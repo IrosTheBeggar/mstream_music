@@ -358,9 +358,24 @@ class _YtdlSubfoldersPageState extends State<YtdlSubfoldersPage> {
     _speak();
   }
 
+  /// The page on its way out hears nothing from the draft: a surface that
+  /// lets go of it in the same frame makes it tell its listeners, and
+  /// reading this page's localizations then would look up a deactivated
+  /// ancestor.
+  @override
+  void deactivate() {
+    _d.removeListener(_moved);
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _d.addListener(_moved);
+  }
+
   @override
   void dispose() {
-    _d.removeListener(_moved);
     _checkTimer?.cancel();
     _speakTimer?.cancel();
     _custom.dispose();

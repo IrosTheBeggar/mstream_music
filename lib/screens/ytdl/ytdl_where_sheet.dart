@@ -130,9 +130,24 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
     _afterChange();
   }
 
+  /// A sheet on its way out hears nothing from the draft: the screen under
+  /// it can go in the same frame, and its draft tells its listeners as it
+  /// lets go — reading this sheet's localizations then would look up a
+  /// deactivated ancestor.
+  @override
+  void deactivate() {
+    draft.removeListener(_onDraft);
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    draft.addListener(_onDraft);
+  }
+
   @override
   void dispose() {
-    draft.removeListener(_onDraft);
     _custom.removeListener(_onCustomTyping);
     _customFocus.removeListener(_onFocus);
     _checkTimer?.cancel();

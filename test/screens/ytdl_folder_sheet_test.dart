@@ -15,7 +15,8 @@
 // name check by tier; the feature turned off by a re-ping leaving an
 // open sheet open (on either page; the lookup goes on, Add off or gone
 // with the line saying why), and opening nothing (a stale menu item, the
-// picker coming back), saying why; 360 dp at 200% without overflow.
+// picker coming back), saying why; the subfolders page deaf to its draft
+// once on its way out; 360 dp at 200% without overflow.
 
 import 'dart:async';
 
@@ -639,6 +640,35 @@ void main() {
     expect(shows(t, h().l.ytdlErrUploadsOff), isTrue);
   });
 
+  testWidgets('the subfolders page on its way out hears nothing: a surface '
+      'letting go of the draft in the same frame reaches no deactivated page',
+      (t) async {
+    final d = h().hub.stateFor(s).folderDraft(here);
+    ui.phone(t);
+    await t.pumpWidget(ui.app(Scaffold(
+      body: Column(
+        children: [
+          // Unmounted first in the frame both go: its dispose detaches the
+          // draft, which tells its listeners while the page is deactivated.
+          _Attached(draft: d),
+          Expanded(
+            child: YtdlSubfoldersPage(
+              draft: d,
+              onBack: () {},
+              onDone: (_) {},
+              onEditTags: (_, _) {},
+            ),
+          ),
+        ],
+      ),
+    )));
+    await t.pump();
+    expect(d.attached, isTrue);
+    await t.pumpWidget(ui.app(const SizedBox()));
+    expect(d.attached, isFalse);
+    expect(t.takeException(), isNull);
+  });
+
   testWidgets('360 dp at 200%: both pages fit', (t) async {
     h().fake.folder(here);
     final d = await ui.pumpSheet(t, s, here,
@@ -651,4 +681,30 @@ void main() {
     await t.pump();
     expect(t.takeException(), isNull);
   });
+}
+
+/// Shows [draft] as the screen or a sheet does: attached while mounted.
+class _Attached extends StatefulWidget {
+  final YtdlDraft draft;
+  const _Attached({required this.draft});
+
+  @override
+  State<_Attached> createState() => _AttachedState();
+}
+
+class _AttachedState extends State<_Attached> {
+  @override
+  void initState() {
+    super.initState();
+    widget.draft.attach();
+  }
+
+  @override
+  void dispose() {
+    widget.draft.detach();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: 1);
 }
