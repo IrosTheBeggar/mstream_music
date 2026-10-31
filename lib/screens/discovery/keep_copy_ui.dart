@@ -73,7 +73,16 @@ Color keepToneOnPage(Color c) => _readable(c, VelvetColors.bg);
 class KeepHitArea extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget child;
-  const KeepHitArea({super.key, required this.onTap, required this.child});
+
+  /// The band's height: 44 for Discover's surfaces; Add from YouTube's
+  /// sheets ask for 48.
+  final double minHeight;
+  const KeepHitArea({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.minHeight = 44,
+  });
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -81,7 +90,7 @@ class KeepHitArea extends StatelessWidget {
     excludeFromSemantics: true,
     onTap: onTap,
     child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
+      constraints: BoxConstraints(minHeight: minHeight),
       child: Center(widthFactor: 1, heightFactor: 1, child: child),
     ),
   );
