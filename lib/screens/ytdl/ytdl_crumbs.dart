@@ -2,6 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/velvet_theme.dart';
+import '../../util/ytdl_layout.dart'
+    show ytdlOnlyBrackets, ytdlWithoutEmptyPairs;
+import '../discovery/destination_pieces.dart' show destHold;
 import 'ytdl_card_parts.dart' show ytdlInk;
 
 /// How Add from YouTube draws a folder path ("Music › Daft Punk ›
@@ -31,12 +34,6 @@ String ytdlPathText(Iterable<String> crumbs) =>
 String ytdlToastPath(String library, List<String> segments) =>
     segments.isEmpty ? ytdlIsolate(library) : ytdlPathText(segments);
 
-/// A folder made only of brackets and separators ("()", "[ ]", "-").
-bool ytdlOnlyBrackets(String crumb) =>
-    crumb.trim().isNotEmpty && RegExp(r'^[\s()\[\]{}\-–—_,·&+]+$').hasMatch(crumb);
-
-final RegExp _endsInEmptyPair = RegExp(r'\s*(\(\s*\)|\[\s*\]|\{\s*\})\s*$');
-
 /// How [crumbs] read aloud: "Music, then Daft Punk, then Discovery, a new
 /// folder" — [newAt] are the indexes that will be made, [trapAt] those an
 /// empty variable left as brackets, [file] the file name the preview ends in.
@@ -51,11 +48,14 @@ String ytdlSpokenPath(
   for (var i = 0; i < crumbs.length; i++) {
     final c = crumbs[i];
     var word = c;
+    // The bracket warning's own rule (ytdl_layout): the folder it tints
+    // is the folder read with its warning word.
     if (trapAt.contains(i)) {
+      final rest = ytdlWithoutEmptyPairs(c);
       if (ytdlOnlyBrackets(c)) {
         word = l.ytdlCrumbEmptyBrackets;
-      } else if (_endsInEmptyPair.hasMatch(c)) {
-        word = l.ytdlCrumbWithEmptyBrackets(c.replaceFirst(_endsInEmptyPair, ''));
+      } else if (rest != null) {
+        word = l.ytdlCrumbWithEmptyBrackets(rest);
       }
     }
     if (newAt.contains(i)) word = l.ytdlCrumbNew(word);
@@ -64,9 +64,6 @@ String ytdlSpokenPath(
   path ??= '';
   return file == null ? path : l.ytdlCrumbFile(path, file);
 }
-
-/// No-break spaces inside a crumb, so a wrapping path breaks only at ›.
-String _hold(String s) => s.replaceAll(' ', '\u00A0');
 
 /// A path inside the result card or a sheet's preview: it wraps at the ›
 /// separators only, a folder that will be made carries a small "new" tag,
@@ -128,7 +125,7 @@ class YtdlCrumbs extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(ytdlIsolate(_hold(c)), style: s)),
+                Flexible(child: Text(ytdlIsolate(destHold(c)), style: s)),
                 const SizedBox(width: 5),
                 const YtdlNewTag(),
               ],
@@ -136,7 +133,7 @@ class YtdlCrumbs extends StatelessWidget {
           ),
         ));
       } else {
-        spans.add(TextSpan(text: ytdlIsolate(_hold(c)), style: s));
+        spans.add(TextSpan(text: ytdlIsolate(destHold(c)), style: s));
       }
     }
     if (file != null) {

@@ -2,11 +2,13 @@
 // names keep the › order, read aloud as "Music, then Daft Punk, then
 // Discovery, a new folder", cut at the start on one line so the last folder
 // stays, and wrapped only at the separators inside the card.
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/screens/ytdl/ytdl_crumbs.dart';
+import 'package:mstream_music/util/ytdl_layout.dart';
 
 void main() {
   final l = lookupAppLocalizations(const Locale('en'));
@@ -39,9 +41,32 @@ void main() {
     expect(ytdlOnlyBrackets('()'), isTrue);
     expect(ytdlOnlyBrackets(' [ ] '), isTrue);
     expect(ytdlOnlyBrackets('-'), isTrue);
+    expect(ytdlOnlyBrackets('【】'), isTrue);
     expect(ytdlOnlyBrackets('Discovery ()'), isFalse);
     expect(ytdlOnlyBrackets(''), isFalse);
   });
+
+  // Every folder the bracket warning flags (and tints) is read with its
+  // warning word: an empty pair anywhere in the name, the CJK pair too.
+  for (final (layout, heard) in [
+    ('{{ALBUM}} ({{YEAR}})', 'Discovery with empty brackets'),
+    ('({{YEAR}}) {{ALBUM}}', 'Discovery with empty brackets'),
+    ('{{ALBUM}} 【{{YEAR}}】', 'Discovery with empty brackets'),
+    ('【{{YEAR}}】', 'empty brackets'),
+    ('[{{YEAR}}]', 'empty brackets'),
+  ]) {
+    test('the flagged folder of $layout reads "$heard"', () {
+      final t = ytdlTarget(
+        vpath: 'Music',
+        layout: layout,
+        tags: const YtdlTags(artist: 'Daft Punk', album: 'Discovery'),
+      );
+      final trap = t.trap;
+      expect(trap, isNotNull, reason: 'the warning flags it');
+      final at = t.segments.indexOf(trap!.folder) + 1;
+      expect(ytdlSpokenPath(l, t.crumbs, trapAt: {at}), 'Music, then $heard');
+    });
+  }
 
   test('a line too narrow for the whole path drops leading crumbs', () {
     const style = TextStyle(fontSize: 12);
@@ -102,6 +127,49 @@ void main() {
 
     final at100 = await tagHeight(1);
     expect(await tagHeight(2), moreOrLessEquals(at100 * 2, epsilon: 1));
+  });
+
+  testWidgets('the card path never breaks inside a name after its hyphen',
+      (tester) async {
+    const crumbs = ['Music', 'Hip-Hop', 'Jay-Z', 'The Blueprint 2-The Gift'];
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: appSupportedLocales,
+      home: const Scaffold(body: YtdlCrumbs(crumbs: crumbs)),
+    ));
+    final para =
+        tester.renderObject<RenderParagraph>(find.byType(RichText).first);
+    final text = para.text.toPlainText();
+    // From the widest unbreakable run on: a name wider than the line has
+    // to break somewhere.
+    final measure = TextPainter(
+      text: para.text,
+      textDirection: TextDirection.ltr,
+      textScaler: para.textScaler,
+    )..layout();
+    final from = measure.minIntrinsicWidth.ceilToDouble();
+    measure.dispose();
+    expect(from, greaterThan(100), reason: 'a name is one run');
+    for (var w = from; w <= 600; w += 4) {
+      final tp = TextPainter(
+        text: para.text,
+        textDirection: TextDirection.ltr,
+        textScaler: para.textScaler,
+      )..layout(maxWidth: w);
+      var offset = 0;
+      final lines = <String>[];
+      while (offset < text.length) {
+        final b = tp.getLineBoundary(TextPosition(offset: offset));
+        if (b.end <= offset) break;
+        lines.add(text.substring(b.start, b.end));
+        offset = b.end;
+      }
+      tp.dispose();
+      for (final line in lines.take(lines.length - 1)) {
+        expect(line.trimRight().replaceAll('\u2060', '').endsWith('-'), isFalse,
+            reason: 'at $w px a line ends "$line"');
+      }
+    }
   });
 
   testWidgets('a one-line path never overflows at 360 dp and 200% text',

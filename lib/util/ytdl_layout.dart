@@ -290,6 +290,24 @@ final RegExp _onlyBrackets = RegExp(r'^[\s()\[\]{}【】\-–—_.,·&+]+$');
 final RegExp _emptyPair = RegExp(r'[(\[{【]\s*[)\]}】]');
 final RegExp _danglingEdge = RegExp(r'^[-–—_,·&+]|[-–—_,·&+]$');
 
+/// A folder made only of brackets and separators ("()", "【】", "-"): what
+/// an empty variable can leave of a folder — the bracket warning's first
+/// case, and how such a folder is read aloud ("empty brackets").
+bool ytdlOnlyBrackets(String folder) =>
+    folder.trim().isNotEmpty && _onlyBrackets.hasMatch(folder);
+
+/// [folder] with its empty bracket pairs taken out ("() Discovery",
+/// "Discovery 【】" → "Discovery"), or null when it has none: the name a
+/// folder the bracket warning flags is read aloud with ("Discovery with
+/// empty brackets").
+String? ytdlWithoutEmptyPairs(String folder) {
+  if (!_emptyPair.hasMatch(folder)) return null;
+  return folder
+      .replaceAll(_emptyPair, ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
 /// The first folder of [layout] an empty variable leaves as only brackets
 /// or separators, or with an empty bracket pair or a separator at its edge.
 /// Each folder renders as the engine renders it (a value never holds a
