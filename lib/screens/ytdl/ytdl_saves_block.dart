@@ -408,7 +408,9 @@ class YtdlClashPanel extends StatelessWidget {
 /// The account can't make folders and one on the path is new or unchecked
 /// (spec §8 "mkdir off"): why, then the three ways on — "Save to Music ›
 /// Daft Punk instead · Just this song" (the deepest folder that listed;
-/// hidden when none did), "Top of the library" and "Choose a folder…".
+/// hidden when none did, or when that is the library's top, which "Top of
+/// the library" already offers), "Top of the library" and "Choose a
+/// folder…".
 class YtdlNoMkdirPanel extends StatelessWidget {
   final YtdlDraft draft;
   final VoidCallback? onChooseFolder;
@@ -428,6 +430,7 @@ class YtdlNoMkdirPanel extends StatelessWidget {
         ? l.ytdlNoMkdirNew(t.segments[fresh])
         : l.ytdlNoMkdirUnchecked;
     final deepest = d.deepestExisting;
+    final instead = deepest == null ? null : pathCrumbs(deepest);
     return YtdlNote(
       key: const ValueKey('ytdl-nomkdir'),
       icon: Icons.warning_amber_rounded,
@@ -435,10 +438,10 @@ class YtdlNoMkdirPanel extends StatelessWidget {
       fontSize: 14,
       text: text,
       below: [
-        if (deepest != null) ...[
+        if (instead != null && instead.length > 1) ...[
           const SizedBox(height: 10),
           _SaveInstead(
-            path: ytdlPathText(pathCrumbs(deepest)),
+            path: ytdlPathText(instead),
             onTap: d.saveToDeepestInstead,
           ),
         ],

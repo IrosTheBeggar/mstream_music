@@ -5,13 +5,13 @@
 // artist with the tags open by themselves and "↶ VEVO"), "Edited" and each
 // blank field's line, the year rule, SAVES TO (new folders, the file name
 // cut in the middle — measured with the theme's letter spacing — but read
-// in full, left-out variables, "Couldn't check
-// this folder", letters outside A–Z), the bracket warning's links to the
-// field, the name check by tier (Add anyway; blocked with Change format
-// and Change), the noMkdir choices, the summary a screen reader hears, the
-// restore chips' spoken names, 360 dp at 200% without overflow, and its
-// links, tags and year error at 4.5:1 on the raised card in every theme
-// and accent.
+// in full, left-out variables, "Couldn't check this folder", letters
+// outside A–Z), the bracket warning's links to the field, the name check
+// by tier (Add anyway; blocked with Change format and Change), the noMkdir
+// choices (no "Save to … instead" at the library's top), the summary a
+// screen reader hears, the restore chips' spoken names, 360 dp at 200%
+// without overflow, and its links, tags and year error at 4.5:1 on the
+// raised card in every theme and accent.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -505,6 +505,16 @@ void main() {
       await tapIn(t, byKey('ytdl-just-undo'));
       await ui.settle(t, YtdlDraft.kCheckAfter);
       expect(d.justThisSong, isNull);
+    });
+
+    testWidgets('only the library\'s top is there: no Save to Music instead, '
+        'which Top of the library already offers', (t) async {
+      final d = await card(t, kOneMoreTime);
+      expect(d.deepestExisting, '/Music/');
+      expect(find.text(h().l.ytdlNoMkdirNew('Daft Punk')), findsOneWidget);
+      expect(byKey('ytdl-save-deepest'), findsNothing);
+      expect(byKey('ytdl-use-top'), findsOneWidget);
+      expect(byKey('ytdl-choose-folder'), findsOneWidget);
     });
 
     testWidgets('unchecked: its own words; Top of the library', (t) async {
