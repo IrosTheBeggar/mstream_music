@@ -3,7 +3,8 @@ import 'package:mstream_music/media/audio_stuff.dart';
 import 'package:mstream_music/objects/server.dart';
 
 // Who may take part in a multi-server Auto DJ session (mStream #929/#946):
-// the pure predicate behind AudioPlayerHandler.multiServerCandidates.
+// the pure predicate behind AudioPlayerHandler.multiServerCandidates, and
+// the servers Play from names, which bound it.
 
 Server _server(String name,
         {String? version = '6.26.0', bool? discovery = true, bool? ready}) =>
@@ -11,6 +12,12 @@ Server _server(String name,
       ..serverVersion = version
       ..discoveryEnabled = discovery
       ..discoveryReady = ready;
+
+Server _quickConnect(String name, {bool? discovery = true}) =>
+    Server('iroh://$name', 'u', 'p', 'JWT', name)
+      ..connectionType = 'iroh'
+      ..serverVersion = '6.26.0'
+      ..discoveryEnabled = discovery;
 
 Server _peer({bool hidden = false, bool missing = false}) =>
     Server('federated://home/3', null, null, null, 'peer-basement')
@@ -352,6 +359,124 @@ void main() {
         }
       }
       expect(checked, fixtures.length * exclusions.length * 4);
+    });
+  });
+
+  // The same reasons as the Auto DJ screen shows them (the Play from sheet,
+  // the participants readout): a Quick Connect server nothing has dialed yet
+  // has had no chance to report its flags.
+  group('AudioPlayerHandler.shownSitOut', () {
+    FanOutSitOut? shown(Server s,
+            {bool tunnelUp = false,
+            Set<String> excluded = const {},
+            Map<String, FanOutSitOut> reasons = const {},
+            bool moodSet = false}) =>
+        AudioPlayerHandler.shownSitOut(s, excluded,
+            why: reasons, tunnelUp: (_) => tunnelUp, moodSet: moodSet);
+
+    test('a Quick Connect server not reached yet is on its way, not '
+        'unreachable', () {
+      expect(shown(_quickConnect('b', discovery: null)), isNull);
+      expect(shown(_quickConnect('b', discovery: null), moodSet: true), isNull,
+          reason: 'its mood flag is just as unreported');
+    });
+
+    test('once its tunnel is up, flags it still has not reported count', () {
+      expect(shown(_quickConnect('b', discovery: null), tunnelUp: true),
+          FanOutSitOut.unreachable);
+    });
+
+    test('a standard server that never reported is unreachable — its ping is '
+        'its chance', () {
+      expect(shown(_server('a', discovery: null)), FanOutSitOut.unreachable);
+      expect(shown(_server('a', discovery: null), tunnelUp: true),
+          FanOutSitOut.unreachable);
+    });
+
+    test('what is known still shows while the tunnel is down', () {
+      expect(shown(_quickConnect('b', discovery: false)),
+          FanOutSitOut.discoveryOff);
+      expect(shown(_quickConnect('b')..serverVersion = '6.25.0'),
+          FanOutSitOut.olderServer);
+      expect(
+          shown(_quickConnect('b')..moodFiltersAvailable = false,
+              moodSet: true),
+          FanOutSitOut.noMood);
+      expect(
+          shown(_quickConnect('b'),
+              excluded: {'b'}, reasons: {'b': FanOutSitOut.otherModel}),
+          FanOutSitOut.otherModel,
+          reason: 'dropped this session, reconnecting or not');
+    });
+
+    test('a Quick Connect server that has reported reads like any other', () {
+      expect(shown(_quickConnect('b')), isNull);
+      expect(shown(_quickConnect('b'), tunnelUp: true), isNull);
+    });
+  });
+
+  // Play from names any set of servers; only those are asked, whatever the
+  // others could do. All servers takes in every one, and the DJ's own server
+  // is always in its session.
+  group('AudioPlayerHandler.fanOutCandidates', () {
+    final a = _server('a');
+    final b = _server('b');
+    final c = _server('c');
+    final off = _server('off', discovery: false);
+    List<String> names(List<Server> got) =>
+        [for (final s in got) s.localname];
+    List<String> ask(List<Server> servers,
+            {bool all = false,
+            List<String> chosen = const [],
+            String? dj,
+            Set<String> excluded = const {},
+            bool allowUnknownDiscovery = false,
+            bool moodSet = false}) =>
+        names(AudioPlayerHandler.fanOutCandidates(servers,
+            all: all,
+            chosen: chosen,
+            dj: dj,
+            excluded: excluded,
+            allowUnknownDiscovery: allowUnknownDiscovery,
+            moodSet: moodSet));
+
+    test('only the chosen servers are asked, in the list\'s order', () {
+      expect(ask([a, b, c], chosen: ['c', 'a']), ['a', 'c']);
+      expect(ask([a, b, c], chosen: ['b']), ['b']);
+    });
+
+    test('All servers asks every server that may take part', () {
+      expect(ask([a, b, c, off], all: true), ['a', 'b', 'c']);
+      expect(ask([a, b, c], all: true, chosen: ['a']), ['a', 'b', 'c'],
+          reason: 'the chosen set does not narrow All servers');
+    });
+
+    test("the DJ's own server is in its session even when not chosen", () {
+      expect(ask([a, b, c], chosen: ['a', 'b'], dj: 'c'), ['a', 'b', 'c']);
+      expect(ask([a, b, c], dj: 'b'), ['b']);
+    });
+
+    test('a chosen server still has to be able to take part', () {
+      expect(ask([a, off, c], chosen: ['a', 'off', 'c']), ['a', 'c']);
+      expect(ask([a, b], chosen: ['a', 'b'], excluded: {'b'}), ['a'],
+          reason: 'dropped this session');
+      expect(ask([a, off], chosen: ['a', 'off'], dj: 'off'), ['a'],
+          reason: 'not even the DJ\'s own, when it cannot');
+    });
+
+    test('a chosen name with no server behind it asks nobody', () {
+      expect(ask([a, b], chosen: ['gone', 'a']), ['a']);
+      expect(ask(const [], chosen: ['a'], dj: 'a'), isEmpty);
+    });
+
+    test('the tunnel targets and a mood pass through to the rule', () {
+      final unreported = _server('u', discovery: null);
+      expect(ask([a, unreported], chosen: ['a', 'u']), ['a']);
+      expect(
+          ask([a, unreported], chosen: ['a', 'u'], allowUnknownDiscovery: true),
+          ['a', 'u']);
+      final mood = _server('m')..moodFiltersAvailable = true;
+      expect(ask([a, mood], chosen: ['a', 'm'], moodSet: true), ['m']);
     });
   });
 }

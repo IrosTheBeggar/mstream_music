@@ -57,7 +57,9 @@ void main() {
       ..sonicSimilarityEnabled = true
       ..sonicMinSimilarity = 0.55
       ..sonicAnchorMode = SonicAnchorMode.rolling
-      ..playFromServer = null;
+      ..playFromServer = null
+      ..playFromAll = false
+      ..playFromServers = const [];
   });
 
   /// Runs [body] and counts the change ticks it caused.
@@ -303,20 +305,131 @@ void main() {
     });
   });
 
-  group('setPlayFromServer', () {
-    test('names the server, saved; null lets it go', () async {
-      expect(await ticks(() => mgr.setPlayFromServer('office')), 1);
+  group('setPlayFrom', () {
+    test('one server: it, saved, and no fan-out', () async {
+      expect(
+          await ticks(() =>
+              mgr.setPlayFrom(all: false, servers: ['office'], home: 'office')),
+          1);
       expect(mgr.playFromServer, 'office');
+      expect(mgr.playFromServers, ['office']);
+      expect(mgr.multiServerEnabled, isFalse);
       expect(saved()['playFromServer'], 'office');
-      expect(await ticks(() => mgr.setPlayFromServer(null)), 1);
-      expect(mgr.playFromServer, isNull);
-      expect(saved().containsKey('playFromServer'), isTrue);
-      expect(saved()['playFromServer'], isNull);
+      expect(saved()['playFromServers'], ['office']);
+      expect(saved()['multiServerEnabled'], isFalse);
     });
 
-    test('the same server again is a no-op: no tick', () async {
-      await mgr.setPlayFromServer('office');
-      expect(await ticks(() => mgr.setPlayFromServer('office')), 0);
+    test('several servers fan out, the home among them', () async {
+      await mgr.setPlayFrom(
+          all: false, servers: ['home', 'office', 'lab'], home: 'office');
+      expect(mgr.playFromServers, ['home', 'office', 'lab']);
+      expect(mgr.playFromServer, 'office');
+      expect(mgr.playFromAll, isFalse);
+      expect(mgr.multiServerEnabled, isTrue);
+      expect(saved()['playFromServers'], ['home', 'office', 'lab']);
+    });
+
+    test('the home is always chosen; a name twice counts once', () async {
+      await mgr.setPlayFrom(
+          all: false, servers: ['lab', 'home', 'lab'], home: 'office');
+      expect(mgr.playFromServers, ['office', 'lab', 'home']);
+    });
+
+    test('All servers is saved under the key it always had', () async {
+      await mgr.setPlayFrom(
+          all: true, servers: ['home', 'office'], home: 'home');
+      expect(mgr.playFromAll, isTrue);
+      expect(mgr.multiServerEnabled, isTrue);
+      expect(saved()['multiServerEnabled'], isTrue);
+    });
+
+    test('the same choice again is a no-op: no tick', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a');
+      expect(
+          await ticks(
+              () => mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a')),
+          0);
+      expect(
+          await ticks(
+              () => mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'b')),
+          1,
+          reason: 'another home is a change');
+    });
+  });
+
+  // Every path that switches the DJ on (setAutoDJ) records its server here.
+  group('setPlayFromHome', () {
+    test('a server already chosen becomes the home; the set stays', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a');
+      expect(await ticks(() => mgr.setPlayFromHome('b')), 1);
+      expect(mgr.playFromServer, 'b');
+      expect(mgr.playFromServers, ['a', 'b']);
+      expect(saved()['playFromServer'], 'b');
+    });
+
+    test('the home again is a no-op: no tick', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a');
+      expect(await ticks(() => mgr.setPlayFromHome('a')), 0);
+    });
+
+    test('one server alone gives way to another', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a'], home: 'a');
+      await mgr.setPlayFromHome('c');
+      expect(mgr.playFromServers, ['c']);
+      expect(mgr.playFromServer, 'c');
+      expect(mgr.multiServerEnabled, isFalse);
+    });
+
+    test('nothing chosen yet (an older file): the server alone', () async {
+      mgr.playFromServer = 'a';
+      await mgr.setPlayFromHome('a');
+      expect(mgr.playFromServers, ['a']);
+      expect(mgr.multiServerEnabled, isFalse);
+    });
+
+    test('several chosen: another server joins them', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a');
+      await mgr.setPlayFromHome('c');
+      expect(mgr.playFromServers, ['a', 'b', 'c']);
+      expect(mgr.playFromServer, 'c');
+      expect(mgr.multiServerEnabled, isTrue);
+    });
+
+    test('All servers takes it in already: only the home moves', () async {
+      await mgr.setPlayFrom(all: true, servers: ['a', 'b'], home: 'a');
+      await mgr.setPlayFromHome('c');
+      expect(mgr.playFromAll, isTrue);
+      expect(mgr.playFromServers, ['a', 'b']);
+      expect(mgr.playFromServer, 'c');
+    });
+  });
+
+  group('forgetServers', () {
+    test('deleted servers leave the set', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b', 'c'], home: 'a');
+      expect(await ticks(() => mgr.forgetServers(['b', 'zz'])), 1);
+      expect(mgr.playFromServers, ['a', 'c']);
+      expect(mgr.playFromServer, 'a');
+      expect(saved()['playFromServers'], ['a', 'c']);
+    });
+
+    test('a deleted home hands over to the next one chosen', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b', 'c'], home: 'a');
+      await mgr.forgetServers(['a', 'b']);
+      expect(mgr.playFromServers, ['c']);
+      expect(mgr.playFromServer, 'c');
+    });
+
+    test('the last one going leaves nothing chosen', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a'], home: 'a');
+      await mgr.forgetServers(['a']);
+      expect(mgr.playFromServers, isEmpty);
+      expect(mgr.playFromServer, isNull);
+    });
+
+    test('a server never chosen changes nothing: no tick', () async {
+      await mgr.setPlayFrom(all: false, servers: ['a', 'b'], home: 'a');
+      expect(await ticks(() => mgr.forgetServers(['zz'])), 0);
     });
   });
 
@@ -324,18 +437,21 @@ void main() {
   test('load brings Play from back, with what the sheets saved', () async {
     await mgr.setKeywords(['live']);
     await mgr.setTempo(enabled: true, tolerance: 3);
-    await mgr.setPlayFromServer('office');
+    await mgr.setPlayFrom(all: false, servers: ['home', 'office'], home: 'office');
     expect(saved()['playFromServer'], 'office');
 
     // A fresh launch's memory: defaults, then the file.
     mgr
       ..playFromServer = null
+      ..playFromServers = const []
       ..keywordFilterWords = []
       ..keywordFilterEnabled = false
       ..bpmContinuityEnabled = false
       ..bpmTolerance = 8;
     expect(await ticks(() => mgr.load()), 1);
     expect(mgr.playFromServer, 'office');
+    expect(mgr.playFromServers, ['home', 'office']);
+    expect(mgr.playFromAll, isFalse);
     expect(mgr.keywordFilterWords, ['live']);
     expect(mgr.keywordFilterEnabled, isTrue);
     expect(mgr.bpmContinuityEnabled, isTrue);

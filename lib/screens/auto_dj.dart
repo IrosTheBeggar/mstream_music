@@ -9,7 +9,7 @@
 //     Harmonic mixing, Skip words
 //   Batch
 //
-// Rows never move between off and on, or between one server and All servers.
+// Rows never move between off and on, or between one server and several.
 // A setting the server can't do stays in place, greyed, with a reason of a few
 // words where its value would be. Values in amber are shaping the picks.
 //
@@ -18,11 +18,13 @@
 // names, a rating scale, a set of genre tags. App-level filters (sonic
 // similarity, mood, track length, tempo, harmonic mixing, skip words) live in
 // AutoDJManager and persist to auto_dj.json; they mean the same thing on every
-// server. With All servers, the Rating and Genres sheets gain server chips.
+// server. With several servers in Play from, the Rating and Genres sheets gain
+// a chip for each.
 
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:rxdart/rxdart.dart' show MergeStream;
 
 import '../l10n/app_localizations.dart';
 import '../media/audio_stuff.dart' show SonicDrop;
@@ -54,6 +56,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   StreamSubscription<dynamic>? _customStateSub;
   StreamSubscription<int>? _autoDjMgrSub;
   StreamSubscription? _tunnelSub;
+  StreamSubscription? _capabilitiesSub;
 
   /// The server the DJ is running on, or null while it is off.
   Server? _dj;
@@ -76,6 +79,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _tunnelSub = ServerManager().tunnelTransitions.listen((_) {
       if (mounted) setState(() {});
     });
+    // And how many take part, which a server's flags decide — the first
+    // answer through a tunnel lands a moment after the tunnel comes up.
+    _capabilitiesSub = ServerManager().capabilityChanges.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -83,6 +91,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _customStateSub?.cancel();
     _autoDjMgrSub?.cancel();
     _tunnelSub?.cancel();
+    _capabilitiesSub?.cancel();
     super.dispose();
   }
 
@@ -96,18 +105,24 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       .toList();
 
   /// The server the rows are about: the DJ's while it runs (named even when
-  /// it has left the picker's list), else Play from's. With All servers it
-  /// is the session's home, whose version gates the rows.
+  /// it has left the picker's list), else Play from's. With several servers
+  /// it is the session's home, whose version gates the rows.
   Server? get _home => _dj ?? autoDjPlayFrom();
 
-  /// All servers is stored — kept even with one server left, so the row
-  /// stays and the choice can be undone.
-  bool get _all => AutoDJManager().multiServerEnabled;
+  /// The servers Play from names — the DJ's own among them while it runs.
+  List<Server> get _set {
+    final set = autoDjPlayFromSet();
+    final dj = _dj;
+    return dj == null || set.contains(dj) ? set : [dj, ...set];
+  }
+
+  /// Several servers: each pick is fanned out across them.
+  bool get _several => _set.length > 1;
 
   ServerVersion? get _version => ServerVersion.tryParse(_home?.serverVersion);
 
   /// The servers a per-server setting (rating, genres) is edited for.
-  List<Server> get _editServers => _all ? _servers : [?_home];
+  List<Server> get _editServers => _several ? _set : [?_home];
 
   String _needs(AppLocalizations l, ServerParam p) =>
       l.autoDjNeedsServer(paramFloorLabel(p));
@@ -122,7 +137,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     if (ServerManager().serverList.isEmpty) return _noServers(l);
     final home = _home;
     final showPlayFrom = _servers.length > 1 ||
-        _all ||
+        _several ||
         (home?.autoDJPaths.length ?? 0) > 1;
     return Scaffold(
       appBar: AppBar(title: Text(l.autoDjTitle)),
@@ -226,9 +241,24 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── session ──────────────────────────────────────────────────────
 
   Widget _playFromRow(AppLocalizations l) {
-    void open() =>
-        _open((_) => PlayFromSheet(servers: _servers, home: _home));
-    if (!_all) {
+    final handler = MediaManager().audioHandler;
+    final set = _set;
+    void open() => _open((_) => PlayFromSheet(
+          servers: _servers,
+          chosen: set,
+          home: _home,
+          sitOut: handler.multiServerSitOut,
+          // A tunnel server counts as taking part from the moment the
+          // session is armed, but it can only answer once its tunnel is up.
+          connecting: (s) =>
+              _dj != null &&
+              fanOutConnecting([s], ServerManager().tunnelServes).isNotEmpty,
+          changes: MergeStream([
+            ServerManager().tunnelTransitions,
+            ServerManager().capabilityChanges,
+          ]),
+        ));
+    if (set.length < 2) {
       return _ValueRow(
         key: const ValueKey('auto-dj-row-play-from'),
         title: l.autoDjPlayFrom,
@@ -236,32 +266,32 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         onTap: open,
       );
     }
-    final servers = _servers;
-    final handler = MediaManager().audioHandler;
+    // Every server (the ones added later too), or the ones ticked by name.
+    final value = AutoDJManager().playFromAll
+        ? l.autoDjAllServers
+        : set.map(autoDjServerName).join(' · ');
     // A home that can't run sonic itself never asks anyone else: say why
     // rather than count servers that will not be asked.
-    final blocked = _home == null ? null : allServersBlocked(_home!);
+    final blocked = _home == null ? null : fanOutHomeBlocked(_home!);
     if (blocked != null) {
       return _ValueRow(
         key: const ValueKey('auto-dj-row-play-from'),
         title: l.autoDjPlayFrom,
-        value: l.autoDjAllServers,
+        value: value,
         onTap: open,
         extra: _warningExtra(sitOutLabel(l, blocked)),
       );
     }
     final taking =
-        servers.where((s) => handler.multiServerSitOut(s) == null).toList();
-    // A tunnel server counts as taking part from the moment the session is
-    // armed, but it can only answer once its tunnel is up.
+        set.where((s) => handler.multiServerSitOut(s) == null).toList();
     final connecting = _dj == null
         ? 0
         : fanOutConnecting(taking, ServerManager().tunnelServes).length;
-    final short = taking.length < servers.length;
+    final short = taking.length < set.length;
     return _ValueRow(
       key: const ValueKey('auto-dj-row-play-from'),
       title: l.autoDjPlayFrom,
-      value: l.autoDjAllServers,
+      value: value,
       onTap: open,
       extra: (connecting > 0 || short)
           ? Row(mainAxisSize: MainAxisSize.min, children: [
@@ -276,7 +306,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 const SizedBox(width: 6),
                 Flexible(
                   child: _warningExtra(
-                      l.autoDjServersTakingPart(taking.length, servers.length)),
+                      l.autoDjServersTakingPart(taking.length, set.length)),
                 ),
               ],
             ])
@@ -361,12 +391,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final mgr = AutoDJManager();
     final home = _home;
     const key = ValueKey('auto-dj-row-mood');
-    // A peer's flags can't be read, so its mood flag is pinned off; with All
-    // servers the mood holds where a server taking part can filter by it.
-    final String? reason = !_all && home?.isFederated == true
+    // A peer's flags can't be read, so its mood flag is pinned off; with
+    // several servers the mood holds where one taking part can filter by it.
+    final String? reason = !_several && home?.isFederated == true
         ? l.autoDjNotOnPeers
-        : (_all
-                ? _servers.any((s) => s.moodFiltersAvailable == true)
+        : (_several
+                ? _set.any((s) => s.moodFiltersAvailable == true)
                 : home?.moodFiltersAvailable == true)
             ? null
             : l.autoDjNoMoodData;

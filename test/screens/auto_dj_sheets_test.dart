@@ -11,6 +11,7 @@
 // never finishes on the fake clock — so a tap that saves runs under
 // runAsync and waits for the sheet to close.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -24,7 +25,6 @@ import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/media/audio_stuff.dart' show FanOutSitOut;
 import 'package:mstream_music/objects/genre_source.dart';
-import 'package:mstream_music/objects/mood_filter.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/auto_dj_sheets.dart';
 import 'package:mstream_music/singletons/api.dart';
@@ -86,9 +86,10 @@ void main() {
       ..sonicAnchorMode = SonicAnchorMode.rolling;
   });
 
-  /// A page whose button opens [sheet] in the Auto DJ chrome.
+  /// A page whose button opens [sheet] in the Auto DJ chrome. A sheet
+  /// showing a spinner never settles: [settle] false pumps it open instead.
   Future<void> open(WidgetTester tester, WidgetBuilder sheet,
-      {Locale? locale, double textScale = 1}) async {
+      {Locale? locale, double textScale = 1, bool settle = true}) async {
     await tester.pumpWidget(MaterialApp(
       locale: locale,
       builder: (context, child) => MediaQuery(
@@ -109,7 +110,12 @@ void main() {
       ),
     ));
     await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
   }
 
   /// Taps [target], whose handler saves and then closes the sheet: the save
@@ -774,7 +780,7 @@ void main() {
     });
   });
 
-  // ── Play from (its Done, and All servers' statuses, reach the handler) ──
+  // ── Play from (its Done reaches the handler; the statuses are passed in) ──
 
   group('PlayFromSheet', () {
     final all = find.byKey(const ValueKey('auto-dj-play-from-all'));
@@ -789,6 +795,12 @@ void main() {
     bool tappable(WidgetTester tester, Finder f) => tester
         .widget<InkWell>(find.descendant(of: f, matching: find.byType(InkWell)))
         .onTap != null;
+    Finder within(Finder row, String text) =>
+        find.descendant(of: row, matching: find.text(text));
+    bool warned(Finder row) => find
+        .descendant(of: row, matching: find.byIcon(Icons.warning_amber_rounded))
+        .evaluate()
+        .isNotEmpty;
 
     Server server(String name,
             {bool? discovery = true, Map<String, bool>? paths}) =>
@@ -797,45 +809,224 @@ void main() {
           ..discoveryEnabled = discovery
           ..autoDJPaths = paths ?? {'music': true};
 
+    /// The sheet over [servers], [chosen] ticked (the first server if not
+    /// given), with the statuses a session would report.
+    PlayFromSheet sheet(List<Server> servers,
+            {List<Server>? chosen,
+            Server? home,
+            Map<String, FanOutSitOut> sitOut = const {},
+            Set<String> connecting = const {},
+            Stream<Object?>? changes}) =>
+        PlayFromSheet(
+          servers: servers,
+          chosen: chosen ?? [servers.first],
+          home: home ?? (chosen ?? servers).first,
+          sitOut: (s) => sitOut[s.localname],
+          connecting: (s) => connecting.contains(s.localname),
+          changes: changes,
+        );
+
     setUp(() {
       mgr
-        ..multiServerEnabled = false
+        ..playFromAll = false
+        ..playFromServers = const []
         ..playFromServer = null
         ..moodFilterEnabled = false;
     });
 
-    testWidgets('the servers, home checked; picking another moves the check '
-        'and shows its folders', (tester) async {
+    testWidgets('the chosen servers ticked; ticking another adds it and shows '
+        'its folders', (tester) async {
       final home = server('home');
       final office =
           server('office', paths: {'music': true, 'podcasts': false});
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
+      await open(tester, (_) => sheet([home, office]));
       expect(find.text('Play from'), findsOneWidget);
       expect(find.text('All servers'), findsOneWidget);
-      expect(tappable(tester, all), isTrue);
       expect(checked(pick('home')), isTrue);
       expect(checked(pick('office')), isFalse);
       expect(checked(all), isFalse);
       expect(folder('office', 'music'), findsNothing,
-          reason: "only the chosen server's folders");
+          reason: "only a ticked server's folders");
 
       await tester.tap(pick('office'));
       await tester.pumpAndSettle();
       expect(checked(pick('office')), isTrue);
-      expect(checked(pick('home')), isFalse);
+      expect(checked(pick('home')), isTrue, reason: 'one more, not another');
+      expect(checked(all), isTrue, reason: 'every server is ticked');
       expect(folder('office', 'music'), findsOneWidget);
       expect(folder('office', 'podcasts'), findsOneWidget);
       expect(folder('home', 'music'), findsNothing,
           reason: 'one folder is nothing to choose');
+
+      await tester.tap(pick('home'));
+      await tester.pumpAndSettle();
+      expect(checked(pick('home')), isFalse);
+      expect(checked(pick('office')), isTrue);
+      expect(checked(all), isFalse);
+    });
+
+    testWidgets('a set of any size: two of three', (tester) async {
+      final home = server('home');
+      final office = server('office');
+      final lab = server('lab');
+      await open(tester,
+          (_) => sheet([home, office, lab], chosen: [home, lab]));
+      expect(checked(pick('home')), isTrue);
+      expect(checked(pick('office')), isFalse);
+      expect(checked(pick('lab')), isTrue);
+      expect(checked(all), isFalse);
+    });
+
+    testWidgets('the last server ticked stays ticked', (tester) async {
+      final home = server('home');
+      final office = server('office');
+      await open(tester, (_) => sheet([home, office]));
+      expect(tappable(tester, pick('home')), isFalse);
+      expect(tappable(tester, pick('office')), isTrue);
+
+      await tester.tap(pick('office'));
+      await tester.pumpAndSettle();
+      expect(tappable(tester, pick('home')), isTrue);
+      await tester.tap(pick('home'));
+      await tester.pumpAndSettle();
+      expect(checked(pick('home')), isFalse);
+      expect(tappable(tester, pick('office')), isFalse,
+          reason: 'now the one left');
+    });
+
+    testWidgets('All servers ticks every one; again, it goes back to the '
+        'home alone', (tester) async {
+      final home = server('home');
+      final office = server('office');
+      final lab = server('lab');
+      await open(tester,
+          (_) => sheet([home, office, lab], chosen: [office], home: office));
+      await tester.tap(all);
+      await tester.pumpAndSettle();
+      for (final n in ['home', 'office', 'lab']) {
+        expect(checked(pick(n)), isTrue, reason: n);
+      }
+      expect(checked(all), isTrue);
+
+      await tester.tap(all);
+      await tester.pumpAndSettle();
+      expect(checked(pick('office')), isTrue, reason: 'the home stays');
+      expect(checked(pick('home')), isFalse);
+      expect(checked(pick('lab')), isFalse);
+      expect(checked(all), isFalse);
+    });
+
+    testWidgets('alone, a server says nothing; the others say why they would '
+        'sit out, plainly', (tester) async {
+      final home = server('home');
+      final office = server('office');
+      await open(
+          tester,
+          (_) => sheet([home, office], sitOut: {
+                'home': FanOutSitOut.scanning,
+                'office': FanOutSitOut.discoveryOff,
+              }));
+      expect(within(pick('home'), 'Still scanning'), findsNothing,
+          reason: 'on its own it needs no discovery');
+      expect(within(pick('office'), 'Discovery off'), findsOneWidget);
+      expect(warned(pick('office')), isFalse, reason: 'not ticked: no alarm');
+    });
+
+    testWidgets('ticked with others, a server that sits out says why in '
+        'amber', (tester) async {
+      final home = server('home');
+      final office = server('office');
+      final lab = server('lab');
+      await open(
+          tester,
+          (_) => sheet([home, office, lab],
+                  chosen: [home, office, lab],
+                  sitOut: {
+                    'office': FanOutSitOut.olderServer,
+                    'lab': FanOutSitOut.otherModel,
+                  }));
+      expect(within(pick('home'), 'Needs server 6.26+'), findsNothing);
+      expect(warned(pick('home')), isFalse);
+      expect(within(pick('office'), 'Needs server 6.26+'), findsOneWidget);
+      expect(warned(pick('office')), isTrue);
+      expect(warned(pick('lab')), isTrue);
+
+      // Down to one: it needs none of this.
+      await tester.tap(pick('home'));
+      await tester.tap(pick('lab'));
+      await tester.pumpAndSettle();
+      expect(within(pick('office'), 'Needs server 6.26+'), findsNothing);
+    });
+
+    testWidgets('a server on its way spins while it is ticked with others',
+        (tester) async {
+      final home = server('home');
+      final office = server('office');
+      await open(
+          tester,
+          (_) => sheet([home, office],
+              chosen: [home, office], connecting: {'office'}),
+          settle: false);
+      expect(
+          find.descendant(
+              of: pick('office'),
+              matching: find.byType(CircularProgressIndicator)),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: pick('home'),
+              matching: find.byType(CircularProgressIndicator)),
+          findsNothing);
+
+      await tester.tap(pick('home'));
+      await tester.pump();
+      expect(
+          find.descendant(
+              of: pick('office'),
+              matching: find.byType(CircularProgressIndicator)),
+          findsNothing,
+          reason: 'alone it is not fanning anything out');
+    });
+
+    testWidgets('the rows follow the session while the sheet is open',
+        (tester) async {
+      final home = server('home');
+      final office = server('office');
+      final sitOut = <String, FanOutSitOut>{};
+      final connecting = {'office'};
+      final changes = StreamController<Object?>.broadcast();
+      addTearDown(changes.close);
+      Finder spinner(String name) => find.descendant(
+          of: pick(name), matching: find.byType(CircularProgressIndicator));
+      await open(
+          tester,
+          (_) => sheet([home, office],
+              chosen: [home, office],
+              sitOut: sitOut,
+              connecting: connecting,
+              changes: changes.stream),
+          settle: false);
+      expect(spinner('office'), findsOneWidget);
+
+      // Its tunnel comes up.
+      connecting.clear();
+      changes.add(null);
+      await tester.pump();
+      expect(spinner('office'), findsNothing);
+
+      // Its first answer says discovery is off.
+      sitOut['office'] = FanOutSitOut.discoveryOff;
+      changes.add(null);
+      await tester.pump();
+      expect(within(pick('office'), 'Discovery off'), findsOneWidget);
+      expect(warned(pick('office')), isTrue);
     });
 
     testWidgets('the last folder on cannot be switched off; closing discards '
         'every draft', (tester) async {
       final home = server('home', paths: {'music': true, 'podcasts': false});
       final office = server('office');
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
+      await open(tester, (_) => sheet([home, office]));
       expect(switchIn(tester, folder('home', 'music')).onChanged, isNull);
 
       await tester.tap(find.descendant(
@@ -854,74 +1045,13 @@ void main() {
       await close(tester);
       expect(home.autoDJPaths, {'music': true, 'podcasts': false});
       expect(mgr.playFromServer, isNull);
+      expect(mgr.playFromServers, isEmpty);
       expect(mgr.multiServerEnabled, isFalse);
-    });
-
-    testWidgets("All servers rests with the home server's reason when it "
-        'cannot run there', (tester) async {
-      final home = server('home', discovery: false);
-      final office = server('office');
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
-      expect(tappable(tester, all), isFalse);
-      expect(
-          find.descendant(of: all, matching: find.text('Discovery off')),
-          findsOneWidget);
-    });
-
-    testWidgets('All servers follows the server picked here: one that cannot '
-        'run it rests the row, one that can wakes it', (tester) async {
-      final home = server('home');
-      final office = server('office', discovery: false);
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
-      expect(tappable(tester, all), isTrue);
-
-      await tester.tap(pick('office'));
-      await tester.pumpAndSettle();
-      expect(tappable(tester, all), isFalse);
-      expect(find.descendant(of: all, matching: find.text('Discovery off')),
-          findsOneWidget);
-
-      await tester.tap(pick('home'));
-      await tester.pumpAndSettle();
-      expect(tappable(tester, all), isTrue);
-      expect(find.descendant(of: all, matching: find.text('Discovery off')),
-          findsNothing);
-    });
-
-    testWidgets('an older home server rests All servers with what it needs',
-        (tester) async {
-      final home = server('home')..serverVersion = '6.25.0';
-      final office = server('office');
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
-      expect(tappable(tester, all), isFalse);
-      expect(
-          find.descendant(of: all, matching: find.text('Needs server 6.26+')),
-          findsOneWidget);
-    });
-
-    testWidgets('a mood does not rest All servers: it only narrows which '
-        'servers answer', (tester) async {
-      mgr
-        ..moodFilterEnabled = true
-        ..moodFilter = const MoodFilter(energy: 'relaxed');
-      addTearDown(() => mgr
-        ..moodFilterEnabled = false
-        ..moodFilter = MoodFilter.empty);
-      final home = server('home')..moodFiltersAvailable = false;
-      final office = server('office')..moodFiltersAvailable = true;
-      await open(tester,
-          (_) => PlayFromSheet(servers: [home, office], home: home));
-      expect(tappable(tester, all), isTrue);
-      expect(find.descendant(of: all, matching: find.text('No mood data')),
-          findsNothing);
     });
 
     testWidgets('one server: no list, just its folders', (tester) async {
       final home = server('home', paths: {'music': true, 'podcasts': true});
-      await open(tester, (_) => PlayFromSheet(servers: [home], home: home));
+      await open(tester, (_) => sheet([home]));
       expect(all, findsNothing);
       expect(pick('home'), findsNothing);
       expect(folder('home', 'music'), findsOneWidget);
@@ -935,13 +1065,39 @@ void main() {
         ..federationPeerId = 3
         ..federationPeerName = 'Basement'
         ..autoDJPaths = {'music': true};
-      await open(
-          tester, (_) => PlayFromSheet(servers: [home, peer], home: home));
+      await open(tester, (_) => sheet([home, peer]));
       expect(
           find.descendant(
               of: pick('peer-3'),
               matching: find.text('$kPeerBranch Basement', findRichText: true)),
           findsOneWidget);
+    });
+
+    testWidgets('a screen reader hears a checkbox and whether it is ticked',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      final home = server('home');
+      final office = server('office');
+      await open(tester, (_) => sheet([home, office]));
+      expect(
+          tester.getSemantics(pick('home')),
+          isSemantics(
+              label: 'home.example.com',
+              hasCheckedState: true,
+              isChecked: true,
+              hasEnabledState: true,
+              isEnabled: false,
+              hasTapAction: false),
+          reason: 'the last one ticked holds');
+      expect(
+          tester.getSemantics(pick('office')),
+          isSemantics(
+              label: 'office.example.com',
+              hasCheckedState: true,
+              isChecked: false,
+              isEnabled: true,
+              hasTapAction: true));
+      handle.dispose();
     });
   });
 

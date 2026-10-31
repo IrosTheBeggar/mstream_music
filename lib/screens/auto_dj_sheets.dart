@@ -31,6 +31,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+import '../util/auto_dj_play_from.dart';
 import '../util/auto_dj_values.dart';
 import '../util/server_tree.dart';
 import '../util/server_version.dart';
@@ -77,20 +78,7 @@ Color autoDjToneColor(AutoDjTone tone) => switch (tone) {
       AutoDjTone.warning => VelvetColors.warning,
     };
 
-/// Why All servers can't run from [home], or null when it can: the session's
-/// seed travels as a sound, so its home must run sonic similarity itself —
-/// discovery on with vectors ready — and be new enough to send a vector seed.
-/// A mood only narrows which other servers answer, so it doesn't count here.
-FanOutSitOut? allServersBlocked(Server home) {
-  final why = AudioPlayerHandler.sitOutReason(home, const {});
-  if (why != null) return why;
-  if (home.sonicUsable) return null;
-  return home.discoveryReady == false
-      ? FanOutSitOut.scanning
-      : FanOutSitOut.discoveryOff;
-}
-
-/// Why a server sits out of an All servers session, in at most four words.
+/// Why a server sits out of a session across several, in at most four words.
 String sitOutLabel(AppLocalizations l, FanOutSitOut why) => switch (why) {
       FanOutSitOut.discoveryOff => l.autoDjDiscoveryOff,
       FanOutSitOut.scanning => l.autoDjStillScanning,
@@ -558,56 +546,199 @@ class _ChoiceRow extends StatelessWidget {
   }
 }
 
+/// A 52 px row in a sheet's checklist: the box, a name and, at the right, a
+/// status or a reason.
+class _CheckRow extends StatelessWidget {
+  const _CheckRow(
+      {super.key,
+      required this.label,
+      required this.checked,
+      this.trailing,
+      this.onTap});
+
+  final Widget label;
+  final bool checked;
+  final Widget? trailing;
+
+  /// Null holds the box as it is, drawn faint.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MergeSemantics(
+      child: Semantics(
+        checked: checked,
+        enabled: onTap != null,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 12, 0),
+              // The name keeps at least 40% of the row; a long reason gives
+              // way.
+              child: LayoutBuilder(
+                builder: (context, box) => Row(children: [
+                  Opacity(
+                    opacity: onTap == null ? 0.5 : 1,
+                    // FedCheckRow's box.
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: checked
+                            ? VelvetColors.primary
+                            : Colors.transparent,
+                        border: checked
+                            ? null
+                            : Border.all(color: VelvetColors.textDim, width: 2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: checked
+                          ? Icon(Icons.check,
+                              size: 16, color: VelvetColors.onPrimary)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: label),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
+                      child: trailing!,
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Play from ──────────────────────────────────────────────────────────
 
-/// Where the music comes from: one server, or All servers — and, under the
-/// list, the folders of whichever server(s) that is.
+/// Where the music comes from: any set of servers — one is a plain session
+/// on it, several fan every pick out across them — and, under the list, the
+/// folders of each one ticked.
 class PlayFromSheet extends StatefulWidget {
-  const PlayFromSheet({super.key, required this.servers, required this.home});
+  const PlayFromSheet(
+      {super.key,
+      required this.servers,
+      required this.chosen,
+      required this.home,
+      required this.sitOut,
+      required this.connecting,
+      this.changes});
 
   /// Every server the picker may offer, grouped (a peer under its parent).
   final List<Server> servers;
 
-  /// The single server the session plays from, or is home to.
+  /// The servers Play from names now.
+  final List<Server> chosen;
+
+  /// The server the session runs on: the DJ's while it is on.
   final Server? home;
+
+  /// Why a server would sit out of a session across several, or null when
+  /// it would take part — the running session's own drops included. A
+  /// server not reached yet has no reason: nothing is known against it.
+  final FanOutSitOut? Function(Server) sitOut;
+
+  /// Whether a server taking part is still on its way: the session is on
+  /// and the server's tunnel is not up yet.
+  final bool Function(Server) connecting;
+
+  /// Fires when what [sitOut] or [connecting] says may have changed — a
+  /// tunnel coming up or dropping, a server's flags arriving — so the rows
+  /// follow while the sheet is open.
+  final Stream<Object?>? changes;
 
   @override
   State<PlayFromSheet> createState() => _PlayFromSheetState();
 }
 
 class _PlayFromSheetState extends State<PlayFromSheet> {
-  late bool _all = AutoDJManager().multiServerEnabled;
-  late Server? _single = widget.home;
+  late final Set<String> _ticked = {
+    for (final s in widget.chosen) s.localname,
+    // Never none in the list: the DJ needs a server to play from.
+    if (!widget.servers.any(widget.chosen.contains) &&
+        widget.servers.isNotEmpty)
+      _one.localname,
+  };
   late final Map<String, Map<String, bool>> _paths = {
-    for (final s in {...widget.servers, ?widget.home})
+    for (final s in {...widget.servers, ...widget.chosen, ?widget.home})
       s.localname: Map.of(s.autoDJPaths),
   };
+  StreamSubscription<Object?>? _changesSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _changesSub = widget.changes?.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
+  }
 
   AudioPlayerHandler get _handler => MediaManager().audioHandler;
 
-  /// Why All servers can't run from the server picked here, or null when it
-  /// can. Only what the session itself needs from its home — discovery and a
-  /// new enough server; a mood only narrows which servers answer.
-  FanOutSitOut? get _allBlocked {
-    final home = _single;
-    return home == null ? null : allServersBlocked(home);
-  }
+  bool _isTicked(Server s) => _ticked.contains(s.localname);
 
-  /// A server's part while All servers is chosen: nothing while it takes
-  /// part, a spinner while it is connecting, else why it sits out.
-  Widget? _status(AppLocalizations l, Server s) {
-    final why = _handler.multiServerSitOut(s);
-    if (why != null) return _warning(sitOutLabel(l, why));
-    if (_handler.autoDJServer != null &&
-        s.isIrohTransport &&
-        !ServerManager().tunnelServes(s)) {
-      return _spinner(16);
+  /// The servers ticked, in the list's order.
+  List<Server> get _set => widget.servers.where(_isTicked).toList();
+
+  bool get _allTicked => widget.servers.every(_isTicked);
+
+  /// The one server left ticked when there has to be one: the server the
+  /// session runs on, if the list has it.
+  Server get _one => widget.servers.contains(widget.home)
+      ? widget.home!
+      : widget.servers.first;
+
+  void _toggle(Server s) => setState(() {
+        if (!_ticked.remove(s.localname)) _ticked.add(s.localname);
+      });
+
+  /// Every server, or — when every one is ticked already — back to [_one].
+  void _toggleAll() => setState(() {
+        if (_allTicked) {
+          final keep = _one;
+          _ticked
+            ..clear()
+            ..add(keep.localname);
+        } else {
+          _ticked.addAll(widget.servers.map((s) => s.localname));
+        }
+      });
+
+  /// A server's part in a session across [count] servers: nothing while it
+  /// takes part, a spinner while it is on its way, else why it sits out —
+  /// amber when it is ticked, plain when it would sit out if it were. A
+  /// server ticked alone says nothing: on its own it needs none of this.
+  Widget? _status(AppLocalizations l, Server s, int count) {
+    final ticked = _isTicked(s);
+    if (ticked && count < 2) return null;
+    final why = widget.sitOut(s);
+    if (why != null) {
+      return ticked
+          ? _warning(sitOutLabel(l, why))
+          : _reason(sitOutLabel(l, why));
     }
+    if (ticked && widget.connecting(s)) return _spinner(16);
     return null;
   }
 
   List<Server> get _folderServers => [
-        for (final s in _all ? widget.servers : [?_single])
+        for (final s in _set)
           if (s.autoDJPaths.length > 1) s,
       ];
 
@@ -635,7 +766,7 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
   Future<void> _done() => _applyThenClose(context, () async {
     final mgr = AutoDJManager();
     var pathsChanged = false;
-    for (final s in {...widget.servers, ?widget.home}) {
+    for (final s in {...widget.servers, ...widget.chosen, ?widget.home}) {
       final draft = _paths[s.localname]!;
       final same = draft.length == s.autoDJPaths.length &&
           draft.entries.every((e) => s.autoDJPaths[e.key] == e.value);
@@ -648,25 +779,38 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
       ServerManager().callAfterEditServer();
       unawaited(_handler.customAction('forceAutoDJRefresh'));
     }
-    // The server picked here is where the session runs — alone, or as the
-    // home of All servers, whose availability was judged on it.
-    final s = _single;
-    if (s != null) await mgr.setPlayFromServer(s.localname);
-    if (_all) {
-      // The session's seed travels as a sound, so it runs on sonic picks — and
-      // a session that had dropped them gets another go.
+    final set = _set;
+    if (set.isEmpty) return;
+    // The session runs on one of them: the server it is on now while that
+    // can lead the others, else one that can.
+    final home = resolvePlayFromHome(
+        set, widget.home, (s) => fanOutHomeBlocked(s) == null)!;
+    final listed = {for (final s in widget.servers) s.localname};
+    await mgr.setPlayFrom(
+        // Ticking every server is All servers, which takes in the ones added
+        // later. With one server there is no list, and nothing to change.
+        all: widget.servers.length > 1 ? _allTicked : mgr.playFromAll,
+        servers: [
+          ...set.map((s) => s.localname),
+          // One the list can't show — a peer hidden, or missing from its
+          // parent's list for now — keeps its place, to take part once back.
+          for (final n in mgr.playFromServers)
+            if (!listed.contains(n)) n,
+        ],
+        home: home.localname);
+    if (set.length > 1) {
+      // The session's seed travels as a sound, so several servers run on
+      // sonic picks — and a session that had dropped them gets another go.
       if (!mgr.sonicSimilarityEnabled) await mgr.setSonicSimilarityEnabled(true);
-      await mgr.setMultiServerEnabled(true);
       if (_handler.sonicDrop != null) {
         unawaited(_handler.customAction('retrySonic'));
       }
-    } else {
-      await mgr.setMultiServerEnabled(false);
     }
-    // Changing Play from while on starts a fresh session there.
+    // A session running somewhere else starts afresh on the home. One that
+    // is already there carries on, asking whichever servers are ticked now.
     final dj = _handler.autoDJServer;
-    if (s != null && dj != null && dj != s) {
-      unawaited(_handler.customAction('setAutoDJ', {'autoDJServer': s}));
+    if (dj != null && dj != home) {
+      unawaited(_handler.customAction('setAutoDJ', {'autoDJServer': home}));
     }
   });
 
@@ -674,45 +818,32 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final servers = widget.servers;
-    final blocked = _allBlocked;
-    final showList = servers.length > 1 || _all;
+    final count = _set.length;
     return AutoDjSheet(
       title: l.autoDjPlayFrom,
       onDone: _done,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (showList)
+        if (servers.length > 1)
           FedCard(children: [
-            _ChoiceRow(
+            _CheckRow(
               key: const ValueKey('auto-dj-play-from-all'),
               label: Text(l.autoDjAllServers,
                   style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: blocked == null && servers.length > 1
-                          ? VelvetColors.textPrimary
-                          : VelvetColors.textTertiary)),
-              selected: _all,
-              trailing: _all
-                  ? _check()
-                  : blocked != null
-                      ? _reason(sitOutLabel(l, blocked))
-                      : null,
-              onTap: blocked == null && servers.length > 1
-                  ? () => setState(() => _all = true)
-                  : null,
+                      color: VelvetColors.textPrimary)),
+              checked: _allTicked,
+              onTap: _toggleAll,
             ),
             for (final s in servers)
-              _ChoiceRow(
+              _CheckRow(
                 key: ValueKey('auto-dj-play-from-${s.localname}'),
                 label: serverLabel(s),
-                selected: !_all && s == _single,
-                trailing: _all
-                    ? _status(l, s)
-                    : (s == _single ? _check() : null),
-                onTap: () => setState(() {
-                  _all = false;
-                  _single = s;
-                }),
+                checked: _isTicked(s),
+                trailing: _status(l, s, count),
+                // The last one ticked stays: the DJ needs a server to play
+                // from.
+                onTap: _isTicked(s) && count == 1 ? null : () => _toggle(s),
               ),
           ]),
         for (final s in _folderServers) _folders(s),
@@ -781,9 +912,13 @@ class _SonicSheetState extends State<SonicSheet> {
       // Webapp parity (clearSonicAnchors): switching it off drops the
       // session anchors — rolling history and the locked pin.
       unawaited(handler.customAction('clearSonicSession'));
-      // All servers runs on sonic picks: without them it is back to the
-      // last single server.
-      if (_mgr.multiServerEnabled) await _mgr.setMultiServerEnabled(false);
+      // Several servers run on sonic picks: without them Play from is back
+      // to the one the session runs on.
+      final home = handler.autoDJServer ?? autoDjPlayFrom();
+      if (_mgr.multiServerEnabled && home != null) {
+        await _mgr.setPlayFrom(
+            all: false, servers: [home.localname], home: home.localname);
+      }
     }
     // A session that dropped sonic tries again with the new settings.
     if (changed) unawaited(handler.customAction('retrySonic'));

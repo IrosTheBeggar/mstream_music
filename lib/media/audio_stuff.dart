@@ -105,8 +105,9 @@ enum SonicDrop { tooStrict, scanning, discoveryOff }
 
 /// Why a server is not taking part in a multi-server Auto DJ session (see
 /// [AudioPlayerHandler.multiServerSitOut]). [unreachable] covers a server
-/// that has never reported its flags, and one dropped this session for a
-/// reason the screen has no better word for.
+/// that has never reported its flags though it has had the chance (not a
+/// Quick Connect one still waiting for its tunnel), and one dropped this
+/// session for a reason the screen has no better word for.
 enum FanOutSitOut {
   discoveryOff,
   scanning,
@@ -226,10 +227,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
   // lazily locked on the session's first pick (explicit seed, else the
   // playing track; same pattern as [_camelotAnchor]) and reused for every
-  // subsequent similarTo. Cleared with the history on new-lane events, and
-  // dropped when the server reports it unanalyzed/unknown so a dead pin
-  // can't wedge the whole session.
-  String? _sonicLockedAnchor;
+  // subsequent similarTo — with the server holding it, since a session
+  // across several servers may pin a track from any of them (see
+  // [sonicPin]). Cleared with the history on new-lane events, and dropped
+  // when its server reports it unanalyzed/unknown, or gives no vector for
+  // it, so a dead pin can't wedge the whole session.
+  ({String path, String server})? _sonicLock;
   /// Why this session dropped sonic similarity and is picking without it, or
   /// null while it hasn't. The Auto DJ screen shows it on the Sonic similarity
   /// row, in place of the toast that used to say so. Session state: a new
@@ -285,7 +288,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _multiServerIgnore.clear();
     _fanOutDeclined.clear();
     _sonicNotReadyLogged = false;
-    _sonicLockedAnchor = null;
+    _sonicLock = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
     sonicDrop = null;
     _clearDeferredPick();
@@ -467,18 +470,26 @@ class AudioPlayerHandler extends BaseAudioHandler
     // edges (and arm / disarm, see setAutoDJ) have to nudge the reconcile.
     ServerManager().djFanOutServers = _djFanOutServers;
     AutoDJManager().changeStream.listen((_) {
-      final on = AutoDJManager().multiServerEnabled;
-      final moodSet = AutoDJManager().activeMoodFilter != null;
+      final mgr = AutoDJManager();
+      final on = mgr.multiServerEnabled;
+      final moodSet = mgr.activeMoodFilter != null;
+      final servers = _fanOutChoice(mgr);
       if (on != _fanOutWasOn) {
         _fanOutWasOn = on;
         _fanOutMoodWasSet = moodSet;
+        _fanOutServersWere = servers;
         unawaited(ServerManager()
             .ensureTunnels(reason: on ? 'dj-fanout' : 'dj-fanout-off'));
       } else if (on && moodSet != _fanOutMoodWasSet) {
         // A mood narrows who may answer (canJoinMultiServer), so setting or
         // clearing one moves the targets too.
         _fanOutMoodWasSet = moodSet;
+        _fanOutServersWere = servers;
         unawaited(ServerManager().ensureTunnels(reason: 'dj-mood'));
+      } else if (on && servers != _fanOutServersWere) {
+        // So does a server joining or leaving Play from.
+        _fanOutServersWere = servers;
+        unawaited(ServerManager().ensureTunnels(reason: 'dj-fanout'));
       }
     });
     // The iroh supervisor re-dials a dropped tunnel forever on the same
@@ -3257,7 +3268,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // the locked pin — so the next pick anchors fresh rather than on
         // stale state (webapp resetAnchors/clearSonicAnchors semantics).
         _sonicHistory = const [];
-        _sonicLockedAnchor = null;
+        _sonicLock = null;
         break;
       case 'setAutoDJ':
         final nextDJ = extras?['autoDJServer'] as Server?;
@@ -3276,11 +3287,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Remembered across restarts. Every toggle path funnels through here,
         // so this is the one place that has to record it.
         unawaited(AutoDJManager().setEnabledServer(nextDJ?.localname));
-        // And it is where the Auto DJ screen's Play from points from now on,
-        // whichever path armed it (a Discover play, Android Auto's Shuffle
-        // All): the screen names the DJ's own server.
+        // And Play from holds it from now on, whichever path armed it (a
+        // Discover play, Android Auto's Shuffle All): the DJ's own server is
+        // always one the screen names, and the one it runs on.
         if (nextDJ != null) {
-          unawaited(AutoDJManager().setPlayFromServer(nextDJ.localname));
+          unawaited(AutoDJManager().setPlayFromHome(nextDJ.localname));
         }
 
         customState.add(CustomEvent(autoDJServer));
@@ -3899,6 +3910,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   // only its edges cost a reconcile (AutoDJManager notifies on every change).
   bool _fanOutWasOn = false;
   bool _fanOutMoodWasSet = false;
+  String _fanOutServersWere = '';
+
+  /// Play from's servers as one comparable value: All servers, or the
+  /// localnames chosen in any order.
+  static String _fanOutChoice(AutoDJManager mgr) => mgr.playFromAll
+      ? '*'
+      : ([...mgr.playFromServers]..sort()).join('\n');
 
   /// What the multi-server session may ask right now, for the tunnel
   /// manager: nothing unless the DJ is armed with the mode on. Servers whose
@@ -3909,10 +3927,74 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (autoDJServer == null || !AutoDJManager().multiServerEnabled) {
       return const <Server>[];
     }
-    return ServerManager().serverList.where((s) => canJoinMultiServer(
-        s, _multiServerExcluded,
-        allowUnknownDiscovery: true,
-        moodSet: AutoDJManager().activeMoodFilter != null));
+    return _fanOutCandidates(allowUnknownDiscovery: true);
+  }
+
+  /// Whether [localname] is one of this session's servers ([inFanOut] on
+  /// the live Play from).
+  bool _inSession(String localname) {
+    final mgr = AutoDJManager();
+    return inFanOut(localname,
+        all: mgr.playFromAll,
+        chosen: mgr.playFromServers,
+        dj: autoDJServer?.localname);
+  }
+
+  /// [fanOutCandidates] on the live state: the server list, Play from, this
+  /// session's drops and the mood.
+  List<Server> _fanOutCandidates({bool allowUnknownDiscovery = false}) {
+    final mgr = AutoDJManager();
+    return fanOutCandidates(ServerManager().serverList,
+        all: mgr.playFromAll,
+        chosen: mgr.playFromServers,
+        dj: autoDJServer?.localname,
+        excluded: _multiServerExcluded,
+        allowUnknownDiscovery: allowUnknownDiscovery,
+        moodSet: mgr.activeMoodFilter != null);
+  }
+
+  /// The servers out of [servers] that a session across several may ask:
+  /// the ones Play from names — every one with [all], else those in
+  /// [chosen], and always the DJ's own ([dj], a localname) — that may take
+  /// part ([canJoinMultiServer]). A server left out of Play from is never
+  /// asked, however able. Pure; unit-tested.
+  static List<Server> fanOutCandidates(Iterable<Server> servers,
+          {required bool all,
+          required Iterable<String> chosen,
+          required String? dj,
+          required Set<String> excluded,
+          bool allowUnknownDiscovery = false,
+          bool moodSet = false}) =>
+      [
+        for (final s in servers)
+          if (inFanOut(s.localname, all: all, chosen: chosen, dj: dj) &&
+              canJoinMultiServer(s, excluded,
+                  allowUnknownDiscovery: allowUnknownDiscovery,
+                  moodSet: moodSet))
+            s,
+      ];
+
+  /// Whether [localname] is one of a session's servers: every server with
+  /// [all], else the ones [chosen] names — and always the DJ's own ([dj]).
+  /// Pure; unit-tested.
+  static bool inFanOut(String localname,
+          {required bool all,
+          required Iterable<String> chosen,
+          required String? dj}) =>
+      all || localname == dj || chosen.contains(localname);
+
+  /// The playing track as an anchor for a session across several servers:
+  /// its [path] and [server], when that server is one of the session's
+  /// ([inSession]) — any of them, the DJ's own included. Null for a track
+  /// from elsewhere, or one with no server behind it (a local file). Pure;
+  /// unit-tested.
+  static ({String path, String server})? fanOutCurrentSeed(
+      {String? path,
+      Object? server,
+      required bool Function(String) inSession}) {
+    final p = _normSonicPath(path);
+    if (p == null || server is! String || !inSession(server)) return null;
+    return (path: p, server: server);
   }
 
   /// Re-evaluate the tunnel targets after something changed what the session
@@ -3932,17 +4014,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   // the winner's list advances — the other servers' picks were never played.
   final Map<String, dynamic> _multiServerIgnore = {};
 
-  /// Servers that could contribute to a multi-server session right now.
-  /// Public so the Auto DJ screen can show who is taking part without
-  /// duplicating the rules.
-  List<Server> multiServerCandidates() {
-    final moodSet = AutoDJManager().activeMoodFilter != null;
-    return ServerManager()
-        .serverList
-        .where((s) =>
-            canJoinMultiServer(s, _multiServerExcluded, moodSet: moodSet))
-        .toList();
-  }
+  /// Servers that could contribute to a multi-server session right now: the
+  /// ones Play from names that may take part.
+  List<Server> multiServerCandidates() => _fanOutCandidates();
 
   /// Whether [s] may take part in a multi-server session: not dropped this
   /// session ([excluded]), not a peer the user hid or its parent stopped
@@ -3995,11 +4069,27 @@ class AudioPlayerHandler extends BaseAudioHandler
     return null;
   }
 
+  /// [sitOutReason] as the Auto DJ screen shows it, [tunnelUp] saying whether
+  /// a server's tunnel is live. A Quick Connect server nothing has dialed
+  /// yet has had no chance to report its flags: it is on its way, not
+  /// unreachable, so — as for the tunnel targets — flags it never reported
+  /// don't count against it until its tunnel is up. The pick itself stays
+  /// strict ([multiServerCandidates]). Pure; unit-tested.
+  static FanOutSitOut? shownSitOut(Server s, Set<String> excluded,
+          {Map<String, FanOutSitOut> why = const {},
+          required bool Function(Server) tunnelUp,
+          bool moodSet = false}) =>
+      sitOutReason(s, excluded,
+          why: why,
+          allowUnknownDiscovery: s.isIrohTransport && !tunnelUp(s),
+          moodSet: moodSet);
+
   /// Why [s] is not taking part in a multi-server session right now, or null
   /// when it is — the Auto DJ screen's Play from sheet, by each server.
-  FanOutSitOut? multiServerSitOut(Server s) => sitOutReason(
+  FanOutSitOut? multiServerSitOut(Server s) => shownSitOut(
       s, _multiServerExcluded,
       why: _multiServerExcludedWhy,
+      tunnelUp: ServerManager().tunnelServes,
       moodSet: AutoDJManager().activeMoodFilter != null);
 
   /// Every song in a random-songs answer with its own similarity. A batch
@@ -4065,22 +4155,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Fetched from the server that OWNS each seed — that's the whole point:
   /// the anchor may hold tracks from several servers, and averaging them is
   /// what makes the session one session rather than several running side by
-  /// side. Null when nothing usable came back, which drops this pick to the
-  /// single-server path rather than playing something unrelated.
-  Future<({String modelId, String base64})?> _multiServerSeed(
-      List<String> seedPaths) async {
+  /// side. [anchors] names the owners of seeds that are not recorded picks
+  /// (see [_seedOwner]). Null when nothing usable came back, which drops
+  /// this pick to the single-server path rather than playing something
+  /// unrelated. [foreign]: a vector came from another server than the DJ's
+  /// own — a sound the single-server path, which seeds by filepath, can't
+  /// carry.
+  Future<({String modelId, String base64, bool foreign})?> _multiServerSeed(
+      List<String> seedPaths, Map<String, String> anchors) async {
     if (seedPaths.isEmpty) return null;
-    // A cross-server anchor records where each path came from; a path with
-    // no owner predates the map and belongs to the DJ's own server.
     final byServer = <Server, List<String>>{};
     for (final p in seedPaths) {
-      final owner = _seedOwner(p);
+      final owner = _seedOwner(p, anchors);
       if (owner == null) continue;
       byServer.putIfAbsent(owner, () => []).add(p);
     }
 
     String? modelId;
     int? dim;
+    var foreign = false;
     final vectors = <Float32List>[];
     for (final entry in byServer.entries) {
       final got = await ApiManager().fetchEmbeddings(entry.key, entry.value);
@@ -4096,6 +4189,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         continue;
       }
       vectors.addAll(got.vectors);
+      if (entry.key.localname != autoDJServer?.localname) foreign = true;
       // The answer names the owner's model space — that server's handshake
       // is done without a health call.
       _fanOutModels.record(entry.key.localname, got.modelId, DateTime.now());
@@ -4105,20 +4199,33 @@ class AudioPlayerHandler extends BaseAudioHandler
     // would refuse it, so don't spend the round trip (null here).
     final base64 = seedVectorBase64(vectors, dim);
     if (base64 == null) return null;
-    return (modelId: modelId, base64: base64);
+    return (modelId: modelId, base64: base64, foreign: foreign);
   }
 
-  /// The server a sonic-history path belongs to: recorded when the pick was
-  /// queued, else the DJ's own server (a single-server history predates the
-  /// owners map).
-  Server? _seedOwner(String path) {
-    final ownerName = _sonicSeedOwners[path];
+  /// The server a seed path belongs to: [anchors] names the ones that are
+  /// not recorded picks (the playing track, the locked pin); a pick's server
+  /// was recorded when it was queued; anything else is the DJ's own (a
+  /// single-server history predates the owners map).
+  Server? _seedOwner(String path,
+      [Map<String, String> anchors = const <String, String>{}]) {
+    final ownerName = anchors[path] ?? _sonicSeedOwners[path];
     return ownerName == null
         ? autoDJServer
         : (ServerManager().byLocalname(ownerName) ?? autoDJServer);
   }
 
-  /// One pick, chosen across every eligible server.
+  /// A locked pin on another server than the DJ's is the cross-server
+  /// pick's alone. When that pick can't carry it — no vector from its
+  /// server, nobody to ask — it is let go, so the next pick pins what is
+  /// playing then rather than every pick going without it.
+  void _unpinForeignLock(String why) {
+    final lock = _sonicLock;
+    if (lock == null || lock.server == autoDJServer?.localname) return;
+    _sonicLock = null;
+    appLog('[dj] multi-server: unpinned the anchor on ${lock.server} — $why');
+  }
+
+  /// One pick, chosen across the eligible servers Play from names.
   ///
   /// Returns false when the session can't run this way right now (no seed, no
   /// eligible servers, nobody answered) — the caller then falls back to the
@@ -4130,13 +4237,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// answer worthless, so it is dropped — false, and the caller checks the
   /// epoch itself before falling back.
   Future<bool> _autoDJMultiServer(List<String> seedPaths,
-      {required int epoch,
+      {Map<String, String> anchors = const <String, String>{},
+      required int epoch,
       bool autoPlay = false,
       bool incrementIndex = false}) async {
+    // A seed from another server than the DJ's is a sound the single-server
+    // pick can't carry (it seeds by filepath), so any one server able to
+    // answer is worth asking; with every seed the DJ's own, it takes two.
+    final foreignSeed = seedPaths.any(
+        (p) => _seedOwner(p, anchors)?.localname != autoDJServer?.localname);
     final candidates = multiServerCandidates();
-    if (candidates.length < 2) {
-      return _fanOutDecline('${candidates.length} eligible server(s) — the '
-          'others lack discovery'
+    if (candidates.isEmpty || (candidates.length < 2 && !foreignSeed)) {
+      if (candidates.isEmpty) _unpinForeignLock('nobody to ask');
+      return _fanOutDecline('${candidates.length} eligible server(s) in Play '
+          'from — the others lack discovery'
           '${AutoDJManager().activeMoodFilter != null ? ', mood filtering' : ''}'
           ' or a new enough version');
     }
@@ -4164,9 +4278,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (epoch != _djSessionEpoch) return false;
     }
 
-    final seed = await _multiServerSeed(seedPaths);
+    final seed = await _multiServerSeed(seedPaths, anchors);
     if (epoch != _djSessionEpoch) return false;
     if (seed == null) {
+      _unpinForeignLock('no vector for it');
       return _fanOutDecline('no vector for the anchor (not analysed yet, or '
           'its server did not answer)');
     }
@@ -4215,12 +4330,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
     }
     // Nothing to gain over the single-server pick when the DJ's own server
-    // is the only one left: that path seeds by filepath, which the server
-    // can exclude from its own pool. One OTHER server alone is still a
-    // session worth running — the DJ's may be the one with nothing to say.
+    // is the only one left and the seed is its own: that path seeds by
+    // filepath, which the server can exclude from its own pool. A sound from
+    // another server is one that path can't carry, so the DJ's server alone
+    // still answers it here. One OTHER server alone is still a session worth
+    // running — the DJ's may be the one with nothing to say.
     if (eligible.isEmpty ||
         (eligible.length == 1 &&
-            eligible.first.localname == autoDJServer?.localname)) {
+            eligible.first.localname == autoDJServer?.localname &&
+            !seed.foreign)) {
       return _fanOutDecline(eligible.isEmpty
           ? 'no server answers in the seed\'s model space right now'
           : 'only the DJ\'s own server is in the seed\'s model space');
@@ -4231,13 +4349,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // each, as candidates are only servers that can filter by it).
     final mood = mgr.activeMoodFilter;
 
-    // What no server may answer with: the playing track and the recent
-    // anchors, keyed "<localname>|<path>" because a path only names a row on
-    // the server that holds it. A vector seed carries no hashes for the
-    // server to exclude on its own (the filepath form's seeds are dropped
-    // from the pool server-side), and ignoreList is only a soft cooldown that
-    // yields to the full pool once it covers every candidate — so this guard
-    // lives here, and a server offering a repeat is simply passed over.
+    // What no server may answer with: the playing track, the recent anchors
+    // and the seed itself (a pin), keyed "<localname>|<path>" because a path
+    // only names a row on the server that holds it. A vector seed carries no
+    // hashes for the server to exclude on its own (the filepath form's seeds
+    // are dropped from the pool server-side), and ignoreList is only a soft
+    // cooldown that yields to the full pool once it covers every candidate —
+    // so this guard lives here, and a server offering a repeat is simply
+    // passed over.
     final recent = <String>{};
     final cur = mediaItem.valueOrNull;
     final curServer = cur?.extras?['server'];
@@ -4247,6 +4366,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     for (final p in _sonicHistory) {
       final owner = _seedOwner(p);
+      if (owner != null) recent.add('${owner.localname}|$p');
+    }
+    for (final p in seedPaths) {
+      final owner = _seedOwner(p, anchors);
       if (owner != null) recent.add('${owner.localname}|$p');
     }
 
@@ -4572,35 +4695,49 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     // The explicit seed ("start the session here") only counts when it was
     // picked from the DJ server — filepaths are per-library. Same rule for
-    // the playing track.
-    final explicitSeed = mgr.sonicSeedServer == autoDJServer!.localname
-        ? mgr.sonicSeedPath
+    // the playing track on the single-server route.
+    final explicitSeed =
+        mgr.sonicSeedServer == dj.localname ? mgr.sonicSeedPath : null;
+    final curServer = currentItem?.extras?['server'];
+    final curPath = currentItem?.extras?['path'] as String?;
+    final sonicCurrent = curServer == dj.localname ? curPath : null;
+    // A session across several servers takes the playing track from any of
+    // them: its sound travels as a vector read from the server holding it,
+    // so the first pick follows what was playing rather than opening on a
+    // random track from the DJ's own server.
+    final fanOutCurrent = mgr.multiServerEnabled
+        ? fanOutCurrentSeed(
+            path: curPath, server: curServer, inSession: _inSession)
         : null;
-    final sonicCurrent =
-        currentItem?.extras?['server'] == autoDJServer!.localname
-            ? (currentItem?.extras?['path'] as String?)
-            : null;
     // Locked mode pins its anchor on the session's first pick — the explicit
     // seed, else the playing track (the same lazy-lock pattern as the
     // Camelot anchor above). A cold start with neither stays plain random
     // and pins on the next call via the then-playing pick.
     if (sonicEnabled &&
         mgr.sonicAnchorMode == SonicAnchorMode.locked &&
-        _sonicLockedAnchor == null) {
-      _sonicLockedAnchor = _normSonicPath(explicitSeed ?? sonicCurrent);
+        _sonicLock == null) {
+      _sonicLock = sonicPin(
+          own: explicitSeed ?? sonicCurrent,
+          dj: dj.localname,
+          elsewhere: fanOutCurrent);
+      if (_sonicLock case final pin? when pin.server != dj.localname) {
+        appLog('[dj] multi-server: pinned the playing track on ${pin.server}');
+      }
     }
+    final lock = _sonicLock;
     // The sonic settings these params are built from: a verdict on them only
     // stands while they are still the ones set (see [_sonicGen]).
     final sonicGen = _sonicGen;
     // The session's anchors from every server that has contributed a pick
-    // — what a cross-server seed averages over.
+    // — what a cross-server seed averages over — else the playing track on
+    // any of its servers.
     final sonicAll = sonicParams(
       enabled: sonicEnabled,
       mode: mgr.sonicAnchorMode,
-      lockedAnchor: _sonicLockedAnchor,
+      lockedAnchor: lock?.path,
       history: _sonicHistory,
       seedPath: explicitSeed,
-      currentPath: sonicCurrent,
+      currentPath: fanOutCurrent?.path ?? sonicCurrent,
       minSimilarity: mgr.sonicMinSimilarity,
     );
     // The single-server body carries only what the DJ's own server can
@@ -4610,12 +4747,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     // found". With the whole recent history on other servers the policy
     // falls back the way it does on a cold start: the explicit seed, else
     // the playing track (both already restricted to the DJ's server above).
+    // A pin on another server is the cross-server pick's alone.
     final sonic = sonicParams(
       enabled: sonicEnabled,
       mode: mgr.sonicAnchorMode,
-      lockedAnchor: _sonicLockedAnchor,
-      history: historyOwnedBy(
-          _sonicHistory, _sonicSeedOwners, autoDJServer!.localname),
+      lockedAnchor: lock?.server == dj.localname ? lock?.path : null,
+      history: historyOwnedBy(_sonicHistory, _sonicSeedOwners, dj.localname),
       seedPath: explicitSeed,
       currentPath: sonicCurrent,
       minSimilarity: mgr.sonicMinSimilarity,
@@ -4632,8 +4769,28 @@ class AudioPlayerHandler extends BaseAudioHandler
       final seedPaths =
           (sonicAll['similarTo'] as List?)?.whereType<String>().toList() ??
               const <String>[];
+      // Where the anchors that are not recorded picks live: the pin, and the
+      // playing track (a recorded pick keeps the server it came from).
+      final anchors = <String, String>{
+        if (fanOutCurrent != null &&
+            !_sonicSeedOwners.containsKey(fanOutCurrent.path))
+          fanOutCurrent.path: fanOutCurrent.server,
+        if (lock != null) lock.path: lock.server,
+      };
+      // The rolling policy's last resort, so only with no picks or opener.
+      if (mgr.sonicAnchorMode == SonicAnchorMode.rolling &&
+          _sonicHistory.isEmpty &&
+          explicitSeed == null &&
+          fanOutCurrent != null &&
+          fanOutCurrent.server != dj.localname) {
+        appLog('[dj] multi-server: seeded by the playing track on '
+            '${fanOutCurrent.server}');
+      }
       final picked = await _autoDJMultiServer(seedPaths,
-          epoch: epoch, autoPlay: autoPlay, incrementIndex: incrementIndex);
+          anchors: anchors,
+          epoch: epoch,
+          autoPlay: autoPlay,
+          incrementIndex: incrementIndex);
       // The lane changed while the servers were being asked: neither the
       // cross-server pick nor a single-server fallback belongs to it now
       // (same rule as the response check further down).
@@ -4774,7 +4931,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             // it lets the next attempt re-pin from the playing track.
             if (mgr.sonicAnchorMode == SonicAnchorMode.locked &&
                 (res.statusCode == 404 || lower.contains('analyzed'))) {
-              _sonicLockedAnchor = null;
+              _sonicLock = null;
             }
             // The three ways sonic can fail while the request itself is
             // fine. All used to `return` — no pick, and with the queue-end
@@ -4816,7 +4973,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             if (drop == null &&
                 res.statusCode == 404 &&
                 lower.contains('track not found')) {
-              _sonicLockedAnchor = null;
+              _sonicLock = null;
               sonicOffThisPick = true;
               continue;
             }
@@ -5123,6 +5280,21 @@ class AudioPlayerHandler extends BaseAudioHandler
       'similarTo': [anchor],
       'minSimilarity': minSimilarity,
     };
+  }
+
+  /// Locked mode's pin for a session that has none yet: [own] — the
+  /// explicit seed, else the playing track, both on the DJ's server ([dj])
+  /// and so carried by either route — else the playing track on another of
+  /// a multi-server session's servers ([elsewhere], see [fanOutCurrentSeed]),
+  /// which only the cross-server pick can carry. Null leaves the pick plain
+  /// random until something plays to pin. Pure; unit-tested.
+  static ({String path, String server})? sonicPin(
+      {String? own,
+      required String dj,
+      ({String path, String server})? elsewhere}) {
+    final mine = _normSonicPath(own);
+    if (mine != null) return (path: mine, server: dj);
+    return elsewhere;
   }
 
   /// The part of a sonic history that [localname] holds — a path with no

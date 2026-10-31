@@ -8,6 +8,7 @@ import '../objects/server.dart';
 import '../objects/direct_access.dart';
 import './api.dart';
 import './app_messenger.dart';
+import './auto_dj_manager.dart';
 import './browser_list.dart';
 import './federation_inbox_alerts.dart';
 import './log_manager.dart';
@@ -68,6 +69,9 @@ class ServerManager {
       BehaviorSubject<List<Server>>.seeded(serverList);
   late final BehaviorSubject<Server?> _currentServerStream =
       BehaviorSubject<Server?>.seeded(currentServer);
+  // A server whose stored capabilities a refresh just changed — its first
+  // answer through a tunnel that came up, an upgrade, discovery switched on.
+  final PublishSubject<Server> _capabilities = PublishSubject();
 
   ServerManager._privateConstructor();
   static final ServerManager _instance = ServerManager._privateConstructor();
@@ -433,6 +437,7 @@ class ServerManager {
           server.noUpload != prevNoUpload ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
+        _capabilities.add(server);
       }
       // The home's cards that follow a flag. Discover wants discovery AND
       // the taste route, so either half changing redraws it — a server
@@ -2301,6 +2306,9 @@ class ServerManager {
     } catch (err) {
       appLog('[server] clearing listening history failed: $err');
     }
+    // And Auto DJ's Play from lets them go (a save failure is logged there).
+    await AutoDJManager().forgetServers(
+        [removeThisServer, ...orphans].map((s) => s.localname));
     // Drop a stale queue-tunnel pointer to the removed server so the ensure
     // below doesn't try to keep its tunnel up (the queue listener would clear
     // it on the next edit, but do it now).
@@ -2750,6 +2758,11 @@ class ServerManager {
   Stream<Server?> get currentServerStream => _currentServerStream.stream;
 
   Stream<List<Server>> get serverListStream => _serverListStream.stream;
+
+  /// Each server whose stored capabilities a refresh changed (the flags
+  /// [getServerPaths] persists): who can take part in an Auto DJ session
+  /// across servers follows them.
+  Stream<Server> get capabilityChanges => _capabilities.stream;
 }
 
 /// What asking the parent for a peer's direct access came to.

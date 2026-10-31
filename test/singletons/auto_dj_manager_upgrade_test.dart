@@ -44,6 +44,8 @@ void main() {
     final mgr = AutoDJManager();
     await mgr.load();
     expect(mgr.playFromServer, 'office');
+    expect(mgr.playFromAll, isFalse);
+    expect(mgr.playFromServers, ['office']);
     expect(mgr.multiServerEnabled, isFalse);
     expect(mgr.sonicSimilarityEnabled, isFalse);
   });

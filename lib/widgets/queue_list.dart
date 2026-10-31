@@ -610,8 +610,10 @@ Future<void> toggleAutoDJ(BuildContext context, {bool announce = true}) async {
   }
   handler.customAction('setAutoDJ', {'autoDJServer': server});
   if (announce) {
+    // Named only when it is the one server the picks come from.
     messenger.showSnackBar(SnackBar(
-        content: Text(ServerManager().serverList.length == 1
+        content: Text(ServerManager().serverList.length == 1 ||
+                autoDjPlayFromSet().length > 1
             ? l.autoDjEnabled
             : l.autoDjEnabledFor(server.displayName))));
   }
