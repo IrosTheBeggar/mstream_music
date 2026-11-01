@@ -31,6 +31,9 @@ class VelvetPalette {
   final Color onPrimary;
   final Color accent, success, error, warning;
   final Color textPrimary, textSecondary, textTertiary, textDim;
+  /// Helper lines under fields and status captions: lighter than
+  /// [textSecondary] but, unlike [textTertiary], still 4.5:1 on [raised].
+  final Color helper;
   final Color hover, active;
   // AppBar-specific so a theme can pair a light body with a dark
   // AppBar (or vice versa) without losing text contrast.
@@ -57,6 +60,7 @@ class VelvetPalette {
     required this.textSecondary,
     required this.textTertiary,
     required this.textDim,
+    this.helper = const Color(0xFF9A9A9A),
     required this.hover,
     required this.active,
     required this.appBarBg,
@@ -85,6 +89,7 @@ class VelvetPalette {
     Color? textSecondary,
     Color? textTertiary,
     Color? textDim,
+    Color? helper,
     Color? hover,
     Color? active,
     Color? appBarBg,
@@ -112,6 +117,7 @@ class VelvetPalette {
         textSecondary: textSecondary ?? this.textSecondary,
         textTertiary: textTertiary ?? this.textTertiary,
         textDim: textDim ?? this.textDim,
+        helper: helper ?? this.helper,
         hover: hover ?? this.hover,
         active: active ?? this.active,
         appBarBg: appBarBg ?? this.appBarBg,
@@ -199,6 +205,7 @@ const _velvetPalette = VelvetPalette(
   textSecondary: Color(0xFF8888B0),
   textTertiary: Color(0xFF7E8EC0),
   textDim: Color(0xFF2A3A5E),
+  helper: Color(0xFFA0A0C8),
   hover: Color(0x14FFFFFF),
   active: Color(0x2E8B5CF6),
   // AppBar matches surface — same dark navy.
@@ -233,6 +240,7 @@ const _darkPalette = VelvetPalette(
   textSecondary: Color(0xFFAAAAAA),
   textTertiary: Color(0xFF888888),
   textDim: Color(0xFF555555),
+  helper: Color(0xFF9A9A9A),
   hover: Color(0x14FFFFFF),
   active: Color(0x26FFAB00),
   appBarBg: Color(0xFF121212),
@@ -268,6 +276,7 @@ const _lightPalette = VelvetPalette(
   textSecondary: Color(0xFF555555),
   textTertiary: Color(0xFF777777),
   textDim: Color(0xFFBBBBBB),
+  helper: Color(0xFF5E5E5E),
   hover: Color(0x14000000),
   active: Color(0x26FFAB00),
   // Master's dark AppBar with light text on top.
@@ -321,6 +330,7 @@ class VelvetColors {
   static Color get textSecondary => _active.textSecondary;
   static Color get textTertiary => _active.textTertiary;
   static Color get textDim => _active.textDim;
+  static Color get helper => _active.helper;
 
   static Color get hover => _active.hover;
   static Color get active => _active.active;

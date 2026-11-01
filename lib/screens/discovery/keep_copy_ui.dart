@@ -67,13 +67,25 @@ Color keepTone(Color c) => _readable(c, VelvetColors.card);
 /// The same, on the page's ground (the row markers' glyphs).
 Color keepToneOnPage(Color c) => _readable(c, VelvetColors.bg);
 
+/// The same, on any [ground] (text on a raised card).
+Color keepToneOn(Color c, Color ground) => _readable(c, ground);
+
 // ── pieces ────────────────────────────────────────────────────────────────
 
 /// A 44 px tall hit band around a smaller control.
 class KeepHitArea extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget child;
-  const KeepHitArea({super.key, required this.onTap, required this.child});
+
+  /// The band's height: 44 for Discover's surfaces; Add from YouTube's
+  /// sheets ask for 48.
+  final double minHeight;
+  const KeepHitArea({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.minHeight = 44,
+  });
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -81,7 +93,7 @@ class KeepHitArea extends StatelessWidget {
     excludeFromSemantics: true,
     onTap: onTap,
     child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
+      constraints: BoxConstraints(minHeight: minHeight),
       child: Center(widthFactor: 1, heightFactor: 1, child: child),
     ),
   );

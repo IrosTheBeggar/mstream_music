@@ -1621,14 +1621,61 @@ class ApiManager {
     }
   }
 
+  /// The browser rows for one `POST /api/v1/file-explorer` answer: its
+  /// folders, then its files (each with the metadata the server attached
+  /// when `pullMetadata` was sent). Shared by [getFileList] and the in-place
+  /// re-list after an Add from YouTube settles in the folder on screen
+  /// (screens/ytdl/ytdl_folder_strip.dart), so a re-listed folder draws
+  /// exactly as a freshly opened one.
+  List<DisplayItem> fileExplorerRows(Server? server, Map res) {
+    final List<DisplayItem> rows = [];
+    res['directories'].forEach((e) {
+      rows.add(DisplayItem(
+          server,
+          e['name'],
+          'directory',
+          path.join(res['path'], e['name']),
+          Icon(Icons.folder, color: VelvetColors.warning),
+          null));
+    });
+
+    res['files'].forEach((e) {
+      // A playlist file opens a list rather than playing, so it should not
+      // wear the same icon as the tracks around it.
+      final isPlaylistFile = isM3u(e['name']?.toString());
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'file',
+          path.join(res['path'], e['name']),
+          Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
+              color: VelvetColors.accent),
+          null);
+
+      // The server wraps each file's metadata as { filepath, metadata:
+      // {…actual fields…} } — drill in one level. Only set when
+      // pullMetadata=true was sent AND the file is in the library DB
+      // (unscanned files still arrive without an inner metadata
+      // object; we tolerate that and fall back to filename display).
+      final outer = e['metadata'];
+      final inner = outer is Map ? outer['metadata'] : null;
+      if (inner is Map) {
+        newItem.metadata = MusicMetadata.fromServerMap(inner);
+      }
+
+      rows.add(newItem);
+    });
+    return rows;
+  }
+
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
     try {
       final res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
         "directory": directory,
         // Server defaults this to false (cheap listing). When the user
         // has the setting on, the server returns a `metadata` field on
-        // each file entry — we attach it to the DisplayItem below so
-        // that when the user taps to queue, browser.dart's addFile
+        // each file entry — fileExplorerRows attaches it to the DisplayItem
+        // so that when the user taps to queue, browser.dart's addFile
         // sees a populated metadata object and the resulting MediaItem
         // carries title/artist/album/art into the player and the
         // notification.
@@ -1637,44 +1684,7 @@ class ApiManager {
 
       BrowserManager().setBrowserLabel('File Explorer');
 
-      List<DisplayItem> newList = [];
-      res['directories'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['name'],
-            'directory',
-            path.join(res['path'], e['name']),
-            Icon(Icons.folder, color: VelvetColors.warning),
-            null);
-        newList.add(newItem);
-      });
-
-      res['files'].forEach((e) {
-        // A playlist file opens a list rather than playing, so it should not
-        // wear the same icon as the tracks around it.
-        final isPlaylistFile = isM3u(e['name']?.toString());
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['name'],
-            'file',
-            path.join(res['path'], e['name']),
-            Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
-                color: VelvetColors.accent),
-            null);
-
-        // The server wraps each file's metadata as { filepath, metadata:
-        // {…actual fields…} } — drill in one level. Only set when
-        // pullMetadata=true was sent AND the file is in the library DB
-        // (unscanned files still arrive without an inner metadata
-        // object; we tolerate that and fall back to filename display).
-        final outer = e['metadata'];
-        final inner = outer is Map ? outer['metadata'] : null;
-        if (inner is Map) {
-          newItem.metadata = MusicMetadata.fromServerMap(inner);
-        }
-
-        newList.add(newItem);
-      });
+      final newList = fileExplorerRows(useThisServer, res);
 
       BrowserManager()
           .addListToStack(newList, alphabetical: true, path: res['path']);

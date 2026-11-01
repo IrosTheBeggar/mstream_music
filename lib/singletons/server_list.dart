@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show listEquals, setEquals, visibleForTesting;
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -374,6 +375,10 @@ class ServerManager {
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
       final bool? prevMoodFilters = server.moodFiltersAvailable;
       final bool? prevNoUpload = server.noUpload;
+      final bool? prevNoMkdir = server.noMkdir;
+      final List<String>? prevFormats = server.supportedAudioFormats;
+      // Copied: the fold edits the map in place.
+      final Set<String> prevLibraries = server.autoDJPaths.keys.toSet();
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -435,6 +440,9 @@ class ServerManager {
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
           server.moodFiltersAvailable != prevMoodFilters ||
           server.noUpload != prevNoUpload ||
+          server.noMkdir != prevNoMkdir ||
+          !sameAudioFormats(server.supportedAudioFormats, prevFormats) ||
+          !setEquals(server.autoDJPaths.keys.toSet(), prevLibraries) ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
         _capabilities.add(server);
@@ -453,6 +461,12 @@ class ServerManager {
           // The SERVER section's Copies row follows these two.
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
           server.noUpload != prevNoUpload ||
+          // Add from YouTube hides on no ffmpeg, no upload right or no
+          // library, and its screen reads the folder right and the formats.
+          server.transcodeAvailable != prevAvail ||
+          !setEquals(server.autoDJPaths.keys.toSet(), prevLibraries) ||
+          server.noMkdir != prevNoMkdir ||
+          !sameAudioFormats(server.supportedAudioFormats, prevFormats) ||
           server.statsVersion != prevStats) {
         _refreshHomeIfShowing(server);
       }
@@ -567,6 +581,13 @@ class ServerManager {
     server.noUpload = user is Map && user['noUpload'] is bool
         ? user['noUpload'] as bool
         : null;
+    // The account's folder right — caller-scoped too.
+    server.noMkdir = user is Map && user['noMkdir'] is bool
+        ? user['noMkdir'] as bool
+        : null;
+    // Server-wide (the formats it converts to), so under `features` here.
+    server.supportedAudioFormats = enabledAudioFormats(
+        features is Map ? features['supportedAudioFiles'] : null);
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -623,6 +644,29 @@ class ServerManager {
     server.moodFiltersAvailable =
         hasMoodFilters(res['discoveryTaste'], res['moodFilters']);
     server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
+    server.noMkdir = res['noMkdir'] is bool ? res['noMkdir'] as bool : null;
+    server.supportedAudioFormats =
+        enabledAudioFormats(res['supportedAudioFiles']);
+  }
+
+  /// The formats a `supportedAudioFiles` wire map turns on: its keys whose
+  /// value is `true`, sorted (the route refuses an `outputCodec` that is
+  /// not). Null when the value is not a map — a server too old to say, or a
+  /// shape this build cannot read; util/ytdl_formats.dart falls back to MP3.
+  @visibleForTesting
+  static List<String>? enabledAudioFormats(dynamic v) {
+    if (v is! Map) return null;
+    return [
+      for (final e in v.entries)
+        if (e.key is String && e.value == true) e.key as String
+    ]..sort();
+  }
+
+  /// Whether two format lists name the same formats, in any order.
+  @visibleForTesting
+  static bool sameAudioFormats(List<String>? a, List<String>? b) {
+    if (a == null || b == null) return a == b;
+    return listEquals([...a]..sort(), [...b]..sort());
   }
 
   /// Whether a `discoveryTaste` wire value advertises the Discover page: an
@@ -2663,6 +2707,10 @@ class ServerManager {
     server.discoveryPluginsAvailable = false;
     server.moodFiltersAvailable = false; // Discover is the parent's page
     server.noUpload = null; // a copy lands on the parent, whose flag governs
+    // /ytdl and mkdir are off the federation allowlist: Add from YouTube is
+    // the parent's, so neither of its flags means anything on a peer.
+    server.noMkdir = null;
+    server.supportedAudioFormats = null;
     server.statsVersion = null; // its plays post to the parent, whose flag governs
     server.playlists.clear();
   }

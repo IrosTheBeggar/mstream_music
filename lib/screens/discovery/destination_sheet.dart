@@ -9,6 +9,7 @@ import '../../objects/discovery_plugins.dart';
 import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_jobs.dart';
+import 'destination_pieces.dart';
 import 'discovery_jobs_controller.dart';
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
@@ -304,8 +305,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     return known.isEmpty ? kLayoutVars : known;
   }
 
-  static String _token(String name) => '{{$name}}';
-
   /// Custom chosen: its field opens with the keyboard up, and scrolls into
   /// view with the variables under it (its scrollPadding).
   void _pickCustom() {
@@ -320,64 +319,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _customChosen) _customFocus.requestFocus();
     });
-  }
-
-  /// A variable button: {{NAME}} where the caret is (over the selection,
-  /// at the end when the field never had one), the caret after it. A button
-  /// with no room left for its token is off (the field's own limit sees
-  /// only the keyboard).
-  void _insertVar(String name) {
-    final token = _token(name);
-    final v = _custom.value;
-    final s = v.selection;
-    final start = s.isValid ? s.start : v.text.length;
-    final end = s.isValid ? s.end : v.text.length;
-    _custom.value = TextEditingValue(
-      text: v.text.replaceRange(start, end, token),
-      selection: TextSelection.collapsed(offset: start + token.length),
-    );
-    _customFocus.requestFocus();
-  }
-
-  /// The validator's refusal in words (the server's codes, one table); an
-  /// unknown variable named as it was typed.
-  String _layoutProblem(
-    AppLocalizations l,
-    LayoutCheck check,
-    List<String> vars,
-  ) => switch (check.error) {
-    'unknown_variable' => l.discoverDestErrUnknownVar(
-      check.token ?? _token(check.variable ?? ''),
-      vars.join(', '),
-    ),
-    'unbalanced_braces' => l.discoverDestErrBraces(_token('ARTIST')),
-    'absolute_template' || 'absolute_path' => l.discoverDestErrAbsolute,
-    'traversal' => l.discoverDestErrTraversal,
-    'empty_path' => l.discoverDestErrEmpty,
-    'home_string' => l.discoverDestErrHome,
-    'drive_letter' || 'drive_letter_segment' => l.discoverDestErrDrive,
-    'template_too_long' => l.discoverDestErrTooLong(kMaxLayoutLength),
-    'invalid_chars' => l.discoverDestErrControl,
-    _ => l.discoverDestErrGeneric,
-  };
-
-  /// A variable button's name for a screen reader ("Insert artist"), with
-  /// the name it shows when the words do not already say it: Voice Control
-  /// finds a button by what it shows.
-  String _insertLabel(AppLocalizations l, String name) {
-    final words = switch (name) {
-      'ARTIST' => l.discoverDestInsertArtist,
-      'ALBUM' => l.discoverDestInsertAlbum,
-      'YEAR' => l.discoverDestInsertYear,
-      'GENRE' => l.discoverDestInsertGenre,
-      'ALBUMARTIST' => l.discoverDestInsertAlbumArtist,
-      'PEER' => l.discoverDestInsertPeer,
-      'SERVERFOLDER' => l.discoverDestInsertServerFolder,
-      _ => _token(name),
-    };
-    return words.toLowerCase().contains(name.toLowerCase())
-        ? words
-        : '$words, $name';
   }
 
   /// The account's own destination is in force (not the library default).
@@ -457,7 +398,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
     var tagMine = false;
     if (view == null && jobs.destinationFailed) {
       final words = jobs.destinationError;
-      body = _BlockCard(
+      body = DestBlockCard(
         key: const ValueKey('destination-failed'),
         icon: Icons.warning_amber_rounded,
         iconColor: keepTone(VelvetColors.warning),
@@ -477,7 +418,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
       footer = _footer(l, null, loading: true);
     } else if (d == null) {
       final uploadsOff = jobs.server.noUpload == true;
-      body = _BlockCard(
+      body = DestBlockCard(
         key: ValueKey(
           uploadsOff ? 'destination-uploads-off' : 'destination-no-library',
         ),
@@ -509,7 +450,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _GrabHandle(),
+            const DestGrabHandle(),
             _header(l, tag, tagMine, compact: typing),
             Divider(height: 1, thickness: 1, color: VelvetColors.border),
             ?preview,
@@ -734,7 +675,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 // only between the › separators.
                 for (var i = 0; i < crumbs.length; i++) ...[
                   if (i > 0) TextSpan(text: ' › ', style: soft),
-                  ...keepCrumbSpans(l, crumbs[i], hold: _hold),
+                  ...keepCrumbSpans(l, crumbs[i], hold: destHold),
                 ],
               ],
             ),
@@ -752,7 +693,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                l.discoverDestMissing(t.missingVars.map(_token).join(', ')),
+                l.discoverDestMissing(t.missingVars.map(destToken).join(', ')),
                 key: const ValueKey('destination-preview-missing'),
                 style: note,
               ),
@@ -760,26 +701,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
         ],
       );
     }
-    return Container(
-      margin: EdgeInsets.fromLTRB(16, compact ? 8 : 12, 16, 4),
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 8 : 10),
-      decoration: BoxDecoration(
-        color: VelvetColors.raised,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Semantics(
-        liveRegion: true,
-        container: true,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: icon),
-            const SizedBox(width: 10),
-            Expanded(child: content),
-          ],
-        ),
-      ),
-    );
+    return DestPreviewShell(compact: compact, icon: icon, content: content);
   }
 
   Widget _label(String text) => Padding(
@@ -796,64 +718,12 @@ class _DestinationSheetState extends State<DestinationSheet> {
     ),
   );
 
-  /// A refusal under its input: the server's words in the error tone,
-  /// announced; or the validator's as typed in the [warning] tone, read in
-  /// its place after the field (announced, it would talk over the typing).
-  Widget _errorLine(String words, Key key, {bool warning = false}) => Padding(
-    key: key,
-    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-    child: Semantics(
-      liveRegion: !warning,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Icon(
-              warning ? Icons.warning_amber_rounded : Icons.error_outline,
-              size: 14,
-              color: keepTone(
-                warning ? VelvetColors.warning : VelvetColors.error,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              words,
-              style: TextStyle(
-                color: keepTone(
-                  warning ? VelvetColors.warning : VelvetColors.error,
-                ),
-                fontSize: 12,
-                height: 16 / 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
   /// The form, knowing its own height: a field being typed in asks the
-  /// form to show no more around its line than fits ([_reveal]).
+  /// form to show no more around its line than fits ([destReveal]).
   Widget _form(AppLocalizations l, DestinationView view) => LayoutBuilder(
     builder: (context, box) =>
-        _formIn(l, view, _reveal(context, box.maxHeight)),
+        _formIn(l, view, destReveal(context, box.maxHeight)),
   );
-
-  /// What a field being typed in brings into view around its line: its
-  /// box's top edge, and under it up to 120 px (the variables under
-  /// Custom's) — less when the form is short (the keyboard up, large text),
-  /// so the field itself is never cut.
-  static EdgeInsets _reveal(BuildContext context, double height) {
-    const top = 16.0;
-    final line = MediaQuery.textScalerOf(context).scale(24);
-    return EdgeInsets.only(
-      top: top,
-      bottom: (height - top - line).clamp(0.0, 120.0),
-    );
-  }
 
   Widget _formIn(AppLocalizations l, DestinationView view, EdgeInsets reveal) {
     final saving = jobs.savingDestination;
@@ -878,7 +748,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
               runSpacing: 8,
               children: [
                 for (final lib in libs)
-                  _LibraryChip(
+                  DestLibraryChip(
                     key: ValueKey('destination-library-${lib.vpath}'),
                     name: lib.vpath,
                     selected: lib.vpath == vpath,
@@ -913,7 +783,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
           ),
           _label(l.discoverDestLayout),
           for (final p in presets)
-            _LayoutOption(
+            DestLayoutOption(
               key: ValueKey('destination-layout-${p.$2}'),
               label: p.$1(l),
               sub: p.$2,
@@ -926,7 +796,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                       _dropError(_Field.layout);
                     }),
             ),
-          _LayoutOption(
+          DestLayoutOption(
             key: const ValueKey('destination-custom-option'),
             label: l.discoverDestPresetCustom,
             sub: l.discoverDestCustomSub,
@@ -939,9 +809,15 @@ class _DestinationSheetState extends State<DestinationSheet> {
           if (_customChosen)
             _customEditor(l, view, saving, reveal)
           else if (_saveErrorField == _Field.layout && _saveError != null)
-            _errorLine(_saveError!, const ValueKey('destination-layout-error')),
+            destErrorLine(
+              _saveError!,
+              const ValueKey('destination-layout-error'),
+            ),
           if (_saveErrorField == _Field.other && _saveError != null)
-            _errorLine(_saveError!, const ValueKey('destination-save-error')),
+            destErrorLine(
+              _saveError!,
+              const ValueKey('destination-save-error'),
+            ),
           const SizedBox(height: 8),
         ],
       ),
@@ -963,7 +839,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
     final problem = _custom.text.isEmpty
         ? null
         : !check.valid
-        ? _layoutProblem(l, check, vars)
+        ? destLayoutProblem(l, check, vars)
         : held == null
         ? null
         : l.discoverDestErrBaseBraces(held);
@@ -1029,7 +905,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                     errorBorder: InputBorder.none,
                     focusedErrorBorder: InputBorder.none,
                     hintText: l.discoverDestCustomHint(
-                      '${_token('ARTIST')}/${_token('ALBUM')}',
+                      '${destToken('ARTIST')}/${destToken('ALBUM')}',
                     ),
                     hintStyle: TextStyle(
                       color: VelvetColors.textTertiary,
@@ -1044,9 +920,9 @@ class _DestinationSheetState extends State<DestinationSheet> {
             ),
           ),
           if (refused)
-            _errorLine(refusal, const ValueKey('destination-layout-error'))
+            destErrorLine(refusal, const ValueKey('destination-layout-error'))
           else if (problem != null)
-            _errorLine(
+            destErrorLine(
               problem,
               const ValueKey('destination-custom-invalid'),
               warning: true,
@@ -1057,14 +933,18 @@ class _DestinationSheetState extends State<DestinationSheet> {
               spacing: 8,
               children: [
                 for (final v in vars)
-                  _VarChip(
+                  DestVarChip(
                     key: ValueKey('destination-var-$v'),
-                    token: _token(v),
-                    label: _insertLabel(l, v),
+                    token: destToken(v),
+                    label: destInsertLabel(l, v),
                     // Off while saving, or with no room left for it.
-                    onTap: saving || _token(v).length > room
+                    onTap: saving || destToken(v).length > room
                         ? null
-                        : () => _insertVar(v),
+                        : () => destInsertVar(
+                            _custom,
+                            _customFocus,
+                            destToken(v),
+                          ),
                   ),
               ],
             ),
@@ -1128,7 +1008,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
             )
           else
             const SizedBox(width: 1),
-          _SaveButton(
+          DestSaveButton(
             label: saving ? l.discoverDestSaving : l.save,
             busy: saving,
             enabled: canSave,
@@ -1151,382 +1031,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
   }
 }
 
-/// [s] as one unbreakable run: no-break spaces, and a word joiner after
-/// each hyphen ("01 - Rooftop Cypher.mp3" would otherwise break after its
-/// dash).
-String _hold(String s) =>
-    s.replaceAll(' ', '\u00A0').replaceAll('-', '-\u2060');
-
 // ── pieces ────────────────────────────────────────────────────────────────
-
-class _GrabHandle extends StatelessWidget {
-  const _GrabHandle();
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 18,
-    child: Align(
-      alignment: Alignment.topCenter,
-      child: Container(
-        margin: const EdgeInsets.only(top: 8),
-        width: 36,
-        height: 4,
-        decoration: BoxDecoration(
-          color: VelvetColors.border2,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    ),
-  );
-}
-
-/// A library choice (FedChipRow's chip in the canvas's size): 40 px, radius
-/// 10; the chosen one primary-dim with a 1.5 px primary edge and a check.
-class _LibraryChip extends StatelessWidget {
-  final String name;
-  final bool selected;
-  final VoidCallback? onTap;
-  const _LibraryChip({
-    super.key,
-    required this.name,
-    required this.selected,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(10);
-    return Semantics(
-      inMutuallyExclusiveGroup: true,
-      checked: selected,
-      button: true,
-      child: KeepHitArea(
-        onTap: onTap,
-        child: Material(
-          color: selected ? VelvetColors.primaryDim : Colors.transparent,
-          borderRadius: radius,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 40, minWidth: 96),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: selected ? VelvetColors.primary : VelvetColors.border2,
-                width: selected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (selected) ...[
-                  Icon(Icons.check, size: 16, color: VelvetColors.textPrimary),
-                  const SizedBox(width: 6),
-                ],
-                Flexible(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One layout: a radio, its name, and under it the template in monospace
-/// (Custom's line in the plain face, read as its [hint]).
-class _LayoutOption extends StatelessWidget {
-  final String label;
-  final String sub;
-  final bool mono;
-  final String? hint;
-  final bool selected;
-  final VoidCallback? onTap;
-  const _LayoutOption({
-    super.key,
-    required this.label,
-    required this.sub,
-    this.mono = true,
-    this.hint,
-    required this.selected,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    inMutuallyExclusiveGroup: true,
-    checked: selected,
-    button: true,
-    label: label,
-    hint: hint,
-    onTap: onTap,
-    excludeSemantics: true,
-    child: InkWell(
-      onTap: onTap,
-      splashColor: VelvetColors.primaryDim,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? VelvetColors.primary
-                        : VelvetColors.textSecondary,
-                    width: 2,
-                  ),
-                ),
-                child: selected
-                    ? Center(
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: VelvetColors.primary,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: VelvetColors.textPrimary,
-                        fontSize: 15,
-                        height: 20 / 15,
-                      ),
-                    ),
-                    Text(
-                      sub,
-                      style: mono
-                          ? TextStyle(
-                              color: VelvetColors.textSecondary,
-                              fontFamily: 'monospace',
-                              fontSize: 11,
-                              height: 16 / 11,
-                            )
-                          : TextStyle(
-                              color: VelvetColors.textSecondary,
-                              fontSize: 12,
-                              height: 16 / 12,
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// A variable Custom inserts at its caret: the token in monospace on a
-/// 32 px chip, a 44 px target, named for a screen reader ("Insert artist").
-class _VarChip extends StatelessWidget {
-  final String token;
-  final String label;
-  final VoidCallback? onTap;
-  const _VarChip({
-    super.key,
-    required this.token,
-    required this.label,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    enabled: onTap != null,
-    label: label,
-    onTap: onTap,
-    excludeSemantics: true,
-    child: KeepHitArea(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 32),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: VelvetColors.raised,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: VelvetColors.border2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                token,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: onTap == null
-                      ? VelvetColors.textTertiary
-                      : VelvetColors.textPrimary,
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-/// Save: an outline in tertiary until there is something to save, then the
-/// primary fill; a ring while the PUT is out.
-class _SaveButton extends StatelessWidget {
-  final String label;
-  final bool busy;
-  final bool enabled;
-  final VoidCallback onTap;
-  const _SaveButton({
-    required this.label,
-    required this.busy,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final on = enabled && !busy;
-    final fg = on ? VelvetColors.onPrimary : VelvetColors.textTertiary;
-    return Semantics(
-      button: true,
-      enabled: on,
-      child: KeepHitArea(
-        onTap: on ? onTap : null,
-        child: Container(
-          key: const ValueKey('destination-save'),
-          constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: on ? keepFill() : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            border: on ? null : Border.all(color: VelvetColors.border2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (busy) ...[
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: fg),
-                ),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(
-                  color: fg,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// No library, uploads off, a failed read: one card, one pill.
-class _BlockCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String? sub;
-  final Widget pill;
-  const _BlockCard({
-    super.key,
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    this.sub,
-    required this.pill,
-  });
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    child: Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
-      decoration: BoxDecoration(
-        color: VelvetColors.card,
-        border: Border.all(color: VelvetColors.border),
-        borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: VelvetColors.raised,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: VelvetColors.textPrimary,
-              fontSize: 15,
-              height: 20 / 15,
-            ),
-          ),
-          if (sub != null && sub!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              sub!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: VelvetColors.textSecondary,
-                fontSize: 13,
-                height: 18 / 13,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          pill,
-        ],
-      ),
-    ),
-  );
-}
 
 class _Block extends StatelessWidget {
   final double? width;
