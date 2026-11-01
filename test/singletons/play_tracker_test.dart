@@ -21,16 +21,20 @@ void main() {
           source: PlaySource.manual,
           playing: playing);
 
-  // Feed [samples] as (seconds of wall clock, position ms) pairs.
-  PlaySession feed(PlaySession s, List<(int, int)> samples) {
-    for (final (wallS, posMs) in samples) {
-      final r = PlaySessionFold.onPosition(
-          s, Duration(milliseconds: posMs), t0.add(Duration(seconds: wallS)));
+  // Feed [samples] as (ms of wall clock, position ms) pairs.
+  PlaySession feedMs(PlaySession s, List<(int, int)> samples) {
+    for (final (wallMs, posMs) in samples) {
+      final r = PlaySessionFold.onPosition(s, Duration(milliseconds: posMs),
+          t0.add(Duration(milliseconds: wallMs)));
       expect(r.restarted, isFalse);
       s = r.session;
     }
     return s;
   }
+
+  // The same with the wall clock in seconds.
+  PlaySession feed(PlaySession s, List<(int, int)> samples) =>
+      feedMs(s, [for (final (wallS, posMs) in samples) (wallS * 1000, posMs)]);
 
   group('PlaySessionFold.onPosition', () {
     test('steady playback accumulates the position deltas', () {
@@ -82,6 +86,25 @@ void main() {
       final r3 = PlaySessionFold.onPosition(
           noDur, Duration.zero, t0.add(const Duration(seconds: 10)));
       expect(r3.restarted, isFalse);
+    });
+
+    test('forward progress on a track shorter than the end guard is not a restart', () {
+      // Every sample of a 1 s track is "at the end" and under restartMax;
+      // none moved backwards, so it is one session played to the end.
+      var s = feedMs(open(facts: track.withDuration(1000)),
+          [for (var ms = 0; ms <= 1000; ms += 50) (ms, ms)]);
+      expect(s.playedMs, 1000);
+      // A 2.5 s track: its 0.5-1 s window reads the same way.
+      s = feedMs(open(facts: track.withDuration(2500)),
+          [for (var ms = 0; ms <= 2500; ms += 100) (ms, ms)]);
+      expect(s.playedMs, 2500);
+    });
+
+    test('a short track starting over is still a restart', () {
+      final s = feedMs(open(facts: track.withDuration(1000)), [(0, 0), (900, 900)]);
+      final r = PlaySessionFold.onPosition(
+          s, Duration.zero, t0.add(const Duration(milliseconds: 1000)));
+      expect(r.restarted, isTrue);
     });
   });
 

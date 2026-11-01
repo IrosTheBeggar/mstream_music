@@ -109,7 +109,10 @@ class PlaySessionFold {
   static const Duration endGuard = Duration(seconds: 2);
 
   /// A position under this, right after one at the end, is the same track
-  /// starting over (repeat-one, or a replay) rather than a seek.
+  /// starting over (repeat-one, or a replay) rather than a seek. The sample
+  /// must also have moved backwards: on a track shorter than [endGuard] plus
+  /// this, every position counts as "at the end" and as "under this", so
+  /// forward progress would read as one restart per sample.
   static const Duration restartMax = Duration(seconds: 1);
 
   /// A position delta is listening when it moved forward by no more than
@@ -136,6 +139,7 @@ class PlaySessionFold {
     }
     if (!s.seekPending &&
         s.playing &&
+        pos < last &&
         pos < restartMax &&
         reachedEnd(last, s.track.durationMs)) {
       return (session: s.copyWith(lastPos: pos, lastSampleAt: now), restarted: true);
