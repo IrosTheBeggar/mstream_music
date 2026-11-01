@@ -5842,11 +5842,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return '无法连接到服务器 $server。请检查它是否正在运行，然后重试。';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return '无法连接到服务器 $server — 请检查它是否正在运行，然后重试。';
   }
 }

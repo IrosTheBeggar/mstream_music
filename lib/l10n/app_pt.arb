@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Você está offline — tente novamente quando a conexão voltar.",
   "ytdlHelpVideoRelease": "Da data de lançamento do vídeo",
   "ytdlChooseLoading": "Carregando pastas",
-  "ytdlRowNoConnection": "Não começou · o celular não conseguiu acessar o servidor"
+  "ytdlRowNoConnection": "Não começou · o celular não conseguiu acessar o servidor",
+  "ytdlServerUnreachable": "Não foi possível acessar o servidor {server}. Verifique se ele está em execução e tente novamente.",
+  "ytdlErrAddUnreachable": "Não foi possível acessar o servidor {server} — verifique se ele está em execução e tente novamente."
 }

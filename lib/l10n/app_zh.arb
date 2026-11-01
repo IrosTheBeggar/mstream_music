@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "你已离线 — 恢复连接后请重试。",
   "ytdlHelpVideoRelease": "取自视频的发布日期",
   "ytdlChooseLoading": "正在加载文件夹",
-  "ytdlRowNoConnection": "未开始 · 手机无法连接服务器"
+  "ytdlRowNoConnection": "未开始 · 手机无法连接服务器",
+  "ytdlServerUnreachable": "无法连接到服务器 {server}。请检查它是否正在运行，然后重试。",
+  "ytdlErrAddUnreachable": "无法连接到服务器 {server} — 请检查它是否正在运行，然后重试。"
 }

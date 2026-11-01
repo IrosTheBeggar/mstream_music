@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Du bist offline – versuch es noch einmal, wenn du wieder online bist.",
   "ytdlHelpVideoRelease": "Aus dem Veröffentlichungsdatum des Videos",
   "ytdlChooseLoading": "Ordner werden geladen",
-  "ytdlRowNoConnection": "Nicht gestartet · das Telefon hat den Server nicht erreicht"
+  "ytdlRowNoConnection": "Nicht gestartet · das Telefon hat den Server nicht erreicht",
+  "ytdlServerUnreachable": "Der Server {server} ist nicht erreichbar. Prüfe, ob er läuft, und versuch es dann noch einmal.",
+  "ytdlErrAddUnreachable": "Der Server {server} ist nicht erreichbar – prüfe, ob er läuft, und versuch es dann noch einmal."
 }

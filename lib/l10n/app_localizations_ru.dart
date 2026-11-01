@@ -6361,11 +6361,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'Не удалось связаться с сервером $server. Проверьте, что он запущен, и попробуйте ещё раз.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'Не удалось связаться с сервером $server — проверьте, что он запущен, и попробуйте ещё раз.';
   }
 }

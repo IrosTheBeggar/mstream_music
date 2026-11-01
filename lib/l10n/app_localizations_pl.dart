@@ -6350,11 +6350,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'Nie można połączyć się z serwerem $server. Sprawdź, czy działa, i spróbuj ponownie.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'Nie można połączyć się z serwerem $server — sprawdź, czy działa, i spróbuj ponownie.';
   }
 }

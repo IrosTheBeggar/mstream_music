@@ -6231,11 +6231,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'Impossible de joindre le serveur $server. Vérifiez qu\'il est démarré, puis réessayez.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'Impossible de joindre le serveur $server — vérifiez qu\'il est démarré, puis réessayez.';
   }
 }

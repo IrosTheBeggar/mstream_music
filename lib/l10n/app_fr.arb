@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Vous êtes hors ligne — réessayez une fois la connexion revenue.",
   "ytdlHelpVideoRelease": "D'après la date de sortie de la vidéo",
   "ytdlChooseLoading": "Chargement des dossiers",
-  "ytdlRowNoConnection": "Non démarré · le téléphone n'a pas pu joindre le serveur"
+  "ytdlRowNoConnection": "Non démarré · le téléphone n'a pas pu joindre le serveur",
+  "ytdlServerUnreachable": "Impossible de joindre le serveur {server}. Vérifiez qu'il est démarré, puis réessayez.",
+  "ytdlErrAddUnreachable": "Impossible de joindre le serveur {server} — vérifiez qu'il est démarré, puis réessayez."
 }

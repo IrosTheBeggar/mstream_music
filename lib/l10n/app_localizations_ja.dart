@@ -5922,11 +5922,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return '$server に接続できませんでした。サーバーが起動しているか確認して、もう一度お試しください。';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return '$server に接続できませんでした — サーバーが起動しているか確認して、もう一度お試しください。';
   }
 }

@@ -6215,11 +6215,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'No se pudo contactar con $server. Comprueba que esté en marcha e inténtalo de nuevo.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'No se pudo contactar con $server — comprueba que esté en marcha e inténtalo de nuevo.';
   }
 }

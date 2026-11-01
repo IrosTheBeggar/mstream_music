@@ -6199,11 +6199,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'Impossibile raggiungere il server $server. Controlla che sia attivo, poi riprova.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'Impossibile raggiungere il server $server — controlla che sia attivo, poi riprova.';
   }
 }

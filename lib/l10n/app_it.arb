@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Sei offline — riprova quando tornerai online.",
   "ytdlHelpVideoRelease": "Dalla data di uscita del video",
   "ytdlChooseLoading": "Caricamento delle cartelle",
-  "ytdlRowNoConnection": "Non avviato · il telefono non è riuscito a raggiungere il server"
+  "ytdlRowNoConnection": "Non avviato · il telefono non è riuscito a raggiungere il server",
+  "ytdlServerUnreachable": "Impossibile raggiungere il server {server}. Controlla che sia attivo, poi riprova.",
+  "ytdlErrAddUnreachable": "Impossibile raggiungere il server {server} — controlla che sia attivo, poi riprova."
 }

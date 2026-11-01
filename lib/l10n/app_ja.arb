@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "オフラインです — 接続が戻ったら、もう一度お試しください。",
   "ytdlHelpVideoRelease": "動画の公開日から",
   "ytdlChooseLoading": "フォルダーを読み込み中",
-  "ytdlRowNoConnection": "開始されませんでした · 端末がサーバーに接続できませんでした"
+  "ytdlRowNoConnection": "開始されませんでした · 端末がサーバーに接続できませんでした",
+  "ytdlServerUnreachable": "{server} に接続できませんでした。サーバーが起動しているか確認して、もう一度お試しください。",
+  "ytdlErrAddUnreachable": "{server} に接続できませんでした — サーバーが起動しているか確認して、もう一度お試しください。"
 }

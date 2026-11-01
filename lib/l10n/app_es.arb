@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Estás sin conexión — inténtalo de nuevo cuando vuelvas a conectarte.",
   "ytdlHelpVideoRelease": "De la fecha de publicación del vídeo",
   "ytdlChooseLoading": "Cargando carpetas",
-  "ytdlRowNoConnection": "No empezó · el teléfono no pudo contactar con el servidor"
+  "ytdlRowNoConnection": "No empezó · el teléfono no pudo contactar con el servidor",
+  "ytdlServerUnreachable": "No se pudo contactar con {server}. Comprueba que esté en marcha e inténtalo de nuevo.",
+  "ytdlErrAddUnreachable": "No se pudo contactar con {server} — comprueba que esté en marcha e inténtalo de nuevo."
 }

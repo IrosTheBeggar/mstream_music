@@ -6201,11 +6201,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String ytdlServerUnreachable(String server) {
-    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+    return 'Não foi possível acessar o servidor $server. Verifique se ele está em execução e tente novamente.';
   }
 
   @override
   String ytdlErrAddUnreachable(String server) {
-    return 'Can\'t reach $server — check that it\'s running, then try again.';
+    return 'Não foi possível acessar o servidor $server — verifique se ele está em execução e tente novamente.';
   }
 }

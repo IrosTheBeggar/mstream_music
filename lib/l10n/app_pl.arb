@@ -1603,5 +1603,7 @@
   "ytdlErrAddOffline": "Jesteś offline — spróbuj ponownie po powrocie połączenia.",
   "ytdlHelpVideoRelease": "Z daty premiery filmu",
   "ytdlChooseLoading": "Wczytywanie folderów",
-  "ytdlRowNoConnection": "Nie rozpoczęto · telefon nie mógł połączyć się z serwerem"
+  "ytdlRowNoConnection": "Nie rozpoczęto · telefon nie mógł połączyć się z serwerem",
+  "ytdlServerUnreachable": "Nie można połączyć się z serwerem {server}. Sprawdź, czy działa, i spróbuj ponownie.",
+  "ytdlErrAddUnreachable": "Nie można połączyć się z serwerem {server} — sprawdź, czy działa, i spróbuj ponownie."
 }
