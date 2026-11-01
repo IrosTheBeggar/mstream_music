@@ -6218,4 +6218,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get ytdlRowNoConnection =>
       'Nicht gestartet · das Telefon hat den Server nicht erreicht';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Can\'t reach $server — check that it\'s running, then try again.';
+  }
 }

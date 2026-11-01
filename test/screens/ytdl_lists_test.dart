@@ -352,6 +352,7 @@ void main() {
       'other words': ('other', 'Not A Directory', 'mp3', 'The server said: “Not A Directory”', true),
       'other, no words': ('other', 'HTTP 502', 'mp3', 'Something went wrong on the server.', true),
       'offline': ('offline', null, 'mp3', "Didn't start · the phone couldn't reach the server", true),
+      'unreachable': ('unreachable', null, 'mp3', "Didn't start · the phone couldn't reach the server", true),
       'yt-dlp missing': ('ytdlpMissing', null, 'mp3',
           "This server can't download from YouTube yet. Ask its admin to set up yt-dlp.", true),
     };

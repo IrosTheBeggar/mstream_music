@@ -7,9 +7,10 @@
 // Try again and adds again), uploads off, a lost library, no route, a
 // format turned off (its "pick another" opens the menu), a bare 500, the
 // server's own words, a folder that could not be made (Try again, Choose
-// a folder…), no connection — and "Already adding to this folder"; the
-// button gone while conversion is off, the line saying why (also after a
-// re-ping that says not ready); the bar stacking at 200% text.
+// a folder…), no connection (offline, or the server named when the phone
+// is online) — and "Already adding to this folder"; the button gone while
+// conversion is off, the line saying why (also after a re-ping that says
+// not ready); the bar stacking at 200% text.
 
 import 'dart:io' show SocketException;
 
@@ -240,14 +241,39 @@ void main() {
       expect(byKey('ytdl-add-error'), findsNothing);
     });
 
-    testWidgets('no connection for the add: its own line', (t) async {
+    testWidgets('no connection for the add, the phone offline: its own line',
+        (t) async {
       await ready(t);
-      h().fake.addThrows =
-          const SocketException('Connection refused');
+      h().network = false;
+      h().fake.addThrows = const SocketException('Network is unreachable');
       await t.tap(byKey('ytdl-add'));
       await ui.settle(t);
       await ui.settle(t);
       expect(errorLine(t), h().l.ytdlErrAddOffline);
+    });
+
+    testWidgets('the add refused with the phone online: the server named',
+        (t) async {
+      await ready(t);
+      h().fake.addThrows = const SocketException('Connection refused');
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      expect(errorLine(t), h().l.ytdlErrAddUnreachable('music.example'));
+      expect(addEnabled(t), isTrue);
+    });
+
+    testWidgets('a mkdir refused with the phone online: the server named, not '
+        'the folder', (t) async {
+      h().fake.mkdirThrows = const SocketException('Connection refused');
+      final d = await ui.pumpScreen(t, s);
+      await ui.paste(t, d, kOneMoreTime);
+      await t.tap(byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      expect(errorLine(t), h().l.ytdlErrAddUnreachable('music.example'));
+      expect(byKey('ytdl-mkdir-choose'), findsNothing);
+      expect(h().fake.count('POST', '/api/v1/ytdl/'), 0);
     });
 
     testWidgets('the same link to the same folder: "Already adding", Add off',

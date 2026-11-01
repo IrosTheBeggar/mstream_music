@@ -269,9 +269,9 @@ class YtdlRecordPage {
 }
 
 /// [cause] is a connection the phone could not even open — no route,
-/// refused, no such host — so the request never left it: offline, never
-/// retried off a tunnel, and a POST with this cause certainly started
-/// nothing.
+/// refused, no such host — so the request never left it: offline (or, the
+/// phone online, the server unreachable), never retried off a tunnel, and
+/// a POST with this cause certainly started nothing.
 bool ytdlNeverConnected(Object cause) {
   final e = cause is YtdlApiException ? cause.cause : cause;
   if (e is! SocketException) return false;

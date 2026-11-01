@@ -6,6 +6,7 @@ import '../../theme/velvet_theme.dart';
 import '../../util/ytdl_errors.dart';
 import '../../util/ytdl_guess.dart';
 import '../../util/ytdl_link.dart';
+import '../auto_dj_sheets.dart' show autoDjServerName;
 import '../discovery/keep_copy_ui.dart';
 import 'ytdl_card_parts.dart';
 import 'ytdl_crumbs.dart';
@@ -17,11 +18,12 @@ import 'ytdl_tag_fields.dart';
 /// the LookingUp, Found…, LinkStates and ServerStates boards): the lookup's
 /// skeleton ("Reading the video…", "Still looking…" with "Enter details
 /// yourself"); a failed or timed-out lookup with "Enter details" and "Try
-/// again"; the offline banner; the yt-dlp-missing panel in place of the
-/// card; or the result card itself — the late-answer strip, the cover and
-/// tags, where they came from, what cleaning removed, the link's notes,
-/// "Edit tags" and its fields, SAVES TO, the name check and the noMkdir
-/// choices.
+/// again"; the offline banner, or the server named with "Try again" when
+/// the phone is online and the server would not connect; the
+/// yt-dlp-missing panel in place of the card; or the result card itself —
+/// the late-answer strip, the cover and tags, where they came from, what
+/// cleaning removed, the link's notes, "Edit tags" and its fields, SAVES
+/// TO, the name check and the noMkdir choices.
 ///
 /// The found card is one summary node for a screen reader ("One More Time,
 /// by Daft Punk, album Discovery, 2001. Tags from YouTube Music. Saves to
@@ -87,6 +89,8 @@ class YtdlResultCard extends StatelessWidget {
             text: l.ytdlOffline,
           ),
         );
+      case YtdlLookupState.unreachable:
+        return _withNotes(l, _unreachable(l));
       case YtdlLookupState.idle:
       case YtdlLookupState.loading:
       case YtdlLookupState.slow:
@@ -301,6 +305,23 @@ class YtdlResultCard extends StatelessWidget {
       ],
     );
   }
+
+  /// The phone is online and the server would not connect: named, with
+  /// "Try again" (it also runs again by itself, as offline does). Add
+  /// waits ([YtdlBlock.unreachable]).
+  Widget _unreachable(AppLocalizations l) => YtdlNote(
+    key: const ValueKey('ytdl-unreachable'),
+    icon: Icons.dns_outlined,
+    text: l.ytdlServerUnreachable(autoDjServerName(_d.owner.server)),
+    children: [
+      YtdlTextLink(
+        l.discoverPageRetry,
+        key: const ValueKey('ytdl-unreachable-retry'),
+        padding: const EdgeInsetsDirectional.only(end: 12),
+        onTap: _d.retryLookup,
+      ),
+    ],
+  );
 
   /// In place of the card: the server has no yt-dlp (remembered for the
   /// session); "Try again" asks once more. No action bar under it.

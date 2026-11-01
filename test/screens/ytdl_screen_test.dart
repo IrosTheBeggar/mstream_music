@@ -7,14 +7,15 @@
 // a short link, a scheme added, a video in a playlist, a live link by
 // tier), every lookup state (reading, slow and Enter details yourself,
 // failed and timed out with Enter details and Try again, failed after
-// manual entry, the late answer and Use them, offline, yt-dlp missing),
-// Add (the field clears and focus drops after a 200), Clear link, no
-// keyboard brought back by a sheet or a menu closing, the screen staying
-// when a re-ping turns the feature off (the card and the lookup go on, Add
-// off or gone with the line saying why), a tag field kept in view with
-// SAVES TO above the keyboard — also when the Where sheet asks for one —
-// the iPhone's Done bar over the Year number pad, and 360 dp at 200% text
-// without overflow or a word cut off.
+// manual entry, the late answer and Use them, offline, the server
+// unreachable with Try again, yt-dlp missing), Add (the field clears and
+// focus drops after a 200), Clear link, no keyboard brought back by a
+// sheet or a menu closing, the screen staying when a re-ping turns the
+// feature off (the card and the lookup go on, Add off or gone with the
+// line saying why), a tag field kept in view with SAVES TO above the
+// keyboard — also when the Where sheet asks for one — the iPhone's Done
+// bar over the Year number pad, and 360 dp at 200% text without overflow
+// or a word cut off.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -321,6 +322,7 @@ void main() {
       expect(byKey('ytdl-skeleton'), findsOneWidget);
       expect(byKey('ytdl-live'), findsOneWidget);
       h().fake.holdLookups = false;
+      h().network = false;
       h().fake.lookupThrows = const SocketException('Failed host lookup');
       d.retryLookup();
       await ui.settle(t);
@@ -333,12 +335,34 @@ void main() {
     });
 
     testWidgets('offline: the banner, Add off', (t) async {
+      h().network = false;
       h().fake.lookupThrows = const SocketException('Failed host lookup');
       final d = await ui.pumpScreen(t, s);
       await ui.paste(t, d, kOneMoreTime);
       expect(byKey('ytdl-offline'), findsOneWidget);
       expect(find.text(h().l.ytdlOffline), findsOneWidget);
+      expect(byKey('ytdl-unreachable'), findsNothing);
       expect(_addEnabled(t), isFalse);
+    });
+
+    testWidgets('the server not running, the phone online: the server named '
+        'with Try again, Add off with no line of its own', (t) async {
+      h().fake.lookupThrows = const SocketException('Connection refused');
+      final d = await ui.pumpScreen(t, s);
+      await ui.paste(t, d, kOneMoreTime);
+      expect(byKey('ytdl-unreachable'), findsOneWidget);
+      expect(find.text(h().l.ytdlServerUnreachable('music.example')),
+          findsOneWidget);
+      expect(byKey('ytdl-offline'), findsNothing);
+      expect(find.text(h().l.ytdlOffline), findsNothing);
+      expect(_addEnabled(t), isFalse);
+      expect(byKey('ytdl-add-error'), findsNothing);
+      h().fake.lookupThrows = null;
+      await t.tap(byKey('ytdl-unreachable-retry'));
+      await ui.settle(t);
+      expect(h().fake.count('GET', '/ytdl/metadata'), 2);
+      expect(byKey('ytdl-unreachable'), findsNothing);
+      expect(byKey('ytdl-card'), findsOneWidget);
     });
 
     testWidgets('yt-dlp missing: the panel in place of the card, no bar',

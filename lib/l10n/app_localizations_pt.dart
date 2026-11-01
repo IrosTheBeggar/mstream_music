@@ -6198,4 +6198,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get ytdlRowNoConnection =>
       'Não começou · o celular não conseguiu acessar o servidor';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Can\'t reach $server — check that it\'s running, then try again.';
+  }
 }

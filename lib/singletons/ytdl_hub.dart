@@ -13,6 +13,7 @@ import '../objects/ytdl_job.dart';
 import '../screens/discovery/keep_toast.dart';
 import '../screens/ytdl/ytdl_crumbs.dart';
 import '../screens/ytdl/ytdl_draft.dart';
+import '../util/connectivity_probe.dart';
 import '../util/discover_jobs.dart' show foldBase, pathCrumbs;
 import '../util/discovery_plugins_api.dart';
 import '../util/media_format.dart' show isM3u;
@@ -235,8 +236,13 @@ class YtdlHub with WidgetsBindingObserver {
 
   /// Waits for a tunnel server's tunnel before the add's one send — a
   /// wait, never a retry: before the tunnel is up the request would be
-  /// refused on the phone and read as offline.
+  /// refused on the phone and read as no connection.
   Future<bool> Function(Server server) awaitTunnel = _defaultAwaitTunnel;
+
+  /// Whether the phone has a usable network ([hasConnectivity], failing
+  /// open): asked when a lookup, a mkdir or the add could not connect, to
+  /// tell "you're offline" from a server that is not running.
+  Future<bool> Function() hasNetwork = _defaultHasNetwork;
 
   /// The account's collection destination (Discover's "Same as Discover"
   /// and the libraries' templates), read only.
@@ -291,6 +297,8 @@ class YtdlHub with WidgetsBindingObserver {
           server: server,
           timeout: const Duration(seconds: 12),
           caller: 'ytdl-add');
+
+  static Future<bool> _defaultHasNetwork() => hasConnectivity();
 
   static Future<DestinationView> _defaultDestination(Server server) =>
       DiscoveryPluginsApi(server).destination();
@@ -366,6 +374,7 @@ class YtdlHub with WidgetsBindingObserver {
     clipboardHasText = _defaultHasText;
     clipboardText = _defaultClipText;
     awaitTunnel = _defaultAwaitTunnel;
+    hasNetwork = _defaultHasNetwork;
     destinationOf = _defaultDestination;
     pathTemplatesOf = _defaultPathTemplates;
     explorerFiles = _defaultExplorerFiles;
@@ -447,6 +456,22 @@ class YtdlHub with WidgetsBindingObserver {
     for (final s in _states.values) {
       s._foregroundChanged(fg);
     }
+  }
+
+  /// [f], with a connection that could not be made placed: on the phone
+  /// when it has no network ([YtdlProblem.offline], as classified), else on
+  /// the server ([YtdlProblem.unreachable] — "Can't reach {server}"). Every
+  /// other failure stands. A probe that throws counts as a network, as
+  /// [hasConnectivity] does.
+  Future<YtdlFailure> refineOffline(YtdlFailure f) async {
+    if (f.problem != YtdlProblem.offline) return f;
+    bool network;
+    try {
+      network = await hasNetwork();
+    } catch (_) {
+      network = true;
+    }
+    return network ? const YtdlFailure(YtdlProblem.unreachable) : f;
   }
 
   /// The device has a usable network again (main.dart's connectivity
@@ -1368,6 +1393,8 @@ class YtdlServerState extends ChangeNotifier {
           case YtdlProblem.mkdirOff:
             _mkdirRefused = true;
             unawaited(_reping());
+          // No connection is no folder failure: offline, or the server
+          // unreachable ([_startFailed] tells which).
           case YtdlProblem.offline:
           case YtdlProblem.libraryGone:
             break;
@@ -1477,7 +1504,8 @@ class YtdlServerState extends ChangeNotifier {
 
   /// A POST with no answer that may have reached the server: a timeout,
   /// or a connection lost mid-flight. One the phone could not even open
-  /// (no route, refused, no such host) never left it — that is offline.
+  /// (no route, refused, no such host) never left it — that is offline, or
+  /// the server unreachable.
   static bool _wentOut(Object e) {
     if (e is! YtdlApiException || e.status != 0) return false;
     if (e.timedOut) return true;
@@ -1486,13 +1514,16 @@ class YtdlServerState extends ChangeNotifier {
 
   /// A start that failed before the server took it: its surface's to show
   /// when [inline] says so, else a "Couldn't add" row and toast. A lost
-  /// library's name comes from the folder when the server's words lack it.
-  YtdlStartOutcome _startFailed(
-      YtdlJob job, YtdlFailure failure, bool Function()? inline) {
-    final f = failure.problem == YtdlProblem.libraryGone &&
-            failure.detail == null
+  /// library's name comes from the folder when the server's words lack it;
+  /// a connection that could not be made (the mkdir's, the tunnel's, the
+  /// POST's) is placed on the phone or the server ([YtdlHub.refineOffline]).
+  Future<YtdlStartOutcome> _startFailed(
+      YtdlJob job, YtdlFailure failure, bool Function()? inline) async {
+    final placed = await hub.refineOffline(failure);
+    final f = placed.problem == YtdlProblem.libraryGone &&
+            placed.detail == null
         ? YtdlFailure(YtdlProblem.libraryGone, _libraryOf(job.directory))
-        : failure;
+        : placed;
     if (_disposed) return YtdlStartOutcome(failure: f, job: job);
     if (inline?.call() == true) {
       discardStartFailure(job);

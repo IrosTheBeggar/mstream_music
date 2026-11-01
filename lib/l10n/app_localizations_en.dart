@@ -6141,4 +6141,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ytdlRowNoConnection =>
       'Didn\'t start · the phone couldn\'t reach the server';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Can\'t reach $server — check that it\'s running, then try again.';
+  }
 }

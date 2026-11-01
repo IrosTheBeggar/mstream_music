@@ -201,7 +201,7 @@ class YtdlActionBar extends StatelessWidget {
   /// the button waits ("Already adding to this folder", uploads off) or is
   /// gone (audio conversion off, spec §8). The card already says the rest
   /// (looking up, a clash, a folder the account can't make, a bad year,
-  /// the offline banner).
+  /// the offline banner, the server that would not connect).
   Widget? _message(BuildContext context, AppLocalizations l) {
     final err = keepTone(VelvetColors.error);
     Widget error(String text, {List<Widget> links = const []}) => Column(
@@ -264,6 +264,10 @@ class YtdlActionBar extends StatelessWidget {
           return error(l.ytdlYtdlpMissing);
         case YtdlProblem.offline:
           return error(l.ytdlErrAddOffline);
+        case YtdlProblem.unreachable:
+          return error(
+            l.ytdlErrAddUnreachable(autoDjServerName(_d.owner.server)),
+          );
         case YtdlProblem.serverError:
         case YtdlProblem.lookupFailed:
         case YtdlProblem.timedOut:

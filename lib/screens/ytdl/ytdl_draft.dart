@@ -17,6 +17,8 @@ import '../../util/ytdl_link.dart';
 import 'ytdl_crumbs.dart';
 
 /// Where the result card's lookup stands (spec §3 Lookup, §8 States).
+/// [offline]: no connection, and the phone has no network. [unreachable]:
+/// no connection while it has one — the server is not running.
 enum YtdlLookupState {
   idle,
   loading,
@@ -26,6 +28,7 @@ enum YtdlLookupState {
   timedOut,
   ytdlpMissing,
   offline,
+  unreachable,
 }
 
 enum YtdlField { title, artist, album, year }
@@ -37,7 +40,8 @@ enum YtdlCheckState { idle, checking, known, unknown }
 enum YtdlAddPhase { idle, starting, failed }
 
 /// Why Add is disabled ([none] = enabled). [offline]: the lookup found no
-/// connection. [ytdlpMissing]: the server has no downloader — an add would
+/// connection. [unreachable]: nor did it reach the server, with the phone
+/// online. [ytdlpMissing]: the server has no downloader — an add would
 /// be refused the same way. [convertOff]: the server's audio conversion is
 /// off (a re-ping after "FFmpeg is not available yet" said so) — spec §8:
 /// the button goes and [YtdlServerState.entryAllowed] is false, so the
@@ -55,6 +59,7 @@ enum YtdlBlock {
   noLink,
   invalidLayout,
   offline,
+  unreachable,
   ytdlpMissing,
   convertOff,
 }
@@ -281,7 +286,7 @@ class YtdlDraft extends ChangeNotifier {
     // The sheet needs the tier for its name check and live note; the
     // screen asks it with the rest (onScreenOpened).
     if (isFolderSheet) unawaited(owner.probeTier());
-    if (_lookup == YtdlLookupState.offline) retryLookup();
+    if (_noConnection) retryLookup();
     _notify();
   }
 
@@ -292,10 +297,16 @@ class YtdlDraft extends ChangeNotifier {
   }
 
   /// The app came back to the front: a lookup that found no connection
-  /// runs again ("the lookup runs when you're back").
+  /// runs again ("the lookup runs when you're back") — the server's too,
+  /// which may have been started meanwhile.
   void resumed() {
-    if (_lookup == YtdlLookupState.offline) retryLookup();
+    if (_noConnection) retryLookup();
   }
+
+  /// The lookup could not connect: offline, or the server unreachable.
+  bool get _noConnection =>
+      _lookup == YtdlLookupState.offline ||
+      _lookup == YtdlLookupState.unreachable;
 
   // ── link (spec §3) ──────────────────────────────────────────────────────
 
@@ -384,7 +395,7 @@ class YtdlDraft extends ChangeNotifier {
       }
     } else if (immediate &&
         url != null &&
-        (_lookupTimer != null || _lookup == YtdlLookupState.offline)) {
+        (_lookupTimer != null || _noConnection)) {
       // A paste looks up at once — and pasting the link of a lookup that
       // found no connection asks again.
       _startLookup();
@@ -397,7 +408,8 @@ class YtdlDraft extends ChangeNotifier {
   YtdlLookupState get lookup => _lookup;
   YtdlMetadata? get meta => _meta;
 
-  /// Why the lookup failed (failed / timedOut / ytdlpMissing / offline).
+  /// Why the lookup failed (failed / timedOut / ytdlpMissing / offline /
+  /// unreachable).
   YtdlFailure? get lookupFailure => _lookupFailure;
 
   /// The tags as read from the lookup; [YtdlGuess.none] until one is used.
@@ -472,12 +484,15 @@ class YtdlDraft extends ChangeNotifier {
     } catch (e) {
       if (_disposed || rid != _rid) return;
       _slowTimer?.cancel();
-      final f = classifyYtdlLookup(e);
+      // No connection: the phone's network says whose it is.
+      final f = await _hub.refineOffline(classifyYtdlLookup(e));
+      if (_disposed || rid != _rid) return;
       _lookupFailure = f;
       _lookup = switch (f.problem) {
         YtdlProblem.ytdlpMissing => YtdlLookupState.ytdlpMissing,
         YtdlProblem.timedOut => YtdlLookupState.timedOut,
         YtdlProblem.offline => YtdlLookupState.offline,
+        YtdlProblem.unreachable => YtdlLookupState.unreachable,
         _ => YtdlLookupState.failed,
       };
       if (f.problem == YtdlProblem.ytdlpMissing) owner.ytdlpMissing = true;
@@ -1137,6 +1152,7 @@ class YtdlDraft extends ChangeNotifier {
     if (owner.server.transcodeAvailable == false) return YtdlBlock.convertOff;
     if (parsed.kind != YtdlLinkKind.video) return YtdlBlock.noLink;
     if (_lookup == YtdlLookupState.offline) return YtdlBlock.offline;
+    if (_lookup == YtdlLookupState.unreachable) return YtdlBlock.unreachable;
     if (_lookup == YtdlLookupState.ytdlpMissing) return YtdlBlock.ytdlpMissing;
     if (!_manual &&
         (_lookup == YtdlLookupState.idle ||

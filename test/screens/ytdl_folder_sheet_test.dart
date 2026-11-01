@@ -5,22 +5,24 @@
 // reads SAVES HERE; Add here sends the folder on screen unchanged with no
 // mkdir, stays open on "Starting…" until the server answers, closes on
 // 200 and shows a refusal inside (the lost library without "Pick another
-// library"); "Sort into subfolders…" turns the sheet to its second page —
-// the locked folder, the choices, the preview's new folder, Done applying
-// (SAVES TO, "Add to library"), back cancelling, Custom's refusals turning
-// Done off, the bracket warning's "Edit tags", the preview read once the
-// typing stops, Custom's field keeping what is typed and its chips named
-// by what they show — and is hidden under noMkdir; every sheet starting at
-// Right here (but an add still starting going where it was sent); the
-// name check by tier; the feature turned off by a re-ping leaving an
-// open sheet open (on either page, or stepped aside for the picker and
-// back with the pick; the lookup goes on, Add off or gone with the line
-// saying why, the field emptied too), and a stale menu item opening
-// nothing, saying why; no keyboard brought back by the format
-// menu closing; the subfolders page deaf to its draft once on its way out;
-// 360 dp at 200% without overflow.
+// library"; the server named when it would not connect, in the lookup's
+// note and the add's line); "Sort into subfolders…" turns the sheet to
+// its second page — the locked folder, the choices, the preview's new
+// folder, Done applying (SAVES TO, "Add to library"), back cancelling,
+// Custom's refusals turning Done off, the bracket warning's "Edit tags",
+// the preview read once the typing stops, Custom's field keeping what is
+// typed and its chips named by what they show — and is hidden under
+// noMkdir; every sheet starting at Right here (but an add still starting
+// going where it was sent); the name check by tier; the feature turned
+// off by a re-ping leaving an open sheet open (on either page, or stepped
+// aside for the picker and back with the pick; the lookup goes on, Add
+// off or gone with the line saying why, the field emptied too), and a
+// stale menu item opening nothing, saying why; no keyboard brought back
+// by the format menu closing; the subfolders page deaf to its draft once
+// on its way out; 360 dp at 200% without overflow.
 
 import 'dart:async';
+import 'dart:io' show SocketException;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -218,6 +220,29 @@ void main() {
     await ui.settle(t);
     expect(find.byType(YtdlFolderSheet), findsOneWidget);
     expect(find.text(h().l.ytdlErrLibraryGoneSheet('Music')), findsOneWidget);
+    expect(addLabel(t), h().l.ytdlAddHere);
+  });
+
+  testWidgets('the server not running, the phone online: the lookup and the '
+      'add name it inside the sheet', (t) async {
+    h().fake.lookupThrows = const SocketException('Connection refused');
+    final d = await filled(t);
+    expect(byKey('ytdl-unreachable'), findsOneWidget);
+    expect(find.text(h().l.ytdlServerUnreachable('music.example')),
+        findsOneWidget);
+    expect(enabled(t, 'ytdl-add'), isFalse);
+    h().fake.lookupThrows = null;
+    await t.tap(byKey('ytdl-unreachable-retry'));
+    await ui.settle(t);
+    expect(d.lookup, YtdlLookupState.found);
+    expect(enabled(t, 'ytdl-add'), isTrue);
+    h().fake.addThrows = const SocketException('Connection refused');
+    await t.tap(byKey('ytdl-add'));
+    await ui.settle(t);
+    await ui.settle(t);
+    expect(find.byType(YtdlFolderSheet), findsOneWidget);
+    expect(find.text(h().l.ytdlErrAddUnreachable('music.example')),
+        findsOneWidget);
     expect(addLabel(t), h().l.ytdlAddHere);
   });
 

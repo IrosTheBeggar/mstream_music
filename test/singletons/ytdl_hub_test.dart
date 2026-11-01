@@ -6,10 +6,12 @@
 // folder that never compare clocks, endings read from the download record
 // (origin, folder, at most five pages, one job per record) or the folder
 // (name clash), entries that vanish unseen, failures routed to the surface
-// that shows them or to a row and a toast, re-pings and the format reset.
-// Then persistence and resuming after a restart, polling only while a job
-// is open and the app is in front, the home summary and markSeen, the
-// lists, the remembered destination and format, and the account presets.
+// that shows them or to a row and a toast (a connection that could not be
+// made is offline only when the phone has no network, else the server is
+// unreachable), re-pings and the format reset. Then persistence and
+// resuming after a restart, polling only while a job is open and the app
+// is in front, the home summary and markSeen, the lists, the remembered
+// destination and format, and the account presets.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -103,6 +105,18 @@ void main() {
       expect(BrowserManager.homeYtdlRow(ytdlServer(noUpload: true)), isFalse);
       h.hub.reset();
       expect(BrowserManager.homeYtdlRow(s), isFalse);
+      h.wire();
+    });
+
+    test('reset restores the network probe', () async {
+      h.network = false;
+      expect(await h.hub.hasNetwork(), isFalse);
+      expect(h.networkAsks, 1);
+      h.hub.reset();
+      // The real probe: no connectivity plug-in under test, so it fails
+      // open — and the harness is not asked.
+      expect(await h.hub.hasNetwork(), isTrue);
+      expect(h.networkAsks, 1);
       h.wire();
     });
 
@@ -266,6 +280,7 @@ void main() {
       expect(named.job!.problemDetail, 'Daft Punk');
       expect(named.job!.mkdir, dir);
 
+      h.network = false;
       h.fake.mkdirThrows = const SocketException('Network is unreachable');
       final off = await state().start(h.request(url: kFeelGood, mkdir: dir, inline: () => true));
       expect(off.failure, const YtdlFailure(YtdlProblem.offline));
@@ -345,11 +360,45 @@ void main() {
       expect(unsure.timedOut, isTrue);
       expect(unsure.job!.state, YtdlJobState.startUnsure);
 
+      h.network = false;
       h.fake.addThrows = const SocketException('Failed host lookup: music.example');
       final off = await state().start(h.request(url: kFeelGood, inline: () => true));
       expect(off.timedOut, isFalse);
       expect(off.failure, const YtdlFailure(YtdlProblem.offline));
       expect(state().jobs.where((j) => j.url == kFeelGood), isEmpty);
+    });
+
+    test('refused with the phone online, the server is unreachable: a mkdir '
+        '(never a folder failure) or the add; a row of it tries again', () async {
+      h.fake.mkdirThrows = const SocketException('Connection refused');
+      final mk = await state().start(h.request(mkdir: dir, inline: () => true));
+      expect(mk.failure, const YtdlFailure(YtdlProblem.unreachable));
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+      expect(h.networkAsks, 1);
+
+      h.fake.mkdirThrows = null;
+      h.fake.addThrows = const SocketException('Connection refused');
+      final add = await state().start(h.request(url: kFeelGood, inline: () => false));
+      expect(add.timedOut, isFalse);
+      expect(add.failure, const YtdlFailure(YtdlProblem.unreachable));
+      expect(add.job!.state, YtdlJobState.startFailed);
+      expect(add.job!.problem, 'unreachable');
+      expect(h.toastTexts, [h.l.ytdlCouldntAdd('One More Time')]);
+      expect(h.networkAsks, 2);
+
+      // The server is back: Try again on the row adds.
+      h.fake.addThrows = null;
+      final again = await state().retry(add.job!);
+      expect(again.ok, isTrue);
+      expect(h.networkAsks, 2);
+
+      // No network: offline, as before.
+      h.network = false;
+      h.fake.mkdirThrows = const SocketException('Connection refused');
+      final off = await state().start(h.request(
+          url: kFeelGood, directory: '/Music/Gorillaz/', mkdir: '/Music/Gorillaz/',
+          inline: () => true));
+      expect(off.failure, const YtdlFailure(YtdlProblem.offline));
     });
 
     test('over a tunnel that is not up: a wait before the one send', () async {
@@ -358,10 +407,11 @@ void main() {
       final out = await state().start(h.request(directory: '/Music/'));
       expect(h.tunnelWaits, 1);
       expect(out.timedOut, isFalse);
-      expect(out.failure, const YtdlFailure(YtdlProblem.offline));
+      // The phone is online: the server is what can't be reached.
+      expect(out.failure, const YtdlFailure(YtdlProblem.unreachable));
       expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
       expect(out.job!.state, YtdlJobState.startFailed);
-      expect(out.job!.problem, 'offline');
+      expect(out.job!.problem, 'unreachable');
 
       h.tunnelReady = true;
       final ok = await state().start(h.request(directory: '/Music/', url: kFeelGood));

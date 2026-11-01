@@ -60,8 +60,17 @@ enum YtdlProblem {
   /// The client's bound ran out.
   timedOut,
 
-  /// No answer at all, not a timeout.
+  /// No answer at all, not a timeout. The classifiers say this for every
+  /// connection that could not be made; where it is shown, the phone's own
+  /// network is asked, and this stands only when it has none (spec §8
+  /// "Offline").
   offline,
+
+  /// No connection could be made while the phone has a network: the server
+  /// is not running, or refused ("Can't reach {server}. Check that it's
+  /// running, then try again."). Set by the hub and the draft in place of
+  /// [offline], never by a classifier.
+  unreachable,
 
   /// Anything else: shown as "The server said: “…”" with
   /// [YtdlFailure.detail].

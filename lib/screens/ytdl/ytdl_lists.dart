@@ -1294,7 +1294,9 @@ String _startFailedText(
     YtdlProblem.noRoute => l.ytdlErrNoRoute,
     YtdlProblem.badFormat => l.ytdlErrFormatOff(ytdlFormatName(job.codec)),
     YtdlProblem.badRequest => l.ytdlErrBadRequest,
-    YtdlProblem.offline => l.ytdlRowNoConnection,
+    // Without a network or with the server not running, the phone couldn't
+    // reach the server: true of both.
+    YtdlProblem.offline || YtdlProblem.unreachable => l.ytdlRowNoConnection,
     YtdlProblem.other => switch (
           ytdlServerWords(YtdlFailure(YtdlProblem.other, detail))) {
         final words? => l.ytdlErrOther(words),

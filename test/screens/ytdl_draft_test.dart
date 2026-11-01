@@ -1,13 +1,14 @@
 // YtdlDraft, the result card's state machine, against the scripted server
 // in ytdl_fakes: the link parsed and looked up (400 ms after typing, at once
 // on a paste; never for a playlist or another site; answers to older asks
-// dropped; slow after 8 s; failed, timed out, offline and yt-dlp missing),
-// manual entry and the late answer that fills only untouched fields; the
-// tags as tiers fill them, where each came from, the restore chips, the
-// artist strip, Undo all and Swap, the year rule and what is sent; the
-// destination (remembered, first use, just this song, Save), the explorer
-// sheet's folder and subfolders; the new-folder check (600 ms, walking up,
-// a file in the way, the name clash by tier, noMkdir's three choices); the
+// dropped; slow after 8 s; failed, timed out, offline, the server
+// unreachable with the phone online, and yt-dlp missing), manual entry and
+// the late answer that fills only untouched fields; the tags as tiers fill
+// them, where each came from, the restore chips, the artist strip, Undo
+// all and Swap, the year rule and what is sent; the destination
+// (remembered, first use, just this song, Save), the explorer sheet's
+// folder and subfolders; the new-folder check (600 ms, walking up, a file
+// in the way, the name clash by tier, noMkdir's three choices); the
 // format; and Add — every reason it is disabled, the reset after a 200, a
 // failure shown inline or left to a row, and the folder checked again
 // after an add that ran a mkdir failed.
@@ -198,9 +199,11 @@ void main() {
       final d = await found();
       expect(d.lookup, YtdlLookupState.timedOut);
       expect(d.block, YtdlBlock.none);
+      expect(h.networkAsks, 0, reason: 'only a connection that could not be made asks');
     });
 
     test('offline: Add waits, and the lookup runs again when the app is back', () async {
+      h.network = false;
       h.fake.lookupThrows = const SocketException('Network is unreachable');
       final d = await found();
       expect(d.lookup, YtdlLookupState.offline);
@@ -214,10 +217,64 @@ void main() {
     });
 
     test('… and when its screen shows again', () async {
+      h.network = false;
       h.fake.lookupThrows = const SocketException('Network is unreachable');
       final d = await found();
       h.fake.lookupThrows = null;
       d.attach();
+      await ytdlSettle();
+      expect(d.lookup, YtdlLookupState.found);
+    });
+
+    test('refused with the phone online: the server unreachable, Add waits; '
+        'Try again looks up once more', () async {
+      h.fake.lookupThrows = const SocketException('Connection refused');
+      final d = await found();
+      expect(h.networkAsks, 1);
+      expect(d.lookup, YtdlLookupState.unreachable);
+      expect(d.lookupFailure, const YtdlFailure(YtdlProblem.unreachable));
+      expect(d.block, YtdlBlock.unreachable);
+      h.fake.lookupThrows = null;
+      d.retryLookup();
+      await ytdlSettle();
+      expect(lookups(), 2);
+      expect(d.lookup, YtdlLookupState.found);
+      expect(d.block, isNot(YtdlBlock.unreachable));
+    });
+
+    test('… the same refusal with no network is offline, as before', () async {
+      h.network = false;
+      h.fake.lookupThrows = const SocketException('Connection refused');
+      final d = await found();
+      expect(h.networkAsks, 1);
+      expect(d.lookup, YtdlLookupState.offline);
+      expect(d.lookupFailure, const YtdlFailure(YtdlProblem.offline));
+      expect(d.block, YtdlBlock.offline);
+    });
+
+    test('… and unreachable runs again by itself as offline does: back in '
+        'front, shown again, the connection back, the link pasted again', () async {
+      h.fake.lookupThrows = const SocketException('Connection refused');
+      final d = await found();
+      expect(d.lookup, YtdlLookupState.unreachable);
+      h.hub.didChangeAppLifecycleState(AppLifecycleState.paused);
+      h.hub.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await ytdlSettle();
+      expect(lookups(), 2);
+      d.attach();
+      await ytdlSettle();
+      expect(lookups(), 3);
+      h.hub.connectivityRestored();
+      await ytdlSettle();
+      expect(lookups(), 4);
+      h.clipboard = kOneMoreTime;
+      await d.pasteFromClipboard();
+      await ytdlSettle();
+      expect(lookups(), 5);
+      expect(d.lookup, YtdlLookupState.unreachable);
+      // The server is up again.
+      h.fake.lookupThrows = null;
+      h.hub.connectivityRestored();
       await ytdlSettle();
       expect(d.lookup, YtdlLookupState.found);
     });
@@ -1199,6 +1256,7 @@ void main() {
     });
 
     test('an offline lookup runs again when the connection comes back', () async {
+      h.network = false;
       h.fake.lookupThrows = const SocketException('Network is unreachable');
       final d = await found();
       expect(d.lookup, YtdlLookupState.offline);
@@ -1209,6 +1267,7 @@ void main() {
     });
 
     test('… or when the same link is pasted again', () async {
+      h.network = false;
       h.fake.lookupThrows = const SocketException('Network is unreachable');
       final d = await found();
       h.fake.lookupThrows = null;

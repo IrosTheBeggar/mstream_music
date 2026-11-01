@@ -5839,4 +5839,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ytdlRowNoConnection => '未开始 · 手机无法连接服务器';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Can\'t reach $server — check that it\'s running, then try again.';
+  }
 }

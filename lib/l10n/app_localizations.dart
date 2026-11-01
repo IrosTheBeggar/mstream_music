@@ -9753,6 +9753,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Didn\'t start · the phone couldn\'t reach the server'**
   String get ytdlRowNoConnection;
+
+  /// Note in place of the result card of Add from YouTube when the video lookup could not connect to the server although the phone has a network (the server is not running or refused the connection). {server} is the server's name or address. A 'Try again' button follows; the lookup also runs again by itself when the app comes back.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach {server}. Check that it\'s running, then try again.'**
+  String ytdlServerUnreachable(String server);
+
+  /// Line above the add button of Add from YouTube when the add could not connect to the server although the phone has a network (the server is not running or refused the connection; nothing was sent, so nothing started). {server} is the server's name or address.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach {server} — check that it\'s running, then try again.'**
+  String ytdlErrAddUnreachable(String server);
 }
 
 class _AppLocalizationsDelegate

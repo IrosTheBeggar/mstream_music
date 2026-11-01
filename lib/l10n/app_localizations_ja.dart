@@ -5919,4 +5919,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ytdlRowNoConnection => '開始されませんでした · 端末がサーバーに接続できませんでした';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Can\'t reach $server. Check that it\'s running, then try again.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Can\'t reach $server — check that it\'s running, then try again.';
+  }
 }

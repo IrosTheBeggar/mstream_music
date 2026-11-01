@@ -7,6 +7,9 @@
 // request logged. And the time the hub and the draft run on: a clock the
 // test moves and timers that fire as it passes.
 //
+// The phone has a network unless a test says otherwise (`h.network =
+// false`): a connection that could not be made is then the server's.
+//
 // The usual setUp is one line — `h = YtdlHarness()..wire();` — and the
 // tearDown `h.unwire();`. In a widget test (fake async) wrap the waits in
 // `tester.runAsync`, or pump: the fake answers through MockClient.
@@ -576,6 +579,12 @@ class YtdlHarness {
   bool tunnelReady = true;
   int tunnelWaits = 0;
 
+  /// Whether the phone has a network, asked when no connection could be
+  /// made (a refused connection with it up is the server's doing). A test
+  /// that means the phone is offline sets it false.
+  bool network = true;
+  int networkAsks = 0;
+
   final AppLocalizations l = lookupAppLocalizations(const Locale('en'));
 
   YtdlHub get hub => YtdlHub();
@@ -595,6 +604,10 @@ class YtdlHarness {
     hub.awaitTunnel = (s) async {
       tunnelWaits++;
       return tunnelReady;
+    };
+    hub.hasNetwork = () async {
+      networkAsks++;
+      return network;
     };
     hub.destinationOf = (s) => DiscoveryPluginsApi(s, client: fake.client).destination();
     hub.pathTemplatesOf = (s) async {
