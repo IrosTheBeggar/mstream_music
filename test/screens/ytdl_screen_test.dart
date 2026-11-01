@@ -824,6 +824,35 @@ void main() {
       expect(label.overlaps(change), isFalse);
       expect(t.takeException(), isNull);
     });
+
+    testWidgets('360 dp at 200%: a long server name fits the unreachable '
+        'note and the add\'s line', (t) async {
+      s.url = 'http://music-server.living-room.home.arpa:4533';
+      const name = 'music-server.living-room.home.arpa:4533';
+      h().fake.folder('/Music/Daft Punk/');
+      h().fake.lookupThrows = const SocketException('Connection refused');
+      final d = await ui.pumpScreen(t, s,
+          size: const Size(360, 800), textScale: 2);
+      await ui.paste(t, d, kOneMoreTime);
+      await t.ensureVisible(byKey('ytdl-unreachable'));
+      await t.pump();
+      expect(find.text(h().l.ytdlServerUnreachable(name)), findsOneWidget);
+      expect(t.takeException(), isNull);
+
+      // The server is up for the lookup, gone again for the add.
+      h().fake.lookupThrows = null;
+      await tapIn(t, byKey('ytdl-unreachable-retry'));
+      await ui.settle(t);
+      expect(d.lookup, YtdlLookupState.found);
+      h().fake.addThrows = const SocketException('Connection refused');
+      await tapIn(t, byKey('ytdl-add'));
+      await ui.settle(t);
+      await ui.settle(t);
+      await t.ensureVisible(byKey('ytdl-add-error'));
+      await t.pump();
+      expect(find.text(h().l.ytdlErrAddUnreachable(name)), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
   });
 
   testWidgets('semantics: the link field, Clear link, the format chip',

@@ -8,10 +8,11 @@
 // (name clash), entries that vanish unseen, failures routed to the surface
 // that shows them or to a row and a toast (a connection that could not be
 // made is offline only when the phone has no network, else the server is
-// unreachable), re-pings and the format reset. Then persistence and
-// resuming after a restart, polling only while a job is open and the app
-// is in front, the home summary and markSeen, the lists, the remembered
-// destination and format, and the account presets.
+// unreachable — a probe that throws counts as a network), re-pings and the
+// format reset. Then persistence and resuming after a restart, polling
+// only while a job is open and the app is in front, the home summary and
+// markSeen, the lists, the remembered destination and format, and the
+// account presets.
 
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -401,6 +402,25 @@ void main() {
       expect(off.failure, const YtdlFailure(YtdlProblem.offline));
     });
 
+    test('a network probe that throws counts as a network, as hasConnectivity '
+        'fails open; a failure with an answer never asks', () async {
+      var asks = 0;
+      h.hub.hasNetwork = () async {
+        asks++;
+        throw StateError('no connectivity plug-in');
+      };
+      h.fake.addThrows = const SocketException('Connection refused');
+      final out = await state().start(h.request(inline: () => true));
+      expect(asks, 1);
+      expect(out.failure, const YtdlFailure(YtdlProblem.unreachable));
+
+      expect(await h.hub.refineOffline(const YtdlFailure(YtdlProblem.serverError)),
+          const YtdlFailure(YtdlProblem.serverError));
+      expect(await h.hub.refineOffline(const YtdlFailure(YtdlProblem.timedOut)),
+          const YtdlFailure(YtdlProblem.timedOut));
+      expect(asks, 1);
+    });
+
     test('over a tunnel that is not up: a wait before the one send', () async {
       s = ytdlIrohServer(tunnelUp: false);
       h.tunnelReady = false;
@@ -418,6 +438,19 @@ void main() {
       expect(ok.ok, isTrue);
       expect(h.tunnelWaits, 2);
       expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+    });
+
+    test('… and with the phone offline, a tunnel that is not up is offline', () async {
+      s = ytdlIrohServer(tunnelUp: false);
+      h.tunnelReady = false;
+      h.network = false;
+      final out = await state().start(h.request(directory: '/Music/'));
+      expect(h.tunnelWaits, 1);
+      expect(h.networkAsks, 1);
+      expect(out.failure, const YtdlFailure(YtdlProblem.offline));
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+      expect(out.job!.state, YtdlJobState.startFailed);
+      expect(out.job!.problem, 'offline');
     });
 
     test('no tunnel wait for a plain server', () async {
