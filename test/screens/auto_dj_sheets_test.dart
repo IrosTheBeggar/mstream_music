@@ -1575,17 +1575,17 @@ void main() {
 
     test('offered where the server has both kinds and can be asked for one',
         () {
-      expect(genreKindOffered(at('6.33.0'), const GenreSources(3, 5)), isTrue);
+      expect(genreKindOffered(at('6.32.2'), const GenreSources(3, 5)), isTrue);
       expect(genreKindOffered(at(null), const GenreSources(3, 5)), isTrue,
           reason: 'an unknown version is sent the key and learns');
-      expect(genreKindOffered(at('6.33.0'), const GenreSources(3, 0)), isFalse);
-      expect(genreKindOffered(at('6.33.0'), null), isFalse,
+      expect(genreKindOffered(at('6.32.2'), const GenreSources(3, 0)), isFalse);
+      expect(genreKindOffered(at('6.32.2'), null), isFalse,
           reason: 'not before the server says what it has');
       expect(genreKindOffered(at('6.32.1'), const GenreSources(3, 5)), isFalse);
     });
 
     test('sent: the stored kind, or every kind where the key is stripped', () {
-      expect(genreKindSent(at('6.33.0')), GenreSource.model);
+      expect(genreKindSent(at('6.32.2')), GenreSource.model);
       expect(genreKindSent(at(null, GenreSource.tag)), GenreSource.tag);
       expect(genreKindSent(at('6.32.1')), GenreSource.both);
     });
