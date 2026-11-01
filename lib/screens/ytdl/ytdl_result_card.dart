@@ -386,27 +386,23 @@ class YtdlResultCard extends StatelessWidget {
           quiet(_sourceLine(source)),
         ],
         if (cleaned) ...[
-          Row(
-            children: [
-              // Read on its own: the summary doesn't say what came out.
-              Expanded(
-                child: Text(
-                  l.ytdlCleanedFrom(_d.guess.rawTitle),
-                  style: TextStyle(
-                    color: VelvetColors.helper,
-                    fontSize: 12,
-                    height: 16 / 12,
-                  ),
-                ),
+          YtdlWordsWithLink(
+            // Read on its own: the summary doesn't say what came out.
+            words: Text(
+              l.ytdlCleanedFrom(_d.guess.rawTitle),
+              style: TextStyle(
+                color: VelvetColors.helper,
+                fontSize: 12,
+                height: 16 / 12,
               ),
-              YtdlTextLink(
-                l.ytdlUndoAll,
-                key: const ValueKey('ytdl-undo-all'),
-                fontSize: 13,
-                padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
-                onTap: _d.undoAll,
-              ),
-            ],
+            ),
+            link: YtdlTextLink(
+              l.ytdlUndoAll,
+              key: const ValueKey('ytdl-undo-all'),
+              fontSize: 13,
+              padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+              onTap: _d.undoAll,
+            ),
           ),
         ] else if (source != null)
           const SizedBox(height: 4),
@@ -487,37 +483,39 @@ class YtdlResultCard extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Semantics(
-            liveRegion: true,
-            container: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l.ytdlLateFound,
-                  style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 14,
+          child: YtdlWordsWithLink(
+            words: Semantics(
+              liveRegion: true,
+              container: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.ytdlLateFound,
+                    style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
-                ),
-                Text(
-                  l.ytdlLateEditsStay,
-                  style: TextStyle(
-                    color: VelvetColors.textSecondary,
-                    fontSize: 12,
-                    height: 16 / 12,
+                  Text(
+                    l.ytdlLateEditsStay,
+                    style: TextStyle(
+                      color: VelvetColors.textSecondary,
+                      fontSize: 12,
+                      height: 16 / 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+            link: YtdlTextLink(
+              l.ytdlLateUseThem,
+              key: const ValueKey('ytdl-use-late'),
+              onTap: _d.useLateAnswer,
             ),
           ),
-        ),
-        YtdlTextLink(
-          l.ytdlLateUseThem,
-          key: const ValueKey('ytdl-use-late'),
-          onTap: _d.useLateAnswer,
         ),
       ],
     ),

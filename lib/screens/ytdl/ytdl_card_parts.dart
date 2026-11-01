@@ -132,8 +132,10 @@ class YtdlTextLink extends StatelessWidget {
   final IconData? trailingIcon;
   final EdgeInsetsGeometry padding;
 
-  /// Wraps onto more lines instead of ellipsizing (the clash panel's long
-  /// "Change format — …" link).
+  /// Wraps onto more lines rather than cut its words — a long translation
+  /// ("Künstler und Titel tauschen") or large text, where an ellipsis would
+  /// leave a button that no longer says what it does. False keeps one line,
+  /// ellipsized.
   final bool wrap;
 
   const YtdlTextLink(
@@ -144,8 +146,51 @@ class YtdlTextLink extends StatelessWidget {
     this.icon,
     this.trailingIcon,
     this.padding = const EdgeInsets.symmetric(horizontal: 8),
-    this.wrap = false,
+    this.wrap = true,
   });
+
+  /// The same link on other [padding] (one that moves under its words).
+  YtdlTextLink withPadding(EdgeInsetsGeometry padding) => YtdlTextLink(
+    label,
+    key: key,
+    onTap: onTap,
+    fontSize: fontSize,
+    icon: icon,
+    trailingIcon: trailingIcon,
+    padding: padding,
+    wrap: wrap,
+  );
+
+  TextStyle _style(Color ink) => TextStyle(
+    color: ink,
+    fontSize: fontSize,
+    fontWeight: FontWeight.w600,
+    height: 18 / 14,
+  );
+
+  /// How wide the link draws on one line — words, icons and padding, in
+  /// the face and text scale of [context] — for a row deciding whether it
+  /// still fits beside other words.
+  double naturalWidth(BuildContext context) {
+    final dir = Directionality.of(context);
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: DefaultTextStyle.of(
+          context,
+        ).style.merge(_style(VelvetColors.primary)),
+      ),
+      textDirection: dir,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final words = tp.width;
+    tp.dispose();
+    return words.ceilToDouble() +
+        padding.resolve(dir).horizontal +
+        (icon != null ? 18 + 6 : 0) +
+        (trailingIcon != null ? 2 + 18 : 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,12 +199,7 @@ class YtdlTextLink extends StatelessWidget {
       label,
       maxLines: wrap ? null : 1,
       overflow: wrap ? null : TextOverflow.ellipsis,
-      style: TextStyle(
-        color: ink,
-        fontSize: fontSize,
-        fontWeight: FontWeight.w600,
-        height: 18 / 14,
-      ),
+      style: _style(ink),
     );
     return Semantics(
       button: true,
@@ -193,6 +233,44 @@ class YtdlTextLink extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Words with a link at their end ("Cleaned from …" · Undo all, "Details
+/// found" · Use them): the link beside them while it takes at most half
+/// the row, else on its own line under them ([below] its padding there, so
+/// it lines up with the words). A long translation of the link, or large
+/// text, would otherwise squeeze the words into a column a word wide.
+class YtdlWordsWithLink extends StatelessWidget {
+  final Widget words;
+  final YtdlTextLink link;
+  final EdgeInsetsGeometry below;
+
+  const YtdlWordsWithLink({
+    super.key,
+    required this.words,
+    required this.link,
+    this.below = const EdgeInsetsDirectional.only(end: 8),
+  });
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      if (!box.maxWidth.isFinite ||
+          link.naturalWidth(context) <= box.maxWidth / 2) {
+        return Row(
+          children: [
+            Expanded(child: words),
+            link,
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [words, link.withPadding(below)],
+      );
+    },
+  );
 }
 
 /// An outlined pill (Enter details, a mkdir's Try again): 40 px drawn,

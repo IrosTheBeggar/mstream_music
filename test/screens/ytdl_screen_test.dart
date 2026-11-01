@@ -730,6 +730,76 @@ void main() {
       await t.pump();
       expect(t.takeException(), isNull);
     });
+
+    // The test font draws every glyph a full em wide, so at 200% these
+    // English words are as long as the German and Russian ones that broke.
+
+    testWidgets('360 dp at 200%: a link too long for its line wraps, its '
+        'words never cut', (t) async {
+      h().fake.folder('/Music/Gorillaz/');
+      final d = await ui.pumpScreen(t, s,
+          size: const Size(360, 800), textScale: 2);
+      await ui.paste(t, d, kFeelGood);
+      d.openTags();
+      await t.pump();
+      final swap = t.renderObject<RenderParagraph>(find.descendant(
+          of: byKey('ytdl-swap'), matching: find.byType(RichText)));
+      expect(swap.didExceedMaxLines, isFalse,
+          reason: '"Swap artist and title" whole, not "Swap artist an…"');
+      expect(swap.size.height,
+          greaterThanOrEqualTo(swap.getMaxIntrinsicHeight(swap.size.width) - 0.5));
+    });
+
+    testWidgets('360 dp at 200%: Undo all too wide to sit beside "Cleaned '
+        'from …" goes under it rather than squeeze it', (t) async {
+      h().fake.folder('/Music/Gorillaz/');
+      final d = await ui.pumpScreen(t, s,
+          size: const Size(360, 800), textScale: 2);
+      await ui.paste(t, d, kFeelGood);
+      final words = t.getRect(find.textContaining('Cleaned from'));
+      final undo = t.getRect(byKey('ytdl-undo-all'));
+      expect(undo.top, greaterThanOrEqualTo(words.bottom - 0.5));
+      expect(words.width, greaterThan(t.getRect(byKey('ytdl-card')).width / 2),
+          reason: 'the words keep the row, not a column a word wide');
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('360 dp at 200%: the late answer\'s Use them goes under its '
+        'words rather than squeeze them', (t) async {
+      h().fake.holdLookups = true;
+      h().fake.folder('/Music/Daft Punk/');
+      final d = await ui.pumpScreen(t, s,
+          size: const Size(360, 800), textScale: 2);
+      d.link.text = kOneMoreTime;
+      await ui.settle(t, YtdlDraft.kLookupDebounce);
+      await ui.settle(t, YtdlDraft.kSlowAfter);
+      await tapIn(t, byKey('ytdl-enter-yourself'));
+      await t.pump();
+      await t.enterText(byKey('ytdl-field-title'), 'One more time');
+      for (final c in h().fake.heldLookups) {
+        c.complete();
+      }
+      await ui.settle(t, YtdlDraft.kCheckAfter);
+      expect(byKey('ytdl-late'), findsOneWidget);
+      final words = t.getRect(find.text(h().l.ytdlLateFound));
+      final use = t.getRect(byKey('ytdl-use-late'));
+      expect(use.top, greaterThanOrEqualTo(words.bottom - 0.5));
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('360 dp at 200%: SAVES TO wraps short of "Change ›", never '
+        'under it', (t) async {
+      h().fake.folder('/Music/Gorillaz/');
+      final d = await ui.pumpScreen(t, s,
+          size: const Size(360, 800), textScale: 2);
+      await ui.paste(t, d, kFeelGood);
+      final label = t.getRect(find.text(h().l.ytdlSavesTo.toUpperCase()));
+      final change = t.getRect(find.descendant(
+          of: byKey('ytdl-saves-change'),
+          matching: find.text(h().l.discoverKeepChange)));
+      expect(label.overlaps(change), isFalse);
+      expect(t.takeException(), isNull);
+    });
   });
 
   testWidgets('semantics: the link field, Clear link, the format chip',

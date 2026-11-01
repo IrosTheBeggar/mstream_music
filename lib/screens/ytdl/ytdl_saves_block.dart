@@ -51,6 +51,15 @@ class YtdlSavesBlock extends StatelessWidget {
     final here =
         sheet && _d.subLayout == kYtdlLayoutTop && _d.justThisSong == null;
     final blank = _d.lookupBlank;
+    final change = sheet
+        ? null
+        : YtdlTextLink(
+            l.discoverKeepChange,
+            key: const ValueKey('ytdl-saves-change'),
+            trailingIcon: Icons.chevron_right,
+            padding: const EdgeInsetsDirectional.only(start: 8),
+            onTap: onChange,
+          );
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -58,7 +67,15 @@ class YtdlSavesBlock extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 20),
           child: Align(
             alignment: AlignmentDirectional.centerStart,
-            child: YtdlFieldLabel(here ? l.ytdlSavesHere : l.ytdlSavesTo),
+            // Clear of "Change ›" drawn over its line: a long label (WIRD
+            // GESPEICHERT IN) or large text wraps short of it rather than
+            // running under it.
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(
+                end: change?.naturalWidth(context) ?? 0,
+              ),
+              child: YtdlFieldLabel(here ? l.ytdlSavesHere : l.ytdlSavesTo),
+            ),
           ),
         ),
         const SizedBox(height: 4),
@@ -105,7 +122,7 @@ class YtdlSavesBlock extends StatelessWidget {
         ],
       ],
     );
-    if (sheet) {
+    if (change == null) {
       return Padding(padding: const EdgeInsets.only(top: 10), child: body);
     }
     // "Change ›" sits on the label's line; its 48 px band reaches into the
@@ -114,17 +131,7 @@ class YtdlSavesBlock extends StatelessWidget {
     return Stack(
       children: [
         Padding(padding: const EdgeInsets.only(top: 14), child: body),
-        PositionedDirectional(
-          top: 0,
-          end: 0,
-          child: YtdlTextLink(
-            l.discoverKeepChange,
-            key: const ValueKey('ytdl-saves-change'),
-            trailingIcon: Icons.chevron_right,
-            padding: const EdgeInsetsDirectional.only(start: 8),
-            onTap: onChange,
-          ),
-        ),
+        PositionedDirectional(top: 0, end: 0, child: change),
       ],
     );
   }
