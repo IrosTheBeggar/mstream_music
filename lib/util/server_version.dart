@@ -270,11 +270,9 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   // vector seed — and move with the two lines above if it is numbered
   // differently.
   ServerParam.limit: ServerVersion(6, 26, 0, '6.26.0'),
-  // random-songs' `genreSource` merged after the 6.32.1 tag (2026-10-31), so
-  // the floor is the next minor, an expected release like the 6.26.0 lines
-  // above; change it if that release is numbered differently. Erring high
-  // only sends the genre list against both kinds of link.
-  ServerParam.genreSource: ServerVersion(6, 33, 0, '6.33.0'),
+  // random-songs' `genreSource` (mStream #1102) merged after the 6.32.1 tag
+  // and shipped in 6.32.2 (2026-11-01; observed in the tag's random.js).
+  ServerParam.genreSource: ServerVersion(6, 32, 2, '6.32.2'),
   // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
