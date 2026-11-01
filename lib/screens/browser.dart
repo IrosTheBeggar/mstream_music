@@ -1024,9 +1024,13 @@ class _BrowserState extends State<Browser> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Up to three lines: a half-width card at 360 dp has
+                    // about 81 px beside its icon, and two lines would cut
+                    // the verb off "Von YouTube hinzufügen" or "Ajouter
+                    // depuis YouTube". The row grows only when one needs it.
                     Text(
                       browserChromeLabel(l, item.name),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 15,

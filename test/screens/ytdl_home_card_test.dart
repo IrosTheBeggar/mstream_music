@@ -9,10 +9,11 @@
 // — else nothing, and the counts the screen has shown clear. In the
 // browser the card opens
 // YtdlScreen for its server, and at 360 dp (also at 200% text) the label
-// wraps without overflowing.
+// wraps without overflowing, onto a third line when it needs one.
 
 import 'dart:io';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -289,6 +290,23 @@ void main() {
       final line = t.getSize(find.text('Adding 1'));
       expect(label.height, greaterThan(line.height * 1.5));
       expect(line.height, lessThan(20));
+    });
+
+    testWidgets('360 dp: a label that needs a third line gets it, not an '
+        'ellipsis after two', (t) async {
+      // A full em a glyph: "Add from YouTube" needs more than two lines of
+      // the card's 81 px, as "Von YouTube hinzufügen" does in a real face.
+      await pumpHome(t, width: 360);
+      final label = t.renderObject<RenderParagraph>(find.text('Add from YouTube'));
+      final line = TextPainter(
+        text: label.text,
+        textDirection: TextDirection.ltr,
+        textScaler: label.textScaler,
+        maxLines: 1,
+      )..layout();
+      expect(label.size.height, moreOrLessEquals(line.height * 3, epsilon: 1));
+      line.dispose();
+      expect(t.takeException(), isNull);
     });
 
     testWidgets('360 dp at 200% text: no overflow', (t) async {
