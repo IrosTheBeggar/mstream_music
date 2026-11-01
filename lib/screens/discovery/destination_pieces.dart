@@ -483,6 +483,11 @@ class DestSaveButton extends StatelessWidget {
   final VoidCallback onTap;
   final Key valueKey;
   final double minHit;
+
+  /// A label too long for the row wraps onto more lines, centred, rather
+  /// than being cut (a full-width button in a footer, where the words are
+  /// all the button says).
+  final bool wrap;
   const DestSaveButton({
     super.key,
     required this.label,
@@ -491,6 +496,7 @@ class DestSaveButton extends StatelessWidget {
     required this.onTap,
     this.valueKey = const ValueKey('destination-save'),
     this.minHit = 44,
+    this.wrap = false,
   });
 
   @override
@@ -523,12 +529,14 @@ class DestSaveButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              // A long label at large text sizes is cut, not overflowed.
+              // A long label at large text sizes is cut (or with [wrap],
+              // wrapped), never overflowed.
               Flexible(
                 child: Text(
                   label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: wrap ? null : 1,
+                  overflow: wrap ? null : TextOverflow.ellipsis,
+                  textAlign: wrap ? TextAlign.center : null,
                   style: TextStyle(
                     color: fg,
                     fontSize: 13,

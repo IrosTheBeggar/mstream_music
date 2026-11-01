@@ -465,6 +465,8 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
             onTap: () => Navigator.of(context).pop(_dirOf(_crumbs)),
             valueKey: const ValueKey('ytdl-choose-use'),
             minHit: 48,
+            // Full width at large text: "Diesen Ordner verwenden" whole.
+            wrap: true,
           ),
         ],
       ),

@@ -10,10 +10,11 @@
 // listed ('/Music/Daft Punk/Homework/', which the caller hands to
 // useFolder), Cancel and ✕ return nothing, the feature going away closes
 // nothing (a pick still comes back); the crumb row keeps one height; and
-// 360 dp at 200% text fits.
+// 360 dp at 200% text fits, "Use this folder" wrapping rather than cut.
 
 import 'dart:async';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
@@ -324,6 +325,19 @@ void main() {
     await tap(tester, 'ytdl-choose-up-0');
     await answer(tester);
     expect(key('ytdl-choose-folder-Gorillaz'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('360 dp at 200% text: "Use this folder" too long for the row '
+      'wraps, its words never cut', (tester) async {
+    // A full em a glyph: as long as "Diesen Ordner verwenden" in a real face.
+    await open(tester,
+        startAt: '/Music/Daft Punk/', size: const Size(360, 800), textScale: 2);
+    final label = tester.renderObject<RenderParagraph>(find.descendant(
+        of: key('ytdl-choose-use'), matching: find.byType(RichText)));
+    expect(label.didExceedMaxLines, isFalse);
+    expect(label.size.height,
+        greaterThanOrEqualTo(label.getMaxIntrinsicHeight(label.size.width) - 0.5));
     expect(tester.takeException(), isNull);
   });
 }
