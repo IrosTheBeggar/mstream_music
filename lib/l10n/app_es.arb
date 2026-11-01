@@ -1422,7 +1422,7 @@
   "settingsResetBody": "También restablece el ecualizador, la transcodificación y algunas opciones fuera de los ajustes. Se conservan servidores, descargas, historial de escucha y preajustes guardados.",
   "settingsResetBodyIos": "También restablece la transcodificación y algunas opciones fuera de los ajustes. Se conservan servidores, descargas e historial de escucha.",
   "ytdlTitle": "Añadir desde YouTube",
-  "ytdlHomeAdding": "{count, plural, other{Añadiendo {count}}}",
+  "ytdlHomeAdding": "{count, plural, other{{count} en curso}}",
   "ytdlHomeAdded": "{count, plural, one{{count} añadida} other{{count} añadidas}}",
   "ytdlHomeFailed": "{count, plural, one{{count} falló} other{{count} fallaron}}",
   "ytdlPasteHint": "Pega un enlace de YouTube",

@@ -1422,7 +1422,7 @@
   "settingsResetBody": "Resetuje też Korektor, Transkodowanie i kilka opcji spoza Ustawień. Serwery, pobrane pliki, historia słuchania i zapisane presety zostają.",
   "settingsResetBodyIos": "Resetuje też Transkodowanie i kilka opcji spoza Ustawień. Serwery, pobrane pliki i historia słuchania zostają.",
   "ytdlTitle": "Dodaj z YouTube",
-  "ytdlHomeAdding": "{count, plural, one{Dodawanie: {count}} few{Dodawanie: {count}} many{Dodawanie: {count}} other{Dodawanie: {count}}}",
+  "ytdlHomeAdding": "{count, plural, one{W toku: {count}} few{W toku: {count}} many{W toku: {count}} other{W toku: {count}}}",
   "ytdlHomeAdded": "{count, plural, one{Dodano: {count}} few{Dodano: {count}} many{Dodano: {count}} other{Dodano: {count}}}",
   "ytdlHomeFailed": "{count, plural, one{{count} nieudany} few{{count} nieudane} many{{count} nieudanych} other{{count} nieudanego}}",
   "ytdlPasteHint": "Wklej link z YouTube",

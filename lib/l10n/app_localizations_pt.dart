@@ -5480,8 +5480,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count a caminho',
-      one: '$count a caminho',
+      other: '$count em curso',
+      one: '$count em curso',
     );
     return '$_temp0';
   }
@@ -5491,8 +5491,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count adicionadas',
-      one: '$count adicionada',
+      other: '$count prontas',
+      one: '$count pronta',
     );
     return '$_temp0';
   }

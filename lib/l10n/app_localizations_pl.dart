@@ -5622,10 +5622,10 @@ class AppLocalizationsPl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Dodawanie: $count',
-      many: 'Dodawanie: $count',
-      few: 'Dodawanie: $count',
-      one: 'Dodawanie: $count',
+      other: 'W toku: $count',
+      many: 'W toku: $count',
+      few: 'W toku: $count',
+      one: 'W toku: $count',
     );
     return '$_temp0';
   }

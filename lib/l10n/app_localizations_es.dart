@@ -5493,7 +5493,7 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Añadiendo $count',
+      other: '$count en curso',
     );
     return '$_temp0';
   }
