@@ -155,6 +155,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.pathScreenTitle;
     case 'Discover':
       return l.discoverPageTitle;
+    case 'Instant mix':
+      return l.instantMix;
     case 'Federation':
       return l.browserFederation;
     case 'P2P Network':

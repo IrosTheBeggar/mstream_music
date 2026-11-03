@@ -10,6 +10,11 @@
 // The setters save auto_dj.json through path_provider — real file IO, which
 // never finishes on the fake clock — so a tap that saves runs under
 // runAsync and waits for the sheet to close.
+//
+// Length, Tempo, Skip words, Rating and Genres also have a value mode (an
+// Instant mix page's Filters): it starts from the value handed in, and its
+// Done hands the choice back, writing nothing to AutoDJManager or a Server
+// and leaving the handler alone.
 
 import 'dart:async';
 import 'dart:convert';
@@ -375,6 +380,41 @@ void main() {
       expect(mgr.bpmContinuityEnabled, isFalse);
       expect(mgr.bpmTolerance, 8);
     });
+
+    testWidgets("value mode: from the value handed in, not Auto DJ's; Done "
+        'hands the choice back and applies nothing', (tester) async {
+      mgr
+        ..bpmContinuityEnabled = true
+        ..bpmTolerance = 12;
+      final got = <TempoChoice>[];
+      await open(tester,
+          (_) => TempoSheet(value: (on: false, tolerance: 8), onDone: got.add));
+      expect(value(tester), 'Off');
+      expect(sliderOn(tester), isFalse);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.drag(slider, const Offset(-2000, 0));
+      await tester.pumpAndSettle();
+      expect(value(tester), '± 1 BPM');
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got, [(on: true, tolerance: 1)]);
+      expect(find.text('Beat matching'), findsNothing, reason: 'closed');
+      expect(mgr.bpmContinuityEnabled, isTrue);
+      expect(mgr.bpmTolerance, 12);
+    });
+
+    testWidgets('value mode: closing hands nothing back', (tester) async {
+      final got = <TempoChoice>[];
+      await open(tester,
+          (_) => TempoSheet(value: (on: true, tolerance: 8), onDone: got.add));
+      expect(value(tester), '± 8 BPM');
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await close(tester);
+      expect(got, isEmpty);
+      expect(mgr.bpmContinuityEnabled, isFalse);
+    });
   });
 
   // ── Sonic similarity (its Done reaches the audio handler) ───────────
@@ -639,6 +679,41 @@ void main() {
       expect(mgr.durationFilterEnabled, isTrue);
       expect((mgr.minDurationSec, mgr.maxDurationSec), (120, 360));
     });
+
+    testWidgets("value mode: from the value handed in, not Auto DJ's; Done "
+        'hands the window back, no limit as 0, and applies nothing',
+        (tester) async {
+      mgr
+        ..durationFilterEnabled = true
+        ..minDurationSec = 300
+        ..maxDurationSec = 600;
+      final got = <LengthChoice>[];
+      await open(
+          tester,
+          (_) => LengthSheet(
+              value: (min: 0, max: 360, allowUnknown: true), onDone: got.add));
+      expect(value(tester), 'Under 6:00');
+      expect(rowValue(tester, shortest), 'Any');
+      expect(rowValue(tester, longest), '6:00');
+      expect(switchIn(tester, unknown).value, isTrue);
+      await tester.tap(shortest);
+      await tester.pumpAndSettle();
+      await turn(tester, const Duration(minutes: 2));
+      expect(value(tester), '2:00–6:00');
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got, [(min: 120, max: 360, allowUnknown: true)]);
+
+      // Cleared, it hands back Any: zeros, and no unknown lengths.
+      await open(tester, (_) => LengthSheet(value: got.last, onDone: got.add));
+      await tester.tap(_clear);
+      await tester.pumpAndSettle();
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got.last, (min: 0, max: 0, allowUnknown: false));
+      expect(mgr.durationFilterEnabled, isTrue);
+      expect((mgr.minDurationSec, mgr.maxDurationSec), (300, 600));
+    });
   });
 
   // ── Skip words ──────────────────────────────────────────────────────
@@ -777,6 +852,44 @@ void main() {
       expect(chip('remix'), findsOneWidget);
       await close(tester);
       expect(mgr.keywordFilterWords, ['live']);
+    });
+
+    testWidgets("value mode: from the words handed in, not Auto DJ's; Done "
+        'hands the list back and applies nothing', (tester) async {
+      mgr
+        ..keywordFilterEnabled = true
+        ..keywordFilterWords = ['interlude'];
+      final got = <List<String>>[];
+      await open(tester,
+          (_) => SkipWordsSheet(value: const ['live'], onDone: got.add));
+      expect(chip('live'), findsOneWidget);
+      expect(chip('interlude'), findsNothing);
+      await tester.enterText(field, 'remix');
+      await tester.pump();
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got, [
+        ['live', 'remix'],
+      ]);
+      expect(find.text('Skip words'), findsNothing, reason: 'closed');
+      expect(mgr.keywordFilterWords, ['interlude']);
+    });
+
+    testWidgets("value mode: a word stops at the mix route's limit; Auto "
+        "DJ's words do not", (tester) async {
+      final long = 'x' * 150;
+      await open(tester,
+          (_) => SkipWordsSheet(value: const [], onDone: (_) {}));
+      await tester.enterText(field, long);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text.length,
+          SkipWordsSheet.maxMixWordLength);
+      await close(tester);
+
+      await open(tester, (_) => const SkipWordsSheet());
+      await tester.enterText(field, long);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text, long);
     });
   });
 
@@ -1200,6 +1313,36 @@ void main() {
       expect(a.autoDJminRating, 6);
       expect(b.autoDJminRating, isNull);
     });
+
+    testWidgets('value mode: one server, from the value handed in; Done '
+        'hands the rating back and writes nothing', (tester) async {
+      final s = server('home', rating: 6);
+      final got = <int?>[];
+      await open(
+          tester,
+          (_) => RatingSheet(
+              servers: [s], initial: s, value: 8, onDone: got.add));
+      expect(value(tester), '4★+');
+      await tester.tap(star(1));
+      await tester.pumpAndSettle();
+      expect(value(tester), '2★+');
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got, [4]);
+      expect(s.autoDJminRating, 6, reason: 'and the DJ was never asked');
+
+      // Cleared, it hands back Any.
+      await open(
+          tester,
+          (_) => RatingSheet(
+              servers: [s], initial: s, value: 8, onDone: got.add));
+      await tester.tap(_clear);
+      await tester.pumpAndSettle();
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got.last, isNull);
+      expect(s.autoDJminRating, 6);
+    });
   });
 
   // ── Genres ──────────────────────────────────────────────────────────
@@ -1564,6 +1707,38 @@ void main() {
               .getSize(find.byKey(const ValueKey('auto-dj-genre-mode')))
               .height,
           reason: 'as tall as Only | Skip: no label broke onto a second line');
+    });
+
+    testWidgets("value mode: one server, from the choice handed in, not the "
+        "server's own; Done hands the choice back and writes nothing",
+        (tester) async {
+      answers['home.example.com'] = (_) => genres(['Blues', 'jazz', 'rock']);
+      final s =
+          server('home', enabled: true, mode: 'blacklist', list: ['rock']);
+      final got = <GenreChoice>[];
+      await open(
+          tester,
+          (_) => GenresSheet(
+              servers: [s],
+              initial: s,
+              value: const GenreChoice(genres: ['jazz']),
+              onDone: got.add));
+      expect(on(tester, 'jazz'), isTrue);
+      expect(on(tester, 'rock'), isFalse);
+      expect(mode(tester), {'whitelist'});
+      await tester.tap(row('Blues'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Skip'));
+      await tester.pumpAndSettle();
+      await tester.tap(_done);
+      await tester.pumpAndSettle();
+      expect(got, [
+        const GenreChoice(mode: 'blacklist', genres: ['jazz', 'Blues']),
+      ]);
+      expect(find.text('Genres'), findsNothing, reason: 'closed');
+      expect(s.autoDJGenres, ['rock']);
+      expect(s.autoDJGenreMode, 'blacklist');
+      expect(s.autoDJGenreEnabled, isTrue);
     });
   });
 

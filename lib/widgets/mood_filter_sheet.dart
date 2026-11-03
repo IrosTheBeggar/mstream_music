@@ -10,7 +10,8 @@
 // Recent their Sort, and Clear and Done: Done applies the choices, Clear
 // empties them, and closing the sheet any other way changes nothing. While
 // anything is set, a grey strip under the bar — the File Explorer's path
-// strip — names the choices, and its Clear lets them all go.
+// strip — names the choices, and its Clear lets them all go. The button and
+// the strip itself (FilterStrip) serve an Instant mix page's filters too.
 
 import 'package:material_ui/material_ui.dart';
 
@@ -402,8 +403,7 @@ class _MoodFilterSheetState extends State<MoodFilterSheet> {
   }
 }
 
-/// While anything is set: the File Explorer's path strip under the bar,
-/// naming the choices, with Clear at its end.
+/// While a mood is set: the [FilterStrip] naming its choices.
 class MoodFilterStrip extends StatelessWidget {
   const MoodFilterStrip({
     super.key,
@@ -414,6 +414,28 @@ class MoodFilterStrip extends StatelessWidget {
   final MoodFilter filter;
 
   /// Null draws Clear off (Discover while its route refuses).
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) => FilterStrip(
+        text: moodLabels(AppLocalizations.of(context), filter).join(' · '),
+        onClear: onClear,
+      );
+}
+
+/// While anything is set: the File Explorer's path strip under the bar,
+/// naming what is set ([text]), with Clear at its end. The mood lists' and
+/// an Instant mix page's.
+class FilterStrip extends StatelessWidget {
+  const FilterStrip({
+    super.key,
+    required this.text,
+    required this.onClear,
+  });
+
+  final String text;
+
+  /// Null draws Clear off.
   final VoidCallback? onClear;
 
   @override
@@ -433,7 +455,7 @@ class MoodFilterStrip extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            moodLabels(l, filter).join(' · '),
+            text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 11.5, color: VelvetColors.textSecondary),

@@ -2069,6 +2069,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverFindSimilar => 'Find similar';
 
   @override
+  String get instantMix => 'Instant mix';
+
+  @override
+  String get instantMixNotAnalyzed => 'Not analyzed yet';
+
+  @override
+  String get instantMixNothingSimilar => 'Nothing similar yet';
+
+  @override
+  String get instantMixFailed => 'Couldn\'t build the mix';
+
+  @override
+  String instantMixPlaylistName(String name) {
+    return '$name Mix';
+  }
+
+  @override
   String get discoverStartSession => 'Start a sonic session';
 
   @override

@@ -1849,6 +1849,31 @@
   "@discoverFindSimilar": {
     "description": "Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track."
   },
+  "instantMix": "Instant mix",
+  "@instantMix": {
+    "description": "Track sheet, queue swipe, Song Info and toolbar action, and the toolbar label of the page it opens: about 50 songs that sound like the song, album, artist or playlist."
+  },
+  "instantMixNotAnalyzed": "Not analyzed yet",
+  "@instantMixNotAnalyzed": {
+    "description": "Instant mix page line when the song, or every song of the album, artist or playlist, has not been analyzed yet."
+  },
+  "instantMixNothingSimilar": "Nothing similar yet",
+  "@instantMixNothingSimilar": {
+    "description": "Instant mix page line when nothing in the library sounds like the item yet (no filters to blame)."
+  },
+  "instantMixFailed": "Couldn't build the mix",
+  "@instantMixFailed": {
+    "description": "Instant mix page line (with Try again) when the mix request failed, and the snackbar when a filter change failed and the page kept its songs."
+  },
+  "instantMixPlaylistName": "{name} Mix",
+  "@instantMixPlaylistName": {
+    "description": "Default name Save as playlist offers for an Instant mix. The same in every language on purpose: it matches the web app's name for the same mix (\"Dolo Mix\"), so a mix saved from either client gets one name. \" 2\", \" 3\"… are added when the name is taken.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "discoverStartSession": "Start a sonic session",
   "@discoverStartSession": {
     "description": "Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback."

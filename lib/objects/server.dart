@@ -135,6 +135,14 @@ class Server {
   //                                  are the user's plays on its PARENT, which
   //                                  is the server they post to.
   int? statsVersion;
+  //   instantMixGeneration         — Instant Mix (POST /api/v1/discovery/
+  //                                  local/mix), an integer generation
+  //                                  (`features.instantMix` on /api; 1 = the
+  //                                  route with every filter key). Null
+  //                                  from a build without it — and after a
+  //                                  ping, which is only read from servers
+  //                                  that predate the route.
+  int? instantMixGeneration;
   // The discovery engine as the server reports it, never pinned: whether it
   // is switched on at all, and — mStream #879 — whether the scan has
   // produced vectors yet (null from a server too old to say). The UI flags
@@ -158,6 +166,19 @@ class Server {
   /// until it can actually answer. Readiness a server cannot report (older
   /// builds) does not hold it back.
   bool get sonicUsable => discoveryOn == true && discoveryReady != false;
+
+  /// Whether Instant mix is offered on this server's items: the route, on a
+  /// server whose sonic index says it can answer now — hidden, never
+  /// disabled, while it can't. Unlike [sonicUsable], a readiness the server
+  /// did not report holds it back: every build with the route reports one.
+  /// Not on a connected server's items yet (the parent's route is
+  /// allowlisted, but Save and the account filters don't apply there); this
+  /// is the one place that changes.
+  bool get instantMixUsable =>
+      (instantMixGeneration ?? 0) >= 1 &&
+      discoveryOn == true &&
+      discoveryReady == true &&
+      !isFederated;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
@@ -461,6 +482,9 @@ class Server {
         noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
         statsVersion =
             json['statsVersion'] is int ? json['statsVersion'] : null,
+        instantMixGeneration = json['instantMixGeneration'] is int
+            ? json['instantMixGeneration']
+            : null,
         discoveryEnabled =
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
@@ -511,6 +535,7 @@ class Server {
         'moodFiltersAvailable': moodFiltersAvailable,
         'noUpload': noUpload,
         'statsVersion': statsVersion,
+        'instantMixGeneration': instantMixGeneration,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
         'connectionType': connectionType,

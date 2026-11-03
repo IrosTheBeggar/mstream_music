@@ -370,6 +370,7 @@ class ServerManager {
       final bool? prevP2pAvailable = server.p2pAvailable;
       final int? prevFedInbox = server.federationInbox;
       final int? prevStats = server.statsVersion;
+      final int? prevInstantMix = server.instantMixGeneration;
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
       final bool? prevMoodFilters = server.moodFiltersAvailable;
@@ -435,7 +436,8 @@ class ServerManager {
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
           server.moodFiltersAvailable != prevMoodFilters ||
           server.noUpload != prevNoUpload ||
-          server.statsVersion != prevStats) {
+          server.statsVersion != prevStats ||
+          server.instantMixGeneration != prevInstantMix) {
         unawaited(writeServerFile());
         _capabilities.add(server);
       }
@@ -563,6 +565,9 @@ class ServerManager {
         features is Map && features['discoveryPlugins'] == true;
     server.moodFiltersAvailable = features is Map &&
         hasMoodFilters(features['discoveryTaste'], features['moodFilters']);
+    // Instant Mix: an integer generation too, server-wide.
+    server.instantMixGeneration =
+        features is Map ? instantMixGenerationOf(features['instantMix']) : null;
     // Caller-scoped (the account's upload right), so under `user` here.
     server.noUpload = user is Map && user['noUpload'] is bool
         ? user['noUpload'] as bool
@@ -623,6 +628,9 @@ class ServerManager {
     server.moodFiltersAvailable =
         hasMoodFilters(res['discoveryTaste'], res['moodFilters']);
     server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
+    // Ping is only read from servers that predate `/api/`, and those
+    // predate Instant Mix too, whatever the payload says.
+    server.instantMixGeneration = null;
   }
 
   /// Whether a `discoveryTaste` wire value advertises the Discover page: an
@@ -640,6 +648,13 @@ class ServerManager {
   @visibleForTesting
   static bool hasMoodFilters(dynamic taste, dynamic moodFilters) =>
       taste is int && taste >= 2 && moodFilters == true;
+
+  /// Instant Mix's generation from its `instantMix` wire value, by
+  /// [hasTasteGeneration]'s rule: an integer ≥ 1 (1 = the route with every
+  /// filter key; a filter added later ships as 2), null for anything else.
+  @visibleForTesting
+  static int? instantMixGenerationOf(dynamic v) =>
+      v is int && v >= 1 ? v : null;
 
   /// Test seam over [_applyServerInfo]: fold a layered `GET /api/` body into
   /// [server] exactly as a refresh would, minus the network.
