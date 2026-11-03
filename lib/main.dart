@@ -16,6 +16,7 @@ import 'objects/display_item.dart';
 import 'native/carplay_bridge.dart';
 import 'native/now_playing_widget_publisher.dart';
 import 'singletons/server_list.dart';
+import 'singletons/ytdl_hub.dart';
 import 'singletons/tunnel_policy.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
@@ -157,6 +158,10 @@ Future<void> _startApp() async {
   // (Discover's Keep a copy): one per server, shared by Discover and the
   // home's SERVER "Copies" row, with their end-of-copy toasts.
   CopiesHub().install();
+  // Add from YouTube: one state per server shared by its screen, the file
+  // explorer's sheet and strip and the home's SERVER card; it owns every
+  // add from the tap and polls the server's job list while one is open.
+  YtdlHub().install();
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,
@@ -336,6 +341,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         unawaited(PlaySync().drain(reason: 'connectivity', bypassBackoff: true));
         unawaited(ServerManager()
             .handleNetworkChange(reason: 'connectivity:$names'));
+        // Add from YouTube: rows waiting for a connection poll, an offline
+        // lookup runs again.
+        YtdlHub().connectivityRestored();
         // Resume on-device playback if a network outage had paused it (no-op
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();

@@ -5640,4 +5640,751 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get settingsResetBodyIos =>
       'Также сбросятся перекодирование и несколько параметров вне настроек. Серверы, загрузки и история прослушиваний останутся.';
+
+  @override
+  String get ytdlTitle => 'Добавить с YouTube';
+
+  @override
+  String ytdlHomeAdding(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'В работе: $count',
+      many: 'В работе: $count',
+      few: 'В работе: $count',
+      one: 'В работе: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytdlHomeAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Готово: $count',
+      many: 'Готово: $count',
+      few: 'Готово: $count',
+      one: 'Готово: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytdlHomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count с ошибкой',
+      many: '$count с ошибкой',
+      few: '$count с ошибкой',
+      one: '$count с ошибкой',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlPasteHint => 'Вставьте ссылку на YouTube';
+
+  @override
+  String get ytdlPasteFromClipboard => 'Вставить из буфера обмена';
+
+  @override
+  String ytdlLandsIn(String path) {
+    return 'Попадёт в папку $path';
+  }
+
+  @override
+  String get ytdlLimits =>
+      'Одно видео на ссылку · сервер прерывает добавление на 500 МБ или через час · без прямых эфиров и плейлистов';
+
+  @override
+  String get ytdlEmptyTitle =>
+      'Вставьте ссылку, чтобы добавить трек в библиотеку.';
+
+  @override
+  String get ytdlEmptyWebApp =>
+      'Треки, добавленные из веб-плеера, тоже появятся здесь.';
+
+  @override
+  String ytdlLinkShortSent(String link) {
+    return 'Короткая ссылка: отправляется как $link';
+  }
+
+  @override
+  String ytdlLinkSentAs(String link) {
+    return 'Отправляется как $link';
+  }
+
+  @override
+  String get ytdlLinkNotYoutube =>
+      'Это не ссылка на YouTube. Вставьте ссылку с youtube.com или youtu.be.';
+
+  @override
+  String get ytdlLinkPlaylist =>
+      'Это плейлист. Откройте в нём одно видео и скопируйте его ссылку.';
+
+  @override
+  String get ytdlLinkInPlaylist => 'Только это видео, без плейлиста.';
+
+  @override
+  String get ytdlLinkLive =>
+      'Прямые эфиры сохранить нельзя. Если этот эфир уже закончился, может получиться.';
+
+  @override
+  String get ytdlLinkLiveOlder =>
+      'Этот сервер не отклоняет прямые эфиры. Добавляйте, только если эфир уже закончился.';
+
+  @override
+  String get ytdlLookupReading => 'Получение сведений о видео…';
+
+  @override
+  String get ytdlLookupSlow => 'Всё ещё ищем — YouTube иногда долго отвечает.';
+
+  @override
+  String get ytdlLookupEnterYourself => 'Заполнить вручную';
+
+  @override
+  String get ytdlLookupFailed =>
+      'Не удалось получить сведения о видео. Возможно, оно приватное, с возрастным ограничением или заблокировано для сервера.';
+
+  @override
+  String get ytdlLookupTimedOut =>
+      'Сервер отвечал слишком долго — возможно, он ещё готовится к работе с YouTube. Попробуйте через минуту.';
+
+  @override
+  String get ytdlLookupEnterDetails => 'Ввести вручную';
+
+  @override
+  String get ytdlLookupNoTags =>
+      'Тегов пока нет, поэтому трек попадёт в корневую папку библиотеки.';
+
+  @override
+  String get ytdlLookupFailedUsingYours =>
+      'Не удалось получить сведения о видео · Будет использовано то, что вы ввели.';
+
+  @override
+  String get ytdlLateFound => 'Найдены сведения о видео';
+
+  @override
+  String get ytdlLateUseThem => 'Применить';
+
+  @override
+  String get ytdlLateEditsStay => 'Ваши правки останутся.';
+
+  @override
+  String get ytdlOffline =>
+      'Вы офлайн — поиск начнётся, когда вы снова будете в сети.';
+
+  @override
+  String get ytdlYtdlpMissing =>
+      'Этот сервер пока не умеет добавлять треки с YouTube. Попросите администратора установить yt-dlp.';
+
+  @override
+  String get ytdlCardNoAlbum => 'Без альбома';
+
+  @override
+  String get ytdlSourceMusic => 'Теги из YouTube Music';
+
+  @override
+  String get ytdlSourceSplit => 'Исполнитель и название из заголовка видео';
+
+  @override
+  String get ytdlSourceSplitAgrees =>
+      'Исполнитель и название из заголовка видео · совпадает с исполнителем на YouTube';
+
+  @override
+  String get ytdlSourceChannel =>
+      'Исполнителем может быть название канала — проверьте';
+
+  @override
+  String ytdlCleanedFrom(String title) {
+    return 'Лишнее убрано из «$title»';
+  }
+
+  @override
+  String get ytdlUndoAll => 'Вернуть всё';
+
+  @override
+  String get ytdlEditTags => 'Изменить теги';
+
+  @override
+  String get ytdlFieldTitle => 'Название';
+
+  @override
+  String get ytdlHelpMusic => 'Из YouTube Music';
+
+  @override
+  String get ytdlHelpVideoTitle => 'Из заголовка видео';
+
+  @override
+  String get ytdlHelpVideoTitleCleaned => 'Из заголовка видео, без лишнего';
+
+  @override
+  String get ytdlHelpYoutubeArtist => 'Из поля исполнителя на YouTube';
+
+  @override
+  String get ytdlHelpYoutubeArtistCheck =>
+      'Из поля исполнителя на YouTube — проверьте';
+
+  @override
+  String ytdlHelpYoutubeArtistStripped(String removed) {
+    return 'Из поля исполнителя на YouTube, убрано «$removed» — проверьте';
+  }
+
+  @override
+  String get ytdlHelpEdited => 'Изменено';
+
+  @override
+  String get ytdlBlankTitle => 'Пусто: файл получит исходный заголовок видео.';
+
+  @override
+  String get ytdlBlankArtistMusic =>
+      'Пусто: в файле останется исполнитель из YouTube Music.';
+
+  @override
+  String ytdlBlankArtistGuess(String name) {
+    return 'Пусто: файл получит исполнителя, которого угадал YouTube, — часто это просто название канала (здесь «$name»).';
+  }
+
+  @override
+  String get ytdlBlankArtistGuessUnnamed =>
+      'Пусто: файл получит исполнителя, которого угадал YouTube, — часто это просто название канала.';
+
+  @override
+  String get ytdlBlankAlbumSingle => 'Оставьте пустым для сингла';
+
+  @override
+  String get ytdlBlankAlbumKeeps => 'Пусто: останется альбом из тегов YouTube';
+
+  @override
+  String get ytdlBlankYear =>
+      'Пусто: файл получит год публикации видео на YouTube.';
+
+  @override
+  String get ytdlYearInvalid => 'Год — это 4 цифры, например 2001';
+
+  @override
+  String ytdlRestoreSplit(String separator) {
+    return 'Разделено по $separator';
+  }
+
+  @override
+  String ytdlOrYoutubeArtist(String name) {
+    return 'Или исполнитель с YouTube: $name';
+  }
+
+  @override
+  String get ytdlSwap => 'Поменять исполнителя и название местами';
+
+  @override
+  String get ytdlSavesTo => 'Сохранится в';
+
+  @override
+  String get ytdlSavesHere => 'Сохранится здесь';
+
+  @override
+  String get ytdlNewTag => 'новая';
+
+  @override
+  String get ytdlSampleFile => 'файл';
+
+  @override
+  String get ytdlSampleFileStem => 'Video_title';
+
+  @override
+  String ytdlFileAbout(String name) {
+    return 'вероятно, $name';
+  }
+
+  @override
+  String ytdlFileAboutLettersDropped(String name) {
+    return 'вероятно, $name · буквы вне A–Z удаляются из имён файлов';
+  }
+
+  @override
+  String get ytdlCheckFailed => 'Не удалось проверить эту папку';
+
+  @override
+  String get ytdlJustThisSong => 'Только для этого трека';
+
+  @override
+  String get ytdlUndo => 'Отменить';
+
+  @override
+  String ytdlClash(String name) {
+    return 'Похоже, в этой папке уже есть что-то вроде «$name». Сервер не заменит этот файл, так что, скорее всего, ничего не выйдет.';
+  }
+
+  @override
+  String get ytdlClashChangeFormat =>
+      'Сменить формат — в другом формате получится другой файл';
+
+  @override
+  String ytdlClashOlder(String name) {
+    return 'Файл «$name» уже есть в этой папке. Этот сервер перезапишет теги этого файла, а не добавит новый.';
+  }
+
+  @override
+  String get ytdlChangeFormat => 'Сменить формат';
+
+  @override
+  String get ytdlAddToLibrary => 'Добавить в библиотеку';
+
+  @override
+  String get ytdlAddHere => 'Добавить сюда';
+
+  @override
+  String get ytdlAddAnyway => 'Всё равно добавить';
+
+  @override
+  String get ytdlAlreadyAdding => 'Уже добавляется в эту папку';
+
+  @override
+  String get ytdlFormatMenuTitle => 'Лучший звук из видео в формате';
+
+  @override
+  String ytdlFormatRemembered(String server) {
+    return 'Запомнено для сервера $server';
+  }
+
+  @override
+  String get ytdlFormatMp3Help => 'Воспроизводится везде';
+
+  @override
+  String get ytdlFormatM4aHelp => 'Подходит для устройств Apple';
+
+  @override
+  String get ytdlFormatOpusHelp =>
+      'Обычно родной звук YouTube, без перекодирования';
+
+  @override
+  String get ytdlFormatFlacHelp => 'Больше, но не лучше звука видео';
+
+  @override
+  String get ytdlFormatWavHelp => 'Самый большой, без обложки';
+
+  @override
+  String get ytdlErrFfmpeg =>
+      'Сервер сейчас не может перекодировать звук. Попробуйте позже или обратитесь к администратору.';
+
+  @override
+  String get ytdlErrUploadsOff =>
+      'Ваша учётная запись не может добавлять файлы на этот сервер.';
+
+  @override
+  String ytdlErrLibraryGone(String library) {
+    return 'Вы больше не можете добавлять файлы в библиотеку «$library». Выберите другую библиотеку.';
+  }
+
+  @override
+  String ytdlErrLibraryGoneSheet(String library) {
+    return 'Вы больше не можете добавлять файлы в библиотеку «$library».';
+  }
+
+  @override
+  String get ytdlErrNoRoute =>
+      'Этот сервер не поддерживает добавление с YouTube.';
+
+  @override
+  String ytdlErrFormatOff(String format) {
+    return 'Этот сервер больше не сохраняет в формате $format';
+  }
+
+  @override
+  String get ytdlErrPickAnother => 'выбрать другой';
+
+  @override
+  String get ytdlErrBadRequest =>
+      'Что-то в этой ссылке не устроило сервер. Попробуйте ещё раз.';
+
+  @override
+  String get ytdlErrServer => 'На сервере что-то пошло не так.';
+
+  @override
+  String ytdlErrOther(String message) {
+    return 'Ответ сервера: «$message»';
+  }
+
+  @override
+  String ytdlErrMkdir(String folder) {
+    return 'Не удалось создать папку «$folder».';
+  }
+
+  @override
+  String get ytdlSectionAdding => 'Добавляются';
+
+  @override
+  String get ytdlSectionAddingNote =>
+      'Идёт на сервере · из приложения не остановить';
+
+  @override
+  String get ytdlSectionNeedsLook => 'Требуют внимания';
+
+  @override
+  String get ytdlSectionAdded => 'Добавлены';
+
+  @override
+  String ytdlRowAdding(int minutes, String format) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Добавляется · $minutes мин · $format',
+      many: 'Добавляется · $minutes мин · $format',
+      few: 'Добавляется · $minutes мин · $format',
+      one: 'Добавляется · $minutes мин · $format',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlRowStartUnsure => 'Запуск… сервер пока не ответил';
+
+  @override
+  String get ytdlRowNotSureStarted => 'Неизвестно, началось ли добавление';
+
+  @override
+  String get ytdlRowNotFound => 'Не найдено на сервере';
+
+  @override
+  String get ytdlRowClash =>
+      'Ошибка · похоже, файл с таким именем там уже есть. Ничего не перезаписано.';
+
+  @override
+  String get ytdlRowFailed =>
+      'Ошибка · сервер не сообщил причину. Частые причины: прямой эфир, отказ YouTube, больше 500 МБ или дольше часа.';
+
+  @override
+  String get ytdlRowFailedOlder =>
+      'Ошибка · сервер не сообщил причину. Возможно, YouTube отказал серверу.';
+
+  @override
+  String get ytdlRowNotSureFinished =>
+      'Неизвестно, завершилось ли добавление · задача закончилась, пока приложение было неактивно, а на сервере нет записи о ней';
+
+  @override
+  String get ytdlRowWaiting => 'Ожидание подключения';
+
+  @override
+  String get ytdlRowFileMissing => 'Файл отсутствует';
+
+  @override
+  String get ytdlRowHide => 'Скрыть из списка';
+
+  @override
+  String get ytdlRowChangeFormatRetry => 'Сменить формат и повторить';
+
+  @override
+  String get ytdlRowShowFolder => 'Показать папку';
+
+  @override
+  String get ytdlRowShowInFolder => 'Показать в папке';
+
+  @override
+  String get ytdlShowEarlier => 'Показать более ранние';
+
+  @override
+  String get ytdlWhereTitle => 'Куда попадают новые треки';
+
+  @override
+  String ytdlWhereSub(String server) {
+    return 'Хранится на этом телефоне для сервера $server · у копий из «Открытий» своя настройка.';
+  }
+
+  @override
+  String ytdlWhereLandsAt(String title) {
+    return '«$title» попадёт в';
+  }
+
+  @override
+  String get ytdlWhereLandsAtSample => 'Трек попадёт в';
+
+  @override
+  String get ytdlWhereSampleNote =>
+      'Пока вы не вставите ссылку, показаны условные названия.';
+
+  @override
+  String ytdlWhereFileNote(String title) {
+    return 'Имя файла берётся из заголовка видео; в библиотеке трек будет называться «$title».';
+  }
+
+  @override
+  String ytdlWhereAlwaysEmpty(String vars) {
+    return 'У треков с YouTube всегда пусто, поэтому не входит в путь: $vars';
+  }
+
+  @override
+  String get ytdlWhereSetByDiscover => 'Задано в «Открытиях»';
+
+  @override
+  String get ytdlLayoutTop => 'Корень библиотеки';
+
+  @override
+  String get ytdlLayoutTopSub => 'Без папок';
+
+  @override
+  String get ytdlLayoutDiscover => 'Как в «Открытиях»';
+
+  @override
+  String get ytdlWhereUseForSong => 'Применить к этому треку';
+
+  @override
+  String get ytdlWhereNoMkdir =>
+      'Ваша учётная запись не может создавать папки, поэтому подойдут только существующие. Корень библиотеки подходит всегда.';
+
+  @override
+  String get ytdlCustomHelp =>
+      'Разделяйте папки знаком /. Переменной TITLE нет — имя файла всегда берётся из заголовка видео.';
+
+  @override
+  String ytdlErrNeverVar(String name, String vars) {
+    return 'Переменная $name у треков с YouTube всегда пуста. Используйте $vars.';
+  }
+
+  @override
+  String get ytdlErrBadChars =>
+      'Имя папки не может содержать : * ? \" < > или |.';
+
+  @override
+  String ytdlTrapEmpty(String folder) {
+    return 'Для этой папки нет значений, поэтому она будет называться «$folder». Добавьте альбом и год или выберите другую структуру папок.';
+  }
+
+  @override
+  String ytdlTrapNoYear(String folder) {
+    return 'У этого трека нет года, поэтому папка будет называться «$folder». В теге файла всё равно будет год публикации на YouTube.';
+  }
+
+  @override
+  String ytdlTrapOther(String folder) {
+    return 'Один из тегов пуст, поэтому папка будет называться «$folder». Заполните теги или выберите другую структуру папок.';
+  }
+
+  @override
+  String get ytdlTrapAddYear => 'Добавить год';
+
+  @override
+  String ytdlNoMkdirNew(String folder) {
+    return 'Папки «$folder» ещё нет, а ваша учётная запись не может создавать папки.';
+  }
+
+  @override
+  String get ytdlNoMkdirUnchecked =>
+      'Ваша учётная запись не может создавать папки, а эту папку не удалось проверить.';
+
+  @override
+  String ytdlSaveToInstead(String path) {
+    return 'Сохранить в папку $path';
+  }
+
+  @override
+  String get ytdlChooseFolderLink => 'Выбрать папку…';
+
+  @override
+  String get ytdlChooseTitle => 'Выберите папку';
+
+  @override
+  String get ytdlChooseSub =>
+      'Ваша учётная запись не может создавать папки, поэтому выберите существующую.';
+
+  @override
+  String get ytdlChooseEmpty => 'Здесь нет папок.';
+
+  @override
+  String get ytdlExplorerEntry => 'Добавить сюда с YouTube';
+
+  @override
+  String ytdlSheetInto(String path) {
+    return 'В папку $path';
+  }
+
+  @override
+  String get ytdlSortSubfolders => 'Разложить по вложенным папкам…';
+
+  @override
+  String get ytdlSubfoldersTitle => 'Разложить по вложенным папкам';
+
+  @override
+  String get ytdlSubfoldersHere => 'Текущая папка';
+
+  @override
+  String get ytdlSubfoldersRightHere => 'Прямо сюда';
+
+  @override
+  String get ytdlSubfoldersNone => 'Без вложенных папок';
+
+  @override
+  String ytdlSubfoldersNew(int count, String folders) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Будет создано $count новой папки: $folders',
+      many: 'Будет создано $count новых папок: $folders',
+      few: 'Будут созданы $count новые папки: $folders',
+      one: 'Будет создана $count новая папка: $folders',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ytdlStripAdding(String title) {
+    return 'Добавляется «$title»…';
+  }
+
+  @override
+  String ytdlStripAddingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Добавляются $count видео…',
+      many: 'Добавляются $count видео…',
+      few: 'Добавляются $count видео…',
+      one: 'Добавляется $count видео…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ytdlStripSeeAll => 'Показать все';
+
+  @override
+  String get ytdlStripDetails => 'Подробнее';
+
+  @override
+  String ytdlToastAdded(String title, String path) {
+    return 'Трек «$title» добавлен в папку $path';
+  }
+
+  @override
+  String ytdlCouldntAdd(String title) {
+    return 'Не удалось добавить «$title»';
+  }
+
+  @override
+  String ytdlToastSaved(String path) {
+    return 'Сохранено · новые треки попадут в папку $path';
+  }
+
+  @override
+  String get ytdlToastHidden => 'Скрыто. Сервер продолжает работу.';
+
+  @override
+  String get ytdlA11yLinkField => 'Ссылка на YouTube';
+
+  @override
+  String get ytdlA11yClearLink => 'Очистить ссылку';
+
+  @override
+  String ytdlA11yFormat(String format) {
+    return 'Формат, $format';
+  }
+
+  @override
+  String ytdlA11yPutBack(String fragment) {
+    return 'Вернуть $fragment';
+  }
+
+  @override
+  String get ytdlA11yUndoSplit => 'Отменить разделение по тире';
+
+  @override
+  String get ytdlA11yUndoSplitColon => 'Отменить разделение по двоеточию';
+
+  @override
+  String ytdlA11yMoreFor(String title) {
+    return 'Ещё для «$title»';
+  }
+
+  @override
+  String get ytdlA11yAdding => 'Добавляется';
+
+  @override
+  String get ytdlA11yNewFolder => 'новая папка';
+
+  @override
+  String ytdlCrumbThen(String previous, String next) {
+    return '$previous, затем $next';
+  }
+
+  @override
+  String ytdlCrumbNew(String folder) {
+    return '$folder, новая папка';
+  }
+
+  @override
+  String ytdlCrumbFile(String path, String file) {
+    return '$path, файл $file';
+  }
+
+  @override
+  String get ytdlCrumbEmptyBrackets => 'пустые скобки';
+
+  @override
+  String ytdlCrumbWithEmptyBrackets(String folder) {
+    return '$folder с пустыми скобками';
+  }
+
+  @override
+  String ytdlA11yVarUsed(String name) {
+    return '$name, уже используется';
+  }
+
+  @override
+  String get ytdlA11yInsertVariable => 'Вставить переменную';
+
+  @override
+  String get ytdlA11yLocked => 'Заблокировано';
+
+  @override
+  String get ytdlA11yFolderPath => 'Путь к папке';
+
+  @override
+  String ytdlA11yUpTo(String folder) {
+    return 'Вверх к папке $folder';
+  }
+
+  @override
+  String get ytdlA11yCover => 'Обложка';
+
+  @override
+  String ytdlSummaryBy(String title, String artist) {
+    return '$title, исполнитель $artist';
+  }
+
+  @override
+  String ytdlSummaryAlbum(String album) {
+    return 'альбом $album';
+  }
+
+  @override
+  String get ytdlSummaryNoAlbum => 'без альбома';
+
+  @override
+  String ytdlSummary(String details, String source, String path) {
+    return '$details. $source. Место сохранения: $path.';
+  }
+
+  @override
+  String get ytdlErrAddOffline =>
+      'Вы офлайн — попробуйте ещё раз, когда снова будете в сети.';
+
+  @override
+  String get ytdlHelpVideoRelease => 'Из даты выхода видео';
+
+  @override
+  String get ytdlChooseLoading => 'Загрузка папок';
+
+  @override
+  String get ytdlRowNoConnection =>
+      'Не началось · телефон не смог связаться с сервером';
+
+  @override
+  String ytdlServerUnreachable(String server) {
+    return 'Не удалось связаться с сервером $server. Проверьте, что он запущен, и попробуйте ещё раз.';
+  }
+
+  @override
+  String ytdlErrAddUnreachable(String server) {
+    return 'Не удалось связаться с сервером $server — проверьте, что он запущен, и попробуйте ещё раз.';
+  }
 }

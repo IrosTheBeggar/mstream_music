@@ -161,6 +161,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserP2pNetwork;
     case 'Add torrent':
       return l.torrentScreenTitle; // the screen's own title, as the drawer used
+    case 'Add from YouTube':
+      return l.ytdlTitle; // the screen's own title
     case 'Copies':
       return l.discoverCopiesTitle;
     case 'Search':

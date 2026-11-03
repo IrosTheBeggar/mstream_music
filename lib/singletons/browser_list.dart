@@ -37,6 +37,14 @@ class BrowserManager {
   static bool Function(Server server) homeCopiesRow = noCopiesRow;
   static bool noCopiesRow(Server server) => false;
 
+  /// Whether the home's SERVER section shows "Add from YouTube" for
+  /// [server] (the build shows it, an own server whose account may upload,
+  /// audio conversion not off, a library). The YouTube hub answers once it
+  /// is installed (singletons/ytdl_hub.dart, YtdlHub.entryAllowed); until
+  /// then, never.
+  static bool Function(Server server) homeYtdlRow = noYtdlRow;
+  static bool noYtdlRow(Server server) => false;
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip
@@ -476,6 +484,9 @@ class BrowserManager {
       // SERVER: work the server does for you. Torrents have no ping flag —
       // the screen's preflight probe is the gate — but the route is off the
       // federation allowlist, so a peer never gets it.
+      // Add from YouTube: the server fetches a video's audio into the
+      // library — beside Add torrent, where its gates allow it (the build,
+      // uploads, audio conversion, a library; YtdlHub.entryAllowed).
       // Copies: what the server is copying for you from connected servers
       // (Discover's Keep a copy) — only where copies are possible: the
       // plug-ins on, the account may upload, the copy plug-in listed and
@@ -484,6 +495,11 @@ class BrowserManager {
         header('Server'),
         DisplayItem(server, 'Add torrent', 'execAction', 'torrents',
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
+        if (homeYtdlRow(server))
+          DisplayItem(server, 'Add from YouTube', 'execAction', 'ytdl',
+              Icon(Icons.smart_display_outlined,
+                  color: VelvetColors.textSecondary),
+              null),
         if (homeCopiesRow(server))
           DisplayItem(server, 'Copies', 'execAction', 'copies',
               Icon(Icons.library_add_outlined,

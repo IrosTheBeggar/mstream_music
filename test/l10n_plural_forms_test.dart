@@ -68,6 +68,12 @@ void main() {
         t.songInfoDevicePlays,
         t.settingsAutoDownloadCapValue,
         t.importedShadersDownloadsImported,
+        t.ytdlHomeAdding,
+        t.ytdlHomeAdded,
+        t.ytdlHomeFailed,
+        t.ytdlStripAddingCount,
+        (n) => t.ytdlRowAdding(n, 'MP3'),
+        (n) => t.ytdlSubfoldersNew(n, 'Discovery'),
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');

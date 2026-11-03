@@ -243,4 +243,97 @@ void main() {
       expect(reparsed.federationDiscoveryAvailable, isTrue);
     });
   });
+
+  // Add from YouTube: the account's folder right, the formats the server
+  // converts to, the remembered destination and format, and the hub's jobs.
+  group('Add from YouTube fields', () {
+    test('a new server, or a record from before them: unknown / first use',
+        () {
+      for (final s in [
+        Server('u', null, null, null, 'l'),
+        Server.fromJson({
+          'url': 'u',
+          'username': null,
+          'password': null,
+          'jwt': null,
+          'localname': 'l',
+        }),
+      ]) {
+        expect(s.noMkdir, isNull);
+        expect(s.supportedAudioFormats, isNull);
+        expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlLayoutKind, s.ytdlFormat],
+            everyElement(isNull));
+        expect(s.ytdlJobs, isEmpty);
+      }
+    });
+
+    test('round-trip through toJson/fromJson', () {
+      final original = Server('u', null, null, null, 'l')
+        ..noMkdir = true
+        ..supportedAudioFormats = ['flac', 'mp3', 'opus']
+        ..ytdlLibrary = 'Music'
+        ..ytdlLayout = '{{ALBUMARTIST}}/{{ALBUM}}'
+        ..ytdlLayoutKind = 'artistAlbum'
+        ..ytdlFormat = 'opus'
+        ..ytdlJobs = [
+          {
+            'id': 'j-1',
+            'url': 'https://www.youtube.com/watch?v=FGBhQbmPwH8',
+            'directory': '/Music/Daft Punk/Discovery/',
+            'state': 'adding',
+            'pid': 4711,
+            'tags': {'title': 'One More Time'},
+          }
+        ];
+      final reparsed = Server.fromJson(original.toJson());
+      expect(reparsed.noMkdir, isTrue);
+      expect(reparsed.supportedAudioFormats, ['flac', 'mp3', 'opus']);
+      expect(reparsed.ytdlLibrary, 'Music');
+      expect(reparsed.ytdlLayout, '{{ALBUMARTIST}}/{{ALBUM}}');
+      expect(reparsed.ytdlLayoutKind, 'artistAlbum');
+      expect(reparsed.ytdlFormat, 'opus');
+      expect(reparsed.ytdlJobs, original.ytdlJobs);
+      expect(identical(reparsed.ytdlJobs.single, original.ytdlJobs.single),
+          isFalse, reason: 'a copy, not the same map');
+    });
+
+    test("'' is a layout (the library's top folder), not first use", () {
+      final s = Server('u', null, null, null, 'l')..ytdlLayout = '';
+      expect(Server.fromJson(s.toJson()).ytdlLayout, '');
+    });
+
+    test('an empty format list (a server with every format off) stays empty',
+        () {
+      final s = Server('u', null, null, null, 'l')..supportedAudioFormats = [];
+      expect(Server.fromJson(s.toJson()).supportedAudioFormats, isEmpty);
+    });
+
+    test('junk values load as unknown; junk entries are skipped', () {
+      final j = Server('u', null, null, null, 'l').toJson()
+        ..['noMkdir'] = 'no'
+        ..['supportedAudioFormats'] = ['mp3', 7, null, 'flac']
+        ..['ytdlLibrary'] = 3
+        ..['ytdlLayout'] = false
+        ..['ytdlLayoutKind'] = 7
+        ..['ytdlFormat'] = ['mp3']
+        ..['ytdlJobs'] = [
+          'junk',
+          {'id': 'j-2', 4: 'x'},
+          null,
+        ];
+      final s = Server.fromJson(j);
+      expect(s.noMkdir, isNull);
+      expect(s.supportedAudioFormats, ['mp3', 'flac']);
+      expect([s.ytdlLibrary, s.ytdlLayout, s.ytdlLayoutKind, s.ytdlFormat],
+          everyElement(isNull));
+      expect(s.ytdlJobs, [
+        {'id': 'j-2'}
+      ]);
+      final k = Server('u', null, null, null, 'l').toJson()
+        ..['supportedAudioFormats'] = {'mp3': true}
+        ..['ytdlJobs'] = {'id': 'j-3'};
+      expect(Server.fromJson(k).supportedAudioFormats, isNull);
+      expect(Server.fromJson(k).ytdlJobs, isEmpty);
+    });
+  });
 }

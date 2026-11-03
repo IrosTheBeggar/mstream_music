@@ -10,6 +10,9 @@
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
 //                          back · label · search · (no songs to act on)
+//   • a server folder    → the same, with "Add from YouTube here" first in
+//                          the overflow (songs) or an icon before search
+//                          (no songs), where the folder offers it
 //   • Discover           → back · label · Filters · New seeds (no search, no
 //                          verbs: its footers carry them; Filters when the
 //                          server filters by mood)
@@ -34,11 +37,15 @@ import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
 import '../objects/mood_filter.dart';
+import '../objects/server.dart';
 import '../screens/discovery/discovery_listing.dart';
+import '../screens/ytdl/ytdl_folder_sheet.dart';
+import '../screens/ytdl/ytdl_folder_strip.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
+import '../singletons/ytdl_hub.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
@@ -63,6 +70,12 @@ class BrowserToolbar extends StatefulWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(50);
+
+  /// How "Add from YouTube here" opens the folder sheet (tests watch it).
+  @visibleForTesting
+  static Future<void> Function(
+          BuildContext context, Server server, String currentPath)
+      openYtdlFolderSheet = showYtdlFolderSheet;
 
   @override
   State<BrowserToolbar> createState() => _BrowserToolbarState();
@@ -224,12 +237,17 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   // (_downloadable), Add All needs anything playable (_enqueueable). Both used
   // to render unconditionally, so they were live-but-inert on Albums, Artists
   // and Playlists — this fixes that as a side effect.
+  //
+  // [offerYtdl]: a folder with songs puts "Add from YouTube here" first, over
+  // a divider (spec §7: the bar is full at 360 dp there), when the folder
+  // offers it as the menu opens.
   Widget _overflow(
     BuildContext context,
     AppLocalizations l,
     List<DisplayItem> targets, {
     bool showSearch = true,
     bool showShuffle = false,
+    bool offerYtdl = false,
   }) {
     final canDownload = _downloadable(targets).isNotEmpty;
     final canAdd = _enqueueable(targets).isNotEmpty;
@@ -244,6 +262,12 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       tooltip: l.browserMoreActions,
       color: VelvetColors.surface,
       itemBuilder: (_) => [
+        if (offerYtdl && ytdlExplorerEntry()) ...[
+          _menuItem(_BarAction.ytdl, Icons.smart_display_outlined,
+              l.ytdlExplorerEntry,
+              key: const ValueKey('ytdl-explorer-menu-item')),
+          const PopupMenuDivider(),
+        ],
         if (showSearch)
           _menuItem(_BarAction.search, Icons.search, l.browserSearchList),
         if (canDownload)
@@ -254,6 +278,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ],
       onSelected: (a) {
         switch (a) {
+          case _BarAction.ytdl:
+            _openYtdl(context);
           case _BarAction.search:
             BrowserManager().openSearch();
           case _BarAction.download:
@@ -268,17 +294,47 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   PopupMenuItem<_BarAction> _menuItem(
-          _BarAction value, IconData icon, String label) =>
+          _BarAction value, IconData icon, String label, {Key? key}) =>
       PopupMenuItem<_BarAction>(
+        key: key,
         value: value,
         child: Row(
           children: [
             Icon(icon, size: 20, color: VelvetColors.textSecondary),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(color: VelvetColors.textPrimary)),
+            // Flexible: "Add from YouTube here" at a large text size wraps
+            // inside the menu's width instead of running past it.
+            Flexible(
+              child: Text(label,
+                  style: TextStyle(color: VelvetColors.textPrimary)),
+            ),
           ],
         ),
       );
+
+  // "Add from YouTube here" for the folder on screen, built by [build] only
+  // where the folder offers it (ytdlExplorerEntry). Its server's state
+  // notifies when a re-ping lands, so a flag that turns the feature off
+  // (uploads, audio conversion) takes the entry away at once — hidden,
+  // never greyed.
+  Widget _ytdlGate(Widget Function() build) {
+    final server = ytdlExplorerServer();
+    if (server == null || !ytdlExplorerEntry()) return const SizedBox.shrink();
+    final state = YtdlHub().stateFor(server);
+    return ListenableBuilder(
+      listenable: state,
+      builder: (_, _) =>
+          state.entryAllowed ? build() : const SizedBox.shrink(),
+    );
+  }
+
+  // The folder sheet: the result card, adding into the folder on screen.
+  void _openYtdl(BuildContext context) {
+    final server = ytdlExplorerServer();
+    final path = BrowserManager().currentPath;
+    if (server == null || path == null) return;
+    unawaited(BrowserToolbar.openYtdlFolderSheet(context, server, path));
+  }
 
   // Discover's "New seeds": the open frame's controller asks again
   // (DiscoveryPageController.refresh) — a plain re-ask, which the server
@@ -626,7 +682,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         if (moodFrame != null) _moodButton(moodFrame),
         _playButton(l, targets),
         _icon(Icons.library_add, l.addAll, () => _addAll(context, targets)),
-        _overflow(context, l, targets, showShuffle: true),
+        _overflow(context, l, targets, showShuffle: true, offerYtdl: true),
       ] else ...[
         // Nothing playable here (Albums, Artists, a song-less folder). The bar
         // is empty anyway, so search keeps its one-tap spot rather than being
@@ -643,6 +699,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         // Recent left with nothing to play): Filters goes before search,
         // which keeps the bar's end.
         if (moodFrame != null) _moodButton(moodFrame),
+        // A server folder with no songs to act on: Add from YouTube here
+        // has room on the bar, just before search.
+        _ytdlGate(() => IconButton(
+              key: const ValueKey('ytdl-explorer-button'),
+              icon: const Icon(Icons.smart_display_outlined, size: 22),
+              color: VelvetColors.appBarTextSecondary,
+              tooltip: l.ytdlExplorerEntry,
+              onPressed: () => _openYtdl(context),
+            )),
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
         _overflow(context, l, targets, showSearch: false),
@@ -652,4 +717,4 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
 }
 
 // Actions demoted into the toolbar's overflow menu.
-enum _BarAction { search, download, addAll, shuffle }
+enum _BarAction { ytdl, search, download, addAll, shuffle }

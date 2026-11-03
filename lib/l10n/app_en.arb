@@ -5996,5 +5996,1037 @@
   "settingsResetBodyIos": "Also resets Transcoding and a few options outside Settings. Servers, downloads and listening history stay.",
   "@settingsResetBodyIos": {
     "description": "Reset confirm body on iPhone (no Equalizer there)."
+  },
+  "ytdlTitle": "Add from YouTube",
+  "@ytdlTitle": {
+    "description": "Home card in the SERVER section (beside Add torrent), the title of the screen it opens, and the title of the File Explorer's folder sheet. The user's server fetches a YouTube video's audio into their library. Use 'add', never 'download': everywhere else in the app Download means saving to this phone."
+  },
+  "ytdlHomeAdding": "{count, plural, other{Adding {count}}}",
+  "@ytdlHomeAdding": {
+    "description": "Second line of the Add from YouTube home card while songs are being added on the server; {count} is how many. Must fit about 81 px at 360 dp.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ytdlHomeAdded": "{count, plural, other{Added {count}}}",
+  "@ytdlHomeAdded": {
+    "description": "Second line of the Add from YouTube home card for up to an hour after songs finished, until the screen is opened; {count} is how many. Must fit about 81 px at 360 dp.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ytdlHomeFailed": "{count, plural, other{{count} failed}}",
+  "@ytdlHomeFailed": {
+    "description": "Second line of the Add from YouTube home card while songs failed and the screen hasn't been opened since; {count} is how many songs (not copies — translate with the agreement songs need). Must fit about 81 px at 360 dp.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ytdlPasteHint": "Paste a YouTube link",
+  "@ytdlPasteHint": {
+    "description": "Placeholder in the link field at the top of the Add from YouTube screen and of the folder sheet."
+  },
+  "ytdlPasteFromClipboard": "Paste from clipboard",
+  "@ytdlPasteFromClipboard": {
+    "description": "Chip under the empty link field: fills the field from the clipboard (on iPhone the system then asks to allow pasting)."
+  },
+  "ytdlLandsIn": "Lands in {path}",
+  "@ytdlLandsIn": {
+    "description": "Line under the link field naming where new songs go; {path} is the library and folders joined with ' › ' (like 'Music › Artist › Album', with sample words before a link is pasted). The format (like ' · MP3') and a Change link follow it.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlLimits": "One video per link · the server stops at 500 MB or after an hour · no live streams or playlists",
+  "@ytdlLimits": {
+    "description": "Quiet line under the paste card (servers on mStream 6.30 or later): the limits the server applies to every add."
+  },
+  "ytdlEmptyTitle": "Paste a link to add a song to your library.",
+  "@ytdlEmptyTitle": {
+    "description": "Empty state of the Add from YouTube screen, before anything was added."
+  },
+  "ytdlEmptyWebApp": "Songs added from the web app show up here too.",
+  "@ytdlEmptyWebApp": {
+    "description": "Line under the empty state (servers on 6.30 or later): the Added list also shows songs added from the server's web app."
+  },
+  "ytdlLinkShortSent": "Short link: sent as {link}",
+  "@ytdlLinkShortSent": {
+    "description": "Helper under the link field when a youtu.be, Shorts, live or embed link was rewritten; {link} is the link the server gets, like 'youtube.com/watch?v=FGBhQbmPwH8'.",
+    "placeholders": {
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlLinkSentAs": "Sent as {link}",
+  "@ytdlLinkSentAs": {
+    "description": "Helper under the link field when a link typed without https:// was completed; {link} is the link the server gets, like 'youtube.com/watch?v=FGBhQbmPwH8'.",
+    "placeholders": {
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlLinkNotYoutube": "That's not a YouTube link. Paste one from youtube.com or youtu.be.",
+  "@ytdlLinkNotYoutube": {
+    "description": "Error under the link field: the pasted text has no YouTube link. Keep youtube.com and youtu.be as they are."
+  },
+  "ytdlLinkPlaylist": "That's a playlist. Open one video in it and copy that link.",
+  "@ytdlLinkPlaylist": {
+    "description": "Error under the link field: the link is a playlist, and only one video per link can be added."
+  },
+  "ytdlLinkInPlaylist": "Just this video, not the playlist.",
+  "@ytdlLinkInPlaylist": {
+    "description": "Note on the result card when the video link also names a playlist: only the video is added."
+  },
+  "ytdlLinkLive": "Live streams can't be saved. If this one has ended, it may still work.",
+  "@ytdlLinkLive": {
+    "description": "Note on the result card for a /live/ link, on servers that refuse live streams (6.30 or later)."
+  },
+  "ytdlLinkLiveOlder": "This server doesn't stop live streams. Add this only if the stream has ended.",
+  "@ytdlLinkLiveOlder": {
+    "description": "Note on the result card for a /live/ link, on servers before 6.30 (or before the version check answered), which would try to record a stream still running."
+  },
+  "ytdlLookupReading": "Reading the video…",
+  "@ytdlLookupReading": {
+    "description": "Caption beside a spinner on the result card while the server looks the video up."
+  },
+  "ytdlLookupSlow": "Still looking — YouTube can be slow.",
+  "@ytdlLookupSlow": {
+    "description": "Caption on the result card when the lookup has run for 8 seconds; an 'Enter details yourself' link follows it."
+  },
+  "ytdlLookupEnterYourself": "Enter details yourself",
+  "@ytdlLookupEnterYourself": {
+    "description": "Link on a slow lookup: opens the tag fields so the user can type them while the lookup carries on."
+  },
+  "ytdlLookupFailed": "Couldn't read this video's details. It may be private, age-restricted or blocked for the server.",
+  "@ytdlLookupFailed": {
+    "description": "Result card when the server could not look the video up; 'Enter details' and 'Try again' buttons follow it."
+  },
+  "ytdlLookupTimedOut": "The server took too long — it may still be setting up its downloader. Try again in a minute.",
+  "@ytdlLookupTimedOut": {
+    "description": "Result card when the lookup got no answer in time (a fresh server can fetch its YouTube downloader during the first lookup); 'Enter details' and 'Try again' buttons follow it."
+  },
+  "ytdlLookupEnterDetails": "Enter details",
+  "@ytdlLookupEnterDetails": {
+    "description": "Button on a failed or timed-out lookup: opens the tag fields to type the title, artist, album and year by hand."
+  },
+  "ytdlLookupNoTags": "No tags yet, so it goes into the library's top folder.",
+  "@ytdlLookupNoTags": {
+    "description": "Note under the Saves to path after a failed lookup: with no artist or album there are no folders to make."
+  },
+  "ytdlLookupFailedUsingYours": "Couldn't read this video's details · Your details will be used.",
+  "@ytdlLookupFailedUsingYours": {
+    "description": "Strip on the result card when the lookup failed after the user chose to enter the details themselves: what they typed is kept and sent."
+  },
+  "ytdlLateFound": "Details found for this video",
+  "@ytdlLateFound": {
+    "description": "Strip on the result card when the lookup answered after the user typed some tags; a 'Use them' link follows."
+  },
+  "ytdlLateUseThem": "Use them",
+  "@ytdlLateUseThem": {
+    "description": "Link on that strip: fills only the tag fields the user has not edited from the lookup."
+  },
+  "ytdlLateEditsStay": "Your edits stay.",
+  "@ytdlLateEditsStay": {
+    "description": "Second line of that strip: fields the user typed in are not overwritten."
+  },
+  "ytdlOffline": "You're offline — the lookup runs when you're back.",
+  "@ytdlOffline": {
+    "description": "Banner on the Add from YouTube screen while the phone has no connection."
+  },
+  "ytdlYtdlpMissing": "This server can't download from YouTube yet. Ask its admin to set up yt-dlp.",
+  "@ytdlYtdlpMissing": {
+    "description": "Panel in place of the result card when the server has no YouTube downloader; a 'Try again' button follows. Keep 'yt-dlp' (the program's name) as it is."
+  },
+  "ytdlCardNoAlbum": "No album",
+  "@ytdlCardNoAlbum": {
+    "description": "Third line of the result card (under title and artist) when the song has no album."
+  },
+  "ytdlSourceMusic": "Tags from YouTube Music",
+  "@ytdlSourceMusic": {
+    "description": "Source line on the result card, beside a tick: YouTube returned an album, so the tags came from YouTube Music and are reliable."
+  },
+  "ytdlSourceSplit": "Artist and title from the video title",
+  "@ytdlSourceSplit": {
+    "description": "Source line on the result card: the phone split a title like 'Gorillaz - Feel Good Inc.' into artist and title."
+  },
+  "ytdlSourceSplitAgrees": "Artist and title from the video title · matches the artist YouTube lists",
+  "@ytdlSourceSplitAgrees": {
+    "description": "The same source line when the artist split from the title also matches YouTube's own artist field."
+  },
+  "ytdlSourceChannel": "Artist may be the channel name — check it",
+  "@ytdlSourceChannel": {
+    "description": "Source line on the result card, beside a warning icon: the artist is YouTube's artist field, which is often just the uploading channel's name."
+  },
+  "ytdlCleanedFrom": "Cleaned from “{title}”",
+  "@ytdlCleanedFrom": {
+    "description": "Line on the result card when words like '(Official Video)' were removed from the title; {title} is the video's original title. An 'Undo all' link follows.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlUndoAll": "Undo all",
+  "@ytdlUndoAll": {
+    "description": "Link after 'Cleaned from …': puts every removed piece back into the title (and undoes an artist split)."
+  },
+  "ytdlEditTags": "Edit tags",
+  "@ytdlEditTags": {
+    "description": "Text button on the result card that opens the title, artist, album and year fields inside the card; also the link on a folder warning that opens those fields."
+  },
+  "ytdlFieldTitle": "Title",
+  "@ytdlFieldTitle": {
+    "description": "Label of the song title text field on the result card (drawn in capitals). The artist, album and year fields reuse torrentArtistLabel, torrentAlbumLabel and torrentYearLabel."
+  },
+  "ytdlHelpMusic": "From YouTube Music",
+  "@ytdlHelpMusic": {
+    "description": "Helper under a tag field: its value came from YouTube Music's tags."
+  },
+  "ytdlHelpVideoTitle": "From the video title",
+  "@ytdlHelpVideoTitle": {
+    "description": "Helper under the title or artist field: its value was read from the video's title."
+  },
+  "ytdlHelpVideoTitleCleaned": "From the video title, cleaned",
+  "@ytdlHelpVideoTitleCleaned": {
+    "description": "Helper under the title field: read from the video's title with words like '(Official Video)' removed (each one can be put back with the chips under it)."
+  },
+  "ytdlHelpYoutubeArtist": "From YouTube's artist field",
+  "@ytdlHelpYoutubeArtist": {
+    "description": "Helper under the artist field after an artist/title split was undone: the artist is YouTube's own artist field again."
+  },
+  "ytdlHelpYoutubeArtistCheck": "From YouTube's artist field — check it",
+  "@ytdlHelpYoutubeArtistCheck": {
+    "description": "Helper under the artist field when the only artist is YouTube's artist field (often the channel name) and nothing was removed from it."
+  },
+  "ytdlHelpYoutubeArtistStripped": "From YouTube's artist field, “{removed}” removed — check it",
+  "@ytdlHelpYoutubeArtistStripped": {
+    "description": "Helper under the artist field when the phone removed a channel suffix from YouTube's artist field; {removed} is what it removed, kept as is: 'VEVO', '- Topic' or 'Official'.",
+    "placeholders": {
+      "removed": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlHelpEdited": "Edited",
+  "@ytdlHelpEdited": {
+    "description": "Helper under a tag field once the user has typed in it."
+  },
+  "ytdlBlankTitle": "Blank: the file gets the video's own title.",
+  "@ytdlBlankTitle": {
+    "description": "Helper under the title field when it is empty: the server then tags the file with the video's original title."
+  },
+  "ytdlBlankArtistMusic": "Blank: the file keeps YouTube Music's artist.",
+  "@ytdlBlankArtistMusic": {
+    "description": "Helper under an empty artist field when the tags came from YouTube Music."
+  },
+  "ytdlBlankArtistGuess": "Blank: the file gets YouTube's own artist guess, often the raw channel name (here “{name}”).",
+  "@ytdlBlankArtistGuess": {
+    "description": "Helper under an empty artist field when the tags did not come from YouTube Music; {name} is YouTube's artist field as YouTube gave it, like 'TheNeighbourhoodVEVO'.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlBlankArtistGuessUnnamed": "Blank: the file gets YouTube's own artist guess, often the raw channel name.",
+  "@ytdlBlankArtistGuessUnnamed": {
+    "description": "The same helper as ytdlBlankArtistGuess when the phone does not know YouTube's artist field (no lookup answer)."
+  },
+  "ytdlBlankAlbumSingle": "Leave blank for a single",
+  "@ytdlBlankAlbumSingle": {
+    "description": "Helper under the album field when YouTube gave no album."
+  },
+  "ytdlBlankAlbumKeeps": "Blank keeps YouTube's album tag",
+  "@ytdlBlankAlbumKeeps": {
+    "description": "Helper under an emptied album field when YouTube gave an album: the server only overwrites the tags you fill in."
+  },
+  "ytdlBlankYear": "Blank: the file gets YouTube's upload year.",
+  "@ytdlBlankYear": {
+    "description": "Helper under an empty year field: the server then tags the file with the year the video was uploaded."
+  },
+  "ytdlYearInvalid": "A year is 4 digits, like 2001",
+  "@ytdlYearInvalid": {
+    "description": "Error under the year field when it is not four digits."
+  },
+  "ytdlRestoreSplit": "Split at {separator}",
+  "@ytdlRestoreSplit": {
+    "description": "Chip under the title field (after an undo arrow) that undoes the artist/title split; {separator} is the character the title was split at, like '-' or ':'.",
+    "placeholders": {
+      "separator": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlOrYoutubeArtist": "Or YouTube's artist: {name}",
+  "@ytdlOrYoutubeArtist": {
+    "description": "Line under the artist field when the artist split from the title differs from YouTube's artist field; {name} is YouTube's artist (channel suffixes like VEVO removed).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlSwap": "Swap artist and title",
+  "@ytdlSwap": {
+    "description": "Text button under the tag fields after an artist/title split: exchanges the two, for titles written 'Title - Artist'."
+  },
+  "ytdlSavesTo": "Saves to",
+  "@ytdlSavesTo": {
+    "description": "Label (drawn in capitals) above the path on the result card where the song will land."
+  },
+  "ytdlSavesHere": "Saves here",
+  "@ytdlSavesHere": {
+    "description": "The same label in the File Explorer's folder sheet while the song goes into the folder on screen."
+  },
+  "ytdlNewTag": "new",
+  "@ytdlNewTag": {
+    "description": "Small outlined tag after a folder in a path: that folder doesn't exist yet and will be made."
+  },
+  "ytdlSampleFile": "file",
+  "@ytdlSampleFile": {
+    "description": "Stand-in word after the library in a path when there are no tags yet ('Music › file'), drawn in italics."
+  },
+  "ytdlSampleFileStem": "Video_title",
+  "@ytdlSampleFileStem": {
+    "description": "Stand-in file name in a sample path before a link is pasted ('Music › Artist › Album › Video_title.mp3'), drawn in italics. The server's file names use only A–Z, digits and underscores, so write it the same way."
+  },
+  "ytdlFileAbout": "about {name}",
+  "@ytdlFileAbout": {
+    "description": "Line under the Saves to path: the file name the server will most likely give the song (the phone can only predict it); {name} is that file name, drawn in a monospace font, like 'One_More_Time.mp3'.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlFileAboutLettersDropped": "about {name} · letters outside A–Z are dropped from file names",
+  "@ytdlFileAboutLettersDropped": {
+    "description": "The same line when the video title has letters outside A–Z that the server's file-name rule drops (a title in Cyrillic becomes '_.mp3'); {name} is the predicted file name, drawn in a monospace font.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlCheckFailed": "Couldn't check this folder",
+  "@ytdlCheckFailed": {
+    "description": "Quiet line under the Saves to path when the phone could not tell which folders already exist."
+  },
+  "ytdlJustThisSong": "Just this song",
+  "@ytdlJustThisSong": {
+    "description": "Small outlined tag (and caption) on a destination chosen for the current song only; the remembered one comes back for the next song."
+  },
+  "ytdlUndo": "Undo",
+  "@ytdlUndo": {
+    "description": "Link after the 'Just this song' tag: goes back to the remembered destination."
+  },
+  "ytdlClash": "Something like “{name}” looks to be in this folder already. The server won't replace it, so this would likely fail.",
+  "@ytdlClash": {
+    "description": "Warning above the add button (servers on 6.30 or later) when the folder already seems to hold a file with the predicted name; {name} is that file name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlClashChangeFormat": "Change format — a different format makes a different file",
+  "@ytdlClashChangeFormat": {
+    "description": "Link under that warning: opens the format menu (another format gives the file another extension)."
+  },
+  "ytdlClashOlder": "A file named “{name}” is already in this folder. This server would re-tag that file instead of adding a new one.",
+  "@ytdlClashOlder": {
+    "description": "Warning on servers before 6.30 when the folder already holds a file with the predicted name; adding is blocked. {name} is that file name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlChangeFormat": "Change format",
+  "@ytdlChangeFormat": {
+    "description": "Link under the older-server name warning: opens the format menu."
+  },
+  "ytdlAddToLibrary": "Add to library",
+  "@ytdlAddToLibrary": {
+    "description": "Main button at the bottom of the Add from YouTube screen (and of the folder sheet once subfolders are chosen): the server fetches the song into the library. Not 'Download', which means saving to this phone."
+  },
+  "ytdlAddHere": "Add here",
+  "@ytdlAddHere": {
+    "description": "Main button of the File Explorer's folder sheet: the server fetches the song into the folder on screen."
+  },
+  "ytdlAddAnyway": "Add anyway",
+  "@ytdlAddAnyway": {
+    "description": "Outlined main button when the folder already seems to hold a file with that name."
+  },
+  "ytdlAlreadyAdding": "Already adding to this folder",
+  "@ytdlAlreadyAdding": {
+    "description": "Caption by the disabled add button: the same video is already being added to the same folder."
+  },
+  "ytdlFormatMenuTitle": "Best audio the video has, saved as",
+  "@ytdlFormatMenuTitle": {
+    "description": "Header of the format menu opened from the format chip (MP3 ▾); the formats follow it."
+  },
+  "ytdlFormatRemembered": "Remembered for {server}",
+  "@ytdlFormatRemembered": {
+    "description": "Footer of the format menu: the choice is kept on this phone for this server; {server} is its name.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlFormatMp3Help": "Plays everywhere",
+  "@ytdlFormatMp3Help": {
+    "description": "Helper under MP3 in the format menu."
+  },
+  "ytdlFormatM4aHelp": "Good for Apple devices",
+  "@ytdlFormatM4aHelp": {
+    "description": "Helper under M4A in the format menu."
+  },
+  "ytdlFormatOpusHelp": "Usually YouTube's own audio, no re-encode",
+  "@ytdlFormatOpusHelp": {
+    "description": "Helper under Opus in the format menu: YouTube usually streams Opus, so it is saved without converting."
+  },
+  "ytdlFormatFlacHelp": "Bigger, not better than the video's sound",
+  "@ytdlFormatFlacHelp": {
+    "description": "Helper under FLAC in the format menu: lossless only keeps the video's sound, it can't improve it."
+  },
+  "ytdlFormatWavHelp": "Biggest, no cover art",
+  "@ytdlFormatWavHelp": {
+    "description": "Helper under WAV in the format menu."
+  },
+  "ytdlErrFfmpeg": "The server can't convert audio right now. Try again later, or ask its admin.",
+  "@ytdlErrFfmpeg": {
+    "description": "Line above the add button when the server answered that its audio converter is not ready."
+  },
+  "ytdlErrUploadsOff": "Your account can't add files to this server.",
+  "@ytdlErrUploadsOff": {
+    "description": "Error when the server refused the add because the account may not upload."
+  },
+  "ytdlErrLibraryGone": "You can't add files to “{library}” any more. Pick another library.",
+  "@ytdlErrLibraryGone": {
+    "description": "Error on the Add from YouTube screen when the server no longer lets the account into that library; {library} is its name.",
+    "placeholders": {
+      "library": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrLibraryGoneSheet": "You can't add files to “{library}” any more.",
+  "@ytdlErrLibraryGoneSheet": {
+    "description": "The same error in the File Explorer's folder sheet, where picking another library makes no sense; {library} is its name.",
+    "placeholders": {
+      "library": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrNoRoute": "This server doesn't offer YouTube downloads.",
+  "@ytdlErrNoRoute": {
+    "description": "Error when the server has no YouTube route at all."
+  },
+  "ytdlErrFormatOff": "This server doesn't save {format} any more",
+  "@ytdlErrFormatOff": {
+    "description": "Error when the server refused the chosen format; {format} is its name, like 'Opus'. A 'pick another' link follows after ' · '.",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrPickAnother": "pick another",
+  "@ytdlErrPickAnother": {
+    "description": "Link after ytdlErrFormatOff (lower case, it continues the line): opens the format menu."
+  },
+  "ytdlErrBadRequest": "Something about this link didn't suit the server. Try again.",
+  "@ytdlErrBadRequest": {
+    "description": "Error when the server refused the request as invalid (its own wording is never shown)."
+  },
+  "ytdlErrServer": "Something went wrong on the server.",
+  "@ytdlErrServer": {
+    "description": "Error when the server answered with a bare server error."
+  },
+  "ytdlErrOther": "The server said: “{message}”",
+  "@ytdlErrOther": {
+    "description": "Error for any other refusal; {message} is the server's own text, untranslated.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrMkdir": "Couldn't make the folder “{folder}”.",
+  "@ytdlErrMkdir": {
+    "description": "Error when making a new folder for the song failed; {folder} is its name. 'Try again' and 'Choose a folder…' follow.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlSectionAdding": "Adding",
+  "@ytdlSectionAdding": {
+    "description": "Section header (drawn in capitals) over the songs the server is adding now."
+  },
+  "ytdlSectionAddingNote": "Runs on the server · can't be stopped from the app",
+  "@ytdlSectionAddingNote": {
+    "description": "Quiet line beside the Adding header."
+  },
+  "ytdlSectionNeedsLook": "Needs a look",
+  "@ytdlSectionNeedsLook": {
+    "description": "Section header (drawn in capitals) over adds that failed or whose outcome is unsure."
+  },
+  "ytdlSectionAdded": "Added",
+  "@ytdlSectionAdded": {
+    "description": "Section header (drawn in capitals) over songs already added to the library."
+  },
+  "ytdlRowAdding": "{minutes, plural, other{Adding · {minutes} min · {format}}}",
+  "@ytdlRowAdding": {
+    "description": "Status of a row in the Adding section; {minutes} is how long it has been running (at least 1), {format} the format's name, like 'MP3'.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlRowStartUnsure": "Starting… the server hasn't answered yet",
+  "@ytdlRowStartUnsure": {
+    "description": "Status of a row whose add request got no answer in time; the phone keeps looking for it on the server for two minutes."
+  },
+  "ytdlRowNotSureStarted": "Not sure it started",
+  "@ytdlRowNotSureStarted": {
+    "description": "Status of a row whose add request never answered and that the phone could not find on the server; a 'Check again' button follows."
+  },
+  "ytdlRowNotFound": "Not found on the server",
+  "@ytdlRowNotFound": {
+    "description": "Status after Check again found nothing; an 'Add again' button follows."
+  },
+  "ytdlRowClash": "Failed · a file with this name looks to be there already. Nothing was replaced.",
+  "@ytdlRowClash": {
+    "description": "Status of a failed row (servers on 6.30 or later) when the folder holds a file with the predicted name."
+  },
+  "ytdlRowFailed": "Failed · the server didn't say why. Common causes: a live stream, YouTube refusing the server, 500 MB, or an hour.",
+  "@ytdlRowFailed": {
+    "description": "Status of a failed row on servers on 6.30 or later, which give no reason; the last two causes are the server's size and time limits."
+  },
+  "ytdlRowFailedOlder": "Failed · the server didn't say why. YouTube may have refused the server.",
+  "@ytdlRowFailedOlder": {
+    "description": "Status of a failed row on servers before 6.30."
+  },
+  "ytdlRowNotSureFinished": "Not sure it finished · it ended while the app was away and the server has no record of it",
+  "@ytdlRowNotSureFinished": {
+    "description": "Status of a row whose job ended while the app was closed or in the background, with nothing on the server saying how."
+  },
+  "ytdlRowWaiting": "Waiting for connection",
+  "@ytdlRowWaiting": {
+    "description": "Status of a row while the phone is offline."
+  },
+  "ytdlRowFileMissing": "File missing",
+  "@ytdlRowFileMissing": {
+    "description": "Status of a greyed row in the Added section: the added file is no longer in the library. The date it was added follows after ' · '."
+  },
+  "ytdlRowHide": "Hide from this list",
+  "@ytdlRowHide": {
+    "description": "Menu item on a row in the Adding section: removes the row; the server carries on (it can't be stopped from the app)."
+  },
+  "ytdlRowChangeFormatRetry": "Change format and retry",
+  "@ytdlRowChangeFormatRetry": {
+    "description": "Button on a row that failed on a file-name clash: opens the format menu and adds the song again in the chosen format."
+  },
+  "ytdlRowShowFolder": "Show folder",
+  "@ytdlRowShowFolder": {
+    "description": "Button on a row that needs a look: opens the target folder in the File Explorer."
+  },
+  "ytdlRowShowInFolder": "Show in folder",
+  "@ytdlRowShowInFolder": {
+    "description": "Menu item on an Added row: opens the folder holding the song in the File Explorer."
+  },
+  "ytdlShowEarlier": "Show earlier",
+  "@ytdlShowEarlier": {
+    "description": "Text button under the Added section: loads older added songs."
+  },
+  "ytdlWhereTitle": "Where new songs land",
+  "@ytdlWhereTitle": {
+    "description": "Title of the sheet that picks the library and folder layout for songs added from YouTube."
+  },
+  "ytdlWhereSub": "Kept on this phone for {server} · Discover copies keep their own setting.",
+  "@ytdlWhereSub": {
+    "description": "Subtitle of that sheet: the choice is stored on this phone for this server ({server} is its name) and doesn't change where Discover copies go.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlWhereLandsAt": "“{title}” lands at",
+  "@ytdlWhereLandsAt": {
+    "description": "Label above the preview path in that sheet; {title} is the song's title. The path follows on the next line.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlWhereLandsAtSample": "A song lands at",
+  "@ytdlWhereLandsAtSample": {
+    "description": "The same label before any link was pasted; the path below it uses sample words."
+  },
+  "ytdlWhereSampleNote": "Shown with sample words until you paste a link.",
+  "@ytdlWhereSampleNote": {
+    "description": "Note under that sample path."
+  },
+  "ytdlWhereFileNote": "The file name comes from the video title; your library shows “{title}”.",
+  "@ytdlWhereFileNote": {
+    "description": "Note under the preview path: the file is named after the original video title, but its tags carry the edited title {title}.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlWhereAlwaysEmpty": "Always empty for YouTube songs, so left out: {vars}",
+  "@ytdlWhereAlwaysEmpty": {
+    "description": "Note under the preview path: the layout's variables that never have a value for a song from YouTube (genre, server name, server folder); {vars} lists them as typed, like {{GENRE}}.",
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlWhereSetByDiscover": "Set by Discover",
+  "@ytdlWhereSetByDiscover": {
+    "description": "Caption under the single locked library chip while 'Same as Discover' is chosen: Discover's destination decides the library."
+  },
+  "ytdlLayoutTop": "Top of the library",
+  "@ytdlLayoutTop": {
+    "description": "Layout choice (and button): songs go straight into the library with no folders."
+  },
+  "ytdlLayoutTopSub": "No folders",
+  "@ytdlLayoutTopSub": {
+    "description": "Line under the 'Top of the library' choice."
+  },
+  "ytdlLayoutDiscover": "Same as Discover",
+  "@ytdlLayoutDiscover": {
+    "description": "Layout choice: use the destination set for Discover copies (its library, folders and layout), read only."
+  },
+  "ytdlWhereUseForSong": "Use for this song",
+  "@ytdlWhereUseForSong": {
+    "description": "Text button in the sheet footer beside Save: applies the choice to the current song only, without remembering it."
+  },
+  "ytdlWhereNoMkdir": "Your account can't make folders, so only folders that already exist work. Top of the library always does.",
+  "@ytdlWhereNoMkdir": {
+    "description": "Note in that sheet when the account may not make folders."
+  },
+  "ytdlCustomHelp": "Use / between folders. There's no TITLE — the file name always comes from the video title.",
+  "@ytdlCustomHelp": {
+    "description": "Help under the custom layout field: '/' makes folders; there is no TITLE variable because the server always names the file after the video. Keep TITLE as it is."
+  },
+  "ytdlErrNeverVar": "{name} is always empty for YouTube songs. Use {vars}.",
+  "@ytdlErrNeverVar": {
+    "description": "Error under the custom layout field: it names a variable that never has a value for a YouTube song; {name} is it in its braces (like {{GENRE}}), {vars} the variables that work (ARTIST, ALBUMARTIST, ALBUM, YEAR).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "vars": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrBadChars": "A folder name can't contain : * ? \" < > or |.",
+  "@ytdlErrBadChars": {
+    "description": "Error under the custom layout field: the typed folder name has a character the server's disk may refuse. Keep the characters as they are."
+  },
+  "ytdlTrapEmpty": "Nothing to fill this folder, so it's named “{folder}”. Add an album and year, or pick another layout.",
+  "@ytdlTrapEmpty": {
+    "description": "Warning under the preview path when the layout's variables for one folder are all empty, leaving only brackets; {folder} is the folder as it would be named, like '()'. An 'Edit tags' link follows.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlTrapNoYear": "No year for this song, so the folder reads “{folder}”. The file still gets YouTube's upload year as its tag.",
+  "@ytdlTrapNoYear": {
+    "description": "Warning under the preview path when the layout puts the year in a folder name and the year is empty; {folder} is the folder as it would be named, like 'Discovery ()'. An 'Add a year' link follows.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlTrapOther": "A tag is empty, so the folder reads “{folder}”. Fill in the tags, or pick another layout.",
+  "@ytdlTrapOther": {
+    "description": "Warning under the preview path when an empty variable leaves a folder ending in a dangling separator or empty brackets for another reason; {folder} is the folder as it would be named, like 'Gorillaz -'. An 'Edit tags' link follows.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlTrapAddYear": "Add a year",
+  "@ytdlTrapAddYear": {
+    "description": "Link after the missing-year warning: closes the sheet and opens the year field."
+  },
+  "ytdlNoMkdirNew": "“{folder}” doesn't exist yet and your account can't make folders.",
+  "@ytdlNoMkdirNew": {
+    "description": "Warning under the Saves to path when the target folder is new but the account may not make folders; {folder} is the first missing folder. Three choices follow.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlNoMkdirUnchecked": "Your account can't make folders and this folder couldn't be checked.",
+  "@ytdlNoMkdirUnchecked": {
+    "description": "The same warning when the phone could not tell whether the folder exists; the app never adds into an unchecked folder for this account."
+  },
+  "ytdlSaveToInstead": "Save to {path} instead",
+  "@ytdlSaveToInstead": {
+    "description": "Choice under the no-folders warning: use the deepest folder that exists; {path} is it, like 'Music › Daft Punk'. Applies to this song only.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlChooseFolderLink": "Choose a folder…",
+  "@ytdlChooseFolderLink": {
+    "description": "Button after a folder warning (the account can't make folders, or making one failed): opens a picker of folders that already exist, for this song only."
+  },
+  "ytdlChooseTitle": "Choose a folder",
+  "@ytdlChooseTitle": {
+    "description": "Title of the sheet that picks a folder that already exists, for this song only."
+  },
+  "ytdlChooseSub": "Your account can't make folders, so pick one that already exists.",
+  "@ytdlChooseSub": {
+    "description": "Subtitle of that sheet."
+  },
+  "ytdlChooseEmpty": "No folders here.",
+  "@ytdlChooseEmpty": {
+    "description": "Shown in that sheet when the folder on screen has no subfolders."
+  },
+  "ytdlExplorerEntry": "Add from YouTube here",
+  "@ytdlExplorerEntry": {
+    "description": "File Explorer: the first item of a folder's ⋮ menu, and the tooltip of the top-bar button in folders without songs. Opens the sheet that adds a song into this folder."
+  },
+  "ytdlSheetInto": "Into {path}",
+  "@ytdlSheetInto": {
+    "description": "Subtitle of the File Explorer's Add from YouTube sheet; {path} is the folder on screen, like 'Music › Daft Punk'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlSortSubfolders": "Sort into subfolders…",
+  "@ytdlSortSubfolders": {
+    "description": "Link in the folder sheet: turns the sheet to a page that picks subfolders (like Album) under the folder on screen."
+  },
+  "ytdlSubfoldersTitle": "Sort into subfolders",
+  "@ytdlSubfoldersTitle": {
+    "description": "Header of that page of the folder sheet."
+  },
+  "ytdlSubfoldersHere": "The folder you're in",
+  "@ytdlSubfoldersHere": {
+    "description": "Caption under the locked path at the top of that page: subfolders go under this folder."
+  },
+  "ytdlSubfoldersRightHere": "Right here",
+  "@ytdlSubfoldersRightHere": {
+    "description": "Choice on that page: put the song in the folder on screen."
+  },
+  "ytdlSubfoldersNone": "No subfolders",
+  "@ytdlSubfoldersNone": {
+    "description": "Line under the 'Right here' choice."
+  },
+  "ytdlSubfoldersNew": "{count, plural, =1{{count} new folder will be made: {folders}} other{{count} new folders will be made: {folders}}}",
+  "@ytdlSubfoldersNew": {
+    "description": "Note under the preview on that page; {count} is how many folders are missing, {folders} their names joined with ', ' (like 'Discovery').",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "folders": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlStripAdding": "Adding “{title}”…",
+  "@ytdlStripAdding": {
+    "description": "Strip above a File Explorer folder while one song is being added into it (or below it); {title} is the song. A 'See all' link follows.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlStripAddingCount": "{count, plural, =1{Adding {count} video…} other{Adding {count} videos…}}",
+  "@ytdlStripAddingCount": {
+    "description": "The same strip while several songs are being added; {count} is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ytdlStripSeeAll": "See all",
+  "@ytdlStripSeeAll": {
+    "description": "Link on that strip: opens the Add from YouTube screen."
+  },
+  "ytdlStripDetails": "Details",
+  "@ytdlStripDetails": {
+    "description": "Link on a failed strip: opens the Add from YouTube screen at the songs that need a look."
+  },
+  "ytdlToastAdded": "Added “{title}” to {path}",
+  "@ytdlToastAdded": {
+    "description": "Toast when a song finished; {title} is the song, {path} its folders below the library, like 'Daft Punk › Discovery', or the library's own name (like 'Music') when the song went into the library's top folder.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlCouldntAdd": "Couldn't add “{title}”",
+  "@ytdlCouldntAdd": {
+    "description": "Toast when adding a song failed, and the File Explorer strip that says so (a 'Details' link follows there); {title} is the song.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlToastSaved": "Saved · new songs land in {path}",
+  "@ytdlToastSaved": {
+    "description": "Toast after Save in Where new songs land; {path} is the library and layout, like 'Music › Artist › Album'.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlToastHidden": "Hidden. The server keeps going.",
+  "@ytdlToastHidden": {
+    "description": "Toast after 'Hide from this list' on a song still being added."
+  },
+  "ytdlA11yLinkField": "YouTube link",
+  "@ytdlA11yLinkField": {
+    "description": "Accessible name of the link field."
+  },
+  "ytdlA11yClearLink": "Clear link",
+  "@ytdlA11yClearLink": {
+    "description": "Accessible name of the ✕ button in the link field."
+  },
+  "ytdlA11yFormat": "Format, {format}",
+  "@ytdlA11yFormat": {
+    "description": "Accessible name of the format chip (MP3 ▾); {format} is the chosen format's name, like 'MP3'.",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yPutBack": "Put back {fragment}",
+  "@ytdlA11yPutBack": {
+    "description": "Accessible name of a chip under the title or artist field that restores a removed piece; {fragment} is that piece as it was, like '(Official Video)' or 'VEVO'.",
+    "placeholders": {
+      "fragment": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yUndoSplit": "Undo the split at the dash",
+  "@ytdlA11yUndoSplit": {
+    "description": "Accessible name of the 'Split at -' chip (the title was split at a dash)."
+  },
+  "ytdlA11yUndoSplitColon": "Undo the split at the colon",
+  "@ytdlA11yUndoSplitColon": {
+    "description": "Accessible name of the 'Split at :' chip (the title was split at a colon)."
+  },
+  "ytdlA11yMoreFor": "More for {title}",
+  "@ytdlA11yMoreFor": {
+    "description": "Accessible name of a row's ⋮ menu button; {title} is the song.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yAdding": "Adding",
+  "@ytdlA11yAdding": {
+    "description": "Accessible name of the spinning ring on a row being added."
+  },
+  "ytdlA11yNewFolder": "a new folder",
+  "@ytdlA11yNewFolder": {
+    "description": "Accessible name of the 'new' tag after a folder that will be made (lower case: it is read after the folder's name)."
+  },
+  "ytdlCrumbThen": "{previous}, then {next}",
+  "@ytdlCrumbThen": {
+    "description": "How a path is read aloud, one folder at a time: 'Music, then Daft Punk, then Discovery'. {previous} is the path read so far, {next} the next folder.",
+    "placeholders": {
+      "previous": {
+        "type": "String"
+      },
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlCrumbNew": "{folder}, a new folder",
+  "@ytdlCrumbNew": {
+    "description": "How a folder that will be made is read aloud inside a path ('Discovery, a new folder'); {folder} is its name.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlCrumbFile": "{path}, file {file}",
+  "@ytdlCrumbFile": {
+    "description": "How a preview path that ends in a file name is read aloud ('Music, then Daft Punk, file One_More_Time.mp3'); {path} is the folders read with ytdlCrumbThen, {file} the full file name.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlCrumbEmptyBrackets": "empty brackets",
+  "@ytdlCrumbEmptyBrackets": {
+    "description": "How a folder named only '()' is read aloud inside a path."
+  },
+  "ytdlCrumbWithEmptyBrackets": "{folder} with empty brackets",
+  "@ytdlCrumbWithEmptyBrackets": {
+    "description": "How a folder ending in '()' is read aloud inside a path ('Discovery with empty brackets'); {folder} is the name before the brackets.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yVarUsed": "{name}, used",
+  "@ytdlA11yVarUsed": {
+    "description": "Accessible name of a variable chip whose variable is already in the custom layout; {name} is the chip's own name, like 'Insert album'.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yInsertVariable": "Insert a variable",
+  "@ytdlA11yInsertVariable": {
+    "description": "Accessible name of the group of variable chips under the custom layout field."
+  },
+  "ytdlA11yLocked": "Locked",
+  "@ytdlA11yLocked": {
+    "description": "Accessible name of the lock icon on a path or library chip that can't be changed here."
+  },
+  "ytdlA11yFolderPath": "Folder path",
+  "@ytdlA11yFolderPath": {
+    "description": "Accessible name of the path row at the top of the Choose a folder sheet."
+  },
+  "ytdlA11yUpTo": "Up to {folder}",
+  "@ytdlA11yUpTo": {
+    "description": "Accessible name of a folder in that path row: tapping it goes up to that folder; {folder} is its name.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlA11yCover": "Cover",
+  "@ytdlA11yCover": {
+    "description": "Accessible name of the video's cover picture on the result card and on rows."
+  },
+  "ytdlSummaryBy": "{title}, by {artist}",
+  "@ytdlSummaryBy": {
+    "description": "Start of the result card's spoken summary when there is an artist: 'One More Time, by Daft Punk'.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlSummaryAlbum": "album {album}",
+  "@ytdlSummaryAlbum": {
+    "description": "Part of the result card's spoken summary: 'album Discovery' (lower case, it follows ', ').",
+    "placeholders": {
+      "album": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlSummaryNoAlbum": "no album",
+  "@ytdlSummaryNoAlbum": {
+    "description": "Part of the result card's spoken summary when there is no album (lower case, it follows ', ')."
+  },
+  "ytdlSummary": "{details}. {source}. Saves to {path}.",
+  "@ytdlSummary": {
+    "description": "The result card read aloud as one sentence: 'One More Time, by Daft Punk, album Discovery, 2001. Tags from YouTube Music. Saves to Music, then Daft Punk, then Discovery, a new folder.' {details} is the title, artist, album and year joined with ', '; {source} the source line; {path} the path read aloud.",
+    "placeholders": {
+      "details": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrAddOffline": "You're offline — try again when you're back.",
+  "@ytdlErrAddOffline": {
+    "description": "Line above the add button of Add from YouTube when the add could not reach the server because the phone has no connection (nothing was sent, so nothing started)."
+  },
+  "ytdlHelpVideoRelease": "From the video's release date",
+  "@ytdlHelpVideoRelease": {
+    "description": "Helper line under the Year field of Add from YouTube when the year came from the video's own release date (a premiere or scheduled upload), not from YouTube Music."
+  },
+  "ytdlChooseLoading": "Loading folders",
+  "@ytdlChooseLoading": {
+    "description": "Read by a screen reader while the Choose a folder sheet lists the folders of the folder on screen (the rows show as still placeholders meanwhile)."
+  },
+  "ytdlRowNoConnection": "Didn't start · the phone couldn't reach the server",
+  "@ytdlRowNoConnection": {
+    "description": "Status of a row in the Needs a look section of Add from YouTube: the add never left the phone because it had no connection to the server, so the server never started it. A 'Try again' button follows."
+  },
+  "ytdlServerUnreachable": "Can't reach {server}. Check that it's running, then try again.",
+  "@ytdlServerUnreachable": {
+    "description": "Note in place of the result card of Add from YouTube when the video lookup could not connect to the server although the phone has a network (the server is not running or refused the connection). {server} is the server's name or address. A 'Try again' button follows; the lookup also runs again by itself when the app comes back.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "ytdlErrAddUnreachable": "Can't reach {server} — check that it's running, then try again.",
+  "@ytdlErrAddUnreachable": {
+    "description": "Line above the add button of Add from YouTube when the add could not connect to the server although the phone has a network (the server is not running or refused the connection; nothing was sent, so nothing started). {server} is the server's name or address.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
   }
 }
