@@ -372,6 +372,7 @@ class ServerManager {
       final int? prevFedInbox = server.federationInbox;
       final int? prevStats = server.statsVersion;
       final int? prevAutoDj = server.autoDjGeneration;
+      final int? prevInstantMix = server.instantMixGeneration;
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
       final bool? prevMoodFilters = server.moodFiltersAvailable;
@@ -449,7 +450,8 @@ class ServerManager {
           // The Auto DJ screen's Learn from skips row and the Seeds page's
           // Less like card follow it, and they redraw on capabilityChanges.
           server.autoDjGeneration != prevAutoDj ||
-          server.statsVersion != prevStats) {
+          server.statsVersion != prevStats ||
+          server.instantMixGeneration != prevInstantMix) {
         unawaited(writeServerFile());
         _capabilities.add(server);
       }
@@ -597,6 +599,9 @@ class ServerManager {
     server.peerRecsAvailable = features is Map &&
         hasPeerRecs(features['discovery'], features['discoveryP2p'],
             features['discoveryTaste'], features['discoveryP2pPeers']);
+    // Instant Mix: an integer generation too, server-wide.
+    server.instantMixGeneration =
+        features is Map ? instantMixGenerationOf(features['instantMix']) : null;
     // Caller-scoped (the account's upload right), so under `user` here.
     server.noUpload = user is Map && user['noUpload'] is bool
         ? user['noUpload'] as bool
@@ -675,6 +680,9 @@ class ServerManager {
     server.noMkdir = res['noMkdir'] is bool ? res['noMkdir'] as bool : null;
     server.supportedAudioFormats =
         enabledAudioFormats(res['supportedAudioFiles']);
+    // Ping is only read from servers that predate `/api/`, and those
+    // predate Instant Mix too, whatever the payload says.
+    server.instantMixGeneration = null;
   }
 
   /// The formats a `supportedAudioFiles` wire map turns on: its keys whose
@@ -729,6 +737,13 @@ class ServerManager {
       taste >= 3 &&
       peers is int &&
       peers >= 1;
+
+  /// Instant Mix's generation from its `instantMix` wire value, by
+  /// [hasTasteGeneration]'s rule: an integer ≥ 1 (1 = the route with every
+  /// filter key; a filter added later ships as 2), null for anything else.
+  @visibleForTesting
+  static int? instantMixGenerationOf(dynamic v) =>
+      v is int && v >= 1 ? v : null;
 
   /// Test seam over [_applyServerInfo]: fold a layered `GET /api/` body into
   /// [server] exactly as a refresh would, minus the network.

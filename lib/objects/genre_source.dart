@@ -7,6 +7,8 @@
 // `sources: { tag, model }` — how many genres each kind has here. A server
 // that predates the filter ignores it and sends no `sources`.
 
+import 'package:flutter/foundation.dart' show immutable, listEquals;
+
 import 'server.dart';
 
 enum GenreSource {
@@ -54,6 +56,42 @@ class GenreSources {
         GenreSource.model => model,
         GenreSource.both => tag + model,
       };
+}
+
+/// A genre filter: Only or Skip ([mode], 'whitelist' | 'blacklist'), the
+/// [genres], and which of their links count ([source]). No genres filters
+/// nothing, whatever the mode. Immutable: the Genres sheet's value mode
+/// (an Instant mix page's Filters) starts from one and hands one back.
+@immutable
+class GenreChoice {
+  final String mode;
+  final List<String> genres;
+  final GenreSource source;
+
+  const GenreChoice(
+      {this.mode = 'whitelist',
+      this.genres = const [],
+      this.source = GenreSource.both});
+
+  static const none = GenreChoice();
+
+  /// [s]'s Auto DJ genre filter: its genres while it is switched on.
+  factory GenreChoice.autoDj(Server s) => GenreChoice(
+      mode: s.autoDJGenreMode,
+      genres: s.autoDJGenreEnabled ? s.autoDJGenres : const [],
+      source: s.autoDJGenreSource);
+
+  bool get isEmpty => genres.isEmpty;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GenreChoice &&
+      other.mode == mode &&
+      other.source == source &&
+      listEquals(other.genres, genres);
+
+  @override
+  int get hashCode => Object.hash(mode, source, Object.hashAll(genres));
 }
 
 /// The single kind to ask for instead of [chosen] when the server has none

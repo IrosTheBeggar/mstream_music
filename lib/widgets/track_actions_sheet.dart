@@ -2,9 +2,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
+import '../objects/instant_mix.dart';
 import '../screens/discover_screen.dart';
 import '../screens/discovery/browse_copy_marks.dart';
 import '../screens/discovery/copies_hub.dart';
+import '../screens/instant_mix/instant_mix_listing.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
@@ -24,8 +26,8 @@ import 'star_rating.dart';
 /// a list row conventionally opens the item's context menu (Apple Music,
 /// Spotify, Symfonium all do exactly this), so this sheet carries the same
 /// queue actions the album-detail dropdown offers — the browser's first
-/// per-track actions — plus Find similar when the track's server supports
-/// discovery.
+/// per-track actions — plus Instant mix and Find similar when the track's
+/// server supports them.
 ///
 /// [parentContext] is a context ABOVE this sheet (the browser's), used for
 /// follow-on navigation and snackbars after the sheet is popped — the
@@ -308,6 +310,12 @@ class TrackActionsSheet extends StatelessWidget {
             if (await addNext(item) != null) _queuedToast();
           }),
           action(Icons.play_arrow, l.queuePlayNow, () => playNow(item)),
+          // A page of songs that sound like this one, opened once the sheet
+          // is gone — only where the server can make one now (hidden,
+          // never greyed). From a mix's own rows too, so mixes chain.
+          if (isServerTrack && item.server!.instantMixUsable)
+            action(Icons.auto_awesome, l.instantMix,
+                () => openInstantMix(parentContext, MixSeed.song(item))),
           // Redundant when the row tap already appends (addToQueue /
           // appendAndJump tap behaviors) — same rule as the album-detail
           // dropdown.

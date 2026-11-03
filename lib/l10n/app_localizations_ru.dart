@@ -2124,6 +2124,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverFindSimilar => 'Найти похожие';
 
   @override
+  String get instantMix => 'Мгновенный микс';
+
+  @override
+  String get instantMixNotAnalyzed => 'Ещё не проанализировано';
+
+  @override
+  String get instantMixNothingSimilar => 'Пока ничего похожего';
+
+  @override
+  String get instantMixFailed => 'Не удалось собрать микс';
+
+  @override
+  String instantMixPlaylistName(String name) {
+    return '$name Mix';
+  }
+
+  @override
   String get discoverStartSession => 'Запустить звуковую сессию';
 
   @override

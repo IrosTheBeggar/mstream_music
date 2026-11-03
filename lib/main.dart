@@ -249,6 +249,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   StreamSubscription<PlayEvent>? _playEventsSub;
   StreamSubscription<IrohTunnelStatus>? _tunnelSub;
   StreamSubscription<PlaybackState>? _playingSub;
+  StreamSubscription<void>? _revealSub;
   // Coalesces the burst connectivity_plus emits for one transport switch.
   Timer? _connectivityDebounce;
   StreamSubscription<List<Server>>? _serverListSub;
@@ -277,6 +278,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // A panel closed for a pick with a way back opens again under the
     // screens it puts back, so Back from them leads to it, as before.
     TrackCapture.onHomeCovered = _reopenPanelAfterCapture;
+    // A browser page opened from inside the expanded player (Instant mix
+    // from the queue or its Discover bar) needs the player out of the way.
+    _revealSub = BrowserManager()
+        .revealRequests
+        .listen((_) => _panelKey.currentState?.collapse());
     // Keep the system navigation/status bars visible (drawn edge-to-edge behind
     // the app) whenever the main screen is up. The Visualizer flips to immersive
     // and restores this on exit, but a kill mid-immersive can leak that mode to
@@ -729,6 +735,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void dispose() {
     TrackCapture.active.removeListener(_collapsePanelForCapture);
     TrackCapture.onHomeCovered = null;
+    _revealSub?.cancel();
     _playEventsSub?.cancel();
     _tunnelSub?.cancel();
     _playingSub?.cancel();
