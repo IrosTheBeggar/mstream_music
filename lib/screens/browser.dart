@@ -29,6 +29,7 @@ import '../util/image_cache.dart';
 import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
+import '../singletons/ytdl_hub.dart';
 import 'federation/federation_screen.dart';
 import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
@@ -45,6 +46,9 @@ import 'discovery/peer_sheets.dart';
 import 'instant_mix/instant_mix_listing.dart';
 import 'instant_mix/instant_mix_widgets.dart';
 import 'sonic_path_screen.dart';
+import 'ytdl/ytdl_folder_strip.dart';
+import 'ytdl/ytdl_home_lines.dart';
+import 'ytdl/ytdl_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -191,6 +195,17 @@ class _BrowserState extends State<Browser> {
         browserList[index].data == 'torrents') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
+      return;
+    }
+    // Add from YouTube: its own pushed route, like Add torrent (the player
+    // overlay stays under it), for the server whose home this is.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'ytdl') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => YtdlScreen(server: s)));
+      }
       return;
     }
     // Copies: what the server is copying for you (Discover's Keep a copy),
@@ -741,6 +756,11 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
+                  // The subfolder an Add from YouTube just went into, for 2 s
+                  // (a tint: the row keeps its height).
+                  tileColor: YtdlRowHighlight.isLit(b[i])
+                      ? VelvetColors.primaryDim
+                      : null,
                   // Long-press = this row's actions, the same convention the
                   // track rows use. The swipe pane has carried Add all for a
                   // while, but a swipe is only found by accident.
@@ -1010,9 +1030,13 @@ class _BrowserState extends State<Browser> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Up to three lines: a half-width card at 360 dp has
+                    // about 81 px beside its icon, and two lines would cut
+                    // the verb off "Von YouTube hinzufügen" or "Ajouter
+                    // depuis YouTube". The row grows only when one needs it.
                     Text(
                       browserChromeLabel(l, item.name),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 15,
@@ -1045,6 +1069,9 @@ class _BrowserState extends State<Browser> {
                     else if (item.data == 'copies' && item.server != null)
                       // Live counts only: "Copying 2" / "1 failed".
                       CopiesHomeLines(jobs: CopiesHub().jobsFor(item.server!))
+                    else if (item.data == 'ytdl' && item.server != null)
+                      // "Adding 1" / "1 failed" / "Added 2", else nothing.
+                      YtdlHomeLines(state: YtdlHub().stateFor(item.server!))
                     else if (item.subtext != null)
                       Text(
                         homeCardSubtext(l, item.subtext!),
@@ -1152,7 +1179,10 @@ class _BrowserState extends State<Browser> {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Material(
-            color: VelvetColors.bg,
+            // The file an Add from YouTube just put here, tinted for 2 s.
+            color: YtdlRowHighlight.isLit(b[i])
+                ? Color.alphaBlend(VelvetColors.primaryDim, VelvetColors.bg)
+                : VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
                 // Nothing for an .m3u: the track sheet rates, queues and finds
@@ -1365,6 +1395,18 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  /// The folder on screen's Add from YouTube strip, or nothing: not a
+  /// server folder that offers it (ytdlExplorerEntry), or nothing running
+  /// or failed there.
+  Widget _ytdlStrip() {
+    final server = ytdlExplorerServer();
+    final path = BrowserManager().currentPath;
+    if (server == null || path == null || !ytdlExplorerEntry()) {
+      return const SizedBox.shrink();
+    }
+    return YtdlFolderStrip(server: server, path: path);
+  }
+
   /// A Discover header, in the home's section style (small accent caps).
   Widget _discoverySectionHeader(BuildContext context, DisplayItem section,
       {required bool first}) {
@@ -1545,6 +1587,12 @@ class _BrowserState extends State<Browser> {
       StreamBuilder<List<DisplayItem>>(
         stream: BrowserManager().browserListStream,
         builder: (context, _) => _moodStrip(),
+      ),
+      // A File Explorer folder Add from YouTube is adding into (or below):
+      // "Adding “One More Time”… · See all", or the failure's Details.
+      StreamBuilder<List<DisplayItem>>(
+        stream: BrowserManager().browserListStream,
+        builder: (context, _) => _ytdlStrip(),
       ),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
