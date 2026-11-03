@@ -13,6 +13,7 @@ import 'auto_dj_manager.dart';
 import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
+import '../objects/instant_mix.dart';
 import '../objects/lyrics.dart';
 import '../objects/mood_filter.dart';
 import '../objects/metadata.dart';
@@ -1156,6 +1157,28 @@ class ApiManager {
     );
   }
 
+  /// POST /api/v1/discovery/local/mix — Instant Mix: about 50 songs that
+  /// sound like the item in [body]'s `from`, in play order, under the
+  /// filters [body] carries (MixFilters.toRequest builds it). A 403 is
+  /// discovery switched off (or no index yet) → disabled; a 400, a 404, a
+  /// timeout are errors. Every empty state is a 200 (see MixAnswer).
+  /// Gating on the flag is the caller's job (Server.instantMixUsable) —
+  /// this only sends.
+  ///
+  /// A longer deadline than the per-seed routes: the first call after a
+  /// scan can pay the index rebuild, and an artist or a playlist ranks the
+  /// library once per sound it spans.
+  Future<DiscoveryFetchResult<MixAnswer>> fetchInstantMix(
+      Server server, Map<String, dynamic> body) {
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/mix',
+      body,
+      (m) => MixAnswer.fromServerMap(server, m),
+      timeout: const Duration(seconds: 20),
+    );
+  }
+
   /// POST /api/v1/db/search, titles only — data-returning song search for
   /// pickers (the Auto DJ sonic-seed sheet). Returns up to [limit] playable
   /// file rows with lite metadata attached; empty list on any error
@@ -1507,7 +1530,11 @@ class ApiManager {
         newList.add(newItem);
       });
 
-      BrowserManager().addListToStack(newList);
+      // The frame names its artist, so the toolbar can offer Instant mix
+      // on it.
+      BrowserManager().addListToStack(newList,
+          artist: (server: useThisServer ?? ServerManager().currentServer,
+              name: artist));
     } catch (err) {
       _browseFailed('getArtistAlbums', err);
     }

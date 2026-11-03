@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../singletons/server_list.dart';
 import '../singletons/play_history.dart';
+import '../objects/instant_mix.dart';
 import '../objects/metadata.dart';
 import '../widgets/federation_widgets.dart';
 import '../theme/velvet_theme.dart';
@@ -15,6 +16,7 @@ import '../util/media_item_credits.dart';
 import '../util/image_cache.dart';
 import '../widgets/star_rating.dart';
 import 'discover_screen.dart';
+import 'instant_mix/instant_mix_listing.dart';
 import 'lyrics_screen.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
@@ -142,6 +144,15 @@ class MetadataScreen extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      // Instant mix — the page of songs that sound like this one, in the
+      // browser (this screen goes). Same server resolution; only where that
+      // server can make one now.
+      if (lyricsServer != null && lyricsServer.instantMixUsable && path != null)
+        _actionChip(
+          Icons.auto_awesome_rounded,
+          l.instantMix,
+          () => openInstantMix(context, MixSeed.queued(lyricsServer, item)),
         ),
       if (item.duration != null)
         _chip(Icons.schedule_rounded, formatDuration(item.duration!)),

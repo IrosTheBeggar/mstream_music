@@ -9,10 +9,12 @@ import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
+import '../objects/mix_filters.dart';
 import '../objects/mood_filter.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
+import '../widgets/mix_filters_sheet.dart' show mixFilterLabels;
 import '../widgets/mood_filter_sheet.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
@@ -41,6 +43,8 @@ import 'discovery/discovery_page_controller.dart';
 import 'discovery/discovery_widgets.dart';
 import 'discovery/keep_copy_ui.dart';
 import 'discovery/peer_sheets.dart';
+import 'instant_mix/instant_mix_listing.dart';
+import 'instant_mix/instant_mix_widgets.dart';
 import 'sonic_path_screen.dart';
 import 'ytdl/ytdl_folder_strip.dart';
 import 'ytdl/ytdl_home_lines.dart';
@@ -352,15 +356,17 @@ class _BrowserState extends State<Browser> {
   // the shared helper (util/queue_actions.dart) so the album-detail screen plays
   // albums with identical semantics.
   /// True when the current frame is an ORDERED collection — a file-explorer
-  /// folder or a playlist — rather than an aggregate the server assembled
-  /// (search results, Rated, Recently added).
+  /// folder, a playlist, or an Instant mix (songs in the order to play
+  /// them) — rather than an aggregate the server assembled (search results,
+  /// Rated, Recently added).
   ///
-  /// The two frame markers are the same ones the subheader and toolbar read,
+  /// The frame markers are the same ones the subheader and toolbar read,
   /// so this can't drift out of step with what the user sees named above the
   /// list. Album detail never reaches here: it has its own row-tap path.
   bool get _isOrderedCollection =>
       BrowserManager().currentPath != null ||
-      BrowserManager().currentPlaylist != null;
+      BrowserManager().currentPlaylist != null ||
+      InstantMixListing.isListing(BrowserManager().browserList);
 
   /// Play-from-here fills the queue with the list you're looking at, which is
   /// what you want inside an album, playlist or folder. On an aggregate it is
@@ -1321,9 +1327,62 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  /// The open Albums / Artists list's mood strip, or nothing: no list its
-  /// server can filter, or nothing set.
+  // ── Instant mix: the frame InstantMixListing keeps on the stack ──
+  //
+  // The seed's banner, fixed above the list (the album detail's scrolls
+  // away) so the seed stays named and the re-ask line in view across fifty
+  // rows; under it the state's line, or the browser's own song rows
+  // (makeListItem: a tap follows the tap setting, a long-press opens the
+  // track sheet, where Instant mix chains). The rows go inert while the
+  // page asks again. No pull to refresh: the same seed under the same
+  // filters is the same mix.
+  Widget _mixView(BuildContext context, List<DisplayItem> all) {
+    final c = InstantMixListing().controller;
+    if (c == null) return const SizedBox.shrink();
+    final rows = [
+      for (final it in all)
+        if (it.type == 'file') it,
+    ];
+    final state = all.where((it) => it.type == kMixState).firstOrNull;
+    return Column(children: [
+      InstantMixBanner(controller: c),
+      Expanded(
+        // Same row density as the browser's list (see the main ListView).
+        child: ListTileTheme.merge(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+          horizontalTitleGap: 10,
+          minLeadingWidth: 32,
+          child: IgnorePointer(
+            ignoring: c.refreshing,
+            child: ListView.builder(
+              controller: BrowserManager().sc,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: state == null ? rows.length : 1,
+              itemBuilder: (context, i) => state == null
+                  ? makeListItem(rows, i, context)
+                  : instantMixStateWidget(context, state, c),
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  /// The open Albums / Artists list's mood strip, or an Instant mix page's
+  /// filter strip, or nothing: no list its server can filter, or nothing
+  /// set.
   Widget _moodStrip() {
+    final mix = InstantMixListing().controller;
+    if (mix != null) {
+      final filters = mix.filters;
+      if (!mix.showsFilters || filters.isEmpty) return const SizedBox.shrink();
+      return FilterStrip(
+        text: mixFilterLabels(AppLocalizations.of(context), filters, mix.server)
+            .join(' · '),
+        onClear: () =>
+            unawaited(applyMixFilters(context, mix, MixFilters.empty)),
+      );
+    }
     final frame = BrowserManager().currentMoodFrame;
     final filter = frame == null ? null : MoodFilters().of(frame.page);
     if (frame == null || filter == null || filter.isEmpty) {
@@ -1523,8 +1582,8 @@ class _BrowserState extends State<Browser> {
       // In-flow context strip under the toolbar (search term / file path) —
       // see _browserSubheader.
       _browserSubheader(context, l),
-      // An Albums / Artists list's mood strip, while its filter is set
-      // (Discover draws its own, under its bar).
+      // An Albums / Artists list's mood strip, while its filter is set, and
+      // an Instant mix page's (Discover draws its own, under its bar).
       StreamBuilder<List<DisplayItem>>(
         stream: BrowserManager().browserListStream,
         builder: (context, _) => _moodStrip(),
@@ -1568,6 +1627,11 @@ class _BrowserState extends State<Browser> {
                       final search = BrowserManager().search;
                       return _discoveryView(context, rawList,
                           search.open ? search.query.trim() : '');
+                    }
+                    // So does Instant mix (the seed's banner over the
+                    // browser's song rows).
+                    if (InstantMixListing.isListing(rawList)) {
+                      return _mixView(context, rawList);
                     }
 
                     // Local search filters only the *displayed* list; the
