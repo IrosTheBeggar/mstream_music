@@ -3,7 +3,8 @@
 // Strict | Standard | Loose with one always pressed, a song list's Sort
 // (Match resting while no mood is set), Clear empties the choices in the
 // sheet, only Done hands them back; the button counts what is set; the
-// strip names it and offers Clear.
+// strip names it and offers Clear — the same strip (FilterStrip) that
+// names an Instant mix page's filters.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -236,6 +237,27 @@ void main() {
                 find.byKey(const ValueKey('mood-strip-clear')))
             .enabled,
         isFalse);
+  });
+
+  testWidgets('FilterStrip: any words, the same strip — its mood-strip key '
+      "and Clear — as the mood lists' (an Instant mix page's)",
+      (tester) async {
+    var cleared = 0;
+    await tester.pumpWidget(_app(FilterStrip(
+        text: 'Relaxed · Harmonic mixing', onClear: () => cleared++)));
+    expect(find.byKey(const ValueKey('mood-strip')), findsOneWidget);
+    expect(find.text('Relaxed · Harmonic mixing'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mood-strip-clear')));
+    expect(cleared, 1);
+
+    // The mood lists' strip is one of these.
+    await tester.pumpWidget(_app(MoodFilterStrip(
+        filter: const MoodFilter(energy: 'relaxed'), onClear: () {})));
+    expect(
+        find.descendant(
+            of: find.byType(FilterStrip),
+            matching: find.byKey(const ValueKey('mood-strip'))),
+        findsOneWidget);
   });
 
   testWidgets('the strip names a level other than Standard, last',

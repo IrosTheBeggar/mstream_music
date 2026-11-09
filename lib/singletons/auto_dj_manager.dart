@@ -19,6 +19,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
+import '../util/library_filters.dart';
 import '../util/write_chain.dart';
 import 'log_manager.dart';
 
@@ -636,39 +637,23 @@ class AutoDJManager {
   /// similarity. Each of those keys off a currently playing track or a locked
   /// anchor, and the caller that needs this most — a cold start on an empty
   /// queue — has neither.
-  Map<String, dynamic> libraryFilters(Server server) {
-    final out = <String, dynamic>{};
-    final ignoreVPaths = <String>[
-      for (final e in server.autoDJPaths.entries)
-        if (e.value == false) e.key,
-    ];
-    if (ignoreVPaths.isNotEmpty) out['ignoreVPaths'] = ignoreVPaths;
-    // Ratings are per-user; a peer is reached with a key (or a guest token)
-    // that has none, and the server skips the clause for such a caller.
-    if (server.autoDJminRating != null && !server.isFederated) {
-      out['minRating'] = server.autoDJminRating;
-    }
-    if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {
-      out['genres'] = server.autoDJGenres;
-      out['genreMode'] = server.autoDJGenreMode;
-      final source = server.autoDJGenreSource.apiValue;
-      if (source != null) out['genreSource'] = source;
-    }
-    final bounds = activeDurationBounds;
-    if (bounds != null) {
-      if (bounds.min != null) out['minDuration'] = bounds.min;
-      if (bounds.max != null) out['maxDuration'] = bounds.max;
-      if (allowUnknownDuration) out['allowUnknownDuration'] = true;
-    }
-    // Only to a server that says it can filter by mood: the route refuses an
-    // unknown key, and the flag is off for a peer, whose flags the app cannot
-    // read (the rule Rated, Recent and Discover follow too).
-    final mood = activeMoodFilter;
-    if (mood != null && server.moodFiltersAvailable == true) {
-      out['moods'] = mood.toJson();
-    }
-    return out;
-  }
+  ///
+  /// Built by libraryFilterFields, which an Instant mix page's request goes
+  /// through too: the same choices go out the same way on both.
+  Map<String, dynamic> libraryFilters(Server server) => libraryFilterFields(
+        server,
+        ignoreVPaths: [
+          for (final e in server.autoDJPaths.entries)
+            if (e.value == false) e.key,
+        ],
+        minRating: server.autoDJminRating,
+        genres: server.autoDJGenreEnabled ? server.autoDJGenres : const [],
+        genreMode: server.autoDJGenreMode,
+        genreSource: server.autoDJGenreSource,
+        duration: activeDurationBounds,
+        allowUnknownDuration: allowUnknownDuration,
+        mood: activeMoodFilter,
+      );
 
   // --- Genre filter migration (global -> per-server) ---
 

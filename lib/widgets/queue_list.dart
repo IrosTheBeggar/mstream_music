@@ -9,9 +9,11 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../singletons/api.dart';
 import '../singletons/track_capture.dart';
+import '../objects/instant_mix.dart';
 import '../objects/play_event.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
+import '../screens/instant_mix/instant_mix_listing.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
@@ -59,6 +61,18 @@ bool _canFindSimilar(MediaItem item) {
   final server =
       ServerManager().byLocalname(item.extras?['server'] as String?);
   return server?.discoveryAvailable == true && item.extras?['path'] is String;
+}
+
+/// The server a queue item can seed Instant mix on, or null: a server
+/// track whose server can make a mix now (Server.instantMixUsable).
+Server? _instantMixServer(MediaItem item) {
+  final server =
+      ServerManager().byLocalname(item.extras?['server'] as String?);
+  return server != null &&
+          server.instantMixUsable &&
+          item.extras?['path'] is String
+      ? server
+      : null;
 }
 
 /// The "Up Next" queue list (design Variant B rows). Reads/writes the queue
@@ -153,18 +167,21 @@ class QueueList extends StatelessWidget {
               }
             }
 
+            final mixServer = _instantMixServer(item);
+            final findSimilar = _canFindSimilar(item);
             return Slidable(
               // Identity key (also the ReorderableListView item key): follows
               // the *item* across reorders; distinct MediaItem instances avoid a
               // duplicate-key clash.
               key: ObjectKey(item),
-              // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
-              // similar when this track's server has discovery data (the pane
-              // widens to fit the second action; hidden on older servers and
-              // for local files, never probed).
+              // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus
+              // Instant mix and Find similar where this track's server can
+              // do them (the pane widens a quarter per action; hidden on
+              // older servers and for local files, never probed).
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
-                extentRatio: _canFindSimilar(item) ? 0.5 : 0.25,
+                extentRatio: 0.25 *
+                    (1 + (mixServer != null ? 1 : 0) + (findSimilar ? 1 : 0)),
                 // A full right-swipe past the actions also removes the track,
                 // so a full swipe in EITHER direction removes.
                 dismissible: DismissiblePane(onDismissed: removeItem),
@@ -183,7 +200,16 @@ class QueueList extends StatelessWidget {
                       );
                     },
                   ),
-                  if (_canFindSimilar(item))
+                  if (mixServer != null)
+                    SlidableAction(
+                      backgroundColor: VelvetColors.raised,
+                      foregroundColor: VelvetColors.primary,
+                      icon: Icons.auto_awesome,
+                      label: l.instantMix,
+                      onPressed: (context) => openInstantMix(
+                          context, MixSeed.queued(mixServer, item)),
+                    ),
+                  if (findSimilar)
                     SlidableAction(
                       backgroundColor: VelvetColors.raised,
                       foregroundColor: VelvetColors.primary,

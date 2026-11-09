@@ -5,6 +5,12 @@
 //
 // The Mood row opens the browse lists' own mood sheet (mood_filter_sheet.dart),
 // which already has this shape.
+//
+// Length, Tempo, Skip words, Rating and Genres also have a value mode, for
+// an Instant mix page's Filters (widgets/mix_filters_sheet.dart): given an
+// `onDone`, the sheet starts from the value it is handed and its Done hands
+// the choice back — nothing is written to AutoDJManager or a Server, and
+// the DJ is left alone. Without one, the sheet is Auto DJ's as it always was.
 
 import 'dart:async';
 
@@ -18,6 +24,7 @@ import 'package:cupertino_ui/cupertino_ui.dart'
         CupertinoTimerPickerMode,
         DefaultCupertinoLocalizations;
 import 'package:flutter/foundation.dart' show SynchronousFuture;
+import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -67,6 +74,15 @@ Future<void> _applyThenClose(
       Navigator.of(context).pop();
     }
   }
+}
+
+/// A value-mode sheet's Done: hand the choice back, then close — once: a
+/// second Done tap while the sheet goes must not pop the sheet under it.
+void _handBackThenClose(BuildContext context, VoidCallback handBack) {
+  final route = ModalRoute.of(context);
+  if (route != null && !route.isCurrent) return;
+  handBack();
+  Navigator.of(context).pop();
 }
 
 /// How a value reads: [neutral] for Any, Off or a session setting, [active]
@@ -497,7 +513,7 @@ InputDecoration _fieldDecoration({String? hint, Widget? prefix}) {
 }
 
 /// A section header inside a sheet: sentence case, over a card.
-Widget _sheetHeader(String text) => Padding(
+Widget autoDjCardHeader(String text) => Padding(
       padding: const EdgeInsets.fromLTRB(14, 20, 14, 8),
       child: Text(text,
           maxLines: 1,
@@ -683,6 +699,40 @@ class AutoDjCheckRow extends StatelessWidget {
   }
 }
 
+/// A server's folders under its name, one switch each: the ones a session
+/// (or an Instant mix) draws from. The last folder still on can't go: the
+/// server would have nothing to draw from.
+class AutoDjFolderCard extends StatelessWidget {
+  const AutoDjFolderCard(
+      {super.key,
+      required this.server,
+      required this.folders,
+      required this.onChanged});
+
+  final Server server;
+
+  /// Each folder, in the server's order, and whether it is on.
+  final Map<String, bool> folders;
+  final void Function(String folder, bool on) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = folders.values.where((v) => v).length;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      autoDjCardHeader(autoDjServerName(server)),
+      FedCard(children: [
+        for (final e in folders.entries)
+          FedSwitchRow(
+            key: ValueKey('auto-dj-folder-${server.localname}-${e.key}'),
+            title: e.key,
+            value: e.value,
+            onChanged: e.value && on == 1 ? null : (v) => onChanged(e.key, v),
+          ),
+      ]),
+    ]);
+  }
+}
+
 // ── Play from ──────────────────────────────────────────────────────────
 
 /// Play from becomes [set] — servers out of [listed], the ones on offer, in
@@ -840,23 +890,11 @@ class _PlayFromSheetState extends State<PlayFromSheet> {
 
   Widget _folders(Server s) {
     final draft = _paths[s.localname]!;
-    final on = draft.values.where((v) => v).length;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _sheetHeader(autoDjServerName(s)),
-      FedCard(children: [
-        for (final e in draft.entries)
-          FedSwitchRow(
-            key: ValueKey('auto-dj-folder-${s.localname}-${e.key}'),
-            title: e.key,
-            value: e.value,
-            // The last folder still on can't go: the server would have
-            // nothing to draw from.
-            onChanged: e.value && on == 1
-                ? null
-                : (v) => setState(() => draft[e.key] = v),
-          ),
-      ]),
-    ]);
+    return AutoDjFolderCard(
+      server: s,
+      folders: draft,
+      onChanged: (folder, on) => setState(() => draft[folder] = on),
+    );
   }
 
   Future<void> _done() => _applyThenClose(context, () async {
@@ -1047,8 +1085,16 @@ class _SonicSheetState extends State<SonicSheet> {
 
 // ── Tempo ──────────────────────────────────────────────────────────────
 
+/// Beat matching on or off, and its tolerance in BPM (1–20).
+typedef TempoChoice = ({bool on, int tolerance});
+
 class TempoSheet extends StatefulWidget {
-  const TempoSheet({super.key});
+  const TempoSheet({super.key, this.value, this.onDone});
+
+  /// Value mode: the sheet starts at [value] (off at ± 8 without one) and
+  /// Done hands the choice to [onDone] instead of applying it to Auto DJ.
+  final TempoChoice? value;
+  final ValueChanged<TempoChoice>? onDone;
 
   @override
   State<TempoSheet> createState() => _TempoSheetState();
@@ -1056,8 +1102,22 @@ class TempoSheet extends StatefulWidget {
 
 class _TempoSheetState extends State<TempoSheet> {
   final _mgr = AutoDJManager();
-  late bool _on = _mgr.bpmContinuityEnabled;
-  late int _bpm = _mgr.bpmTolerance;
+  late bool _on = widget.onDone != null
+      ? widget.value?.on ?? false
+      : _mgr.bpmContinuityEnabled;
+  late int _bpm = widget.onDone != null
+      ? (widget.value?.tolerance ?? 8).clamp(1, 20)
+      : _mgr.bpmTolerance;
+
+  void _done() {
+    final handBack = widget.onDone;
+    if (handBack != null) {
+      _handBackThenClose(context, () => handBack((on: _on, tolerance: _bpm)));
+      return;
+    }
+    _applyThenClose(
+        context, () => _mgr.setTempo(enabled: _on, tolerance: _bpm));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1068,8 +1128,7 @@ class _TempoSheetState extends State<TempoSheet> {
       tone: _on ? AutoDjTone.active : AutoDjTone.neutral,
       toggle: _titleSwitch(l.autoDjTempo, _on, (v) => setState(() => _on = v),
           key: const ValueKey('auto-dj-tempo-switch')),
-      onDone: () => _applyThenClose(
-          context, () => _mgr.setTempo(enabled: _on, tolerance: _bpm)),
+      onDone: _done,
       child: Opacity(
         opacity: _on ? 1 : 0.4,
         child: _slider(
@@ -1193,10 +1252,20 @@ class _TimerWheelLabelsDelegate
       old._labels._hour != _labels._hour;
 }
 
+/// A track-length window in seconds, 0 for no limit on that side, and
+/// whether a song with no known length counts (only beside a limit).
+typedef LengthChoice = ({int min, int max, bool allowUnknown});
+
 /// Shortest and Longest, each set on a timer wheel (hours, minutes, seconds)
 /// that opens under its row, one at a time. 0:00:00 is no limit on that side.
 class LengthSheet extends StatefulWidget {
-  const LengthSheet({super.key});
+  const LengthSheet({super.key, this.value, this.onDone});
+
+  /// Value mode: the sheet starts at [value] (Any without one) and Done
+  /// hands the window, in order, to [onDone] instead of applying it to Auto
+  /// DJ.
+  final LengthChoice? value;
+  final ValueChanged<LengthChoice>? onDone;
 
   @override
   State<LengthSheet> createState() => _LengthSheetState();
@@ -1211,11 +1280,17 @@ class _LengthSheetState extends State<LengthSheet> {
   static const _wheelMax = _ceil - 1;
 
   final _mgr = AutoDJManager();
+  bool get _valueMode => widget.onDone != null;
   // 0 is no limit, on both sides: the bottom of either wheel.
-  late int _min = _mgr.activeDurationBounds?.min ?? 0;
-  late int _max = _mgr.activeDurationBounds?.max ?? 0;
-  late bool _unknown =
-      _mgr.activeDurationBounds != null && _mgr.allowUnknownDuration;
+  late int _min = _valueMode
+      ? (widget.value?.min ?? 0).clamp(0, _wheelMax)
+      : _mgr.activeDurationBounds?.min ?? 0;
+  late int _max = _valueMode
+      ? (widget.value?.max ?? 0).clamp(0, _wheelMax)
+      : _mgr.activeDurationBounds?.max ?? 0;
+  late bool _unknown = _valueMode
+      ? (widget.value?.allowUnknown ?? false) && !_any
+      : _mgr.activeDurationBounds != null && _mgr.allowUnknownDuration;
   _LengthBound? _open;
   // Bumped by Clear: a wheel only takes its value when it is built.
   int _cleared = 0;
@@ -1310,10 +1385,23 @@ class _LengthSheetState extends State<LengthSheet> {
                 _unknown = false;
                 _cleared++;
               }),
-      onDone: () => _applyThenClose(
-          context,
-          () => _mgr.setDurationFilter(
-              minSec: lo, maxSec: hi, allowUnknown: !_any && _unknown)),
+      onDone: () {
+        final handBack = widget.onDone;
+        if (handBack != null) {
+          _handBackThenClose(
+              context,
+              () => handBack((
+                    min: lo,
+                    max: hi >= _ceil ? 0 : hi,
+                    allowUnknown: !_any && _unknown,
+                  )));
+          return;
+        }
+        _applyThenClose(
+            context,
+            () => _mgr.setDurationFilter(
+                minSec: lo, maxSec: hi, allowUnknown: !_any && _unknown));
+      },
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         FedCard(children: [
           _row(l, _LengthBound.shortest, l.autoDjLengthShortest, _min),
@@ -1341,12 +1429,24 @@ class _LengthSheetState extends State<LengthSheet> {
 /// The minimum rating, per server. Ratings are per user, and a peer is
 /// reached with a key that has none, so [servers] never holds one.
 class RatingSheet extends StatefulWidget {
-  const RatingSheet({super.key, required this.servers, required this.initial});
+  const RatingSheet(
+      {super.key,
+      required this.servers,
+      required this.initial,
+      this.value,
+      this.onDone})
+      : assert(onDone == null || servers.length == 1);
 
   /// Whose ratings are edited; chips choose between them when there are two
   /// or more (All servers).
   final List<Server> servers;
   final Server initial;
+
+  /// Value mode, on one server: the sheet starts at [value] (1–10, null for
+  /// Any) and Done hands the rating to [onDone] instead of writing it to the
+  /// server.
+  final int? value;
+  final ValueChanged<int?>? onDone;
 
   @override
   State<RatingSheet> createState() => _RatingSheetState();
@@ -1355,7 +1455,8 @@ class RatingSheet extends StatefulWidget {
 class _RatingSheetState extends State<RatingSheet> {
   late Server _target = widget.initial;
   late final Map<String, int?> _draft = {
-    for (final s in widget.servers) s.localname: s.autoDJminRating,
+    for (final s in widget.servers)
+      s.localname: widget.onDone != null ? widget.value : s.autoDJminRating,
   };
 
   int? get _rating => _draft[_target.localname];
@@ -1384,6 +1485,12 @@ class _RatingSheetState extends State<RatingSheet> {
           ? null
           : () => setState(() => _draft[_target.localname] = null),
       onDone: () {
+        final handBack = widget.onDone;
+        if (handBack != null) {
+          _handBackThenClose(
+              context, () => handBack(_draft[_target.localname]));
+          return;
+        }
         var changed = false;
         for (final s in widget.servers) {
           final v = _draft[s.localname];
@@ -1453,8 +1560,10 @@ GenreSource genreKindSent(Server s) => _genreKindKnownUnsupported(s)
 bool genreKindOffered(Server s, GenreSources? sources) =>
     (sources?.offersChoice ?? false) && !_genreKindKnownUnsupported(s);
 
+/// A server's draft while the sheet is open: a [GenreChoice] being edited.
 class _GenreDraft {
   _GenreDraft(this.mode, this.genres, this.source);
+  _GenreDraft.of(GenreChoice c) : this(c.mode, List.of(c.genres), c.source);
   String mode; // 'whitelist' | 'blacklist'
   final List<String> genres;
   GenreSource source;
@@ -1463,12 +1572,24 @@ class _GenreDraft {
 /// Only or Skip, which kind of genre (Generated, Tags or Mixed) and which
 /// genres — per server, from that server's own list.
 class GenresSheet extends StatefulWidget {
-  const GenresSheet({super.key, required this.servers, required this.initial});
+  const GenresSheet(
+      {super.key,
+      required this.servers,
+      required this.initial,
+      this.value,
+      this.onDone})
+      : assert(onDone == null || servers.length == 1);
 
   /// Whose genres are edited; chips choose between them when there are two
   /// or more (All servers).
   final List<Server> servers;
   final Server initial;
+
+  /// Value mode, on one server: the sheet starts at [value] (none without
+  /// it) and Done hands the choice to [onDone] instead of writing it to the
+  /// server.
+  final GenreChoice? value;
+  final ValueChanged<GenreChoice>? onDone;
 
   @override
   State<GenresSheet> createState() => _GenresSheetState();
@@ -1479,10 +1600,9 @@ class _GenresSheetState extends State<GenresSheet> {
   String _query = '';
   late final Map<String, _GenreDraft> _drafts = {
     for (final s in widget.servers)
-      s.localname: _GenreDraft(
-          s.autoDJGenreMode,
-          s.autoDJGenreEnabled ? List.of(s.autoDJGenres) : <String>[],
-          s.autoDJGenreSource),
+      s.localname: widget.onDone != null
+          ? _GenreDraft.of(widget.value ?? GenreChoice.none)
+          : _GenreDraft.of(GenreChoice.autoDj(s)),
   };
   // Only servers the user touched are written back: a server whose filter
   // was switched off keeps its stored list unless it is edited here.
@@ -1572,6 +1692,18 @@ class _GenresSheetState extends State<GenresSheet> {
       });
 
   void _done() {
+    final handBack = widget.onDone;
+    if (handBack != null) {
+      final s = _target;
+      final d = _drafts[s.localname]!;
+      // The kind the list showed, as below.
+      final kind = _sources.containsKey(s.localname) ? _listed(s) : d.source;
+      _handBackThenClose(
+          context,
+          () => handBack(GenreChoice(
+              mode: d.mode, genres: List.of(d.genres), source: kind)));
+      return;
+    }
     var changed = false;
     for (final s in widget.servers) {
       final d = _drafts[s.localname]!;
@@ -1825,9 +1957,18 @@ class _GenresSheetState extends State<GenresSheet> {
 // ── Skip words ─────────────────────────────────────────────────────────
 
 /// Words that keep a song out: matched against its title, artist, album
-/// and file path, on the phone (audio_stuff's autoDJ retry loop).
+/// and file path, on the phone (audio_stuff's autoDJ retry loop) — on an
+/// Instant mix page, by the server (its `skipWords`).
 class SkipWordsSheet extends StatefulWidget {
-  const SkipWordsSheet({super.key});
+  const SkipWordsSheet({super.key, this.value, this.onDone});
+
+  /// Value mode: the sheet starts with [value] (none without it) and Done
+  /// hands the list to [onDone] instead of applying it to Auto DJ.
+  final List<String>? value;
+  final ValueChanged<List<String>>? onDone;
+
+  /// The longest word the Instant mix route takes.
+  static const int maxMixWordLength = 100;
 
   @override
   State<SkipWordsSheet> createState() => _SkipWordsSheetState();
@@ -1836,9 +1977,11 @@ class SkipWordsSheet extends StatefulWidget {
 class _SkipWordsSheetState extends State<SkipWordsSheet> {
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
-  late final List<String> _words = AutoDJManager().keywordFilterEnabled
-      ? List.of(AutoDJManager().keywordFilterWords)
-      : <String>[];
+  late final List<String> _words = widget.onDone != null
+      ? List.of(widget.value ?? const <String>[])
+      : AutoDJManager().keywordFilterEnabled
+          ? List.of(AutoDJManager().keywordFilterWords)
+          : <String>[];
 
   @override
   void initState() {
@@ -1882,10 +2025,20 @@ class _SkipWordsSheetState extends State<SkipWordsSheet> {
         clearable: true,
         onClear: _words.isEmpty ? null : () => setState(_words.clear),
         // A word typed but not yet added counts: Done applies what is shown.
-        onDone: () => _applyThenClose(context, () {
-          if (_canAdd) _words.add(_ctrl.text.trim());
-          return AutoDJManager().setKeywords(_words);
-        }),
+        onDone: () {
+          final handBack = widget.onDone;
+          if (handBack != null) {
+            _handBackThenClose(context, () {
+              if (_canAdd) _words.add(_ctrl.text.trim());
+              handBack(List.of(_words));
+            });
+            return;
+          }
+          _applyThenClose(context, () {
+            if (_canAdd) _words.add(_ctrl.text.trim());
+            return AutoDJManager().setKeywords(_words);
+          });
+        },
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             // Named for screen readers (merged into the field's own node);
@@ -1902,6 +2055,14 @@ class _SkipWordsSheetState extends State<SkipWordsSheet> {
                     autofocus: true,
                     enabled: !_full,
                     textInputAction: TextInputAction.done,
+                    // The mix route refuses a longer word (a 400 for the
+                    // whole mix); Auto DJ matches on the phone, so any.
+                    inputFormatters: widget.onDone == null
+                        ? null
+                        : [
+                            LengthLimitingTextInputFormatter(
+                                SkipWordsSheet.maxMixWordLength),
+                          ],
                     onSubmitted: (_) => _add(),
                     decoration: _fieldDecoration(),
                   ),

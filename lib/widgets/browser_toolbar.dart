@@ -22,6 +22,14 @@
 //                          list's server answered that it filters by mood)
 //   • Rated / Recent     → back · label · Filters · Play · Add all · overflow
 //                          (Filters when the server filters by mood)
+//   • Instant mix        → back · label · Filters · Shuffle · Play · Add all
+//                          · Save as playlist (the verbs only with songs,
+//                          Filters too when the filters emptied the list;
+//                          all off while the page asks again)
+//
+// Instant mix's ✦ sits first on an album's bar, before Shuffle on a
+// playlist's and before search on an artist's albums, where the item's
+// server can make a mix now (Server.instantMixUsable).
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -36,9 +44,12 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
 import '../objects/genre_source.dart';
+import '../objects/instant_mix.dart';
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../screens/discovery/discovery_listing.dart';
+import '../screens/instant_mix/instant_mix_controller.dart';
+import '../screens/instant_mix/instant_mix_listing.dart';
 import '../screens/ytdl/ytdl_folder_sheet.dart';
 import '../screens/ytdl/ytdl_folder_strip.dart';
 import '../singletons/api.dart';
@@ -51,7 +62,9 @@ import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import 'local_search_bar.dart';
+import 'mix_filters_sheet.dart';
 import 'mood_filter_sheet.dart';
+import 'playlist_picker_sheet.dart';
 
 // Combined snapshot the toolbar renders from.
 typedef _Tb = ({
@@ -205,21 +218,28 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ? (BrowserManager().albumDetailSongs ?? const [])
       : BrowserManager().browserList;
 
-  Widget _icon(IconData icon, String tooltip, VoidCallback onTap) => IconButton(
+  // A null [onTap] draws the button off (Instant mix's verbs while it asks
+  // again).
+  Widget _icon(IconData icon, String tooltip, VoidCallback? onTap) =>
+      IconButton(
         icon: Icon(icon, size: 22),
         color: VelvetColors.appBarTextSecondary,
+        disabledColor: VelvetColors.appBarTextSecondary.withValues(alpha: 0.4),
         tooltip: tooltip,
         onPressed: onTap,
       );
+
+  Widget _playButton(AppLocalizations l, List<DisplayItem> rows) =>
+      _playFilled(l, () => playFromHere(rows, 0));
 
   // Filled accent Play, sized to the 44px the bar leaves after its bottom
   // padding (a default IconButton's 48px minimum would overflow). Deliberately
   // the same treatment as the album banner's play control, so the two verbs
   // rank identically wherever they appear.
-  Widget _playButton(AppLocalizations l, List<DisplayItem> rows) => Padding(
+  Widget _playFilled(AppLocalizations l, VoidCallback? onPressed) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
         child: IconButton.filled(
-          onPressed: () => playFromHere(rows, 0),
+          onPressed: onPressed,
           tooltip: l.play,
           iconSize: 20,
           padding: EdgeInsets.zero,
@@ -406,6 +426,52 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     );
   }
 
+  // Instant mix's ✦ on an album's, a playlist's or an artist's bar.
+  Widget _mixButton(AppLocalizations l, MixSeed Function() seed) =>
+      _icon(Icons.auto_awesome, l.instantMix,
+          () => openInstantMix(context, seed()));
+
+  // An album that can be mixed: a named one (the singles bucket is no
+  // album), on a server that can make a mix now.
+  bool _mixesAlbum(DisplayItem album) =>
+      album.server?.instantMixUsable == true &&
+      (album.data?.trim().isNotEmpty ?? false);
+
+  // The mix page's Filters: Auto DJ's filter rows in a sheet, its badge the
+  // count of choices set. After the label and before the verbs, as on Rated
+  // and Recent, while [InstantMixController.showsFilters]; off while the
+  // page asks again.
+  Widget _mixFiltersButton(InstantMixController c) => c.showsFilters
+      ? MoodFilterButton(
+          count: c.filters.count,
+          onPressed: c.refreshing
+              ? null
+              : () => unawaited(showMixFiltersSheet(context, c)),
+        )
+      : const SizedBox.shrink();
+
+  // The mix page's verbs, on its rows: Shuffle and Play replace the queue
+  // (Play keeps a playing seed going), Add All appends, Save as playlist
+  // offers "‹seed› Mix" for a new playlist. Off while the page asks again.
+  List<Widget> _mixVerbs(
+      BuildContext context, AppLocalizations l, InstantMixController c) {
+    final rows = c.rows;
+    VoidCallback? idle(VoidCallback f) => c.refreshing ? null : f;
+    return [
+      _icon(Icons.shuffle, l.shuffle,
+          idle(() => playFromHere(rows, 0, shuffle: true))),
+      _playFilled(l, idle(() => playMix(rows))),
+      _icon(Icons.library_add, l.addAll, idle(() => _addAll(context, rows))),
+      _icon(
+          Icons.playlist_add_check,
+          l.pathSaveAsPlaylist,
+          idle(() => savePlaylistFlow(context, c.server, rows,
+              newName: mixPlaylistName(
+                  l.instantMixPlaylistName(c.seed.title),
+                  c.server.playlists)))),
+    ];
+  }
+
   // The genre list's Tags | Generated | Both switch: re-lists the open list
   // in place (no new frame) and remembers the choice for next time.
   Widget _genreSourceSwitch(AppLocalizations l, GenreListFrame frame) =>
@@ -552,12 +618,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // Still conditional: the songs arrive from an async fetch, so this bar is
     // Back-only until they land (and stays that way if the fetch fails).
     if (s.album != null) {
+      final album = s.album!;
       final albumSongs = _actionTargets;
       return Row(children: [
         _icon(Icons.arrow_back, l.goBack,
             () => BrowserManager().closeAlbumDetail()),
         const Spacer(),
         if (_enqueueable(albumSongs).isNotEmpty) ...[
+          if (_mixesAlbum(album))
+            _mixButton(l, () => MixSeed.album(album, songs: albumSongs)),
           _shuffleButton(l, albumSongs),
           _playButton(l, albumSongs),
           _icon(Icons.library_add, l.addAll,
@@ -618,24 +687,59 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // scrolling to one track is the slow way to reach it. Search sits beside
     // Back, at the opposite end from the actions, so it reads as "narrow this
     // list" rather than as another thing to do to the list.
-    if (BrowserManager().currentPlaylist != null) {
+    //
+    // Instant mix's ✦ makes it seven buttons (330 dp): on a phone narrower
+    // than 360 dp, search, Download and Shuffle go into the overflow, the
+    // normal list's bar, so nothing is clipped.
+    final playlist = BrowserManager().currentPlaylist;
+    if (playlist != null) {
       final songs = _actionTargets;
+      final canPlay = _enqueueable(songs).isNotEmpty;
+      // The playlist's own server: its songs'.
+      final server = songs.isEmpty ? null : songs.first.server;
+      final mixOn =
+          canPlay && server != null && server.instantMixUsable ? server : null;
+      final narrow = mixOn != null && MediaQuery.sizeOf(context).width < 360;
       return Row(children: [
         _icon(Icons.arrow_back, l.goBack, () {
           BrowserManager().closeSearch();
           BrowserManager().popBrowser();
         }),
-        _icon(Icons.search, l.browserSearchList,
-            () => BrowserManager().openSearch()),
+        if (!narrow)
+          _icon(Icons.search, l.browserSearchList,
+              () => BrowserManager().openSearch()),
         const Spacer(),
-        if (_enqueueable(songs).isNotEmpty) ...[
-          _shuffleButton(l, songs),
+        if (canPlay) ...[
+          if (mixOn != null)
+            _mixButton(l, () => MixSeed.playlist(mixOn, playlist)),
+          if (!narrow) _shuffleButton(l, songs),
           _playButton(l, songs),
           _icon(Icons.library_add, l.addAll, () => _addAll(context, songs)),
         ],
-        if (_downloadable(songs).isNotEmpty)
+        if (narrow)
+          _overflow(context, l, songs, showShuffle: true)
+        else if (_downloadable(songs).isNotEmpty)
           _icon(Icons.download_sharp, l.download,
               () => _downloadAll(context, songs)),
+      ]);
+    }
+
+    // Instant mix: back · label · Filters · Shuffle · Play · Add All · Save
+    // as playlist, on the mix's rows. The verbs only with songs; while the
+    // page asks again they stay where they are, off. No search: the list is
+    // in an order of its own.
+    if (InstantMixListing.isListing(s.list)) {
+      final c = InstantMixListing().controller;
+      return Row(children: [
+        _icon(Icons.arrow_back, l.goBack, () {
+          BrowserManager().closeSearch();
+          BrowserManager().popBrowser();
+        }),
+        _title(browserChromeLabel(l, s.label)),
+        if (c != null) ...[
+          _mixFiltersButton(c),
+          if (c.showsVerbs) ..._mixVerbs(context, l, c),
+        ],
       ]);
     }
 
@@ -657,6 +761,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     final discover = DiscoveryListing.isListing(s.list);
     final genreFrame = BrowserManager().currentGenreFrame;
     final moodFrame = BrowserManager().currentMoodFrame;
+    final artist = BrowserManager().currentArtist;
+    final artistServer = artist?.server;
     final targets = discover ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
@@ -708,6 +814,9 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
               tooltip: l.ytdlExplorerEntry,
               onPressed: () => _openYtdl(context),
             )),
+        // An artist's albums: Instant mix of the artist, before search too.
+        if (artistServer != null && artistServer.instantMixUsable)
+          _mixButton(l, () => MixSeed.artist(artistServer, artist!.name)),
         _icon(Icons.search, l.browserSearchList,
             () => BrowserManager().openSearch()),
         _overflow(context, l, targets, showSearch: false),

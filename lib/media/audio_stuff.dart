@@ -40,6 +40,7 @@ import '../singletons/server_list.dart';
 import '../singletons/tunnel_policy.dart';
 import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
+import '../util/bpm_windows.dart';
 import '../util/camelot.dart';
 import '../util/server_version.dart';
 import '../util/seed_vector.dart';
@@ -4823,9 +4824,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       };
       if (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0) {
         payload['bpmRanges'] =
-            _bpmWindows(currentBpm, mgr.bpmTolerance);
+            bpmWindows(currentBpm, mgr.bpmTolerance);
         payload['bpmRangesWide'] =
-            _bpmWindows(currentBpm, mgr.bpmTolerance + 2);
+            bpmWindows(currentBpm, mgr.bpmTolerance + 2);
         // Require tagged tracks so the waterfall doesn't fall back
         // to BPM-unknown picks when our windows return nothing.
         payload['requireBpm'] = true;
@@ -5335,20 +5336,5 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (p == null) return null;
     final s = p.startsWith('/') ? p.substring(1) : p;
     return s.isEmpty ? null : s;
-  }
-
-  // BPM continuity windows: one centered on the current tempo, one
-  // at half-tempo, one at double. The server OR-s these together so
-  // a 120-BPM source matches tracks at 112–128, 56–64, or 232–248
-  // (with tolerance=8). Half/double cover the common DJ practice
-  // of mixing across octaves.
-  static List<Map<String, int>> _bpmWindows(int bpm, int tolerance) {
-    final half = (bpm / 2).round();
-    final dbl = bpm * 2;
-    return [
-      {'min': bpm - tolerance, 'max': bpm + tolerance},
-      {'min': half - tolerance, 'max': half + tolerance},
-      {'min': dbl - tolerance, 'max': dbl + tolerance},
-    ];
   }
 }
