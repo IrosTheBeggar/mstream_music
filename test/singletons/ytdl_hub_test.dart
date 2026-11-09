@@ -569,6 +569,187 @@ void main() {
       await h.timers.elapse(beat);
       expect(b.pid, isNull);
     });
+
+    // The newest of several entries that showed after the POST (the
+    // candidates the floor leaves).
+    test('of several entries that show after the POST, the newest', () async {
+      h.fake.addStartsEntry = false;
+      final job = await started();
+      h.fake.addEntry(url: kOneMoreTime, directory: dir);
+      final newer = h.fake.addEntry(url: kOneMoreTime, directory: dir);
+      await h.timers.elapse(beat);
+      expect(job.pid, newer['pid']);
+    });
+
+    // A server with per-account jobs lists a settled entry for a day, not
+    // 30 s: an add whose answer was lost must not take an earlier add's
+    // (from this phone before a restart, or from another device).
+    test('an add whose answer was lost never claims an earlier add\'s entry for the same link and folder', () async {
+      final earlier = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      h.fake.addThrows = TimeoutException('no answer');
+      final job = (await state().start(h.request())).job!;
+      h.fake.addThrows = null;
+      expect(job.state, YtdlJobState.startUnsure);
+      expect(job.priorEntries, {(earlier['pid'], earlier['startTime'])});
+      await h.timers.elapse(const Duration(minutes: 1));
+      expect(job.pid, isNull, reason: 'the earlier entry is not this add\'s');
+      expect(job.state, YtdlJobState.startUnsure);
+      // Its own entry shows after all: that one is taken.
+      final own = h.fake.addEntry(url: kOneMoreTime, directory: dir);
+      await h.timers.elapse(beat);
+      expect(job.pid, own['pid']);
+      expect(job.state, YtdlJobState.adding);
+    });
+
+    test('… with nothing of its own it ends not sure it started, and Check again\'s list step skips it too', () async {
+      h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      h.fake.addThrows = TimeoutException('no answer');
+      final job = (await state().start(h.request())).job!;
+      h.fake.addThrows = null;
+      await h.timers.elapse(const Duration(minutes: 2, seconds: 3));
+      expect(job.state, YtdlJobState.notSureStarted);
+      expect(job.pid, isNull);
+      await state().checkAgain(job);
+      // No file and no record either (the fixture's earlier add left
+      // none), so nothing answers for it.
+      expect(job.pid, isNull);
+      expect(job.state, YtdlJobState.notFound);
+    });
+
+    test('the snapshot is every entry this link and folder had, answered before the POST went', () async {
+      h.fake.addEntry(url: kOneMoreTime, directory: '/Music/Elsewhere/');
+      final done = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      final running = h.fake.addEntry(url: kOneMoreTime, directory: dir);
+      h.fake.addEntry(url: kFeelGood, directory: dir);
+      h.fake.jobsGate = Completer<void>();
+      final pending = state().start(h.request());
+      await ytdlSettle();
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0, reason: 'waiting for the list');
+      h.fake.jobsGate!.complete();
+      h.fake.jobsGate = null;
+      final job = (await pending).job!;
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+      expect(job.priorEntries, {
+        (done['pid'], done['startTime']),
+        (running['pid'], running['startTime']),
+      });
+      await ytdlSettle();
+      expect(job.pid, h.fake.tracker.last['pid'], reason: 'its own entry, not the other device\'s running one');
+      expect(job.state, YtdlJobState.adding);
+    });
+
+    test('a list read that hangs holds the POST for kFloorWait at most; it goes without a snapshot', () async {
+      h.fake.jobsGate = Completer<void>();
+      final pending = state().start(h.request());
+      await ytdlSettle();
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 0);
+      await h.timers.elapse(YtdlServerState.kFloorWait);
+      final out = await pending;
+      expect(out.ok, isTrue);
+      expect(out.job!.priorEntries, isNull);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+      h.fake.jobsGate!.complete();
+      h.fake.jobsGate = null;
+    });
+
+    test('a list that cannot be read leaves no snapshot (no protection), and the add still goes', () async {
+      h.fake.jobsThrows = TimeoutException('slow');
+      final out = await state().start(h.request());
+      h.fake.jobsThrows = null;
+      expect(out.ok, isTrue);
+      expect(out.job!.priorEntries, isNull);
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1);
+      await h.timers.elapse(beat);
+      expect(out.job!.pid, h.fake.tracker.last['pid']);
+    });
+
+    test('an older server (30 s retention) is not read first: the POST goes at once', () async {
+      h.fake.hasRecords = false;
+      await state().probeTier();
+      expect(state().tier, YtdlServerTier.older);
+      final job = await started();
+      expect(job.priorEntries, isNull);
+      final paths = h.fake.requests.map((r) => r.url.path).toList();
+      expect(paths.indexOf('/api/v1/ytdl/'), lessThan(paths.indexOf('/api/v1/ytdl/downloads')));
+      expect(job.pid, h.fake.tracker.last['pid']);
+    });
+
+    test('Add again reads the snapshot afresh', () async {
+      final first = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      h.fake.addThrows = TimeoutException('no answer');
+      final job = (await state().start(h.request())).job!;
+      h.fake.addThrows = null;
+      expect(job.priorEntries, {(first['pid'], first['startTime'])});
+      await h.timers.elapse(const Duration(minutes: 2, seconds: 3));
+      await state().checkAgain(job);
+      expect(job.state, YtdlJobState.notFound);
+      final between = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      await state().addAgain(job);
+      await ytdlSettle();
+      expect(job.priorEntries, {
+        (first['pid'], first['startTime']),
+        (between['pid'], between['startTime']),
+      });
+      expect(job.pid, h.fake.tracker.last['pid']);
+      expect(job.state, YtdlJobState.adding);
+    });
+
+    test('the snapshot is saved before the POST goes: an app killed mid-POST comes back with it', () async {
+      final earlier = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'complete');
+      h.fake
+        ..addStartsEntry = false
+        ..addGate = Completer<void>();
+      unawaited(state().start(h.request()));
+      await ytdlSettle();
+      expect(h.fake.count('POST', '/api/v1/ytdl/'), 1, reason: 'the POST is out');
+      expect(s.ytdlJobs.single['priorEntries'], [
+        [earlier['pid'], earlier['startTime']],
+      ]);
+      // Killed with the POST out; back up.
+      h.hub.reset();
+      h.wire();
+      final restored = state().jobs.single;
+      expect(restored.state, YtdlJobState.startUnsure);
+      await ytdlSettle();
+      expect(restored.pid, isNull, reason: 'the earlier entry is not this add\'s');
+      final own = h.fake.addEntry(url: kOneMoreTime, directory: dir);
+      await h.timers.elapse(beat);
+      expect(restored.pid, own['pid']);
+      h.fake.addGate!.complete();
+    });
+
+    test('a server clock that stepped back never hides an add\'s own entry', () async {
+      final a = await started();
+      h.fake.finish(a.pid!);
+      await h.timers.elapse(beat);
+      expect(a.state, YtdlJobState.added);
+      h.fake.serverNow -= const Duration(hours: 1).inMilliseconds;
+      final b = await started(request: h.request(codec: 'opus'));
+      expect((h.fake.tracker.last['startTime'] as int) < (h.fake.entry(a.pid!)['startTime'] as int), isTrue);
+      expect(b.pid, h.fake.tracker.last['pid']);
+      expect(b.state, YtdlJobState.adding);
+    });
+
+    test('a poll in flight when the POST went out never claims for it: its list predates the add', () async {
+      final other = await started(request: h.request(url: kFeelGood));
+      expect(other.state, YtdlJobState.adding);
+      final earlier = h.fake.addEntry(url: kOneMoreTime, directory: dir, status: 'error');
+      h.fake.jobsGate = Completer<void>();
+      await h.timers.elapse(beat); // a poll's list read is out, held
+      final pending = state().start(h.request());
+      await ytdlSettle();
+      // Its own list read is held too: past the wait it goes without one.
+      await h.timers.elapse(YtdlServerState.kFloorWait);
+      final job = (await pending).job!;
+      expect(job.priorEntries, isNull);
+      h.fake.jobsGate!.complete();
+      h.fake.jobsGate = null;
+      await ytdlSettle();
+      expect(job.pid, isNot(earlier['pid']), reason: 'the held list was read before the POST');
+      await h.timers.elapse(beat);
+      expect(job.pid, h.fake.entryFor(kOneMoreTime, directory: dir)['pid']);
+      expect(job.state, YtdlJobState.adding);
+    });
   });
 
   group('endings', () {

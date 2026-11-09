@@ -121,6 +121,15 @@ class YtdlJob {
   /// [serverStart]). Null when it could not be read.
   int? recordFloor;
 
+  /// The tracker's entries for this link and folder just before the POST,
+  /// as (pid, startTime): each is an earlier add's, so none of them can
+  /// ever be this one's. The tracker lists settled entries for a while (a
+  /// day, on a server with per-account jobs), and an add whose answer was
+  /// lost must not take yesterday's. By identity, not by time, so no
+  /// clock (the phone's, or a server's that stepped back) decides. Null
+  /// when the list was not read (an older server, a read that failed).
+  Set<(int, int)>? priorEntries;
+
   YtdlJob({
     required this.id,
     required this.url,
@@ -145,6 +154,7 @@ class YtdlJob {
     this.trackId,
     this.recordId,
     this.recordFloor,
+    this.priorEntries,
   });
 
   /// Polled, and counted as "Adding" (see [YtdlJobState.open]).
@@ -174,6 +184,9 @@ class YtdlJob {
         'trackId': trackId,
         'recordId': recordId,
         'recordFloor': recordFloor,
+        'priorEntries': priorEntries == null
+            ? null
+            : [for (final (pid, start) in priorEntries!) [pid, start]],
       };
 
   /// Reads what [toJson] wrote. Throws [FormatException] for an entry with
@@ -224,6 +237,7 @@ class YtdlJob {
       trackId: _int(json['trackId']),
       recordId: _int(json['recordId']),
       recordFloor: _int(json['recordFloor']),
+      priorEntries: _pairs(json['priorEntries']),
     );
   }
 
@@ -238,6 +252,14 @@ class YtdlJob {
   }
 
   static int? _int(dynamic v) => v is int ? v : null;
+
+  static Set<(int, int)>? _pairs(dynamic v) => v is List
+      ? {
+          for (final p in v)
+            if (p is List && p.length == 2 && p[0] is int && p[1] is int)
+              (p[0] as int, p[1] as int),
+        }
+      : null;
   static String? _str(dynamic v) => v is String ? v : null;
   static DateTime? _time(dynamic v) =>
       v is int ? DateTime.fromMillisecondsSinceEpoch(v) : null;

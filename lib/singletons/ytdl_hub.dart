@@ -525,6 +525,11 @@ class YtdlServerState extends ChangeNotifier {
 
   final List<YtdlJob> _jobs = [];
   final Map<String, DateTime> _sentAt = {};
+
+  /// The order POSTs went out in (this session): a poll whose list was
+  /// read before a job's POST was sent can't hold that job's entry.
+  final Map<String, int> _sentSeq = {};
+  int _sendSeq = 0;
   final Map<String, String> _origins = {};
   final Set<String> _busy = {};
 
@@ -1350,6 +1355,7 @@ class YtdlServerState extends ChangeNotifier {
     final pid = job.pid;
     if (pid != null) _retiredPids.add(pid);
     _sentAt.remove(job.id);
+    _sentSeq.remove(job.id);
     _sawError.remove(job.id);
   }
 
@@ -1359,6 +1365,7 @@ class YtdlServerState extends ChangeNotifier {
       ..pid = null
       ..serverStart = null
       ..recordFloor = null
+      ..priorEntries = null
       ..endedAt = null
       ..seen = false
       ..problem = null
@@ -1378,12 +1385,19 @@ class YtdlServerState extends ChangeNotifier {
   /// On 6.30+ the record's newest id is read alongside the mkdir and kept
   /// as [YtdlJob.recordFloor] before the POST, so no record older than this
   /// add can ever settle it (bounded by [kFloorWait]; the last id read
-  /// stands in when it can't be had).
+  /// stands in when it can't be had). The tracker is read alongside it for
+  /// [YtdlJob.priorEntries], within the same wait, so no entry that was
+  /// there before this add can ever be claimed for it (not on an older
+  /// server, which keeps an ended entry 30 s and has no wait to share).
+  /// Both are saved before the POST goes, for a row an app killed while it
+  /// is out comes back with.
   Future<YtdlStartOutcome> _run(YtdlJob job,
       {String? mkdir, String? mkdirFolder, bool Function()? inline}) async {
     final api = this.api;
     final floor =
         _tier == YtdlServerTier.older ? null : _readFloor(api);
+    final prior =
+        _tier == YtdlServerTier.older ? null : _readPriorEntries(api, job);
     if (mkdir != null) {
       try {
         await api.mkdir(mkdir);
@@ -1409,12 +1423,17 @@ class YtdlServerState extends ChangeNotifier {
     if (server.isIrohTransport && !await hub.awaitTunnel(server)) {
       return _startFailed(job, const YtdlFailure(YtdlProblem.offline), inline);
     }
+    final priorWait =
+        prior == null ? null : _bounded<Set<(int, int)>?>(prior, kFloorWait);
     if (floor != null) {
       job.recordFloor =
           await _bounded<int?>(floor, kFloorWait) ?? _newestRecordId;
     }
+    if (priorWait != null) job.priorEntries = await priorWait;
     if (_disposed) return YtdlStartOutcome(job: job);
     _sentAt[job.id] = _now;
+    _sentSeq[job.id] = ++_sendSeq;
+    _changed();
     try {
       await api.add(
           directory: job.directory,
@@ -1475,6 +1494,20 @@ class YtdlServerState extends ChangeNotifier {
       final id = page.newestId ?? 0;
       _noteNewest(id);
       return id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The tracker's entries for [job]'s link and folder, as (pid, startTime)
+  /// ([YtdlJob.priorEntries]); null when the list can't be read.
+  Future<Set<(int, int)>?> _readPriorEntries(YtdlApi api, YtdlJob job) async {
+    try {
+      return {
+        for (final e in await api.jobs())
+          if (e.url == job.url && e.directory == job.directory)
+            (e.pid, e.startTime),
+      };
     } catch (_) {
       return null;
     }
@@ -1630,6 +1663,7 @@ class YtdlServerState extends ChangeNotifier {
 
   Future<void> _pollOnce() async {
     if (!_needsPoll) return;
+    final sentBefore = _sendSeq;
     final List<YtdlServerJob> entries;
     try {
       entries = await api.jobs();
@@ -1667,6 +1701,10 @@ class YtdlServerState extends ChangeNotifier {
     // and folder that no other job holds.
     for (final job in [..._jobs]) {
       if (!_polled(job) || job.pid != null) continue;
+      // A list read before this job's POST went out (a poll in flight that
+      // the add's own poll joined) can't hold its entry, only an earlier
+      // add's: the next poll's will.
+      if ((_sentSeq[job.id] ?? 0) > sentBefore) continue;
       final entry = _unclaimedFor(job, entries, claimed);
       if (entry != null) {
         claimed.add(entry.pid);
@@ -1697,13 +1735,16 @@ class YtdlServerState extends ChangeNotifier {
         for (final j in _jobs) ?j.pid,
       };
 
-  /// The newest entry for [job]'s link and folder that no job holds.
+  /// The newest entry for [job]'s link and folder that no job holds and
+  /// that was not there before the add was sent ([YtdlJob.priorEntries]).
   static YtdlServerJob? _unclaimedFor(
       YtdlJob job, List<YtdlServerJob> entries, Set<int> claimed) {
+    final prior = job.priorEntries;
     YtdlServerJob? best;
     for (final e in entries) {
       if (e.url != job.url || e.directory != job.directory) continue;
       if (claimed.contains(e.pid)) continue;
+      if (prior != null && prior.contains((e.pid, e.startTime))) continue;
       if (best == null || e.startTime > best.startTime) best = e;
     }
     return best;
