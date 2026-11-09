@@ -51,7 +51,8 @@ void main() {
       ..bytes = 8400000
       ..trackId = 991
       ..recordId = 57
-      ..recordFloor = 41;
+      ..recordFloor = 41
+      ..priorEntries = {(4710, 1793450001000), (4709, 1793449000000)};
     final back = roundTrip(j);
     expect(back.id, 'j-1');
     expect(back.url, j.url);
@@ -73,6 +74,7 @@ void main() {
     expect(back.trackId, 991);
     expect(back.recordId, 57);
     expect(back.recordFloor, 41);
+    expect(back.priorEntries, {(4710, 1793450001000), (4709, 1793449000000)});
     expect(back.mkdir, isNull);
     final made = roundTrip(YtdlJob(
         id: 'j-2',

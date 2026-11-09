@@ -235,6 +235,11 @@ class FakeYtdlServer {
   Object? jobsThrows;
   YtdlRefusal? jobsRefusal;
 
+  /// Hold every list read until the test completes it. The list is the
+  /// tracker as it was when the request arrived: an answer composed before
+  /// a later POST, delivered after it.
+  Completer<void>? jobsGate;
+
   Map<String, dynamic> entry(int pid) => tracker.firstWhere((e) => e['pid'] == pid);
 
   /// The newest entry for [url] (and [directory] when given).
@@ -485,7 +490,10 @@ class FakeYtdlServer {
       if (t != null) throw t;
       final r = jobsRefusal;
       if (r != null) return _refused(r);
-      return _json({'downloads': tracker});
+      final listed = [for (final e in tracker) Map<String, dynamic>.of(e)];
+      final gate = jobsGate;
+      if (gate != null) await gate.future;
+      return _json({'downloads': listed});
     }
     if (req.method == 'POST' && path.endsWith('/api/v1/file-explorer/mkdir')) {
       final gate = mkdirGate;
