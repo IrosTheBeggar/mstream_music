@@ -256,7 +256,6 @@ class _CopiesSheetState extends State<CopiesSheet> {
         icon: Icons.library_add_outlined,
         iconColor: VelvetColors.textTertiary,
         title: l.discoverCopiesEmpty,
-        sub: l.discoverCopiesEmptySubAny,
         pill: widget.fromHome && _discoverReachable
             ? KeepPill(
                 l.discoverCopiesOpenDiscover,
@@ -970,14 +969,14 @@ class _StateCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
-  final String sub;
+  final String? sub;
   final Widget? pill;
   const _StateCard({
     super.key,
     required this.icon,
     required this.iconColor,
     required this.title,
-    required this.sub,
+    this.sub,
     this.pill,
   });
 
@@ -1000,19 +999,21 @@ class _StateCard extends StatelessWidget {
               height: 20 / 15,
             ),
           ),
-          const SizedBox(height: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 290),
-            child: Text(
-              sub,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: VelvetColors.textSecondary,
-                fontSize: 13,
-                height: 18 / 13,
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 290),
+              child: Text(
+                sub!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 13,
+                  height: 18 / 13,
+                ),
               ),
             ),
-          ),
+          ],
           if (pill != null) ...[const SizedBox(height: 12), pill!],
         ],
       ),

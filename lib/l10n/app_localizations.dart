@@ -9814,24 +9814,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{Takes the {count} album credited to {artist}} other{Takes the {count} albums credited to {artist}}}'**
   String browseKeepTakes(int count, String artist);
 
-  /// Artist page of an artist who only appears on other albums of the connected server: why there is no Keep a copy pill.
-  ///
-  /// In en, this message translates to:
-  /// **'{artist} only appears on albums here, so there is no artist copy. Keep each album from its card.'**
-  String browseKeepNoArtistCopy(String artist);
-
-  /// Album page of a connected server's album whose songs name different album artists: why there is no Keep a copy pill.
-  ///
-  /// In en, this message translates to:
-  /// **'Its songs name different album artists, so copies go song by song.'**
-  String get browseKeepNoCredit;
-
-  /// Under a page pill while its copy runs: leaving does not stop it ({peer} the connected server's name).
-  ///
-  /// In en, this message translates to:
-  /// **'Copies keep going if you leave this page or {peer}.'**
-  String browseKeepKeepsGoing(String peer);
-
   /// Accessible name of a page pill that shows a copy's state ({state} e.g. 'In your collection').
   ///
   /// In en, this message translates to:
@@ -9849,12 +9831,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name}: {state}'**
   String browseKeepStatePlainAria(String name, String state);
-
-  /// Track sheet / folder sheet: the second line of the Keep a copy row ({peer} the connected server's name).
-  ///
-  /// In en, this message translates to:
-  /// **'To your server, from {peer}'**
-  String browseKeepRowSub(String peer);
 
   /// Track sheet's Keep a copy row while the album page's album copy runs, before it knows how many songs.
   ///
@@ -9895,26 +9871,8 @@ abstract class AppLocalizations {
   /// One-time hint the first time a connected server's song list shows.
   ///
   /// In en, this message translates to:
-  /// **'Long-press a song to keep a copy of it on your server.'**
+  /// **'Long-press a song to keep a copy'**
   String get browseKeepHoldHint;
-
-  /// Artist page header on a connected server: how many albums it lists there.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} album on {peer}} other{{count} albums on {peer}}}'**
-  String browseHeadAlbumsOn(int count, String peer);
-
-  /// Folder page header on a connected server: what this is and where.
-  ///
-  /// In en, this message translates to:
-  /// **'Folder on {peer}'**
-  String browseHeadFolderOn(String peer);
-
-  /// Folder page header: how many folders the open folder lists.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} folder} other{{count} folders}}'**
-  String browseHeadFolders(int count);
 
   /// Accessible name of a song row's ⋮, and the screen-reader action that opens its track sheet.
   ///
@@ -9970,53 +9928,17 @@ abstract class AppLocalizations {
   /// **'As on {peer}'**
   String discoverKeepLandingMirror(String peer);
 
-  /// Second line of the 'As on' landing.
-  ///
-  /// In en, this message translates to:
-  /// **'Its own folders, as they are there'**
-  String get discoverKeepLandingMirrorSub;
-
   /// Folder copy landing: a folder the user picks.
   ///
   /// In en, this message translates to:
   /// **'Into a folder…'**
   String get discoverKeepLandingFolder;
 
-  /// Second line of the 'Into a folder…' landing.
-  ///
-  /// In en, this message translates to:
-  /// **'One you pick, for this copy only'**
-  String get discoverKeepLandingFolderSub;
-
   /// Folder copy landing: each song by its tags, by the saved layout.
   ///
   /// In en, this message translates to:
   /// **'By your layout'**
   String get discoverKeepLandingTags;
-
-  /// Second line of the 'By your layout' landing.
-  ///
-  /// In en, this message translates to:
-  /// **'Each song by its tags, like any other copy'**
-  String get discoverKeepLandingTagsSub;
-
-  /// Under the 'As on' landing's path: which part comes from the connected server ({library} its library's name).
-  ///
-  /// In en, this message translates to:
-  /// **'Its path inside “{library}” on {peer}'**
-  String discoverKeepLandingMirrorFoot(String library, String peer);
-
-  /// Into a folder…: the chosen folder is not named as the pressed one, so the files go straight in ({folder} the chosen folder or library, {name} the pressed folder).
-  ///
-  /// In en, this message translates to:
-  /// **'Its files go straight into {folder}, with no “{name}” folder of their own.'**
-  String discoverKeepLandingStraightIn(String folder, String name);
-
-  /// Into a folder…: the foot under the folder list.
-  ///
-  /// In en, this message translates to:
-  /// **'For this copy only · nothing is saved to your account'**
-  String get discoverKeepLandingThisCopyOnly;
 
   /// Under a folder copy's first files: how many more it copies.
   ///
@@ -10036,40 +9958,34 @@ abstract class AppLocalizations {
   /// **'Add folder'**
   String get discoverKeepAddFolderUncounted;
 
-  /// Folder copy over the server's cap: the line that replaces the card ({count} its songs, {cap} the most one copy takes).
+  /// Folder copy over the server's cap: the line that replaces the card ({cap} the most songs one copy takes).
   ///
   /// In en, this message translates to:
-  /// **'“{name}” holds {count} songs, more than one copy takes here ({cap}). Keep its folders one at a time.'**
-  String discoverKeepFolderCap(String name, int count, int cap);
+  /// **'More than {cap} songs: keep its folders one at a time'**
+  String discoverKeepFolderCap(int cap);
 
   /// A finished folder copy: files it left out.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{{count} file left out: not music this server plays, or hidden} other{{count} files left out: not music this server plays, or hidden}}'**
+  /// **'{count, plural, one{{count} file left out} other{{count} files left out}}'**
   String discoverKeepFilesLeftOut(int count);
 
   /// Artist copy: the one album it leaves out (the artist only appears on it).
   ///
   /// In en, this message translates to:
-  /// **'Leaves out {album}: {artist} only appears on it.'**
-  String discoverKeepLeftOutOne(String album, String artist);
+  /// **'Leaves out {album}'**
+  String discoverKeepLeftOutOne(String album);
 
   /// Artist copy: how many albums it leaves out (the artist only appears on them).
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, other{Leaves out {count} albums {artist} only appears on.}}'**
-  String discoverKeepLeftOutMany(int count, String artist);
-
-  /// Artist copy: after the left-out line, when the artist has songs in no album.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs outside an album stay out too.'**
-  String get discoverKeepLeftOutSingles;
+  /// **'{count, plural, one{Leaves out {count} album} other{Leaves out {count} albums}}'**
+  String discoverKeepLeftOutMany(int count);
 
   /// Keep a copy, Artist chosen for an artist who only appears on other albums.
   ///
   /// In en, this message translates to:
-  /// **'{artist} only appears on albums here, so there is no artist copy.'**
+  /// **'{artist} has no albums of their own here'**
   String discoverKeepNoArtistCopyHere(String artist);
 
   /// Into a folder…: the label over the folder list ({name} the chosen folder or library).
@@ -10102,17 +10018,11 @@ abstract class AppLocalizations {
   /// **'Looking up…'**
   String get discoverKeepLookingUp;
 
-  /// Into a folder…: the chosen folder is new.
+  /// Into a folder…: the chosen folder name has a brace (a layout reads braces as variables).
   ///
   /// In en, this message translates to:
-  /// **'This folder does not exist yet — it is created by the first file'**
-  String get discoverKeepFolderWillCreate;
-
-  /// Into a folder…: the chosen folder name has a brace.
-  ///
-  /// In en, this message translates to:
-  /// **'“{folder}” has a brace in its name, which a layout reads as a variable. Choose or name a folder without one.'**
-  String discoverKeepFolderBraces(String folder);
+  /// **'Folder names can\'t contain braces'**
+  String get discoverKeepFolderBraces;
 
   /// A running folder copy's line: where its files go.
   ///
@@ -10125,42 +10035,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In {path}'**
   String discoverKeepIn(String path);
-
-  /// Folder copy sheet header: the folder's path on the connected server ('music › Boukmanflow › Borrowed Tapes').
-  ///
-  /// In en, this message translates to:
-  /// **'Folder · {path}'**
-  String discoverSheetFolderSub(String path);
-
-  /// Artist copy sheet header ({albums} e.g. '4 albums').
-  ///
-  /// In en, this message translates to:
-  /// **'Artist · {albums} on {peer}'**
-  String discoverSheetArtistSub(String albums, String peer);
-
-  /// Folder copy sheet header: while the folder is counted.
-  ///
-  /// In en, this message translates to:
-  /// **'Counting…'**
-  String get discoverSheetCounting;
-
-  /// Folder copy sheet header: the folder could not be counted.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t count its songs'**
-  String get discoverSheetCountFailed;
-
-  /// Folder copy sheet header: subfolders that hold songs.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} subfolder} other{{count} subfolders}}'**
-  String discoverSheetSubfolders(int count);
-
-  /// Folder copy sheet header: the folder has no subfolders with songs.
-  ///
-  /// In en, this message translates to:
-  /// **'no subfolders'**
-  String get discoverSheetNoSubfolders;
 
   /// Folder copy sheet: plays the folder from the connected server.
   ///
@@ -10185,12 +10059,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open {folder} on your server'**
   String discoverCopiesShowFailed(String folder);
-
-  /// Copies sheet empty state: how a copy starts.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep a copy of a connected server\'s music from Discover, or while you browse that server.'**
-  String get discoverCopiesEmptySubAny;
 
   /// Keep a copy's folder: how many songs the counted folder holds (its header, the Folder choice, Play folder).
   ///

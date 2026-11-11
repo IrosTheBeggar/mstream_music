@@ -44,7 +44,6 @@ import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../widgets/browse_keep_entry.dart';
 import '../widgets/browse_keep_pill.dart';
-import '../widgets/browse_page_header.dart' show KeepNoCreditLine;
 import '../widgets/player_panel.dart';
 import '../widgets/track_actions_sheet.dart';
 import 'discovery/browse_copy_marks.dart';
@@ -698,9 +697,9 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   }
 
   // The slot under the banner's facts (a connected server's named album):
-  //   gate open, credit known      the pill, its live line while it copies
+  //   gate open, credit known      the pill
   //   gate open, credit resolving  the pill's 44 pt, held empty
-  //   gate open, credits disagree  the line why there is no album copy
+  //   gate open, credits disagree  nothing (its songs copy one by one)
   //   gate open, credit unknown    nothing — the held place folds away
   //   gate closed, a copy of it    its state as plain text
   //   otherwise                    nothing
@@ -714,8 +713,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
       final open = _gate.allows(kScopeAlbum);
       if (open && credit == null) {
         child = const KeepReservedSlot();
-      } else if (open && credit!.state == AlbumCredit.disagree) {
-        child = const KeepNoCreditLine();
       } else if (credit?.state == AlbumCredit.known &&
           KeepPageAction.shows(l, open, pick)) {
         final req = _albumRequest;
@@ -726,7 +723,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
             pick: pick,
             subject: KeepSubject.album,
             name: widget.album.name,
-            peerName: _peerName,
             album: widget.album.data,
             fullWidth: fullWidth,
             onTap: _keepAlbum,

@@ -215,7 +215,6 @@ void main() {
         pick: null,
         subject: KeepSubject.artist,
         name: 'Boukmanflow',
-        peerName: 'Stage Peer B',
         hint: 'Takes the 3 albums credited to Boukmanflow',
         onTap: () => taps++,
       )));
@@ -229,7 +228,6 @@ void main() {
             hint: 'Takes the 3 albums credited to Boukmanflow',
             isButton: true,
           ));
-      expect(find.byKey(const ValueKey('browse-keep-live-line')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('browse-keep-pill')));
       expect(taps, 1);
       tester.semantics.tap(find.semantics.byLabel('Keep a copy of albums by Boukmanflow…'));
@@ -237,18 +235,17 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('live: the line under it says copies keep going; the pill keeps its height', (tester) async {
+    testWidgets('live: the pill says how far, keeps its height, and nothing is added under it', (tester) async {
       await tester.pumpWidget(app(KeepPageAction(
         open: true,
         pick: KeepChoiceJob(job(state: 'running', progress: 0.6, statusText: '2 of 3 songs')),
         subject: KeepSubject.album,
         name: 'Borrowed Tapes',
-        peerName: 'Stage Peer B',
         album: 'Borrowed Tapes',
         onTap: () {},
       )));
       expect(find.text('Copying 2 of 3'), findsOneWidget);
-      expect(find.text('Copies keep going if you leave this page or Stage Peer B.'), findsOneWidget);
+      expect(find.byType(Text), findsOneWidget, reason: 'the pill\'s words alone');
       expect(tester.getSize(find.byKey(const ValueKey('browse-keep-pill'))).height, 44);
     });
 
@@ -259,8 +256,7 @@ void main() {
             pick: pick,
             subject: KeepSubject.album,
             name: 'Borrowed Tapes',
-            peerName: 'Stage Peer B',
-            onTap: () {},
+                onTap: () {},
           ));
       await tester.pumpWidget(closed(KeepChoiceJob(job(result: many(copied: 3)))));
       expect(find.byKey(const ValueKey('browse-keep-pill')), findsNothing);
@@ -298,8 +294,7 @@ void main() {
           pick: KeepChoiceJob(job(state: 'running', peer: pc), fromOtherPeer: true),
           subject: KeepSubject.album,
           name: 'Borrowed Tapes',
-          peerName: 'Stage Peer B',
-          fullWidth: true,
+            fullWidth: true,
           onTap: () {},
         ),
         textScale: 2,
@@ -313,18 +308,18 @@ void main() {
   });
 
   group("a menu row's sub-line", () {
-    test('the album copy running first; then the item\'s own copy; else where copies go', () {
+    test('the album copy running first; then the item\'s own copy; else none', () {
       final album = job(state: 'running', progress: 0.6, statusText: '2 of 3 songs');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', albumLive: (name: 'Borrowed Tapes', job: album)), 'Copying Borrowed Tapes · 2 of 3');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', albumLive: (name: 'Borrowed Tapes', job: job(state: 'running'))), 'Copying Borrowed Tapes');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', own: const CopyMarker(CopyMarkerKind.waiting)), 'Waiting for a free slot');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', own: const CopyMarker(CopyMarkerKind.copying, done: 2, total: 3)), 'Copying 2 of 3');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', own: const CopyMarker(CopyMarkerKind.inCollection)), 'In your collection');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', own: const CopyMarker(CopyMarkerKind.refused)), 'Refused');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', own: const CopyMarker(CopyMarkerKind.failed)), 'Copy failed');
-      expect(keepMenuSub(l, peer: 'Stage Peer B'), 'To your server, from Stage Peer B');
-      expect(keepMenuSub(l, peer: 'Stage Peer B', albumLive: (name: 'Borrowed Tapes', job: job(result: many(copied: 3)))),
-          'To your server, from Stage Peer B', reason: 'a finished album copy is not "copying"');
+      expect(keepMenuSub(l, albumLive: (name: 'Borrowed Tapes', job: album)), 'Copying Borrowed Tapes · 2 of 3');
+      expect(keepMenuSub(l, albumLive: (name: 'Borrowed Tapes', job: job(state: 'running'))), 'Copying Borrowed Tapes');
+      expect(keepMenuSub(l, own: const CopyMarker(CopyMarkerKind.waiting)), 'Waiting for a free slot');
+      expect(keepMenuSub(l, own: const CopyMarker(CopyMarkerKind.copying, done: 2, total: 3)), 'Copying 2 of 3');
+      expect(keepMenuSub(l, own: const CopyMarker(CopyMarkerKind.inCollection)), 'In your collection');
+      expect(keepMenuSub(l, own: const CopyMarker(CopyMarkerKind.refused)), 'Refused');
+      expect(keepMenuSub(l, own: const CopyMarker(CopyMarkerKind.failed)), 'Copy failed');
+      expect(keepMenuSub(l), isNull);
+      expect(keepMenuSub(l, albumLive: (name: 'Borrowed Tapes', job: job(result: many(copied: 3)))), isNull,
+          reason: 'a finished album copy is not "copying"');
     });
   });
 }

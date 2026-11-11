@@ -1187,20 +1187,25 @@ class _BrowserState extends State<Browser> {
   static bool _cardsMarked(_PeerPage page) =>
       page.kind == _PeerKind.albums || page.kind == _PeerKind.artist;
 
-  /// A connected server's artist page's header: whose page it is, its
-  /// albums there, and Keep a copy of the artist's own albums.
+  /// A connected server's artist page's header: Keep a copy of the
+  /// artist's own albums.
   Widget? _artistHeader(BuildContext c, _PeerPage page) {
     final artist = page.artist;
     if (artist == null) return null;
     final rec = artistLeadOf(artist);
     final keep = BrowseKeepRequest.artistPage(artist);
+    final open = keep != null && page.gate.allows(kScopeArtist);
+    final pick = rec == null ? null : page.marks?.pillJob(rec, kScopeArtist);
+    if (!ArtistPageHeader.showsFor(AppLocalizations.of(c), artist,
+        open: open, pick: pick)) {
+      return null;
+    }
     return KeepFocusAnchor(
       focusKey: keep?.focusKey,
       builder: (context, node) => ArtistPageHeader(
         artist: artist,
-        peerName: page.peerName,
-        open: keep != null && page.gate.allows(kScopeArtist),
-        pick: rec == null ? null : page.marks?.pillJob(rec, kScopeArtist),
+        open: open,
+        pick: pick,
         onKeep: () {
           if (keep != null) _openKeep(c, page, keep);
         },
@@ -1212,9 +1217,7 @@ class _BrowserState extends State<Browser> {
 
   /// The open folder's header (a connected server's folder below its
   /// library's root): with the gate closed, only for an earlier copy of it.
-  /// Its counts are this listing's own.
-  Widget? _folderHeader(
-      BuildContext c, _PeerPage page, List<DisplayItem> rows) {
+  Widget? _folderHeader(BuildContext c, _PeerPage page) {
     final l = AppLocalizations.of(c);
     final ref = page.folder?.ref;
     if (ref == null) return null;
@@ -1224,16 +1227,10 @@ class _BrowserState extends State<Browser> {
     if (!KeepPageAction.shows(l, open, pick)) return null;
     final keep =
         BrowseKeepRequest.ofFolder(ref, page.peer, variant: KeepVariant.page);
-    final folders = rows.where((r) => r.type == 'directory').length;
-    final songs =
-        rows.where((r) => r.type == 'file' && !isM3u(r.data)).length;
     return KeepFocusAnchor(
       focusKey: keep?.focusKey,
       builder: (context, node) => FolderPageHeader(
         name: ref.name,
-        folders: folders,
-        songs: songs,
-        peerName: page.peerName,
         open: open,
         pick: pick,
         onKeep: () {
@@ -1624,13 +1621,12 @@ class _BrowserState extends State<Browser> {
               if (keep != null)
                 KeepMenuRow(
                   label: l.browseKeepOfFolder(item.name),
-                  peerName: page!.peerName,
                   state: state,
                   ask: () => KeepMenuState.lookup(
-                      CopiesHub().jobsFor(page.peer), keep.lead, kScopeFolder),
+                      CopiesHub().jobsFor(page!.peer), keep.lead, kScopeFolder),
                   onTap: () {
                     Navigator.of(sheetCtx).pop();
-                    _openKeep(c, page, keep);
+                    _openKeep(c, page!, keep);
                   },
                 ),
               const SizedBox(height: 8),
@@ -2279,7 +2275,7 @@ class _BrowserState extends State<Browser> {
                             : switch (page.kind) {
                                 _PeerKind.artist => _artistHeader(context, page),
                                 _PeerKind.explorer =>
-                                  _folderHeader(context, page, rawList),
+                                  _folderHeader(context, page),
                                 _ => null,
                               };
                         Widget content = useGrid

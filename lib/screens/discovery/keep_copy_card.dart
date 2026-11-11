@@ -919,13 +919,7 @@ class _KeepCopySectionState extends State<KeepCopySection> {
         } else if (overCap) {
           // Past the server's cap: this line alone — no landings, no Add.
           children.add(
-            KeepFolderCapLine(
-              l.discoverKeepFolderCap(
-                widget.folder!.name,
-                folderFacts!.songs!.length,
-                cap!,
-              ),
-            ),
+            KeepFolderCapLine(l.discoverKeepFolderCap(cap!)),
           );
         } else {
           if (_firstUse) {
@@ -1068,21 +1062,18 @@ class _KeepCopySectionState extends State<KeepCopySection> {
     ),
   );
 
-  /// Under Artist: what an artist copy leaves out, as the copy plans it —
-  /// "Leaves out Night Market Sampler: Boukmanflow only appears on it." /
-  /// "Leaves out 2 albums Boukmanflow only appears on.", then "Songs
-  /// outside an album stay out too." when the list has songs in no album.
-  /// Null when nothing is left out (or the peer's list has not answered).
+  /// Under Artist: the albums an artist copy leaves out, as the copy plans
+  /// it — "Leaves out Night Market Sampler" / "Leaves out 2 albums". Null
+  /// when it leaves out no album (or the peer's list has not answered).
   Widget? _leftOut(AppLocalizations l) {
     final out = widget.facts.facts.leftOutFor(lead.artist);
     if (out == null) return null;
-    final words = [
-      if (out.one != null)
-        l.discoverKeepLeftOutOne(out.one!, lead.artist)
-      else if (out.many > 0)
-        l.discoverKeepLeftOutMany(out.many, lead.artist),
-      if (out.singles) l.discoverKeepLeftOutSingles,
-    ].join(' ');
+    final words = out.one != null
+        ? l.discoverKeepLeftOutOne(out.one!)
+        : out.many > 0
+        ? l.discoverKeepLeftOutMany(out.many)
+        : null;
+    if (words == null) return null;
     final tone = keepQuiet(VelvetColors.textTertiary);
     return Padding(
       key: const ValueKey('keep-left-out'),
@@ -1140,10 +1131,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
           children: [
             _destination(l, kScopeFolder, change: false),
             if (files != null) KeepFolderFileList(files),
-            KeepFolderNote(
-              l.discoverKeepLandingMirrorFoot(f.library, widget.peerName),
-              key: const ValueKey('keep-mirror-foot'),
-            ),
           ],
         ),
         FolderLanding.folder =>

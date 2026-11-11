@@ -54,10 +54,7 @@ void main() {
 
       // The header names the album, its credit and the server.
       expect(find.text('Borrowed Tapes'), findsOneWidget);
-      expect(
-        find.text('Boukmanflow · 2019 · 3 songs · 0:29'),
-        findsOneWidget,
-      );
+      expect(find.text('Boukmanflow · 2019'), findsOneWidget);
       expect(find.text('Stage Peer B online'), findsOneWidget);
       // Listen: Play album and Queue album; the album is behind the sheet.
       expect(find.text('Play album'), findsOneWidget);
@@ -160,13 +157,7 @@ void main() {
       await h.open(tester, h.albumPage());
       await tapKey(tester, 'keep-chip-artist');
       expect(find.text("Only the 2 albums you don't have"), findsOneWidget);
-      expect(
-        find.text(
-          'Leaves out Night Market Sampler: Boukmanflow only appears on '
-          'it. Songs outside an album stay out too.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Leaves out Night Market Sampler'), findsOneWidget);
       expect(
         line('Files go to copies › Boukmanflow › one folder per album'),
         findsOneWidget,
@@ -317,7 +308,8 @@ void main() {
       await h.open(tester, h.artistPage());
       expect(tester.takeException(), isNull);
       expect(find.text('Boukmanflow'), findsOneWidget);
-      expect(find.text('Artist · 4 albums on Stage Peer B'), findsOneWidget);
+      expect(find.text('Artist'), findsWidgets);
+      expect(find.text('Stage Peer B online'), findsOneWidget);
       expect(find.text('LISTEN'), findsNothing);
       expect(find.byKey(const ValueKey('keep-chip-artist')), findsNothing);
       expect(find.text("Only the 2 albums you don't have"), findsOneWidget);
@@ -379,10 +371,7 @@ void main() {
       )!;
       await h.open(tester, r);
       expect(
-        find.text(
-          'Lantern Choir only appears on albums here, so there is no artist '
-          'copy.',
-        ),
+        find.text('Lantern Choir has no albums of their own here'),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('keep-destination')), findsNothing);
@@ -400,7 +389,7 @@ void main() {
       await h.open(tester, r);
       expect(find.text('Late Train Verse'), findsOneWidget);
       expect(find.text('Boukmanflow  ·  Borrowed Tapes'), findsOneWidget);
-      expect(find.text('MP3  ·  0:08'), findsOneWidget);
+      expect(find.text('MP3  ·  0:08'), findsNothing);
       // V-menu: nothing of the menu that just closed.
       expect(find.text('LISTEN'), findsNothing);
       expect(find.text('Add next'), findsNothing);
@@ -625,10 +614,7 @@ void main() {
       expect(find.text('0 albums'), findsOneWidget);
       await tapKey(tester, 'keep-chip-artist');
       expect(
-        find.text(
-          'Lantern Choir only appears on albums here, so there is no artist '
-          'copy.',
-        ),
+        find.text('Lantern Choir has no albums of their own here'),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('keep-add-bar')), findsNothing);

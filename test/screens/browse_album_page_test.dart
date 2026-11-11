@@ -91,8 +91,7 @@ void main() {
       await open(tester, split);
       expect(tester.widget<Text>(find.byKey(const ValueKey('album-banner-credit'))).data, 'ALM, Night Owl Radio');
       expect(find.text('Various Artists'), findsNothing);
-      expect(pill(), findsNothing);
-      expect(find.text('Its songs name different album artists, so copies go song by song.'), findsOneWidget);
+      expect(pill(), findsNothing, reason: 'its songs copy one by one; no line why');
       await close(tester);
     });
 
@@ -156,7 +155,7 @@ void main() {
       final hit = DisplayItem(h.peerB, 'Borrowed Tapes', 'album', 'Borrowed Tapes', null, 'album');
       await open(tester, hit);
       await tester.pump(const Duration(milliseconds: 300));
-      expect([reserved(), pill(), find.byKey(const ValueKey('browse-keep-no-credit'))], everyElement(findsNothing));
+      expect([reserved(), pill()], everyElement(findsNothing));
       await close(tester);
     });
 
@@ -273,26 +272,25 @@ void main() {
       await close(tester);
     });
 
-    testWidgets('while the album copy runs: "Copying 2 of 3", the live line and the bar; the rows say nothing', (tester) async {
+    testWidgets('while the album copy runs: "Copying 2 of 3" and the bar, nothing under the pill; the rows say nothing', (tester) async {
       h.setUp();
       h.fake.addJob(tapesAlbumRec(), scope: 'album', state: 'running', progress: 0.6, statusText: '2 of 3 songs · 4.1 MB · Corner Store Loop');
       h.fake.addJob(tapesSongRec('02 - Late Train Verse.mp3', 'Late Train Verse', seconds: 8, credit: 'Boukmanflow'),
           state: 'done', result: {'copied': {'filepath': 'copies/x.mp3'}});
       await open(tester, tapes());
       expect(find.text('Copying 2 of 3'), findsOneWidget);
-      expect(find.text('Copies keep going if you leave this page or Stage Peer B.'), findsOneWidget);
+      expect(find.textContaining('keep going'), findsNothing);
       expect(find.byKey(const ValueKey('browse-keep-bar')), findsOneWidget);
       expect(find.text('in your collection'), findsNothing, reason: 'rows do not guess while the album copies');
       await close(tester);
     });
 
-    testWidgets("another server's live copy: \"Copying from Stage Peer C\" on the pill only, no live line, no bar", (tester) async {
+    testWidgets("another server's live copy: \"Copying from Stage Peer C\" on the pill only, no bar", (tester) async {
       h.setUp();
       h.fake.addJob(tapesAlbumRec(peer: browsePeerC), scope: 'album', state: 'running', progress: 0.3, statusText: '1 of 3 songs');
       await open(tester, tapes());
       expect(find.text('Copying from Stage Peer C'), findsOneWidget);
-      expect([find.byKey(const ValueKey('browse-keep-live-line')), find.byKey(const ValueKey('browse-keep-bar'))],
-          everyElement(findsNothing));
+      expect(find.byKey(const ValueKey('browse-keep-bar')), findsNothing);
       await close(tester);
     });
   });
@@ -303,7 +301,7 @@ void main() {
       await open(tester, tapes());
       await tester.tap(find.byTooltip('More actions for Late Train Verse'));
       await tester.pumpAndSettle();
-      expect(find.text('To your server, from Stage Peer B'), findsOneWidget);
+      expect(find.text('To your server, from Stage Peer B'), findsNothing, reason: 'no copy: no sub-line');
       final row = find.byKey(const ValueKey('browse-keep-menu-row'));
       final keepY = tester.getTopLeft(row).dy;
       expect(keepY, greaterThan(tester.getTopLeft(find.text('Play now')).dy));
@@ -324,7 +322,7 @@ void main() {
       await close(tester);
     });
 
-    testWidgets("the track sheet's row for a screen reader: \"Keep a copy of {title}…\", its sub-line as the value, and it acts", (tester) async {
+    testWidgets("the track sheet's row for a screen reader: \"Keep a copy of {title}…\", no value while there is no copy, and it acts", (tester) async {
       h.setUp();
       final handle = tester.ensureSemantics();
       await open(tester, tapes());
@@ -332,7 +330,7 @@ void main() {
       await tester.pumpAndSettle();
       final row = find.semantics.byLabel('Keep a copy of Late Train Verse…');
       expect(tester.getSemantics(find.byKey(const ValueKey('browse-keep-menu-row'))),
-          isSemantics(label: 'Keep a copy of Late Train Verse…', value: 'To your server, from Stage Peer B', isButton: true));
+          isSemantics(label: 'Keep a copy of Late Train Verse…', value: '', isButton: true));
       tester.semantics.tap(row);
       await tester.pumpAndSettle();
       expect(h.opened.single.subject, KeepSubject.song);

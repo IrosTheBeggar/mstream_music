@@ -189,10 +189,9 @@ String keepStateWord(AppLocalizations l, CopyMarker m, {bool menu = false}) =>
 /// sheet's), the first that holds: the album page's album copy running
 /// ([albumLive], the album's name, its job: "Copying Borrowed Tapes · 2 of
 /// 3"); the item's own copy ([own]: the song's, a folder row's folder
-/// copy); else where a copy goes — "To your server, from Stage Peer B".
-String keepMenuSub(
+/// copy); else none.
+String? keepMenuSub(
   AppLocalizations l, {
-  required String peer,
   CopyMarker? own,
   ({String name, DiscoveryJob job})? albumLive,
 }) {
@@ -204,7 +203,7 @@ String keepMenuSub(
         : l.browseKeepCopyingOfCount(album.name, counts.$1, counts.$2);
   }
   if (own != null) return keepStateWord(l, own, menu: true);
-  return l.browseKeepRowSub(peer);
+  return null;
 }
 
 /// Where [job] puts its files, for a screen reader ("copies/Boukmanflow/
@@ -303,14 +302,13 @@ class KeepMenuState {
 
 /// The "Keep a copy…" row a song's or a folder's menu gains on a connected
 /// server (the track sheet's, the folder sheet's): Keep a copy's glyph in
-/// gold, the title, and the sub-line ([keepMenuSub]) — "To your server,
-/// from Stage Peer B" or the item's own state. With no page to say, it asks
-/// once ([ask]) and the sub-line updates once. A screen reader hears "Keep
-/// a copy of {title}…" with the sub-line as its value.
+/// gold, the title, and under it the item's copy's state ([keepMenuSub])
+/// when it has one. With no page to say, it asks once ([ask]) and the
+/// sub-line updates once. A screen reader hears "Keep a copy of {title}…"
+/// with the sub-line as its value.
 class KeepMenuRow extends StatefulWidget {
   /// "Keep a copy of Late Train Verse…" / "Keep a copy of the folder …".
   final String label;
-  final String peerName;
   final KeepMenuState state;
 
   /// The row's own ask, when [state] is not known.
@@ -320,7 +318,6 @@ class KeepMenuRow extends StatefulWidget {
   const KeepMenuRow({
     super.key,
     required this.label,
-    required this.peerName,
     required this.state,
     this.ask,
     required this.onTap,
@@ -349,9 +346,7 @@ class _KeepMenuRowState extends State<KeepMenuRow> {
     final l = AppLocalizations.of(context);
     final st = widget.state;
     final sub = keepMenuSub(l,
-        peer: widget.peerName,
-        own: st.known ? st.marker : _asked,
-        albumLive: st.album);
+        own: st.known ? st.marker : _asked, albumLive: st.album);
     // One node: its name, the sub-line as its value, the tap on it.
     return Semantics(
       key: const ValueKey('browse-keep-menu-row'),
@@ -365,8 +360,11 @@ class _KeepMenuRowState extends State<KeepMenuRow> {
         leading: KeepFolderGlyph(size: 24, color: keepInk()),
         title: Text(l.browseKeepButton,
             style: TextStyle(color: VelvetColors.textPrimary)),
-        subtitle: Text(sub,
-            style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary)),
+        subtitle: sub == null
+            ? null
+            : Text(sub,
+                style: TextStyle(
+                    fontSize: 13, color: VelvetColors.textSecondary)),
         onTap: widget.onTap,
       ),
     );

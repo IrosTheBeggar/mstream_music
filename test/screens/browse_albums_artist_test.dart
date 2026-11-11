@@ -3,9 +3,9 @@
 // a known credit carry Keep a copy's ⋯ and long-press (never the singles
 // bucket, never credits that disagree), their copy's badge whatever the
 // gate — glyph only at large text — and the badge's word in the card's
-// accessible label; the artist page names its artist, counts its albums,
-// and offers the artist copy with its takes line (or the line why there is
-// none); a list row's long-press and screen-reader action do what a card's
+// accessible label; the artist page offers the artist copy — its pill
+// alone, the bar naming the artist (none at all where there is no artist
+// copy); a list row's long-press and screen-reader action do what a card's
 // ⋯ does.
 
 import 'dart:async';
@@ -304,14 +304,14 @@ void main() {
 
     Finder header() => find.byKey(const ValueKey('browse-artist-header'));
 
-    testWidgets('its header names it, counts its albums, and offers the artist copy with its takes line', (tester) async {
+    testWidgets('its header is the artist copy\'s pill alone; what it takes is the pill\'s hint', (tester) async {
       h.setUp();
       final handle = tester.ensureSemantics();
       final artist = boukmanflow();
       await openAlbums(tester, cards(), artist: artist, width: 600);
       expect(header(), findsOneWidget);
-      expect(find.text('4 albums on Stage Peer B'), findsOneWidget);
-      expect(find.text('Takes the 3 albums credited to Boukmanflow'), findsOneWidget);
+      expect(find.text('4 albums on Stage Peer B'), findsNothing);
+      expect(find.text('Takes the 3 albums credited to Boukmanflow'), findsNothing);
       expect(
           tester.getSemantics(find.byKey(const ValueKey('browse-keep-pill'))),
           isSemantics(label: 'Keep a copy of albums by Boukmanflow…', hint: 'Takes the 3 albums credited to Boukmanflow', isButton: true));
@@ -330,22 +330,20 @@ void main() {
       await close(tester);
     });
 
-    testWidgets('an artist who only appears on the albums here: no pill, the line why', (tester) async {
+    testWidgets('an artist who only appears on the albums here: no header at all', (tester) async {
       h.setUp();
       final choir = ArtistContext(server: h.peerB, name: 'Lantern Choir', albums: const [
         {'name': 'Night Market Sampler', 'year': 2024, 'album_artist': 'Various Artists', 'artists': ['Lantern Choir', 'ALM'], 'compilation': true},
       ]);
       await openAlbums(tester, [cards()[3]], artist: choir);
-      expect(find.byKey(const ValueKey('browse-keep-pill')), findsNothing);
-      expect(find.text('Lantern Choir only appears on albums here, so there is no artist copy. Keep each album from its card.'), findsOneWidget);
+      expect([header(), find.byKey(const ValueKey('browse-keep-pill'))], everyElement(findsNothing));
       await close(tester);
     });
 
-    testWidgets('Various Artists, or a server too old to name credits: the header, no action row', (tester) async {
+    testWidgets('Various Artists, or a server too old to name credits: no header', (tester) async {
       h.setUp();
       await openAlbums(tester, cards(), artist: boukmanflow(credits: false));
-      expect(header(), findsOneWidget);
-      expect([find.byKey(const ValueKey('browse-keep-pill')), find.byKey(const ValueKey('browse-artist-no-copy'))], everyElement(findsNothing));
+      expect([header(), find.byKey(const ValueKey('browse-keep-pill'))], everyElement(findsNothing));
       await close(tester);
       await openAlbums(tester, [cards()[3]],
           artist: ArtistContext(server: h.peerB, name: 'Various Artists', albums: const [
@@ -368,16 +366,15 @@ void main() {
       await openAlbums(tester, cards(), artist: boukmanflow());
       expect(find.byKey(const ValueKey('browse-keep-pill')), findsNothing);
       expect(find.byKey(const ValueKey('browse-keep-plain')), findsOneWidget);
-      expect(find.text('Takes the 3 albums credited to Boukmanflow'), findsNothing);
       await close(tester);
     });
 
-    testWidgets('2.0× on a 360 phone: the takes line under the pill, nothing overflows', (tester) async {
+    testWidgets('2.0× on a 360 phone: the pill takes the full width, nothing overflows', (tester) async {
       h.setUp();
       await openAlbums(tester, cards(), artist: boukmanflow(), width: 360, textScale: 2);
       expect(tester.takeException(), isNull);
       final pill = tester.getRect(find.byKey(const ValueKey('browse-keep-pill')));
-      expect(tester.getTopLeft(find.byKey(const ValueKey('browse-artist-takes'))).dy, greaterThan(pill.bottom));
+      expect(pill.width, tester.getRect(header()).width - 32);
       await close(tester);
     });
   });

@@ -17,7 +17,6 @@ import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/browse_keep_leads.dart';
 import '../../util/discover_badges.dart' show nameKey;
-import '../../util/discover_jobs.dart' show folderCounts;
 import '../../util/image_cache.dart' show artCacheSize;
 import '../../util/queue_actions.dart';
 import '../../util/stream_url.dart';
@@ -198,8 +197,6 @@ class _SheetHeader extends StatelessWidget {
   final String peerName;
   final bool answering;
   final bool browse;
-  final int bylineLines;
-  final String? status;
   const _SheetHeader({
     required this.cover,
     required this.title,
@@ -208,8 +205,6 @@ class _SheetHeader extends StatelessWidget {
     required this.peerName,
     required this.answering,
     this.browse = false,
-    this.bylineLines = 1,
-    this.status,
   });
 
   @override
@@ -241,7 +236,7 @@ class _SheetHeader extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       byline,
-                      maxLines: bylineLines,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: VelvetColors.textSecondary,
@@ -285,12 +280,9 @@ class _SheetHeader extends StatelessWidget {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            [
-                              answering
-                                  ? l.discoverSheetPeerOnline(peerName)
-                                  : l.discoverSheetPeerNotAnswering(peerName),
-                              ?status,
-                            ].join(' · '),
+                            answering
+                                ? l.discoverSheetPeerOnline(peerName)
+                                : l.discoverSheetPeerNotAnswering(peerName),
                             maxLines: browse ? 2 : 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1380,7 +1372,6 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
     final f = _facts.facts;
     switch (r.subject) {
       case KeepSubject.song:
-        final d = lead.durationSeconds ?? _tags?.durationSeconds;
         return _SheetHeader(
           browse: true,
           cover: _songCover(),
@@ -1388,11 +1379,6 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           byline: [
             if (lead.artist.trim().isNotEmpty) lead.artist.trim(),
             if ((lead.album ?? '').trim().isNotEmpty) lead.album!.trim(),
-          ].join('  ·  '),
-          spec: [
-            ?keepFormatOf(lead.filepath),
-            if (d != null && d > 0)
-              keepClock(Duration(milliseconds: (d * 1000).round())),
           ].join('  ·  '),
           peerName: r.peerName,
           answering: !_down,
@@ -1408,34 +1394,21 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           byline: [
             ?_text(lead.albumArtist),
             if (year != null) '$year',
-            if (f.albumSongCount != null)
-              l.discoverSheetSongCount(f.albumSongCount!),
-            if (f.albumLength != null) keepClock(f.albumLength!),
           ].join(' · '),
           peerName: r.peerName,
           answering: !_down,
         );
       case KeepSubject.artist:
-        final held = r.artist;
-        final count = held != null && held.albums.isNotEmpty
-            ? held.albumCount
-            : f.peerAlbums?.length;
         return _SheetHeader(
           browse: true,
           cover: _tile(Icons.person_outline, shape: BoxShape.circle),
           title: lead.artist,
-          byline: count == null
-              ? l.discoverKeepArtist
-              : l.discoverSheetArtistSub(
-                  l.discoverSheetAlbumCount(count),
-                  r.peerName,
-                ),
+          byline: l.discoverKeepArtist,
           peerName: r.peerName,
           answering: !_down,
         );
       case KeepSubject.folder:
         final folder = r.folder;
-        final ff = _folderFacts;
         return _SheetHeader(
           browse: true,
           cover: _tile(
@@ -1445,36 +1418,11 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
             color: keepTone(VelvetColors.warning),
           ),
           title: folder?.name ?? lead.title,
-          // The path there, library first, wrapping between its folders.
-          byline: folder == null
-              ? ''
-              : l.discoverSheetFolderSub(
-                  folder.segments
-                      .map((s) => s.replaceAll(' ', '\u00A0'))
-                      .join(' › '),
-                ),
-          bylineLines: 3,
-          status: ff == null ? null : _countWords(l, ff),
+          byline: l.discoverKeepFolder,
           peerName: r.peerName,
           answering: !_down,
         );
     }
-  }
-
-  /// "Counting…" → "3 songs · no subfolders" / "9 songs · 3 subfolders",
-  /// or "Couldn't count its songs".
-  String _countWords(AppLocalizations l, KeepFolderFactsLoader ff) {
-    final f = ff.facts;
-    if (f.countFailed) return l.discoverSheetCountFailed;
-    final songs = f.songs;
-    if (songs == null) return l.discoverSheetCounting;
-    final n = folderCounts(songs);
-    return [
-      l.discoverSheetFolderSongCount(n.songs),
-      n.subfolders == 0
-          ? l.discoverSheetNoSubfolders
-          : l.discoverSheetSubfolders(n.subfolders),
-    ].join(' · ');
   }
 
   /// A song's cover: its row's, else the queue's own art (a queued
@@ -1577,7 +1525,6 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
             key: const ValueKey('browse-keep-play-folder'),
             icon: Icons.play_arrow,
             label: l.discoverSheetPlayFolder,
-            sub: n == null ? null : l.discoverSheetFolderSongCount(n),
             enabled: ready,
             onTap: () => _folderVerb(l, play: true),
           ),

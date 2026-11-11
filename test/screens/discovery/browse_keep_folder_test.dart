@@ -1,10 +1,10 @@
 // Keep a copy's folder focus, entered from a connected server's file
 // explorer (the phone spec's §6.6, its RecSheets S10–S25 boards): the
-// header with its count, Listen waiting on it, "Where it lands" and its
-// three bodies — as on the server (the layout's leading folders kept,
+// header, Listen waiting on the count, "Where it lands" and its three
+// bodies — as on the server (the layout's leading folders kept,
 // decision 1), Into a folder… (the saved library › the pressed folder's
 // name, decision 2; the libraries, Up, the folders, Show all, New folder…,
-// a brace refused, the straight-in line) and By your layout (tags read
+// a brace refused) and By your layout (tags read
 // once, one folder per album, Change previewing the folder) — the cap line
 // in place of all of it, what each start sends, and every state a folder
 // copy reads in. And the destination sheet's preview by the folder rule.
@@ -115,23 +115,17 @@ void main() {
       tester.widget<KeepPill>(add()).onTap != null;
 
   group('folder focus · as on Stage Peer B', () {
-    testWidgets('from the folder header (V-page): the count, Listen, the '
-        'landings, the path, three files, the foot, Add folder · 3 songs', (
+    testWidgets('from the folder header (V-page): Listen, the landings, '
+        'the path, three files, Add folder · 3 songs — the count said once', (
       tester,
     ) async {
       await h.pumpHost(tester);
       await h.open(tester, h.folder('/$tapesDir'));
       expect(tester.takeException(), isNull);
       expect(find.text('Borrowed Tapes'), findsOneWidget);
-      expect(
-        line('Folder · music › Boukmanflow › Borrowed Tapes'),
-        findsOneWidget,
-        reason: 'the path wraps only between its folders',
-      );
-      expect(
-        find.text('Stage Peer B online · 3 songs · no subfolders'),
-        findsOneWidget,
-      );
+      expect(find.text('Folder'), findsWidgets);
+      expect(find.text('Stage Peer B online'), findsOneWidget,
+          reason: 'no path, no counts in the header');
       expect(h.facts.count('recursive /$tapesDir'), 1, reason: 'once');
       expect(find.text('Play folder'), findsOneWidget);
       expect(find.text('Add to queue'), findsOneWidget);
@@ -150,7 +144,7 @@ void main() {
       final mono = tester.widget<Text>(find.text('01 - Rooftop Cypher.mp3'));
       expect(mono.style!.fontFamily, 'monospace');
       expect(mono.style!.fontFamilyFallback, contains('Menlo'));
-      expect(find.text('Its path inside “music” on Stage Peer B'), findsOneWidget);
+      expect(find.textContaining('songs'), findsOneWidget, reason: 'on Add alone');
       expect(find.text('Change'), findsNothing, reason: 'the layout does not apply');
       expect(find.text('Add folder · 3 songs'), findsOneWidget);
 
@@ -189,7 +183,7 @@ void main() {
       h.facts.countGate = Completer<void>();
       await h.pumpHost(tester);
       await h.open(tester, h.folder('/$tapesDir', variant: KeepVariant.menu));
-      expect(find.text('Stage Peer B online · Counting…'), findsOneWidget);
+      expect(find.text('Stage Peer B online'), findsOneWidget);
       expect(find.text('Play folder'), findsNothing);
       expect(find.text('Add folder'), findsOneWidget);
       await tapKey(tester, 'keep-start');
@@ -199,14 +193,10 @@ void main() {
       await frames(tester);
     });
 
-    testWidgets('a folder of folders: "9 songs · 3 subfolders", each file '
-        'its folder first, "and 6 more songs"', (tester) async {
+    testWidgets('a folder of folders: each file its folder first, "and 6 '
+        'more songs"', (tester) async {
       await h.pumpHost(tester);
       await h.open(tester, h.folder('/music/Boukmanflow'));
-      expect(
-        find.text('Stage Peer B online · 9 songs · 3 subfolders'),
-        findsOneWidget,
-      );
       expect(line('Files go to copies › Boukmanflow'), findsOneWidget);
       expect(find.text('Borrowed Tapes/01 - Rooftop Cypher.mp3'), findsOneWidget);
       expect(find.text('and 6 more songs'), findsOneWidget);
@@ -233,8 +223,8 @@ void main() {
       await frames(tester);
     }
 
-    testWidgets('the default: copies › Borrowed Tapes, its files, not there '
-        'yet; the libraries; Up to copies; New folder…; this copy only', (
+    testWidgets('the default: copies › Borrowed Tapes, its files; the '
+        'libraries; Up to copies; New folder…', (
       tester,
     ) async {
       await into(tester);
@@ -245,48 +235,30 @@ void main() {
         line('Files go to copies › Borrowed Tapes'),
         findsOneWidget,
       );
-      expect(
-        find.byKey(const ValueKey('keep-into-missing')),
-        findsOneWidget,
-        reason: 'the folder is not there yet',
-      );
-      expect(find.byKey(const ValueKey('keep-into-straight')), findsNothing);
       expect(find.text('FOLDERS IN BORROWED TAPES'), findsOneWidget);
       expect(find.text('Up to copies'), findsOneWidget);
       expect(find.text('No subfolders here'), findsOneWidget);
       expect(find.text('New folder…'), findsOneWidget);
-      expect(
-        find.text('For this copy only · nothing is saved to your account'),
-        findsOneWidget,
-      );
       await tapKey(tester, 'keep-start');
       await frames(tester, 8);
       expect(h.lastStart()['landing'], {'vpath': 'copies', 'path': 'Borrowed Tapes'});
     });
 
-    testWidgets('an existing default is simply chosen: no missing note',
+    testWidgets('an existing default is simply chosen: its folders listed',
         (tester) async {
       h.facts.own['/copies/Borrowed Tapes'] = ['Side A'];
       await into(tester);
-      expect(find.byKey(const ValueKey('keep-into-missing')), findsNothing);
       expect(find.text('Side A'), findsOneWidget);
     });
 
-    testWidgets('Up to copies: the library root, the straight-in line; From '
-        'Sam goes in and is chosen; the start sends it, no 409', (
+    testWidgets('Up to copies: the library root; From Sam goes in and is '
+        'chosen; the start sends it, no 409', (
       tester,
     ) async {
       await into(tester);
       await tapText(tester, 'Up to copies');
       await frames(tester);
       expect(line('Files go to copies'), findsOneWidget);
-      expect(
-        find.text(
-          'Its files go straight into copies, with no “Borrowed Tapes” '
-          'folder of their own.',
-        ),
-        findsOneWidget,
-      );
       expect(find.text('FOLDERS IN COPIES'), findsOneWidget);
       expect(find.text('Up to copies'), findsNothing, reason: 'at the root');
       for (final n in ['Boukmanflow', 'Color Out', 'From Sam']) {
@@ -295,14 +267,6 @@ void main() {
       await tapKey(tester, 'keep-into-folder-From Sam');
       await frames(tester);
       expect(line('Files go to copies › From Sam'), findsOneWidget);
-      expect(
-        find.text(
-          'Its files go straight into From Sam, with no “Borrowed Tapes” '
-          'folder of their own.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.byKey(const ValueKey('keep-into-missing')), findsNothing);
       expect(find.text('FOLDERS IN FROM SAM'), findsOneWidget);
       expect(find.text('Up to copies'), findsOneWidget);
       // The saved place moved meanwhile: a folder of its own never 409s.
@@ -342,16 +306,14 @@ void main() {
       expect(h.lastStart()['landing'], {'vpath': 'music', 'path': ''});
     });
 
-    testWidgets('the lister in flight: "Looking up…", the missing note waits',
-        (tester) async {
+    testWidgets('the lister in flight: "Looking up…"', (tester) async {
       h.facts.ownGate = Completer<void>();
       await into(tester);
       expect(find.text('Looking up…'), findsOneWidget);
-      expect(find.byKey(const ValueKey('keep-into-missing')), findsNothing);
       h.facts.ownGate!.complete();
       await frames(tester);
       expect(find.text('Looking up…'), findsNothing);
-      expect(find.byKey(const ValueKey('keep-into-missing')), findsOneWidget);
+      expect(find.text('No subfolders here'), findsOneWidget);
     });
 
     testWidgets('New folder…: the pressed folder\'s name, all selected; a '
@@ -376,13 +338,7 @@ void main() {
         'Tapes {2019}',
       );
       await frames(tester);
-      expect(
-        find.text(
-          '“Tapes {2019}” has a brace in its name, which a layout reads as a '
-          'variable. Choose or name a folder without one.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text("Folder names can't contain braces"), findsOneWidget);
       expect(addEnabled(tester), isFalse, reason: "the sheet's Add waits");
       await tester.tap(find.byKey(const ValueKey('keep-into-add')));
       await frames(tester);
@@ -397,11 +353,6 @@ void main() {
       expect(addEnabled(tester), isTrue);
       await tapKey(tester, 'keep-into-add');
       expect(line('Files go to copies › Tapes 2019'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('keep-into-missing')),
-        findsOneWidget,
-        reason: 'named here: not there yet',
-      );
       await tapKey(tester, 'keep-start');
       await frames(tester, 8);
       expect(h.lastStart()['landing'], {'vpath': 'copies', 'path': 'Tapes 2019'});
@@ -423,8 +374,6 @@ void main() {
       await tapText(tester, 'Up to copies');
       await tapKey(tester, 'keep-into-folder-AC:DC');
       await frames(tester);
-      expect(find.byKey(const ValueKey('keep-into-missing')), findsNothing,
-          reason: 'it is there');
       await tapKey(tester, 'keep-start');
       await frames(tester, 8);
       expect(h.lastStart()['landing'], {'vpath': 'copies', 'path': 'AC:DC'});
@@ -583,12 +532,8 @@ void main() {
         tester,
         h.folder('/music/Night Owl Radio Archive', variant: KeepVariant.menu),
       );
-      expect(find.textContaining('1,240 songs · '), findsOneWidget);
       expect(
-        find.text(
-          '“Night Owl Radio Archive” holds 1,240 songs, more than one copy '
-          'takes here (1,000). Keep its folders one at a time.',
-        ),
+        find.text('More than 1,000 songs: keep its folders one at a time'),
         findsOneWidget,
       );
       expect(find.text('Where it lands'), findsNothing);
@@ -690,10 +635,7 @@ void main() {
       await open(tester);
       expect(find.text('In your collection'), findsOneWidget);
       expect(find.text('2 copied · 1 already yours'), findsOneWidget);
-      expect(
-        find.text('2 files left out: not music this server plays, or hidden'),
-        findsOneWidget,
-      );
+      expect(find.text('2 files left out'), findsOneWidget);
       expect(
         find.text('In copies › Boukmanflow › Borrowed Tapes'),
         findsOneWidget,
@@ -876,16 +818,13 @@ void main() {
   });
 
   group('the server offline', () {
-    testWidgets('"not answering", "Couldn\'t count its songs", Listen dimmed '
-        'but focusable, the landings shown, Add folder', (tester) async {
+    testWidgets('"not answering", Listen dimmed but focusable, the landings '
+        'shown, Add folder', (tester) async {
       h.facts.peerDown = true;
       final handle = tester.ensureSemantics();
       await h.pumpHost(tester);
       await h.open(tester, h.folder('/$tapesDir'));
-      expect(
-        find.text("Stage Peer B not answering · Couldn't count its songs"),
-        findsOneWidget,
-      );
+      expect(find.text('Stage Peer B not answering'), findsOneWidget);
       final play = tester.getSemantics(find.byKey(const ValueKey('browse-keep-play-folder')));
       expect(play, isSemantics(isButton: true, isEnabled: false));
       expect(find.text('Where it lands'), findsOneWidget);
@@ -945,8 +884,6 @@ void main() {
         final raised = VelvetColors.raised;
         for (final (what, ground) in [
           ('Where it lands', card),
-          ('Its own folders, as they are there', card),
-          ('Its path inside “music” on Stage Peer B', card),
         ]) {
           expect(_contrast(colorOf(tester, find.text(what)), ground),
               greaterThanOrEqualTo(4.5), reason: what);
@@ -963,8 +900,6 @@ void main() {
         await frames(tester);
         for (final (what, ground) in [
           ('LIBRARY', card),
-          ('This folder does not exist yet — it is created by the first file', raised),
-          ('For this copy only · nothing is saved to your account', card),
           ('No subfolders here', card),
         ]) {
           expect(_contrast(colorOf(tester, find.text(what)), ground),

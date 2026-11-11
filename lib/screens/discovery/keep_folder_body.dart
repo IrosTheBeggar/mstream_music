@@ -199,21 +199,9 @@ class KeepLandingGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final rows = [
-      (
-        FolderLanding.mirror,
-        l.discoverKeepLandingMirror(peerName),
-        l.discoverKeepLandingMirrorSub,
-      ),
-      (
-        FolderLanding.folder,
-        l.discoverKeepLandingFolder,
-        l.discoverKeepLandingFolderSub,
-      ),
-      (
-        FolderLanding.tags,
-        l.discoverKeepLandingTags,
-        l.discoverKeepLandingTagsSub,
-      ),
+      (FolderLanding.mirror, l.discoverKeepLandingMirror(peerName)),
+      (FolderLanding.folder, l.discoverKeepLandingFolder),
+      (FolderLanding.tags, l.discoverKeepLandingTags),
     ];
     return Column(
       key: const ValueKey('keep-landings'),
@@ -247,7 +235,6 @@ class KeepLandingGroup extends StatelessWidget {
                   child: _LandingRow(
                     key: ValueKey('keep-landing-${r.$1.name}'),
                     label: r.$2,
-                    sub: r.$3,
                     selected: r.$1 == chosen,
                     onTap: () => onChoose(r.$1),
                   ),
@@ -260,18 +247,16 @@ class KeepLandingGroup extends StatelessWidget {
   }
 }
 
-/// One landing: a 20 px radio, its name over what it does; the chosen one
-/// primary-dim with a 1.5 px edge, its ring and dot in the primary's text
-/// colour ([keepInk]: Light's amber reads on white, raw it would not).
+/// One landing: a 20 px radio and its name; the chosen one primary-dim
+/// with a 1.5 px edge, its ring and dot in the primary's text colour
+/// ([keepInk]: Light's amber reads on white, raw it would not).
 class _LandingRow extends StatelessWidget {
   final String label;
-  final String sub;
   final bool selected;
   final VoidCallback onTap;
   const _LandingRow({
     super.key,
     required this.label,
-    required this.sub,
     required this.selected,
     required this.onTap,
   });
@@ -284,7 +269,6 @@ class _LandingRow extends StatelessWidget {
       checked: selected,
       button: true,
       label: label,
-      hint: sub,
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
@@ -295,7 +279,7 @@ class _LandingRow extends StatelessWidget {
           borderRadius: radius,
           splashColor: VelvetColors.primaryDim,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: radius,
@@ -333,27 +317,13 @@ class _LandingRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: VelvetColors.textPrimary,
-                          fontSize: 15,
-                          height: 20 / 15,
-                        ),
-                      ),
-                      Text(
-                        sub,
-                        style: TextStyle(
-                          color: keepQuiet(VelvetColors.textSecondary),
-                          fontSize: 13,
-                          height: 18 / 13,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 15,
+                      height: 20 / 15,
+                    ),
                   ),
                 ),
               ],
@@ -651,13 +621,12 @@ class _KeepIntoFolderState extends State<KeepIntoFolder> {
           liveRegion: true,
           container: true,
           child: KeepFolderNote(
-            l.discoverKeepFolderBraces(braced),
+            l.discoverKeepFolderBraces,
             key: const ValueKey('keep-into-braces'),
             icon: Icons.warning_amber_rounded,
             color: keepTone(VelvetColors.error),
           ),
         ),
-      KeepFolderNote(l.discoverKeepLandingThisCopyOnly),
     ];
     return Container(
       key: const ValueKey('keep-into'),
@@ -674,10 +643,7 @@ class _KeepIntoFolderState extends State<KeepIntoFolder> {
     );
   }
 
-  /// Where the files go, the first of them, and what the place is: not
-  /// there yet (the first file creates it) — never the library itself —
-  /// and, when it is not named as the pressed folder, that its files go
-  /// straight in.
+  /// Where the files go, and the first of them.
   Widget _preview(AppLocalizations l, OwnFolders? listing) {
     final t = widget.target;
     final at = choice.into(_place);
@@ -701,9 +667,6 @@ class _KeepIntoFolderState extends State<KeepIntoFolder> {
       ],
     ];
     final files = t?.files;
-    final missing =
-        at.path.isNotEmpty && listing != null && listing.missing;
-    final straight = t?.straightIn;
     return Container(
       key: const ValueKey('keep-into-preview'),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -723,19 +686,6 @@ class _KeepIntoFolderState extends State<KeepIntoFolder> {
             ),
             if (files != null)
               KeepFolderFileList(files, ground: VelvetColors.raised),
-            if (missing)
-              KeepFolderNote(
-                l.discoverKeepFolderWillCreate,
-                key: const ValueKey('keep-into-missing'),
-                ground: VelvetColors.raised,
-              ),
-            if (straight != null)
-              KeepFolderNote(
-                l.discoverKeepLandingStraightIn(straight.folder, straight.name),
-                key: const ValueKey('keep-into-straight'),
-                icon: Icons.info_outline,
-                ground: VelvetColors.raised,
-              ),
           ],
         ),
       ),

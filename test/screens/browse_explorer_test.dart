@@ -11,7 +11,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +78,6 @@ void main() {
       ];
 
   Finder header() => find.byKey(const ValueKey('browse-folder-header'));
-  Finder headLine() => find.byKey(const ValueKey('browse-folder-head-text'));
   Finder pill() => find.byKey(const ValueKey('browse-keep-pill'));
   Finder menuRow() => find.byKey(const ValueKey('browse-keep-menu-row'));
   // A row is its Slidable and the 1 pt rule under it.
@@ -97,7 +95,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Add All'), findsOneWidget);
       expect(menuRow(), findsOneWidget);
-      expect(find.text('To your server, from Stage Peer B'), findsOneWidget);
+      expect(find.text('To your server, from Stage Peer B'), findsNothing, reason: 'no copy: no sub-line');
       expect(tester.widget<Text>(find.descendant(of: find.byType(BottomSheet), matching: find.text('Boukmanflow'))).maxLines, 2);
       expect(tester.getTopLeft(menuRow()).dy, greaterThan(tester.getTopLeft(find.text('Add All')).dy));
       await tester.tap(menuRow());
@@ -112,17 +110,14 @@ void main() {
       await close(tester);
     });
 
-    // The test font draws every glyph a full em wide: the row that leaves
-    // the text 150 pt beside the pill is wider than a phone's here, and the
-    // one with room for the whole line (no server's name cut) wider still.
-    testWidgets('below it: "Boukmanflow · Folder on Stage Peer B · 3 folders" and the pill, which opens the folder sheet from the page', (tester) async {
+    testWidgets('below it: the pill alone — the path strip and the bar name the folder and its server — and it opens the folder sheet from the page', (tester) async {
       h.setUp();
       await openFolder(tester, boukmanflow(), '/music/Boukmanflow/', width: 800);
       expect(header(), findsOneWidget);
-      final text = find.textContaining('Folder on Stage Peer B · 3\u00A0folders');
-      expect(text, findsOneWidget);
+      expect(find.textContaining('Folder on'), findsNothing);
+      expect(find.textContaining('folders'), findsNothing);
       expect(tester.getSize(header()).height, lessThan(80), reason: 'a compact row');
-      expect(tester.getTopLeft(pill()).dx, greaterThan(tester.getRect(text).right), reason: 'beside its text');
+      expect(tester.getTopLeft(pill()).dx, tester.getTopLeft(header()).dx + 16, reason: 'at the start of the row');
       await tester.tap(pill());
       await tester.pumpAndSettle();
       final r = h.opened.single;
@@ -131,14 +126,15 @@ void main() {
       await close(tester);
     });
 
-    testWidgets("a folder of songs counts them, not its .m3u: \"Folder on Stage Peer B · 3 songs\"", (tester) async {
+    testWidgets('a folder of songs: the pill alone, no count', (tester) async {
       h.setUp();
       await openFolder(tester, [
         for (final (i, t) in ['Rooftop Cypher', 'Late Train Verse', 'Corner Store Loop'].indexed)
           file(h.peerB, '/music/Boukmanflow/Borrowed Tapes/0${i + 1} - $t.mp3', title: t),
         file(h.peerB, '/music/Boukmanflow/Borrowed Tapes/tapes.m3u'),
       ], '/music/Boukmanflow/Borrowed Tapes/');
-      expect(find.textContaining('Folder on Stage Peer B · 3\u00A0songs'), findsOneWidget);
+      expect([header(), pill()], everyElement(findsOneWidget));
+      expect(find.textContaining('3\u00A0songs'), findsNothing);
       await close(tester);
     });
 
@@ -274,17 +270,12 @@ void main() {
       await close(tester);
     });
 
-    testWidgets('2.0× on a 360×780 phone: the header\'s pill under its text, rows 116 / 148, nothing overflows', (tester) async {
+    testWidgets('2.0× on a 360×780 phone: the header\'s pill the full width, rows 116 / 148, nothing overflows', (tester) async {
       h.setUp();
       h.fake.addJob(folderRec('music/Boukmanflow/Borrowed Tapes'), scope: 'folder', state: 'running', statusText: '2 of 3 songs');
       await openFolder(tester, boukmanflow(), '/music/Boukmanflow/', width: 360, height: 780, textScale: 2);
       expect(tester.takeException(), isNull);
-      final text = tester.getRect(headLine());
-      expect(tester.getTopLeft(pill()).dy, greaterThan(text.bottom));
-      // Its count drawn whole, whatever of the rest gave way.
-      final line = tester.renderObject<RenderParagraph>(find.descendant(of: headLine(), matching: find.byType(RichText)));
-      expect(line.text.toPlainText(), endsWith(' 3\u00A0folders'));
-      expect(line.didExceedMaxLines, isFalse);
+      expect(tester.getSize(pill()).width, tester.getSize(header()).width - 32);
       expect(rowHeight(tester, 'Harbour Lights'), 116);
       expect(rowHeight(tester, 'Borrowed Tapes'), 148);
       await close(tester);
@@ -407,7 +398,7 @@ void main() {
       expect(h.toasts, isEmpty, reason: 'folders only: no song to long-press');
       BrowserManager().addListToStack(songs, alphabetical: true, path: '/music/Boukmanflow/Borrowed Tapes/');
       await BrowseHarness.frames(tester);
-      expect(h.toasts, ['Long-press a song to keep a copy of it on your server.']);
+      expect(h.toasts, ['Long-press a song to keep a copy']);
       expect(SettingsManager().keepBrowseHintShown, isTrue);
       BrowserManager().popBrowser();
       await BrowseHarness.frames(tester);

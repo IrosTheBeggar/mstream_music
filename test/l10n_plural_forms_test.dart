@@ -75,15 +75,12 @@ void main() {
         (n) => t.ytdlRowAdding(n, 'MP3'),
         (n) => t.ytdlSubfoldersNew(n, 'Discovery'),
         // Keep a copy while browsing a connected server
-        t.browseHeadFolders,
         t.discoverKeepMoreFiles,
         t.discoverKeepAddFolder,
         t.discoverKeepFilesLeftOut,
         t.discoverKeepShowAllFolders,
-        t.discoverSheetSubfolders,
         (n) => t.browseKeepTakes(n, 'Boukmanflow'),
-        (n) => t.browseHeadAlbumsOn(n, 'Stage Peer B'),
-        (n) => t.discoverKeepLeftOutMany(n, 'Boukmanflow'),
+        t.discoverKeepLeftOutMany,
         (n) => t.discoverKeepFolderAriaCount(n, 'Borrowed Tapes'),
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
@@ -105,8 +102,7 @@ void main() {
 
   test("a folder's counts read in the language's own digits grouping", () {
     final en = l('en');
-    expect(en.discoverKeepFolderCap('Night Owl Radio Archive', 1240, 1000),
-        '“Night Owl Radio Archive” holds 1,240 songs, more than one copy takes here (1,000). Keep its folders one at a time.');
+    expect(en.discoverKeepFolderCap(1000), 'More than 1,000 songs: keep its folders one at a time');
     expect(en.discoverKeepAddFolder(1), 'Add folder · 1 song');
     expect(en.discoverKeepAddFolder(1240), 'Add folder · 1,240 songs');
     expect(en.browseKeepTakes(1, 'Boukmanflow'), 'Takes the 1 album credited to Boukmanflow');

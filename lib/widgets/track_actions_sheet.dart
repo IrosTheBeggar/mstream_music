@@ -321,7 +321,6 @@ class TrackActionsSheet extends StatelessWidget {
           if (keep != null && isServerTrack)
             KeepMenuRow(
               label: l.browseKeepOfItem(title),
-              peerName: keep!.request.peerName,
               state: keep!.state,
               ask: () => KeepMenuState.lookupSong(
                   CopiesHub().jobsFor(keep!.request.peer), keep!.request),

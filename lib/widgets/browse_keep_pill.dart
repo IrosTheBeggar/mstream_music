@@ -35,8 +35,7 @@ class KeepPillForm {
   /// The final states' (and another server's) quiet edge: border2.
   final bool settled;
 
-  /// This page's own copy is waiting, starting, copying or stopping: the
-  /// live line shows under the pill.
+  /// This page's own copy is waiting, starting, copying or stopping.
   final bool live;
 
   /// Its copy's fraction while it copies (the header's 3 pt bar).
@@ -454,24 +453,6 @@ class KeepPlainState extends StatelessWidget {
   }
 }
 
-/// Under a live pill: "Copies keep going if you leave this page or Stage
-/// Peer B." — the copy runs on the user's server, not on this page.
-class KeepLiveLine extends StatelessWidget {
-  final String peerName;
-  const KeepLiveLine({super.key, required this.peerName});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        key: const ValueKey('browse-keep-live-line'),
-        padding: const EdgeInsets.only(top: 6),
-        child: Text(
-          AppLocalizations.of(context).browseKeepKeepsGoing(peerName),
-          style: TextStyle(
-              fontSize: 12, height: 1.4, color: VelvetColors.textSecondary),
-        ),
-      );
-}
-
 /// The 3 pt bar along a page header's bottom edge while its own copy
 /// copies and says how far ([fraction]); the pill's name already carries
 /// the count, so a screen reader skips it.
@@ -495,16 +476,15 @@ class KeepHeaderBar extends StatelessWidget {
 }
 
 /// A page header's Keep a copy slot for [subject] [name]: with the gate
-/// open for its scope ([open]) the pill — and the live line under it while
-/// its own copy runs — else, an earlier or running copy of this server's
-/// on the page, its state as plain text; else nothing. [pick] is the page
-/// marks' job for it; [album] an album pill's name (its counts).
+/// open for its scope ([open]) the pill, else, an earlier or running copy
+/// of this server's on the page, its state as plain text; else nothing.
+/// [pick] is the page marks' job for it; [album] an album pill's name (its
+/// counts).
 class KeepPageAction extends StatelessWidget {
   final bool open;
   final KeepChoiceJob? pick;
   final KeepSubject subject;
   final String name;
-  final String peerName;
   final String? album;
   final String? hint;
   final bool fullWidth;
@@ -517,7 +497,6 @@ class KeepPageAction extends StatelessWidget {
     required this.pick,
     required this.subject,
     required this.name,
-    required this.peerName,
     this.album,
     this.hint,
     this.fullWidth = false,
@@ -544,21 +523,16 @@ class KeepPageAction extends StatelessWidget {
       return KeepPlainState(form: form, name: name);
     }
     final into = form.live && pick != null ? keepJobInto(l, pick!.job) : null;
-    return Column(
-      crossAxisAlignment:
-          fullWidth ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        KeepPagePill(
-          form: form,
-          label: form.label(l, subject: subject, name: name, into: into),
-          hint: hint,
-          fullWidth: fullWidth,
-          onTap: onTap,
-          focusNode: focusNode,
-        ),
-        if (form.live) KeepLiveLine(peerName: peerName),
-      ],
+    final pill = KeepPagePill(
+      form: form,
+      label: form.label(l, subject: subject, name: name, into: into),
+      hint: hint,
+      fullWidth: fullWidth,
+      onTap: onTap,
+      focusNode: focusNode,
     );
+    return fullWidth
+        ? pill
+        : Align(alignment: AlignmentDirectional.centerStart, child: pill);
   }
 }

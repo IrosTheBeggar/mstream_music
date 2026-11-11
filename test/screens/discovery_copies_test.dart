@@ -557,12 +557,8 @@ void main() {
       (tester) async {
         await h.pumpCopies(tester, fromHome: true);
         expect(find.text('Nothing copying'), findsOneWidget);
-        expect(
-          find.text(
-            "Keep a copy of a connected server's music from Discover, or while you browse that server.",
-          ),
-          findsOneWidget,
-        );
+        expect(find.textContaining('Keep a copy of'), findsNothing,
+            reason: 'no line under it');
         expect(find.text('Open Discover'), findsOneWidget);
         expect(find.byKey(const ValueKey('copies-clear')), findsNothing);
       },
