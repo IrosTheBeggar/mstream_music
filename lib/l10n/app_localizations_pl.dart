@@ -4770,19 +4770,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverJobCancelledSub => 'Anulowano';
 
   @override
-  String discoverJobCancelledStay(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Anulowano · $count utworu zostaje w twojej kolekcji',
-      many: 'Anulowano · $count utworów zostaje w twojej kolekcji',
-      few: 'Anulowano · $count utwory zostają w twojej kolekcji',
-      one: 'Anulowano · utwór zostaje w twojej kolekcji',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get discoverJobNothingAll => 'Masz już wszystko';
 
   @override
@@ -4801,11 +4788,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String discoverJobFromOther(String peer) {
     return 'Kopiowanie z „$peer”';
-  }
-
-  @override
-  String discoverJobComesBack(String action) {
-    return '„$action” wróci, gdy ta kopia się skończy';
   }
 
   @override
@@ -4965,10 +4947,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverCopiesEmpty => 'Nic się nie kopiuje';
-
-  @override
-  String get discoverCopiesEmptySub =>
-      'Przytrzymaj utwór lub album z połączonego serwera w Odkrywaj, aby zachować kopię.';
 
   @override
   String get discoverCopiesOpenDiscover => 'Otwórz Odkrywaj';
@@ -5214,6 +5192,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverDestServerFolderSlot => 'folder z serwera';
 
   @override
+  String get discoverDestAlbumArtistSlot => 'album artist';
+
+  @override
   String discoverKeepSlotNote(int count, String slots) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5312,10 +5293,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get discoverDestLoading =>
       'Wczytywanie miejsca, do którego trafiają kopie';
-
-  @override
-  String get discoverKeepFirstUse =>
-      'Kopie trafiają na twój serwer, nie na ten telefon. Przed pierwszą sprawdź, gdzie trafią.';
 
   @override
   String get discoverElsewhereExact => 'Dokładne strony';
@@ -6375,5 +6352,297 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String ytdlErrAddUnreachable(String server) {
     return 'Nie można połączyć się z serwerem $server — sprawdź, czy działa, i spróbuj ponownie.';
+  }
+
+  @override
+  String get browseKeepButton => 'Keep a copy…';
+
+  @override
+  String browseKeepOfItem(String name) {
+    return 'Keep a copy of $name…';
+  }
+
+  @override
+  String browseKeepOfFolder(String name) {
+    return 'Keep a copy of the folder $name…';
+  }
+
+  @override
+  String browseKeepOfArtist(String artist) {
+    return 'Keep a copy of albums by $artist…';
+  }
+
+  @override
+  String browseKeepTakes(int count, String artist) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Takes the $count albums credited to $artist',
+      one: 'Takes the $count album credited to $artist',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String browseKeepStateAria(String name, String state) {
+    return '$name: $state. Open the copy';
+  }
+
+  @override
+  String browseKeepStateIntoAria(String name, String state, String path) {
+    return '$name: $state, into $path. Open the copy';
+  }
+
+  @override
+  String browseKeepStatePlainAria(String name, String state) {
+    return '$name: $state';
+  }
+
+  @override
+  String browseKeepCopyingOf(String name) {
+    return 'Copying $name';
+  }
+
+  @override
+  String browseKeepCopyingOfCount(String name, int done, int total) {
+    return 'Copying $name · $done of $total';
+  }
+
+  @override
+  String get browseKeepPillWaiting => 'Waiting';
+
+  @override
+  String browseKeepPillCopyingCount(int done, int total) {
+    return 'Copying $done of $total';
+  }
+
+  @override
+  String get browseKeepPillSkipped => 'Skipped';
+
+  @override
+  String get browseKeepPillRefused => 'Refused';
+
+  @override
+  String get browseKeepHoldHint => 'Long-press a song to keep a copy';
+
+  @override
+  String browserMoreActionsFor(String title) {
+    return 'More actions for $title';
+  }
+
+  @override
+  String browserMoreForFolder(String name) {
+    return 'More for the folder $name';
+  }
+
+  @override
+  String queueRowGripLabel(String title) {
+    return 'Actions for $title, or hold to reorder';
+  }
+
+  @override
+  String get discoverToastView => 'View';
+
+  @override
+  String get discoverKeepFolder => 'Folder';
+
+  @override
+  String discoverKeepFolderAria(String name) {
+    return 'Folder: $name and everything in it';
+  }
+
+  @override
+  String discoverKeepFolderAriaCount(int count, String name) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Folder: $name, $countString songs',
+      one: 'Folder: $name, $countString song',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepLanding => 'Where it lands';
+
+  @override
+  String discoverKeepLandingMirror(String peer) {
+    return 'As on $peer';
+  }
+
+  @override
+  String get discoverKeepLandingFolder => 'Into a folder…';
+
+  @override
+  String get discoverKeepLandingTags => 'By your layout';
+
+  @override
+  String discoverKeepMoreFiles(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'and $countString more songs',
+      one: 'and $countString more song',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepAddFolder(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add folder · $countString songs',
+      one: 'Add folder · $countString song',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepAddFolderUncounted => 'Add folder';
+
+  @override
+  String discoverKeepFolderCap(int cap) {
+    final intl.NumberFormat capNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String capString = capNumberFormat.format(cap);
+
+    return 'More than $capString songs: keep its folders one at a time';
+  }
+
+  @override
+  String discoverKeepFilesLeftOut(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString files left out',
+      one: '$countString file left out',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepLeftOutOne(String album) {
+    return 'Leaves out $album';
+  }
+
+  @override
+  String discoverKeepLeftOutMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Leaves out $count albums',
+      one: 'Leaves out $count album',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepNoArtistCopyHere(String artist) {
+    return '$artist has no albums of their own here';
+  }
+
+  @override
+  String discoverKeepFoldersIn(String name) {
+    return 'Folders in $name';
+  }
+
+  @override
+  String discoverKeepUpTo(String name) {
+    return 'Up to $name';
+  }
+
+  @override
+  String discoverKeepShowAllFolders(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Show all $countString folders',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverKeepNewFolder => 'New folder…';
+
+  @override
+  String get discoverKeepLookingUp => 'Looking up…';
+
+  @override
+  String get discoverKeepFolderBraces => 'Folder names can\'t contain braces';
+
+  @override
+  String discoverKeepInto(String path) {
+    return 'Into $path';
+  }
+
+  @override
+  String discoverKeepIn(String path) {
+    return 'In $path';
+  }
+
+  @override
+  String get discoverSheetPlayFolder => 'Play folder';
+
+  @override
+  String get discoverCopiesKindFolder => 'Folder';
+
+  @override
+  String get discoverCopiesShowInLibrary => 'Show in your library';
+
+  @override
+  String discoverCopiesShowFailed(String folder) {
+    return 'Couldn\'t open $folder on your server';
+  }
+
+  @override
+  String discoverSheetFolderSongCount(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString songs',
+      one: '$countString song',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverKeepFilesAria(int count, String files) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString files: $files',
+      one: '$countString file: $files',
+    );
+    return '$_temp0';
   }
 }

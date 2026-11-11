@@ -5089,15 +5089,6 @@
   "@discoverJobCancelledSub": {
     "description": "Under a cancelled copy."
   },
-  "discoverJobCancelledStay": "{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}",
-  "@discoverJobCancelledStay": {
-    "description": "Under a cancelled album copy: the songs that already landed stay.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "discoverJobNothingAll": "You have it all",
   "@discoverJobNothingAll": {
     "description": "Keep a copy card: an album/artist copy found nothing to copy — the user already has everything."
@@ -5132,15 +5123,6 @@
     "description": "Keep a copy card: the same album/artist is being copied from ANOTHER connected server. {peer} is that other server.",
     "placeholders": {
       "peer": {
-        "type": "String"
-      }
-    }
-  },
-  "discoverJobComesBack": "{action} comes back when that copy ends",
-  "@discoverJobComesBack": {
-    "description": "Under 'Copying from …'. {action} is the card's button label ('Add album').",
-    "placeholders": {
-      "action": {
         "type": "String"
       }
     }
@@ -5304,10 +5286,6 @@
   "discoverCopiesEmpty": "Nothing copying",
   "@discoverCopiesEmpty": {
     "description": "Copies sheet empty state: the server is copying nothing and nothing failed."
-  },
-  "discoverCopiesEmptySub": "Long-press a connected server's song or album on Discover to keep a copy.",
-  "@discoverCopiesEmptySub": {
-    "description": "Copies sheet empty state: how a copy starts."
   },
   "discoverCopiesOpenDiscover": "Open Discover",
   "@discoverCopiesOpenDiscover": {
@@ -5666,6 +5644,10 @@
   "@discoverDestServerFolderSlot": {
     "description": "Keep a copy paths not landed yet: the words that stand in for the folders a song sits in on the connected server, shown between ‹ › marks ('copies › ‹server folder›'), when the songs a copy takes sit in different folders there — each song lands in its own server folder."
   },
+  "discoverDestAlbumArtistSlot": "album artist",
+  "@discoverDestAlbumArtistSlot": {
+    "description": "Keep a copy paths not landed yet: the words that stand in for the album artist folder, shown between ‹ › marks ('copies › ‹album artist› › Borrowed Tapes'), when the songs a folder copy takes name different album artists, or only some name one — each song files under its own album's credit, the rest under their artist."
+  },
   "discoverKeepSlotNote": "{count, plural, =1{{slots} comes from each song's own tags, so these songs can land in more than one folder.} other{{slots} come from each song's own tags, so these songs can land in more than one folder.}}",
   "@discoverKeepSlotNote": {
     "description": "Keep a copy, one quiet line under a path not landed yet that shows stand-ins: {slots} lists them as shown, joined with ', ' (like '‹artist›' or '‹artist›, ‹year›'); {count} is how many. The server files each song by its own tags, so the copy can land in several folders.",
@@ -5753,10 +5735,6 @@
   "discoverDestLoading": "Loading where copies land",
   "@discoverDestLoading": {
     "description": "Accessible label of the destination picker's loading placeholders."
-  },
-  "discoverKeepFirstUse": "Copies go to your server, not this phone. Check where they land before the first one.",
-  "@discoverKeepFirstUse": {
-    "description": "Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved."
   },
   "discoverElsewhereExact": "Exact pages",
   "@discoverElsewhereExact": {
@@ -7025,6 +7003,391 @@
     "description": "Line above the add button of Add from YouTube when the add could not connect to the server although the phone has a network (the server is not running or refused the connection; nothing was sent, so nothing started). {server} is the server's name or address.",
     "placeholders": {
       "server": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepButton": "Keep a copy…",
+  "@browseKeepButton": {
+    "description": "Browsing a connected server: the page pill on an album, artist or folder page that opens the Keep a copy sheet."
+  },
+  "browseKeepOfItem": "Keep a copy of {name}…",
+  "@browseKeepOfItem": {
+    "description": "Accessible name of a way into Keep a copy for one song or album ({name} its title).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepOfFolder": "Keep a copy of the folder {name}…",
+  "@browseKeepOfFolder": {
+    "description": "Accessible name of a way into Keep a copy for a connected server's folder ({name} the folder's name).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepOfArtist": "Keep a copy of albums by {artist}…",
+  "@browseKeepOfArtist": {
+    "description": "Accessible name of the artist page's Keep a copy pill.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepTakes": "{count, plural, one{Takes the {count} album credited to {artist}} other{Takes the {count} albums credited to {artist}}}",
+  "@browseKeepTakes": {
+    "description": "Artist page, beside its Keep a copy pill: how many of the connected server's albums an artist copy takes (the ones credited to the artist).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepStateAria": "{name}: {state}. Open the copy",
+  "@browseKeepStateAria": {
+    "description": "Accessible name of a page pill that shows a copy's state ({state} e.g. 'In your collection').",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepStateIntoAria": "{name}: {state}, into {path}. Open the copy",
+  "@browseKeepStateIntoAria": {
+    "description": "Accessible name of a page pill while its copy runs ({path} where its files land, '/'-joined).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepStatePlainAria": "{name}: {state}",
+  "@browseKeepStatePlainAria": {
+    "description": "Accessible name of a page header's plain-text copy state (Keep a copy is not offered here; an earlier copy shows its state).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepCopyingOf": "Copying {name}",
+  "@browseKeepCopyingOf": {
+    "description": "Track sheet's Keep a copy row while the album page's album copy runs, before it knows how many songs.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "browseKeepCopyingOfCount": "Copying {name} · {done} of {total}",
+  "@browseKeepCopyingOfCount": {
+    "description": "Track sheet's Keep a copy row while the album page's album copy runs: songs done of the album's.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "browseKeepPillWaiting": "Waiting",
+  "@browseKeepPillWaiting": {
+    "description": "Page pill: its copy waits for a free slot."
+  },
+  "browseKeepPillCopyingCount": "Copying {done} of {total}",
+  "@browseKeepPillCopyingCount": {
+    "description": "Page pill while its copy runs: songs done of total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "browseKeepPillSkipped": "Skipped",
+  "@browseKeepPillSkipped": {
+    "description": "Page pill: the copy was skipped (a file is already there)."
+  },
+  "browseKeepPillRefused": "Refused",
+  "@browseKeepPillRefused": {
+    "description": "Page pill: the connected server refused the copy."
+  },
+  "browseKeepHoldHint": "Long-press a song to keep a copy",
+  "@browseKeepHoldHint": {
+    "description": "One-time hint the first time a connected server's song list shows."
+  },
+  "browserMoreActionsFor": "More actions for {title}",
+  "@browserMoreActionsFor": {
+    "description": "Accessible name of a song row's ⋮, and the screen-reader action that opens its track sheet.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "browserMoreForFolder": "More for the folder {name}",
+  "@browserMoreForFolder": {
+    "description": "Screen-reader action on a folder row that opens its folder sheet.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "queueRowGripLabel": "Actions for {title}, or hold to reorder",
+  "@queueRowGripLabel": {
+    "description": "Accessible name of a queue row's grip: a tap opens its actions, a hold drags it.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastView": "View",
+  "@discoverToastView": {
+    "description": "The action on a copy's start toast: opens the Copies sheet of the user's server."
+  },
+  "discoverKeepFolder": "Folder",
+  "@discoverKeepFolder": {
+    "description": "Keep a copy choice: the folder the song sits in on the connected server, and everything in it."
+  },
+  "discoverKeepFolderAria": "Folder: {name} and everything in it",
+  "@discoverKeepFolderAria": {
+    "description": "Accessible name of the Folder choice before it is counted.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepFolderAriaCount": "{count, plural, one{Folder: {name}, {count} song} other{Folder: {name}, {count} songs}}",
+  "@discoverKeepFolderAriaCount": {
+    "description": "Accessible name of the Folder choice once counted.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepLanding": "Where it lands",
+  "@discoverKeepLanding": {
+    "description": "Folder copy: the label over its landing choices."
+  },
+  "discoverKeepLandingMirror": "As on {peer}",
+  "@discoverKeepLandingMirror": {
+    "description": "Folder copy landing: its own folders as they are on the connected server ({peer} its name).",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepLandingFolder": "Into a folder…",
+  "@discoverKeepLandingFolder": {
+    "description": "Folder copy landing: a folder the user picks."
+  },
+  "discoverKeepLandingTags": "By your layout",
+  "@discoverKeepLandingTags": {
+    "description": "Folder copy landing: each song by its tags, by the saved layout."
+  },
+  "discoverKeepMoreFiles": "{count, plural, one{and {count} more song} other{and {count} more songs}}",
+  "@discoverKeepMoreFiles": {
+    "description": "Under a folder copy's first files: how many more it copies.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepAddFolder": "{count, plural, one{Add folder · {count} song} other{Add folder · {count} songs}}",
+  "@discoverKeepAddFolder": {
+    "description": "Folder copy: the primary button once the folder is counted.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepAddFolderUncounted": "Add folder",
+  "@discoverKeepAddFolderUncounted": {
+    "description": "Folder copy: the primary button before the folder is counted (or when it could not be)."
+  },
+  "discoverKeepFolderCap": "More than {cap} songs: keep its folders one at a time",
+  "@discoverKeepFolderCap": {
+    "description": "Folder copy over the server's cap: the line that replaces the card ({cap} the most songs one copy takes).",
+    "placeholders": {
+      "cap": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepFilesLeftOut": "{count, plural, one{{count} file left out} other{{count} files left out}}",
+  "@discoverKeepFilesLeftOut": {
+    "description": "A finished folder copy: files it left out.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepLeftOutOne": "Leaves out {album}",
+  "@discoverKeepLeftOutOne": {
+    "description": "Artist copy: the one album it leaves out (the artist only appears on it).",
+    "placeholders": {
+      "album": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepLeftOutMany": "{count, plural, one{Leaves out {count} album} other{Leaves out {count} albums}}",
+  "@discoverKeepLeftOutMany": {
+    "description": "Artist copy: how many albums it leaves out (the artist only appears on them).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverKeepNoArtistCopyHere": "{artist} has no albums of their own here",
+  "@discoverKeepNoArtistCopyHere": {
+    "description": "Keep a copy, Artist chosen for an artist who only appears on other albums.",
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepFoldersIn": "Folders in {name}",
+  "@discoverKeepFoldersIn": {
+    "description": "Into a folder…: the label over the folder list ({name} the chosen folder or library).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepUpTo": "Up to {name}",
+  "@discoverKeepUpTo": {
+    "description": "Into a folder…: the row that goes up one folder ({name} the folder above).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepShowAllFolders": "{count, plural, other{Show all {count} folders}}",
+  "@discoverKeepShowAllFolders": {
+    "description": "Into a folder…: shows the rest of a long folder list.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepNewFolder": "New folder…",
+  "@discoverKeepNewFolder": {
+    "description": "Into a folder…: names a new folder to copy into (nothing is made until the copy runs)."
+  },
+  "discoverKeepLookingUp": "Looking up…",
+  "@discoverKeepLookingUp": {
+    "description": "Into a folder…: the folder list while it loads."
+  },
+  "discoverKeepFolderBraces": "Folder names can't contain braces",
+  "@discoverKeepFolderBraces": {
+    "description": "Into a folder…: the chosen folder name has a brace (a layout reads braces as variables)."
+  },
+  "discoverKeepInto": "Into {path}",
+  "@discoverKeepInto": {
+    "description": "A running folder copy's line: where its files go.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverKeepIn": "In {path}",
+  "@discoverKeepIn": {
+    "description": "A finished folder copy's line: where its files are.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetPlayFolder": "Play folder",
+  "@discoverSheetPlayFolder": {
+    "description": "Folder copy sheet: plays the folder from the connected server."
+  },
+  "discoverCopiesKindFolder": "Folder",
+  "@discoverCopiesKindFolder": {
+    "description": "Copies sheet row: what a copy takes (first part of 'Folder · from Server')."
+  },
+  "discoverCopiesShowInLibrary": "Show in your library",
+  "@discoverCopiesShowInLibrary": {
+    "description": "A finished folder copy: opens the user's server's file explorer where its files are."
+  },
+  "discoverCopiesShowFailed": "Couldn't open {folder} on your server",
+  "@discoverCopiesShowFailed": {
+    "description": "Toast: 'Show in your library' switched to the user's server, but its file explorer could not open the folder ({folder} is the folder's name, e.g. 'Borrowed Tapes').",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverSheetFolderSongCount": "{count, plural, one{{count} song} other{{count} songs}}",
+  "@discoverSheetFolderSongCount": {
+    "description": "Keep a copy's folder: how many songs the counted folder holds (its header, the Folder choice, Play folder).",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverKeepFilesAria": "{count, plural, one{{count} file: {files}} other{{count} files: {files}}}",
+  "@discoverKeepFilesAria": {
+    "description": "Screen reader: a folder copy's preview of its first files, read as one. {files} is the shown file lines and 'and N more songs', joined with commas.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "files": {
         "type": "String"
       }
     }

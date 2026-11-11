@@ -74,6 +74,14 @@ void main() {
         t.ytdlStripAddingCount,
         (n) => t.ytdlRowAdding(n, 'MP3'),
         (n) => t.ytdlSubfoldersNew(n, 'Discovery'),
+        // Keep a copy while browsing a connected server
+        t.discoverKeepMoreFiles,
+        t.discoverKeepAddFolder,
+        t.discoverKeepFilesLeftOut,
+        t.discoverKeepShowAllFolders,
+        (n) => t.browseKeepTakes(n, 'Boukmanflow'),
+        t.discoverKeepLeftOutMany,
+        (n) => t.discoverKeepFolderAriaCount(n, 'Borrowed Tapes'),
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');
@@ -90,5 +98,14 @@ void main() {
       expect(t.settingsHistoryClearConfirm('1.2 MB', 0), contains('1.2 MB'),
           reason: '$locale');
     }
+  });
+
+  test("a folder's counts read in the language's own digits grouping", () {
+    final en = l('en');
+    expect(en.discoverKeepFolderCap(1000), 'More than 1,000 songs: keep its folders one at a time');
+    expect(en.discoverKeepAddFolder(1), 'Add folder · 1 song');
+    expect(en.discoverKeepAddFolder(1240), 'Add folder · 1,240 songs');
+    expect(en.browseKeepTakes(1, 'Boukmanflow'), 'Takes the 1 album credited to Boukmanflow');
+    expect(en.browseKeepTakes(3, 'Boukmanflow'), 'Takes the 3 albums credited to Boukmanflow');
   });
 }

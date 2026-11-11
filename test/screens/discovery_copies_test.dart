@@ -26,7 +26,6 @@ import 'package:mstream_music/screens/discovery/discovery_listing.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
-import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
 
 import 'discovery_keep_fixtures.dart';
@@ -142,7 +141,7 @@ void main() {
           inRow(waiting, find.text('Waiting for a free slot')),
           findsOneWidget,
         );
-        expect(inRow(waiting, find.text('Starts on its own')), findsOneWidget);
+        expect(inRow(waiting, find.text('Starts on its own')), findsNothing);
         expect(inRow(waiting, find.text('Cancel')), findsOneWidget);
 
         // Failed: the server's words verbatim under "Copy failed", Retry.
@@ -490,7 +489,7 @@ void main() {
       expect(inRow(owned, find.text('Already yours')), findsOneWidget);
       expect(
         inRow(owned, find.text('Your library has this song')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(inRow(owned, find.text('Play')), findsOneWidget);
       expect(
@@ -557,12 +556,8 @@ void main() {
       (tester) async {
         await h.pumpCopies(tester, fromHome: true);
         expect(find.text('Nothing copying'), findsOneWidget);
-        expect(
-          find.text(
-            "Long-press a connected server's song or album on Discover to keep a copy.",
-          ),
-          findsOneWidget,
-        );
+        expect(find.textContaining('Keep a copy of'), findsNothing,
+            reason: 'no line under it');
         expect(find.text('Open Discover'), findsOneWidget);
         expect(find.byKey(const ValueKey('copies-clear')), findsNothing);
       },
@@ -725,21 +720,61 @@ void main() {
       },
     );
 
-    test('a peer\'s home never has it', () async {
+    // The user's call (2026-10-24): a connected server's home has the same
+    // Copies card — the copies on THEIR server — reached without going back.
+    test("a peer's home: its own server's gate is read on the way in, the "
+        'home holds its taps until it answers, then shows the same card', () async {
       final peer = Server('federated://home/1', null, null, null, 'peer-1')
         ..federationParent = 'home'
         ..federationPeerId = 1
         ..federationPeerName = 'Stage Peer B'
-        ..parentServer = h.server
-        ..discoveryPluginsAvailable = true;
+        ..parentServer = h.server;
+      ServerManager().serverList.add(peer);
+      ServerManager().currentServer = peer;
+      final gate = Completer<void>();
+      h.fake.destinationGate = gate;
+      BrowserManager().goToNavScreen();
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isFalse,
+          reason: 'not known yet');
+      expect(BrowserManager().isLoading, isTrue,
+          reason: 'the loading bar and the tap guard while the gate is read');
+      await settle();
+      // The listing answered (the card needs no destination); the gate
+      // waits for where files land.
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isTrue);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.unknown);
+      expect(BrowserManager().isLoading, isTrue);
+      gate.complete();
+      await settle();
+      await settle();
+      expect(BrowserManager().isLoading, isFalse);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.open);
+      final card = BrowserManager().browserList.firstWhere((i) => i.data == 'copies');
+      expect(identical(card.server, peer), isTrue,
+          reason: "the card's sheet is CopiesHub().jobsFor(peer): the parent's");
+      expect(identical(CopiesHub().jobsFor(peer), CopiesHub().jobsFor(h.server)), isTrue);
+      // Moving onto it again re-reads the gate, but nothing waits for it.
+      final lists = h.fake.count('GET', '/api/v1/discovery/plugins');
+      BrowserManager().goToNavScreen();
+      expect(BrowserManager().isLoading, isFalse);
+      await settle();
+      expect(h.fake.count('GET', '/api/v1/discovery/plugins'), lists + 1);
+    });
+
+    test("a peer's home: none while its own server cannot copy", () async {
+      final peer = Server('federated://home/1', null, null, null, 'peer-1')
+        ..federationParent = 'home'
+        ..federationPeerId = 1
+        ..federationPeerName = 'Stage Peer B'
+        ..parentServer = h.server;
+      h.server.noUpload = true;
       ServerManager().serverList.add(peer);
       ServerManager().currentServer = peer;
       BrowserManager().goToNavScreen();
       await settle();
-      expect(
-        BrowserManager().browserList.any((i) => i.data == 'copies'),
-        isFalse,
-      );
+      await settle();
+      expect(BrowserManager().browserList.any((i) => i.data == 'copies'), isFalse);
+      expect(CopiesHub().gateFor(peer).state, KeepGateState.closed);
     });
 
     test(
@@ -944,29 +979,23 @@ void main() {
     });
   });
 
-  group('the start toast and the first-use note (Discover)', () {
+  group('the start toast (Discover)', () {
     final k = KeepHarness();
-    setUp(() {
-      k.setUp();
-      SettingsManager().discoverKeepNoteSeen = false;
-    });
+    setUp(k.setUp);
     tearDown(() {
       BrowserManager().closeAlbumDetail();
       ServerManager().currentServer = null;
-      SettingsManager().discoverKeepNoteSeen = false;
       k.tearDown();
     });
 
     testWidgets(
       'a copy started from the song sheet toasts once the sheet closes; the '
-      'first-use note shows until then and goes for good',
+      'card has no first-use note',
       (tester) async {
         await k.pumpDiscover(tester);
         await tester.longPress(find.text('Late Train Verse'));
         await frames(tester, 8);
-        const note =
-            'Copies go to your server, not this phone. Check where they land before the first one.';
-        expect(find.text(note), findsOneWidget);
+        expect(find.textContaining('Copies go to your server'), findsNothing);
         final pill = find.byKey(const ValueKey('keep-start'));
         await tester.ensureVisible(pill);
         await tester.pump();
@@ -977,31 +1006,12 @@ void main() {
           isEmpty,
           reason: 'not while the sheet that started it is up',
         );
-        expect(find.text(note), findsNothing);
-        expect(SettingsManager().discoverKeepNoteSeen, isTrue);
         // Close the sheet (the dimmed page above it).
         await tester.tapAt(const Offset(195, 20));
         await frames(tester, 10);
         expect(h.toasts, ['Copying Late Train Verse from Stage Peer B']);
       },
     );
-
-    testWidgets('no note once the account has a saved destination', (
-      tester,
-    ) async {
-      k.fake.destination = {
-        ...k.fake.destination,
-        'saved': {
-          'vpath': 'copies',
-          'base': 'mine',
-          'layout': '{{ARTIST}}/{{ALBUM}}',
-        },
-      };
-      await k.pumpDiscover(tester);
-      await tester.longPress(find.text('Late Train Verse'));
-      await frames(tester, 8);
-      expect(find.byKey(const ValueKey('keep-first-use')), findsNothing);
-    });
 
     testWidgets("the Copies strip opens the Copies sheet over Discover", (
       tester,
