@@ -6,7 +6,6 @@ import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
 import '../../objects/display_item.dart';
-import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/browse_keep_leads.dart'
     show FolderRef, KeepSubject, kFederationSource;
@@ -16,6 +15,7 @@ import '../../util/discover_jobs.dart';
 import '../../util/queue_actions.dart';
 import '../../widgets/federation_widgets.dart';
 import 'browse_copy_marks.dart';
+import 'copy_news.dart' show copyFailedReason;
 import 'destination_sheet.dart';
 import 'discovery_jobs_controller.dart';
 import 'discovery_keep_routes.dart';
@@ -698,7 +698,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
       setState(() => _startedHere[jobSlot(kCopyPlugin, jobScope(job))] = job);
     }
     if (job == null || !out.created || out.fromOtherPeer) return;
-    unawaited(SettingsManager().markDiscoverKeepNoteSeen());
     widget.onStarted?.call(job);
   }
 
@@ -731,14 +730,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
       genre: facts.genreOf(lead.filepath),
     );
   }
-
-  /// "Copies go to your server, not this phone": until the first copy
-  /// starts or a destination is saved (on this phone, or the account's
-  /// already saved one), and while the account has no copy at all.
-  bool get _firstUse =>
-      !SettingsManager().discoverKeepNoteSeen &&
-      jobs.destination?.saved == null &&
-      !jobs.jobs.any((j) => j.plugin == kCopyPlugin);
 
   /// Retry and Add again land where files land now — what the card shows,
   /// naming it first when the copy ran somewhere else ([_againPlace]).
@@ -922,15 +913,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
             KeepFolderCapLine(l.discoverKeepFolderCap(cap!)),
           );
         } else {
-          if (_firstUse) {
-            children.add(
-              Padding(
-                key: const ValueKey('keep-first-use'),
-                padding: const EdgeInsets.only(top: 12),
-                child: _FirstUseNote(l.discoverKeepFirstUse),
-              ),
-            );
-          }
           // Under Artist, what the copy leaves out, right above its path.
           if (chip == _kChipArtist) {
             final out = _leftOut(l);
@@ -1259,12 +1241,6 @@ class _KeepCopySectionState extends State<KeepCopySection> {
               ),
             )
           else ...[
-            if (_firstUse)
-              Padding(
-                key: const ValueKey('keep-first-use'),
-                padding: const EdgeInsets.only(top: 12),
-                child: _FirstUseNote(l.discoverKeepFirstUse),
-              ),
             _destination(l, scope),
             if (_error != null) _errorLine(_error!, warn: _moved),
             Padding(
@@ -1861,13 +1837,11 @@ class _JobLine extends StatelessWidget {
       title = l.discoverJobFromOther(job.peerName ?? peer);
       bar = true;
       if (status.isNotEmpty) subs.add(status);
-      subs.add(l.discoverJobComesBack(pillLabel));
     } else {
       switch (row.kind) {
         case JobRowKind.queued:
           glyph = icon(Icons.schedule, text2);
           title = l.discoverJobQueued;
-          subs.add(l.discoverJobQueuedSub);
           if (into != null) muted.add(l.discoverKeepInto(into!));
           cancel = true;
         case JobRowKind.running:
@@ -1958,11 +1932,7 @@ class _JobLine extends StatelessWidget {
             if (p.isNotEmpty) subs.add(p.join(' · '));
           } else {
             final at = row.filepath;
-            subs.add(
-              at == null
-                  ? l.discoverJobOwnedSub
-                  : '${l.discoverJobOwnedSub} · ${pathCrumbs(at).join(' / ')}',
-            );
+            if (at != null) subs.add(pathCrumbs(at).join(' / '));
             if (at != null) {
               actions.add(
                 KeepPill(
@@ -2007,7 +1977,8 @@ class _JobLine extends StatelessWidget {
               ].join(' · '),
             );
           } else {
-            subs.add(job.error ?? l.discoverJobFailedSub);
+            final why = copyFailedReason(l, job);
+            if (why != null) subs.add(why);
           }
           // Past an older server's cap the same folder fails again.
           if (!_capFailed(job)) actions.addAll([?retry()]);
@@ -2035,10 +2006,8 @@ class _JobLine extends StatelessWidget {
           final copied = many == null ? 0 : manyCounts(many).copied;
           if (copied > 0) {
             title = l.discoverJobCancelledSome(copied);
-            subs.add(l.discoverJobCancelledStay(copied));
           } else {
             title = l.discoverJobCancelledNothing;
-            subs.add(l.discoverJobCancelledSub);
           }
           againAddsTo = l.discoverKeepAddAgainAddsTo;
           actions.add(
@@ -2181,42 +2150,3 @@ class _SlotNote extends StatelessWidget {
   );
 }
 
-/// The first-use note (FedNote's shape in the canvas's kit): raised, radius
-/// 10, an info glyph and one sentence in the secondary text.
-class _FirstUseNote extends StatelessWidget {
-  final String text;
-  const _FirstUseNote(this.text);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-    decoration: BoxDecoration(
-      color: VelvetColors.raised,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: Icon(
-            Icons.info_outline,
-            size: 16,
-            color: VelvetColors.textSecondary,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: VelvetColors.textSecondary,
-              fontSize: 13,
-              height: 18 / 13,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}

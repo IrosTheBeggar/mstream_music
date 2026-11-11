@@ -7512,12 +7512,6 @@ abstract class AppLocalizations {
   /// **'You cancelled it'**
   String get discoverJobCancelledSub;
 
-  /// Under a cancelled album copy: the songs that already landed stay.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}'**
-  String discoverJobCancelledStay(int count);
-
   /// Keep a copy card: an album/artist copy found nothing to copy — the user already has everything.
   ///
   /// In en, this message translates to:
@@ -7547,12 +7541,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copying from {peer}'**
   String discoverJobFromOther(String peer);
-
-  /// Under 'Copying from …'. {action} is the card's button label ('Add album').
-  ///
-  /// In en, this message translates to:
-  /// **'{action} comes back when that copy ends'**
-  String discoverJobComesBack(String action);
 
   /// Keep a copy card: a copy finished in a way this app cannot read in detail.
   ///
@@ -8181,12 +8169,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading where copies land'**
   String get discoverDestLoading;
-
-  /// Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved.
-  ///
-  /// In en, this message translates to:
-  /// **'Copies go to your server, not this phone. Check where they land before the first one.'**
-  String get discoverKeepFirstUse;
 
   /// Open elsewhere section label (drawn in capitals): pages for this exact recording on MusicBrainz.
   ///

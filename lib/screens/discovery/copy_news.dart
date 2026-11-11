@@ -64,13 +64,19 @@ void showCopyStarted(
       onAction: onView,
     );
 
-/// Why a copy failed, for its toast and its row: the server's words, else
-/// what its counts say ("Nothing copied · 3 failed").
-String copyFailedWords(AppLocalizations l, DiscoveryJob job) {
+/// Why a copy failed, for its toast: [copyFailedReason], else "The copy
+/// did not finish".
+String copyFailedWords(AppLocalizations l, DiscoveryJob job) =>
+    copyFailedReason(l, job) ?? l.discoverJobFailedSub;
+
+/// Why a copy failed, when anything says: the server's words, else what
+/// its counts say ("Nothing copied · 3 failed"); null when neither does (a
+/// row under "Copy failed" then says nothing more).
+String? copyFailedReason(AppLocalizations l, DiscoveryJob job) {
   final err = (job.error ?? '').trim();
   if (err.isNotEmpty) return err;
   final many = job.view.isMany ? job.result : null;
-  if (many == null) return l.discoverJobFailedSub;
+  if (many == null) return null;
   final peer = keepJobPeer(job, '');
   final n = manyCounts(many);
   return [

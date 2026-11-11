@@ -25,7 +25,6 @@ import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
-import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
 
 import 'discovery_copies_fixtures.dart';
@@ -51,14 +50,12 @@ void main() {
       toasts.add(m);
       successes.add(success);
     };
-    SettingsManager().discoverKeepNoteSeen = true;
   });
   tearDown(() {
     KeepToast.debugSink = null;
     elsewhereLaunch = (uri) async => false;
     BrowserManager().closeAlbumDetail();
     ServerManager().currentServer = null;
-    SettingsManager().discoverKeepNoteSeen = false;
     k.tearDown();
   });
 
@@ -208,7 +205,6 @@ void main() {
         expect(successes, [true], reason: 'the check toast');
         expect(find.text('yours'), findsOneWidget);
         expect(find.text('Use the library default'), findsOneWidget);
-        expect(SettingsManager().discoverKeepNoteSeen, isTrue);
         // Saved: Save waits for the next change again.
         await tapKey(tester, 'destination-save');
         expect(k.fake.count('PUT', _dest), 1);

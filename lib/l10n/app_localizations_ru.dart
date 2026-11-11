@@ -4780,19 +4780,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverJobCancelledSub => 'Вы отменили копирование';
 
   @override
-  String discoverJobCancelledStay(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Вы отменили · $count трека остаются в вашей коллекции',
-      many: 'Вы отменили · $count треков остаются в вашей коллекции',
-      few: 'Вы отменили · $count трека остаются в вашей коллекции',
-      one: 'Вы отменили · $count трек остаётся в вашей коллекции',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get discoverJobNothingAll => 'У вас уже всё есть';
 
   @override
@@ -4812,11 +4799,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String discoverJobFromOther(String peer) {
     return 'Копирование с «$peer»';
-  }
-
-  @override
-  String discoverJobComesBack(String action) {
-    return '«$action» вернётся, когда это копирование закончится';
   }
 
   @override
@@ -5319,10 +5301,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverDestLoading => 'Загрузка места для копий';
-
-  @override
-  String get discoverKeepFirstUse =>
-      'Копии сохраняются на вашем сервере, а не на этом телефоне. Перед первой проверьте, куда они попадут.';
 
   @override
   String get discoverElsewhereExact => 'Точные страницы';

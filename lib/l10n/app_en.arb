@@ -5089,15 +5089,6 @@
   "@discoverJobCancelledSub": {
     "description": "Under a cancelled copy."
   },
-  "discoverJobCancelledStay": "{count, plural, =1{You cancelled it · the song stays in your collection} other{You cancelled it · the {count} songs stay in your collection}}",
-  "@discoverJobCancelledStay": {
-    "description": "Under a cancelled album copy: the songs that already landed stay.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "discoverJobNothingAll": "You have it all",
   "@discoverJobNothingAll": {
     "description": "Keep a copy card: an album/artist copy found nothing to copy — the user already has everything."
@@ -5132,15 +5123,6 @@
     "description": "Keep a copy card: the same album/artist is being copied from ANOTHER connected server. {peer} is that other server.",
     "placeholders": {
       "peer": {
-        "type": "String"
-      }
-    }
-  },
-  "discoverJobComesBack": "{action} comes back when that copy ends",
-  "@discoverJobComesBack": {
-    "description": "Under 'Copying from …'. {action} is the card's button label ('Add album').",
-    "placeholders": {
-      "action": {
         "type": "String"
       }
     }
@@ -5753,10 +5735,6 @@
   "discoverDestLoading": "Loading where copies land",
   "@discoverDestLoading": {
     "description": "Accessible label of the destination picker's loading placeholders."
-  },
-  "discoverKeepFirstUse": "Copies go to your server, not this phone. Check where they land before the first one.",
-  "@discoverKeepFirstUse": {
-    "description": "Keep a copy card's first-use note above the destination line, shown until the first copy starts or a destination is saved."
   },
   "discoverElsewhereExact": "Exact pages",
   "@discoverElsewhereExact": {

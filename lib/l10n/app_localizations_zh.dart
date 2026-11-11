@@ -4400,16 +4400,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverJobCancelledSub => '你已取消';
 
   @override
-  String discoverJobCancelledStay(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '你已取消 · $count 首歌曲保留在你的收藏中',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get discoverJobNothingAll => '你已全部拥有';
 
   @override
@@ -4428,11 +4418,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String discoverJobFromOther(String peer) {
     return '正在从 $peer 复制';
-  }
-
-  @override
-  String discoverJobComesBack(String action) {
-    return '该复制结束后，“$action”会重新出现';
   }
 
   @override
@@ -4875,9 +4860,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverDestLoading => '正在加载副本存放位置';
-
-  @override
-  String get discoverKeepFirstUse => '副本会存放到你的服务器，而不是这部手机。第一次复制前请先确认存放位置。';
 
   @override
   String get discoverElsewhereExact => '精确页面';

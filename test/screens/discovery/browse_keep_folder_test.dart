@@ -601,7 +601,7 @@ void main() {
       job('queued');
       await open(tester);
       expect(find.text('Waiting for a free slot'), findsOneWidget);
-      expect(find.text('Starts on its own'), findsOneWidget);
+      expect(find.text('Starts on its own'), findsNothing);
       expect(
         find.text('Into copies › Boukmanflow › Borrowed Tapes'),
         findsOneWidget,

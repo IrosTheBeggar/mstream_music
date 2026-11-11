@@ -190,10 +190,7 @@ void main() {
       await h.pumpHost(tester);
       await h.open(tester, h.albumPage());
       expect(find.text('Copying from Stage Peer C'), findsOneWidget);
-      expect(
-        find.text('Add album comes back when that copy ends'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('comes back'), findsNothing);
       expect(find.byKey(const ValueKey('keep-add-bar')), findsNothing);
     });
 

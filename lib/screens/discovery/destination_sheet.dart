@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
-import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_jobs.dart';
 import 'destination_pieces.dart';
@@ -386,7 +385,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
     if (!mounted) return;
     if (ok) {
       _sync(force: true);
-      unawaited(SettingsManager().markDiscoverKeepNoteSeen());
       final d = jobs.destination?.destination;
       if (d != null) {
         KeepToast.show(

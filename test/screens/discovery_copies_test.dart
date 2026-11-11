@@ -26,7 +26,6 @@ import 'package:mstream_music/screens/discovery/discovery_listing.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
-import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
 
 import 'discovery_keep_fixtures.dart';
@@ -142,7 +141,7 @@ void main() {
           inRow(waiting, find.text('Waiting for a free slot')),
           findsOneWidget,
         );
-        expect(inRow(waiting, find.text('Starts on its own')), findsOneWidget);
+        expect(inRow(waiting, find.text('Starts on its own')), findsNothing);
         expect(inRow(waiting, find.text('Cancel')), findsOneWidget);
 
         // Failed: the server's words verbatim under "Copy failed", Retry.
@@ -490,7 +489,7 @@ void main() {
       expect(inRow(owned, find.text('Already yours')), findsOneWidget);
       expect(
         inRow(owned, find.text('Your library has this song')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(inRow(owned, find.text('Play')), findsOneWidget);
       expect(
@@ -980,29 +979,23 @@ void main() {
     });
   });
 
-  group('the start toast and the first-use note (Discover)', () {
+  group('the start toast (Discover)', () {
     final k = KeepHarness();
-    setUp(() {
-      k.setUp();
-      SettingsManager().discoverKeepNoteSeen = false;
-    });
+    setUp(k.setUp);
     tearDown(() {
       BrowserManager().closeAlbumDetail();
       ServerManager().currentServer = null;
-      SettingsManager().discoverKeepNoteSeen = false;
       k.tearDown();
     });
 
     testWidgets(
       'a copy started from the song sheet toasts once the sheet closes; the '
-      'first-use note shows until then and goes for good',
+      'card has no first-use note',
       (tester) async {
         await k.pumpDiscover(tester);
         await tester.longPress(find.text('Late Train Verse'));
         await frames(tester, 8);
-        const note =
-            'Copies go to your server, not this phone. Check where they land before the first one.';
-        expect(find.text(note), findsOneWidget);
+        expect(find.textContaining('Copies go to your server'), findsNothing);
         final pill = find.byKey(const ValueKey('keep-start'));
         await tester.ensureVisible(pill);
         await tester.pump();
@@ -1013,31 +1006,12 @@ void main() {
           isEmpty,
           reason: 'not while the sheet that started it is up',
         );
-        expect(find.text(note), findsNothing);
-        expect(SettingsManager().discoverKeepNoteSeen, isTrue);
         // Close the sheet (the dimmed page above it).
         await tester.tapAt(const Offset(195, 20));
         await frames(tester, 10);
         expect(h.toasts, ['Copying Late Train Verse from Stage Peer B']);
       },
     );
-
-    testWidgets('no note once the account has a saved destination', (
-      tester,
-    ) async {
-      k.fake.destination = {
-        ...k.fake.destination,
-        'saved': {
-          'vpath': 'copies',
-          'base': 'mine',
-          'layout': '{{ARTIST}}/{{ALBUM}}',
-        },
-      };
-      await k.pumpDiscover(tester);
-      await tester.longPress(find.text('Late Train Verse'));
-      await frames(tester, 8);
-      expect(find.byKey(const ValueKey('keep-first-use')), findsNothing);
-    });
 
     testWidgets("the Copies strip opens the Copies sheet over Discover", (
       tester,

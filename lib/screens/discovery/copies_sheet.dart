@@ -505,7 +505,6 @@ class _CopyRow extends StatelessWidget {
         r.glyph = icon(Icons.schedule, text2);
         r.line1 = l.discoverJobQueued;
         r.line1Color = text2;
-        r.line2 = l.discoverJobQueuedSub;
         r.verbs.add(_Verb.cancel);
       case JobRowKind.running:
         final stopping = job.cancelRequested;
@@ -545,7 +544,7 @@ class _CopyRow extends StatelessWidget {
       case JobRowKind.owned:
         r.glyph = icon(Icons.check_circle_outline, text2);
         r.line1 = l.discoverJobOwned;
-        r.line2 = many != null ? parts() : l.discoverJobOwnedSub;
+        if (many != null) r.line2 = parts();
         if (_files().isNotEmpty) r.verbs.add(_Verb.play);
       case JobRowKind.exists:
         final warn = keepTone(VelvetColors.warning);
@@ -563,7 +562,7 @@ class _CopyRow extends StatelessWidget {
           r.line1 = copyFailedWords(l, job);
         } else {
           r.line1 = l.discoverJobFailed;
-          r.line2 = copyFailedWords(l, job);
+          r.line2 = copyFailedReason(l, job);
         }
         if (jobNeedsNewSeeds(job)) {
           if (canNewSeeds) r.verbs.add(_Verb.newSeeds);
@@ -589,7 +588,6 @@ class _CopyRow extends StatelessWidget {
         r.line1 = copied > 0
             ? l.discoverJobCancelledSome(copied)
             : l.discoverJobCancelledNothing;
-        r.line2 = l.discoverJobCancelledSub;
         r.verbs.add(_Verb.addAgain);
       case JobRowKind.nothing:
         final guest = row.leadPhrase == JobPhrase.onlyAppearances;

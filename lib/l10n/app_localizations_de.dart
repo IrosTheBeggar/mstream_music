@@ -4687,18 +4687,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverJobCancelledSub => 'Du hast es abgebrochen';
 
   @override
-  String discoverJobCancelledStay(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other:
-          'Du hast es abgebrochen · die $count Titel bleiben in deiner Sammlung',
-      one: 'Du hast es abgebrochen · der Titel bleibt in deiner Sammlung',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get discoverJobNothingAll => 'Du hast schon alles';
 
   @override
@@ -4717,11 +4705,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String discoverJobFromOther(String peer) {
     return 'Wird von $peer kopiert';
-  }
-
-  @override
-  String discoverJobComesBack(String action) {
-    return '„$action“ ist wieder da, wenn diese Kopie fertig ist';
   }
 
   @override
@@ -5195,10 +5178,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverDestLoading => 'Speicherort der Kopien wird geladen';
-
-  @override
-  String get discoverKeepFirstUse =>
-      'Kopien landen auf deinem Server, nicht auf diesem Telefon. Prüf vor der ersten, wo sie landen.';
 
   @override
   String get discoverElsewhereExact => 'Genaue Seiten';
