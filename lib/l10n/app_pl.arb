@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Pobieraj kolejkę",
   "settingsOfflineQueueSubtitle": "Odtwarzanie trwa dalej po utracie połączenia.",
   "settingsOfflineQueueWifiOnly": "Tylko Wi-Fi",
+  "settingsNewAudioEngine": "Nowy silnik audio",
+  "settingsNewAudioEngineSubtitle": "Eksperymentalny",
   "downloadWaitingWifi": "Oczekiwanie na Wi-Fi",
   "settingsRatingHalf": "Oceny w połówkach gwiazdek",
   "settingsRatingHalfSubtitle": "Przytrzymaj gwiazdkę",

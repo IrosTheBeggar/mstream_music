@@ -2658,6 +2658,18 @@ abstract class AppLocalizations {
   /// **'Wi-Fi only'**
   String get settingsOfflineQueueWifiOnly;
 
+  /// Android-only switch under Settings › Playback: play through the app's own Media3 engine instead of just_audio's. Playback behaves the same either way; the new engine is the one later sound-quality features are built on.
+  ///
+  /// In en, this message translates to:
+  /// **'New audio engine'**
+  String get settingsNewAudioEngine;
+
+  /// One-word note under the New audio engine switch: the engine is still being proven.
+  ///
+  /// In en, this message translates to:
+  /// **'Experimental'**
+  String get settingsNewAudioEngineSubtitle;
+
   /// Title of the keep-queue-offline retention-cap setting.
   ///
   /// In en, this message translates to:

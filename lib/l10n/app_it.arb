@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Scarica la coda",
   "settingsOfflineQueueSubtitle": "La riproduzione continua se cade la connessione.",
   "settingsOfflineQueueWifiOnly": "Solo Wi-Fi",
+  "settingsNewAudioEngine": "Nuovo motore audio",
+  "settingsNewAudioEngineSubtitle": "Sperimentale",
   "downloadWaitingWifi": "In attesa del Wi-Fi",
   "settingsRatingHalf": "Valutazioni a mezza stella",
   "settingsRatingHalfSubtitle": "Tieni premuta una stella",

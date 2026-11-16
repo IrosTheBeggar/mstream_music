@@ -1520,6 +1520,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsOfflineQueueWifiOnly => 'Só por Wi-Fi';
 
   @override
+  String get settingsNewAudioEngine => 'Novo motor de áudio';
+
+  @override
+  String get settingsNewAudioEngineSubtitle => 'Experimental';
+
+  @override
   String get settingsAutoDownloadCap => 'Limite de download';
 
   @override

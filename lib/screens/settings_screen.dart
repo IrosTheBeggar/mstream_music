@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/language_names.dart';
+import '../media/playback_engine.dart';
 import '../native/torrent_channel.dart';
 import '../native/user_shaders.dart';
 import '../objects/player_layout.dart';
@@ -171,6 +172,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (mounted) setState(() {});
                   },
                 ),
+                // Android only: which native engine plays (see
+                // lib/media/playback_engine.dart). The switch shows where it
+                // is headed and waits while playback is carried across, which
+                // includes reloading the current track.
+                if (PlaybackEngine.selectable)
+                  _SwitchRow(
+                    title: l.settingsNewAudioEngine,
+                    subtitle: l.settingsNewAudioEngineSubtitle,
+                    value: _enginePending ?? s.useMedia3Engine,
+                    onChanged: _enginePending != null ? null : _setEngine,
+                  ),
                 _SwitchRow(
                   title: l.settingsOfflineQueue,
                   value: s.offlineQueue,
@@ -606,6 +618,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showGlobalSnack(l.settingsHistoryCleared);
   }
 
+  // The engine the switch is on its way to, while the handler moves
+  // playback there; null otherwise.
+  bool? _enginePending;
+
+  Future<void> _setEngine(bool media3) async {
+    setState(() => _enginePending = media3);
+    final moved =
+        await MediaManager().audioHandler.setPlaybackEngine(media3: media3);
+    // Saved only once playback is really on it, so a switch that failed
+    // falls back to what the setting still says.
+    if (moved) await SettingsManager().setMedia3Engine(media3);
+    if (mounted) setState(() => _enginePending = null);
+  }
+
   Future<void> _reset() async {
     final l = AppLocalizations.of(context);
     // The equalizer is Android-only, so only Android's copy names it.
@@ -623,6 +649,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // resetAll writes the EQ fields directly; the live engine keeps its
     // curve (and the five-band player its pipeline) until told.
     unawaited(MediaManager().audioHandler.resetEqualizer(wasOn: eqWasOn));
+    // And the engine choice is back on the app's default: move playback
+    // there if it was elsewhere (a no-op when it already is).
+    unawaited(MediaManager().audioHandler.setPlaybackEngine(
+        media3: SettingsManager().useMedia3Engine));
     if (mounted) setState(() {});
     // App-wide messenger so the toast doesn't depend on this screen's
     // context surviving the await.

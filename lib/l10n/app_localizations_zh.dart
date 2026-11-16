@@ -1445,6 +1445,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsOfflineQueueWifiOnly => '仅限 Wi-Fi';
 
   @override
+  String get settingsNewAudioEngine => '新音频引擎';
+
+  @override
+  String get settingsNewAudioEngineSubtitle => '实验性';
+
+  @override
   String get settingsAutoDownloadCap => '下载上限';
 
   @override

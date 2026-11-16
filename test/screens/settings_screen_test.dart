@@ -81,6 +81,16 @@ void main() {
     expect(find.text('25+ items'), findsOneWidget);
   });
 
+  testWidgets('the engine switch is offered only where there is a choice',
+      (tester) async {
+    // PlaybackEngine.install is a no-op off Android (this VM included), so
+    // there is one engine and nothing to switch: no row, on any platform
+    // that is not Android.
+    await open(tester);
+    await scrollTo(tester, find.text('Resume queue on launch'));
+    expect(find.text('New audio engine'), findsNothing);
+  });
+
   testWidgets('a picker sheet applies the pick and closes', (tester) async {
     await open(tester);
     await tester.tap(find.text('Theme'));

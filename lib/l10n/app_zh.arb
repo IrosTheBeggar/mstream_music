@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "下载播放队列",
   "settingsOfflineQueueSubtitle": "断开连接时也能继续播放。",
   "settingsOfflineQueueWifiOnly": "仅限 Wi-Fi",
+  "settingsNewAudioEngine": "新音频引擎",
+  "settingsNewAudioEngineSubtitle": "实验性",
   "downloadWaitingWifi": "等待 Wi-Fi",
   "settingsRatingHalf": "半星评分",
   "settingsRatingHalfSubtitle": "长按星标",

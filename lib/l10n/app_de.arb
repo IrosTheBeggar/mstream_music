@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Warteschlange herunterladen",
   "settingsOfflineQueueSubtitle": "Die Wiedergabe läuft auch ohne Verbindung weiter.",
   "settingsOfflineQueueWifiOnly": "Nur über WLAN",
+  "settingsNewAudioEngine": "Neue Audio-Engine",
+  "settingsNewAudioEngineSubtitle": "Experimentell",
   "downloadWaitingWifi": "Wartet auf WLAN",
   "settingsRatingHalf": "Halbsterne-Bewertungen",
   "settingsRatingHalfSubtitle": "Stern lange drücken",

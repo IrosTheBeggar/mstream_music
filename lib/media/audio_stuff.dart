@@ -15,6 +15,7 @@ import 'playback_backend.dart';
 import 'dynamics_equalizer.dart';
 import 'eq_output_router.dart';
 import 'local_playback_backend.dart';
+import 'playback_engine.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
 import 'local_media_server.dart';
@@ -744,10 +745,40 @@ class AudioPlayerHandler extends BaseAudioHandler
       return;
     }
 
-    // Local backend active — carry position / index / play + shuffle/repeat
-    // across the rebuild (the new player starts empty). _reviveSpot: a parked
-    // failed-restore spot must survive the rebuild, not be replaced by the
-    // never-loaded player's index 0.
+    // Local backend active — rebuild the player under live playback.
+    await _rebuildLocalPlayer(
+      withEqualizer: enabled,
+      logTag: 'eq',
+      why: 'EQ toggle',
+      afterRebuild: () async {
+        // Persist only after the rebuild succeeds, so a thrown rebuild can't
+        // leave the setting saying "on" with no pipeline attached.
+        await SettingsManager().setEqEnabled(enabled);
+        // Enable EQ + arm the saved-gains apply BEFORE the re-seed, so the
+        // gains are already pending when the new source's first 'ready'
+        // fires.
+        if (enabled) await _applySavedEqualizer();
+      },
+    );
+  }
+
+  /// Replace the active local backend's player with a fresh one, built
+  /// [withEqualizer] or without, and carry playback across: position / index
+  /// / play + shuffle/repeat (the new player starts empty). [afterRebuild]
+  /// runs once the new player exists and before it is re-seeded — where a
+  /// caller persists what the rebuild was for and sets the new player up.
+  /// Shared by the two things that need a new player mid-playback: the
+  /// five-band EQ toggle (the pipeline is fixed at construction) and the
+  /// engine switch (a player keeps the native engine it loaded on). Callers
+  /// run serialized on _switchChain.
+  Future<void> _rebuildLocalPlayer({
+    required bool withEqualizer,
+    required String logTag,
+    required String why,
+    required Future<void> Function() afterRebuild,
+  }) async {
+    // _reviveSpot: a parked failed-restore spot must survive the rebuild, not
+    // be replaced by the never-loaded player's index 0.
     final spot = _reviveSpot();
     final wasShuffle = _localBackend.shuffleEnabled;
     final wasRepeat = _localBackend.repeat;
@@ -760,7 +791,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _rebuilding = true;
     try {
       await _localBackend.pause();
-      await _localBackend.rebuildPlayer(withEqualizer: enabled);
+      await _localBackend.rebuildPlayer(withEqualizer: withEqualizer);
       // Re-emit IMMEDIATELY (same instance): the switchMap-derived streams
       // must rebind to the NEW player before its first load — a failed
       // re-seed below would otherwise leave the handler deaf forever on the
@@ -769,12 +800,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // unobserved. Player streams replay current state on subscribe, so the
       // early rebind loses nothing.
       _backendSubject.add(_localBackend);
-      // Persist only after the rebuild succeeds, so a thrown rebuild can't
-      // leave the setting saying "on" with no pipeline attached.
-      await SettingsManager().setEqEnabled(enabled);
-      // Enable EQ + arm the saved-gains apply BEFORE the re-seed, so the
-      // gains are already pending when the new source's first 'ready' fires.
-      if (enabled) await _applySavedEqualizer();
+      await afterRebuild();
       await _localBackend.setShuffleEnabled(wasShuffle);
       await _localBackend.setRepeat(wasRepeat);
       try {
@@ -790,7 +816,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // _loadAtSpot already parked the spot and logged the cause; the new
         // player is empty, so without that park the next revive / snapshot
         // save would land on track 1 / 0:00 instead of the user's spot.
-        appLog('[eq] re-seed after EQ toggle failed: $e');
+        appLog('[$logTag] re-seed after $why failed: $e');
       }
       // The rebuilt player has a new audio-session id — re-point the
       // visualizer's real-audio capture (no-op unless actively tapping).
@@ -800,6 +826,70 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     _broadcastState();
     _emitCurrentMediaItem();
+  }
+
+  /// Move on-device playback onto the other native engine: the in-repo
+  /// Media3 one ([media3]) or just_audio's own (Settings › New audio engine;
+  /// Android only). A player keeps the engine its native side was made on,
+  /// so this flips which engine makes the next one (PlaybackEngine) and
+  /// rebuilds the local player, carrying playback across at the same spot.
+  /// Serialized through _switchChain like the EQ toggle it shares the
+  /// rebuild with.
+  ///
+  /// Completes with whether playback is now on the asked engine. It does not
+  /// persist the choice: the caller knows whether this is the user choosing
+  /// or a reset to the default, which are stored differently (see
+  /// SettingsManager.media3Engine).
+  Future<bool> setPlaybackEngine({required bool media3}) {
+    final done = _switchChain
+        .then((_) => _doSetPlaybackEngine(media3))
+        .catchError((Object e) {
+      appLog('[audio] engine switch failed: $e');
+      return false;
+    });
+    _switchChain = done;
+    return done;
+  }
+
+  Future<bool> _doSetPlaybackEngine(bool media3) async {
+    // Don't race _init's seed on the single player (the same gate
+    // restoreQueue waits on).
+    await _initialized.future;
+    if (!PlaybackEngine.selectable) return false;
+    if (PlaybackEngine.usesMedia3 == media3) return true;
+    // From here every native player just_audio asks for is made on the new
+    // engine; the rebuild is what makes it ask.
+    PlaybackEngine.usesMedia3 = media3;
+    // The five-band EQ sits in the player's pipeline, so the fresh player is
+    // built the way the current one is. (The ten-band engine follows the
+    // session id on its own.)
+    final pipeline = _localBackend.equalizer != null;
+    try {
+      if (!identical(_backend, _localBackend)) {
+        // Casting: the local player is parked. Rebuild it so the phone is on
+        // the asked engine when playback comes back, and leave the cast
+        // alone. No re-seed, for the EQ toggle's reason: every
+        // return-to-local re-seeds with fresh URLs anyway.
+        await _localBackend.rebuildPlayer(withEqualizer: pipeline);
+        if (pipeline) await _applySavedEqualizer(_localBackend.equalizer);
+      } else {
+        await _rebuildLocalPlayer(
+          withEqualizer: pipeline,
+          logTag: 'audio',
+          why: 'engine switch',
+          afterRebuild: () async {
+            if (pipeline) await _applySavedEqualizer();
+          },
+        );
+      }
+    } catch (e) {
+      // The choice follows what happened: a rebuild that threw leaves the
+      // next native player on the engine the settings still name.
+      PlaybackEngine.usesMedia3 = !media3;
+      rethrow;
+    }
+    appLog('[audio] playback engine → ${media3 ? 'media3' : 'just_audio'}');
+    return true;
   }
 
   /// Pushed for exactly one event as the queue empties, purely to overwrite

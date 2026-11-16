@@ -1214,6 +1214,14 @@
   "settingsOfflineQueue": "Download the queue",
   "settingsOfflineQueueSubtitle": "Playback keeps going when the connection drops.",
   "settingsOfflineQueueWifiOnly": "Wi-Fi only",
+  "settingsNewAudioEngine": "New audio engine",
+  "@settingsNewAudioEngine": {
+    "description": "Android-only switch under Settings › Playback: play through the app's own Media3 engine instead of just_audio's. Playback behaves the same either way; the new engine is the one later sound-quality features are built on."
+  },
+  "settingsNewAudioEngineSubtitle": "Experimental",
+  "@settingsNewAudioEngineSubtitle": {
+    "description": "One-word note under the New audio engine switch: the engine is still being proven."
+  },
   "settingsAutoDownloadCap": "Download limit",
   "@settingsAutoDownloadCap": {
     "description": "Title of the keep-queue-offline retention-cap setting."

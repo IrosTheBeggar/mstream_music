@@ -15,6 +15,25 @@ subprojects {
     def newSubprojectBuildDir = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+// One Media3 for the whole build. just_audio declares 1.4.1 and the in-repo
+// engine (packages/media3_player) needs a newer one; an APK can only carry
+// one copy of the classes, so Gradle would run just_audio against the newer
+// jars while having compiled it against the old ones. Forcing the version in
+// every module makes just_audio COMPILE against what ships, so an API it
+// uses going away is a build error here instead of a NoSuchMethodError on a
+// phone. Keep in step with media3Version in
+// packages/media3_player/android/build.gradle.kts.
+def media3Version = '1.11.1'
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.media3') {
+                details.useVersion media3Version
+                details.because 'one Media3 for just_audio and media3_player'
+            }
+        }
+    }
+}
 subprojects {
     project.evaluationDependsOn(':app')
 }

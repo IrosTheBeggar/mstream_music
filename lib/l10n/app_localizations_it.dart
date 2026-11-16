@@ -1521,6 +1521,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsOfflineQueueWifiOnly => 'Solo Wi-Fi';
 
   @override
+  String get settingsNewAudioEngine => 'Nuovo motore audio';
+
+  @override
+  String get settingsNewAudioEngineSubtitle => 'Sperimentale';
+
+  @override
   String get settingsAutoDownloadCap => 'Limite di download';
 
   @override
