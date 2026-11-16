@@ -24,6 +24,7 @@ import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
+import 'package:mstream_music/widgets/album_grid.dart';
 
 import 'discovery_keep_fixtures.dart';
 
@@ -174,7 +175,7 @@ void main() {
           reason: 'a song job has none',
         );
         expect(find.text('Waiting for a free slot'), findsOneWidget);
-        expect(find.text('Starts on its own'), findsOneWidget);
+        expect(find.text('Starts on its own'), findsNothing);
         expect(
           find.text('Add song'),
           findsNothing,
@@ -185,7 +186,7 @@ void main() {
         await frames(tester);
         expect(h.fake.count('POST', '/cancel'), 1);
         expect(find.text('Stopped · nothing was copied'), findsOneWidget);
-        expect(find.text('You cancelled it'), findsOneWidget);
+        expect(find.text('You cancelled it'), findsNothing);
         await tapText(tester, 'Add again');
         expect(h.fake.calls('POST', _jobs), hasLength(2));
         expect(
@@ -630,11 +631,7 @@ void main() {
         List<String> buttons = const [],
       ]) => has(name, texts, buttons: buttons, not: others(buttons));
 
-      state(
-        'queued',
-        ['Waiting for a free slot', 'Starts on its own'],
-        ['Cancel'],
-      );
+      state('queued', ['Waiting for a free slot'], ['Cancel']);
       state(
         'running',
         ['Copying', '1 of 3 songs · 7.4 MB · Late Train Verse'],
@@ -668,7 +665,7 @@ void main() {
         'already yours',
         [
           'Already yours',
-          'Your library has this song · copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3',
+          'copies / Boukmanflow / Borrowed Tapes / 02 - Late Train Verse.mp3',
         ],
         ['Play', 'Add to queue'],
       );
@@ -713,19 +710,8 @@ void main() {
         ['Retry'],
       );
       state('failed re-paired', ['Copy failed'], ['New seeds']);
-      state(
-        'cancelled nothing',
-        ['Stopped · nothing was copied', 'You cancelled it'],
-        ['Add again'],
-      );
-      state(
-        'cancelled some',
-        [
-          'Stopped · 2 copied',
-          'You cancelled it · the 2 songs stay in your collection',
-        ],
-        ['Add again'],
-      );
+      state('cancelled nothing', ['Stopped · nothing was copied'], ['Add again']);
+      state('cancelled some', ['Stopped · 2 copied'], ['Add again']);
       state('nothing to copy', [
         'You have it all',
         'Nothing to copy from Stage Peer B',
@@ -737,7 +723,6 @@ void main() {
       state('from another server', [
         'Copying from Stage Peer C',
         '1 of 1 songs · Rooftop Cypher',
-        'Add album comes back when that copy ends',
       ]);
       // No pill while a job speaks for the choice.
       expect(find.byKey(const ValueKey('keep-start')), findsNothing);
@@ -995,11 +980,21 @@ void main() {
           ),
         );
         expect(rest.style!.color, VelvetColors.textSecondary);
-        // The cards: B's says how far it is; C's says nothing.
+        // The cards: B's says how far it is; C's says nothing. Discover's
+        // strip keeps its word (the glyph-only rule is browsing's), and the
+        // card's accessible label carries it too.
         expect(find.text('copying 2 of 3'), findsOneWidget);
+        final badge = find.byKey(
+          const ValueKey('discovery-card-badge-copying'),
+        );
+        expect(badge, findsOneWidget);
         expect(
-          find.byKey(const ValueKey('discovery-card-badge-copying')),
-          findsOneWidget,
+          tester
+              .widget<AlbumGridCard>(
+                find.ancestor(of: badge, matching: find.byType(AlbumGridCard)),
+              )
+              .mark,
+          'copying 2 of 3',
         );
       },
     );
@@ -1148,6 +1143,13 @@ void main() {
       expect(find.text('1 wird kopiert'), findsOneWidget);
       expect(find.text('1 fehlgeschlagen'), findsOneWidget);
       expect(find.text('kopiert 1 von 3'), findsOneWidget);
+      // The card's word, in its accessible label too.
+      expect(
+        tester
+            .widgetList<AlbumGridCard>(find.byType(AlbumGridCard))
+            .map((c) => c.mark),
+        contains('kopiert 1 von 3'),
+      );
       await tester.longPress(find.text('Borrowed Tapes').first);
       await frames(tester, 8);
       expect(tester.takeException(), isNull);

@@ -48,6 +48,11 @@ Map<String, dynamic> queueExtras(
       // the Song Info chips. Null on older servers.
       'artistDisplay': meta?.artistDisplay,
       'composer': meta?.composer,
+      // The album's own credit (`album-artist`, mStream since 2026-10-23),
+      // for Keep a copy's Album choice on a queued connected-server track:
+      // a compilation's "Various Artists", never the track's artist. Null
+      // on older servers and for a song in no album.
+      'albumArtist': meta?.albumArtist,
     };
 
 class MusicMetadata {
@@ -61,6 +66,12 @@ class MusicMetadata {
   // The COMPOSER / TCOM credit(s), joined. Same provenance and nullability.
   String? composer;
   String? album;
+  // The album's own credit (`album-artist`, mStream since 2026-10-23): the
+  // album item's credit as the albums listing names it — "Various Artists"
+  // on every song of a compilation, whoever performs it. Null on older
+  // servers and for a song in no album. What Keep a copy's Album choice is
+  // keyed on, never [artist].
+  String? albumArtist;
   String? title;
   int? track;
   int? disc;
@@ -117,13 +128,15 @@ class MusicMetadata {
       this.lastPlayed,
       this.hasLyrics = false,
       this.artistDisplay,
-      this.composer});
+      this.composer,
+      this.albumArtist});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
       : artist = json['artist'],
         artistDisplay = json['artistDisplay'],
         composer = json['composer'],
         album = json['album'],
+        albumArtist = json['albumArtist'],
         title = json['title'],
         track = json['track'],
         disc = json['disc'],
@@ -149,6 +162,7 @@ class MusicMetadata {
         'artistDisplay': artistDisplay,
         'composer': composer,
         'album': album,
+        'albumArtist': albumArtist,
         'title': title,
         'track': track,
         'disc': disc,
@@ -201,6 +215,9 @@ class MusicMetadata {
         // V73 credits, kebab-case on the wire; absent on older servers → null.
         artistDisplay: _asString(m['artist-display'] ?? m['artistDisplay']),
         composer: _asString(m['composer']),
+        // The album's credit (S2), kebab-case like the rest; absent on older
+        // servers → null.
+        albumArtist: _asString(m['album-artist'] ?? m['albumArtist']),
         trackTotal: _asInt(m['track-total'] ?? m['trackTotal']),
         discTotal: _asInt(m['disc-total'] ?? m['discTotal']),
         playCount: _asInt(m['play-count'] ?? m['playCount']),

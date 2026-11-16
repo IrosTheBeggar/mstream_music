@@ -117,12 +117,14 @@ String sanitizeFolders(Object? raw) {
 /// A path on a peer as the server reads it (recommendation.js
 /// normalizePeerPath): forward slashes, names trimmed, no empty or '.'
 /// folders, the case kept ('..' kept too: [sanitizeFolders] drops it).
-String _peerPath(Object? p) => (p == null ? '' : _jsString(p))
+String normalizePeerPath(Object? p) => (p == null ? '' : _jsString(p))
     .replaceAll('\\', '/')
     .split('/')
     .map(_jsTrim)
     .where((s) => s.isNotEmpty && s != '.')
     .join('/');
+
+String _peerPath(Object? p) => normalizePeerPath(p);
 
 /// {{SERVERFOLDER}} of the song at [filepath], its path on the connected
 /// server (federation-copy.js serverFolderOf): the folder its file sits in,
@@ -323,6 +325,35 @@ String? bracedFolder(Object? base) {
   return null;
 }
 
+/// A layout's leading folders that name no variable — where every copy
+/// lands whatever its tags ("From friends/{{ARTIST}}" → "From friends",
+/// each trimmed, joined with '/') — and the rest of it as typed
+/// ("{{ARTIST}}"): destination.js layoutLead, the webapp's.
+({String folders, String rest}) layoutLead(Object? layout) {
+  final s = layout == null ? '' : _jsString(layout);
+  // Split keeping the separators, as the webapp's /([/\\]+)/ does.
+  final parts = <String>[];
+  var at = 0;
+  for (final m in RegExp(r'[/\\]+').allMatches(s)) {
+    parts
+      ..add(s.substring(at, m.start))
+      ..add(m.group(0)!);
+    at = m.end;
+  }
+  parts.add(s.substring(at));
+  final folders = <String>[];
+  var i = 0;
+  for (; i < parts.length; i += 2) {
+    final seg = _jsTrim(parts[i]);
+    if (seg.contains('{') || seg.contains('}')) break;
+    if (seg.isNotEmpty) folders.add(seg);
+  }
+  return (
+    folders: folders.join('/'),
+    rest: i < parts.length ? parts.sublist(i).join() : '',
+  );
+}
+
 /// Whether two destinations put files in the same place — the jobs route's
 /// own test for a start's `destination_changed` (destination.js
 /// sameDestination, the webapp's discover-jobs.js): the library, the base
@@ -519,8 +550,11 @@ List<String> pathCrumbs(String? filepath) =>
 // A path that has landed (a finished copy's files) is the server's own
 // filepath: no slots there.
 
-/// A per-song variable a path cannot promise one value for.
-enum LayoutSlot { artist, year, genre, serverFolder }
+/// A per-song variable a path cannot promise one value for ([albumArtist]:
+/// a folder copy's songs that name different album credits, or only some
+/// name one — the copy files each under its own, the rest under their
+/// artist).
+enum LayoutSlot { artist, year, genre, serverFolder, albumArtist }
 
 /// [slot]'s mark inside a rendered path: private-use characters no tag
 /// brings and the layout engine leaves alone. The UI draws the slot's word
@@ -589,9 +623,32 @@ class ScopeTarget {
   final PreviewTarget target;
   final String rendered;
 
-  /// An artist copy: one folder per album under [rendered].
+  /// An artist copy — or a folder copy by the layout whose songs sit in
+  /// more than one album — one folder per album under [rendered].
   final bool perAlbum;
-  const ScopeTarget(this.target, this.rendered, {this.perAlbum = false});
+
+  /// A folder copy: how it lands ([FolderLanding]); null for every other
+  /// scope.
+  final FolderLanding? landing;
+
+  /// A folder copy whose path is one folder: where its files land below it
+  /// ([folderFiles]); null while uncounted, and wherever the path is not
+  /// exact (a slot, one folder per album).
+  final FolderFiles? files;
+
+  /// Into a folder…: the chosen folder is not named as the pressed one (or
+  /// is the library's root), so the pressed folder's files go straight into
+  /// [folder] with no folder of their own named [name]; null otherwise.
+  final ({String folder, String name})? straightIn;
+
+  const ScopeTarget(
+    this.target,
+    this.rendered, {
+    this.perAlbum = false,
+    this.landing,
+    this.files,
+    this.straightIn,
+  });
 
   bool get valid => target.valid;
 
@@ -635,6 +692,23 @@ Object? _agreed(Iterable<Object?> values, LayoutSlot slot,
   return first;
 }
 
+/// The value every one of [values] files under (the first as given), or
+/// null when two would make different folders.
+({Object? value})? _shared(Iterable<Object?> values) {
+  Object? first;
+  String? key;
+  for (final v in values) {
+    final k = sanitizeSegment(v);
+    if (key == null) {
+      key = k;
+      first = v;
+    } else if (k != key) {
+      return null;
+    }
+  }
+  return (value: first);
+}
+
 final RegExp _albumFolderRe = RegExp(
   r'\{\{\s*(album|year|serverfolder)\s*\}\}',
   caseSensitive: false,
@@ -646,6 +720,14 @@ final RegExp _albumFolderRe = RegExp(
 /// ([serverFolderOf] of its path); [albumSongs] the album's listing (null
 /// until it answers); [oneAlbum] the one album an artist-missing copy
 /// takes, when only one is missing.
+///
+/// A folder copy ([kScopeFolder]) lands by its [landing] — as on the
+/// connected server (none), into a folder (`{vpath, path}`), or by the
+/// layout (`{tags: true}`): [folder] is the pressed folder's path there,
+/// [folderSongs] what the copy takes ([planFolder]; null until counted) and
+/// [folderTags] the songs' own tags for "By your layout" ([folderSongTags]
+/// of the peer's metadata batch; null when none were read). See
+/// [folderTarget].
 ScopeTarget scopeTarget({
   String? vpath,
   Object? base,
@@ -657,7 +739,23 @@ ScopeTarget scopeTarget({
   ({String name, Object? year})? oneAlbum,
   String? peerName,
   String? fileName,
+  Object? landing,
+  String? folder,
+  List<FolderSong>? folderSongs,
+  List<FolderSongTags>? folderTags,
 }) {
+  if (scope == kScopeFolder) {
+    return folderTarget(
+      vpath: vpath,
+      base: base,
+      layout: layout,
+      landing: landing,
+      folder: folder,
+      songs: folderSongs,
+      tags: folderTags,
+      peerName: peerName,
+    );
+  }
   final t = tags ?? const <String, Object?>{};
   final artistScope = scope == kScopeArtist || scope == kScopeArtistMissing;
   final one = scope == kScopeArtistMissing ? oneAlbum : null;
@@ -749,6 +847,611 @@ ScopeTarget scopeTarget({
     'peer': peerName,
   });
   return ScopeTarget(target, head.path, perAlbum: true);
+}
+
+// ── a folder from a connected server ─────────────────────────────────────
+// federation-copy's folder half, mirrored through the webapp's
+// discover-jobs.js: what a folder copy takes (planFolder) and where it lands
+// (landingFor), so the sheet counts, lists and places the folder the way the
+// copy will. Any change to the rules there has to be made here too — the
+// webapp's cases are ported in test/util/discover_jobs_folder_test.dart.
+
+/// A folder's path inside the peer's library: its first folder (the
+/// library's own name) dropped, each folder made safe, the empty ones gone —
+/// what a mirrored folder lands as (federation-copy insidePeerLibrary;
+/// [serverFolderOf] is a song's: the folder its file sits in).
+String insidePeerLibrary(Object? folder) => sanitizeFolders(
+    normalizePeerPath(folder).split('/').skip(1).join('/'));
+
+// src/db/scan-ignore.js isIgnoredRelPath (the scanner's defaults): a path
+// through a folder the scanner never walks — a recycle bin, a snapshot, VCS
+// or OS litter, a dot folder — or to a dot file. A dot entry is ONE leading
+// dot ("...Trilogy" is a name).
+const Set<String> kIgnoredDirNames = {
+  r'$recycle.bin',
+  '#recycle',
+  '@recycle',
+  '@recently-snapshot',
+  '#snapshot',
+  '.git',
+  'lost+found',
+  '.stfolder',
+  '.stversions',
+  'system volume information',
+};
+
+bool _dotEntry(String name) => name.startsWith('.') && !name.startsWith('..');
+
+bool isIgnoredRelPath(String relPath) {
+  final segs = relPath.split('/');
+  for (var i = 0; i < segs.length; i++) {
+    final seg = segs[i];
+    if (seg.isEmpty) continue;
+    final ignored = i == segs.length - 1
+        ? _dotEntry(seg)
+        : kIgnoredDirNames.contains(seg.toLowerCase()) || _dotEntry(seg);
+    if (ignored) return true;
+  }
+  return false;
+}
+
+/// destination.js isSupportedAudioFile, by the ping's supportedAudioFiles
+/// (`{mp3: true, …}`): the file's extension, any case. No map: nothing is
+/// known to play.
+bool isSupportedAudioFile(Object? fileName, Map<String, bool>? supported) {
+  final last = (fileName == null ? '' : _jsString(fileName)).split('/').last;
+  final dots = last.split('.');
+  final ext = dots.length > 1 ? dots.last : '';
+  return ext.isNotEmpty &&
+      supported != null &&
+      supported[ext.toLowerCase()] == true;
+}
+
+/// One song a folder copy takes: its path on the connected server (as
+/// [normalizePeerPath] reads it) and the folder it sits in relative to the
+/// pressed one, each folder made safe ('' when it sits in the folder
+/// itself).
+class FolderSong {
+  final String filepath;
+  final String relDir;
+  const FolderSong(this.filepath, {this.relDir = ''});
+
+  @override
+  bool operator ==(Object other) =>
+      other is FolderSong && other.filepath == filepath && other.relDir == relDir;
+
+  @override
+  int get hashCode => Object.hash(filepath, relDir);
+
+  @override
+  String toString() => 'FolderSong($filepath${relDir.isEmpty ? '' : ', $relDir'})';
+}
+
+/// What a folder copy takes ([songs], in path order) and leaves out
+/// ([skipped]: each listed entry as sent, with why — `outside`, `ignored`,
+/// `unsupported`).
+class FolderPlan {
+  final List<FolderSong> songs;
+  final List<({Object? from, String why})> skipped;
+  const FolderPlan({this.songs = const [], this.skipped = const []});
+}
+
+/// JS `a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})`
+/// — ICU's root order, near enough for a folder's paths: character by
+/// character, spaces first, then punctuation and symbols in ICU's own
+/// sequence ([_marks]), then a run of digits by its number, then letters
+/// case- and accent-folded (Latin-1 and Latin Extended-A; ß as "ss", æ as
+/// "ae", œ as "oe"). Equal at that level is equal: the caller's sort keeps
+/// the listed order then, as JS's stable sort does.
+int _pathOrder(String a, String b) {
+  final x = _collation(a), y = _collation(b);
+  for (var i = 0; i < x.length && i < y.length; i++) {
+    final p = x[i], q = y[i];
+    if (p.rank != q.rank) return p.rank - q.rank;
+    final c = p.rank == _digits
+        ? p.number!.compareTo(q.number!)
+        : p.weight - q.weight;
+    if (c != 0) return c;
+  }
+  return x.length - y.length;
+}
+
+// The classes of ICU's root order, lowest first.
+const int _space = 0, _mark = 1, _digits = 2, _letter = 3;
+
+/// ICU root's punctuation and symbols in its order; the characters of one
+/// entry weigh the same ('‘’ as ', “” as ").
+const List<String> _marks = [
+  '_', '-', '–', '—', ',', ';', ':', '!', '¡', '?', '¿', '.', '…', '·', //
+  "'‘’", '"“”', '«', '»', '(', ')', '[', ']', '{', '}', '§', '¶', '@', //
+  '*', '/', r'\', '&', '#', '%', '`', '´', '^', '¯', '¨', '¸', '°', '©', //
+  '®', '+', '±', '÷', '×', '<', '=', '>', '¬', '|', '¦', '~', '¤', '¢', //
+  r'$', '£', '¥', '€',
+];
+
+final Map<int, int> _markWeight = {
+  for (var g = 0; g < _marks.length; g++)
+    for (final r in _marks[g].runes) r: g,
+};
+
+/// Lower-case Latin letters with a mark, and the letter each folds to.
+const String _accented =
+    'àáâãäåçèéêëìíîïðñòóôõöøùúûüýÿāăąćĉċčďđēĕėęěĝğġģĥħĩīĭįĵķĺļľŀł'
+    'ńņňōŏőŕŗřśŝşšţťũūŭůűųŵŷźżžſ';
+const String _plain =
+    'aaaaaaceeeeiiiidnoooooouuuuyyaaaccccddeeeeegggghhiiiiijklllll'
+    'nnnooorrrssssttuuuuuuwyzzzs';
+const Map<String, String> _expanded = {'ß': 'ss', 'æ': 'ae', 'œ': 'oe'};
+
+/// [s] as ICU's root order compares it at its base level: one element a
+/// character, a run of digits one element of its number.
+List<({int rank, int weight, BigInt? number})> _collation(String s) {
+  final folded = StringBuffer();
+  for (final ch in s.toLowerCase().split('')) {
+    final i = _accented.indexOf(ch);
+    folded.write(_expanded[ch] ?? (i == -1 ? ch : _plain[i]));
+  }
+  final out = <({int rank, int weight, BigInt? number})>[];
+  final runes = folded.toString().runes.toList();
+  for (var i = 0; i < runes.length; i++) {
+    final r = runes[i];
+    if (r >= 0x30 && r <= 0x39) {
+      var j = i;
+      while (j < runes.length && runes[j] >= 0x30 && runes[j] <= 0x39) {
+        j++;
+      }
+      out.add((
+        rank: _digits,
+        weight: 0,
+        number: BigInt.parse(String.fromCharCodes(runes.sublist(i, j))),
+      ));
+      i = j - 1;
+    } else if (r == 0x20 || r == 0xA0 || r == 0x09) {
+      out.add((rank: _space, weight: 0, number: null));
+    } else if (_markWeight.containsKey(r)) {
+      out.add((rank: _mark, weight: _markWeight[r]!, number: null));
+    } else {
+      out.add((rank: _letter, weight: r, number: null));
+    }
+  }
+  return out;
+}
+
+/// What a folder copy takes (federation-copy planFolder): every file the
+/// peer's recursive [listing] names under [folderPath] (its library first),
+/// in path order, each with the folder it sits in relative to the pressed
+/// one, and what it leaves out, with why — `outside` (not under the folder,
+/// or climbing), `ignored` (the scanner's rules), `unsupported` (a file this
+/// server does not play: [supported] is the own server's
+/// supportedAudioFiles; without it every file the listing names is taken).
+/// One entry per path.
+FolderPlan planFolder(Object? listing, Object? folderPath,
+    {Map<String, bool>? supported}) {
+  final dir = normalizePeerPath(folderPath);
+  final prefix = dir.isEmpty ? '' : '$dir/';
+  final songs = <FolderSong>[];
+  final skipped = <({Object? from, String why})>[];
+  final seen = <String>{};
+  for (final raw in listing is List ? listing : const []) {
+    if (raw is! String) continue;
+    final p = normalizePeerPath(raw);
+    if (p.isEmpty || !seen.add(p)) continue;
+    if (prefix.isNotEmpty && !p.startsWith(prefix)) {
+      skipped.add((from: raw, why: 'outside'));
+      continue;
+    }
+    final rel = prefix.isEmpty ? p : p.substring(prefix.length);
+    final segs = rel.split('/');
+    if (segs.any((x) => x == '..')) {
+      skipped.add((from: raw, why: 'outside'));
+      continue;
+    }
+    if (isIgnoredRelPath(rel)) {
+      skipped.add((from: raw, why: 'ignored'));
+      continue;
+    }
+    if (supported != null && !isSupportedAudioFile(segs.last, supported)) {
+      skipped.add((from: raw, why: 'unsupported'));
+      continue;
+    }
+    songs.add(FolderSong(
+      p,
+      relDir: segs
+          .sublist(0, segs.length - 1)
+          .map(sanitizeSegment)
+          .where((x) => x.isNotEmpty)
+          .join('/'),
+    ));
+  }
+  // A stable sort, as JS's: by path, then the order listed.
+  final indexed = [for (var i = 0; i < songs.length; i++) (songs[i], i)];
+  indexed.sort((a, b) {
+    final c = _pathOrder(a.$1.filepath, b.$1.filepath);
+    return c != 0 ? c : a.$2 - b.$2;
+  });
+  return FolderPlan(
+    songs: List.unmodifiable([for (final x in indexed) x.$1]),
+    skipped: List.unmodifiable(skipped),
+  );
+}
+
+/// A planned folder's numbers for the sheet's header ("9 songs · 3
+/// subfolders"): its songs, and the subfolders that hold any — every folder
+/// on a song's way down from the pressed one, counted once.
+({int songs, int subfolders}) folderCounts(List<FolderSong>? songs) {
+  final list = songs ?? const <FolderSong>[];
+  final folders = <String>{};
+  for (final song in list) {
+    final segs = song.relDir.split('/').where((x) => x.isNotEmpty).toList();
+    for (var i = 1; i <= segs.length; i++) {
+      folders.add(segs.sublist(0, i).join('/'));
+    }
+  }
+  return (songs: list.length, subfolders: folders.length);
+}
+
+/// One song of a folder as "By your layout" files it (the webapp's
+/// folderSongTags, from the peer's metadata batch): its ARTIST tag as
+/// written, its year, its one genre (the library splits a "Hip-Hop/Rap" tag
+/// in two while a copy files under it as written: more than one, or none, is
+/// unknown), the folder its file sits in on the server, its album, and the
+/// album's credit (`album-artist`: none from a peer before 2026-10-23, and
+/// for a song in no album).
+class FolderSongTags {
+  final String? artist;
+  final int? year;
+  final String? genre;
+  final String serverFolder;
+  final String? album;
+  final String? albumArtist;
+  const FolderSongTags({
+    this.artist,
+    this.year,
+    this.genre,
+    this.serverFolder = '',
+    this.album,
+    this.albumArtist,
+  });
+}
+
+String? _text(String? s) => s != null && s.isNotEmpty ? s : null;
+
+/// [filepath]'s song (its path on the connected server) as "By your layout"
+/// files it, from its metadata — [artist] / [artistDisplay] / [year] /
+/// [genres] / [album] / [albumArtist], as MusicMetadata holds them (none: a
+/// path the peer has no row for).
+FolderSongTags folderSongTags(
+  String filepath, {
+  String? artist,
+  String? artistDisplay,
+  int? year,
+  List<String> genres = const [],
+  String? album,
+  String? albumArtist,
+}) {
+  final named = genres.where((g) => g.trim().isNotEmpty).toList();
+  return FolderSongTags(
+    artist: _text(artistDisplay) ?? _text(artist),
+    year: year == null || year == 0 ? null : year,
+    genre: named.length == 1 ? named.first : null,
+    serverFolder: serverFolderOf(filepath),
+    album: _text(album),
+    albumArtist: _text(albumArtist),
+  );
+}
+
+/// How a folder copy lands (its `landing`, destination.js validateLanding):
+/// as on the connected server (none), into a folder the user picked
+/// (`{vpath?, path}`: the pressed folder's files there, its subfolders
+/// beneath), or song by song by the layout like any other copy
+/// (`{tags: true}`).
+enum FolderLanding { mirror, folder, tags }
+
+/// The mode a landing on the wire (a job's `params.landing`, a start's)
+/// reads as.
+FolderLanding landingMode(Object? landing) {
+  if (landing is! Map) return FolderLanding.mirror;
+  if (landing['tags'] == true) return FolderLanding.tags;
+  final vpath = landing['vpath'];
+  if (landing['path'] is String || (vpath is String && vpath.isNotEmpty)) {
+    return FolderLanding.folder;
+  }
+  return FolderLanding.mirror;
+}
+
+/// The landing a start sends for [mode]: null for a mirror (sent as none),
+/// `{vpath, path}` for a folder ([vpath] null = the destination's library;
+/// [path] '' its root), `{tags: true}`.
+Map<String, dynamic>? folderLanding(FolderLanding mode,
+        {String? vpath, String? path}) =>
+    switch (mode) {
+      FolderLanding.mirror => null,
+      FolderLanding.tags => const {'tags': true},
+      FolderLanding.folder => {'vpath': vpath, 'path': path ?? ''},
+    };
+
+/// [landing] as a start's body carries it (the webapp's discoveryJobStart):
+/// `{tags: true}`, `{vpath, path}` or `{path}` (no library of its own: the
+/// destination's), or nothing for a mirror. The route takes no null library.
+Map<String, dynamic>? wireLanding(Object? landing) {
+  switch (landingMode(landing)) {
+    case FolderLanding.mirror:
+      return null;
+    case FolderLanding.tags:
+      return const {'tags': true};
+    case FolderLanding.folder:
+      final l = landing as Map;
+      final vpath = l['vpath'];
+      final path = l['path'] is String ? l['path'] as String : '';
+      return vpath is String && vpath.isNotEmpty
+          ? {'vpath': vpath, 'path': path}
+          : {'path': path};
+  }
+}
+
+/// "Into a folder…"'s first place: a new folder in [destination]'s library
+/// named as the pressed [folder], its name made safe as a mirror writes it
+/// ("copies › Borrowed Tapes"), so the folder keeps its name unless the user
+/// goes elsewhere. A brace is kept (the sheet says why it cannot be used).
+({String? vpath, String path}) folderIntoDefault(
+        CollectionDestination? destination, Object? folder) =>
+    (
+      vpath: destination?.vpath,
+      path: sanitizeSegment(normalizePeerPath(folder).split('/').last),
+    );
+
+/// The most file lines a folder's preview draws.
+const int kFolderFileLines = 3;
+
+/// At most [kFolderFileLines] of a folder's songs as where each lands below
+/// the path drawn ([lines]) and how many more there are ([more]).
+class FolderFiles {
+  final List<String> lines;
+  final int more;
+  const FolderFiles(this.lines, this.more);
+
+  @override
+  bool operator ==(Object other) =>
+      other is FolderFiles &&
+      other.more == more &&
+      other.lines.length == lines.length &&
+      [for (var i = 0; i < lines.length; i++) other.lines[i] == lines[i]]
+          .every((x) => x);
+
+  @override
+  int get hashCode => Object.hash(Object.hashAll(lines), more);
+
+  @override
+  String toString() => 'FolderFiles($lines, more: $more)';
+}
+
+/// [songs] ([planFolder]'s, in path order) as [FolderFiles]: each line its
+/// folder relative to the pressed one first ("Harbour Lights/01 - Tide.mp3")
+/// — or, [flat] ("By your layout", where every song files by the layout),
+/// its file name alone — written as the copy writes it ([safeFileName]).
+/// Null without songs (not counted yet).
+FolderFiles? folderFiles(List<FolderSong>? songs, {bool flat = false}) {
+  if (songs == null) return null;
+  final lines = [
+    for (final x in songs.take(kFolderFileLines))
+      flat
+          ? safeFileName(x.filepath)
+          : [x.relDir, safeFileName(x.filepath)]
+              .where((p) => p.isNotEmpty)
+              .join('/'),
+  ];
+  return FolderFiles(List.unmodifiable(lines), songs.length - lines.length);
+}
+
+PreviewTarget _refused(String? error, String field, String library) =>
+    PreviewTarget(
+      valid: false,
+      error: error,
+      field: field,
+      library: library,
+      base: '',
+      rendered: '',
+      file: '',
+      relPath: '',
+    );
+
+/// Where a folder copy lands (federation-copy landingFor), by its
+/// [landing]:
+///   mirror  the destination's library, its base folder, the layout's
+///           leading folders that name no variable ([layoutLead]: "From
+///           friends/{{ALBUMARTIST}}/{{ALBUM}}" → "From friends"), then the
+///           folder's path inside the peer's library, the library's own name
+///           dropped ([insidePeerLibrary]) — never through the rest of the
+///           layout
+///   folder  the chosen library (`landing.vpath`, else the destination's)
+///           and folder (`landing.path`, under the base folder's rules; ''
+///           its root): the pressed folder's files go straight in, its
+///           subfolders beneath — [ScopeTarget.straightIn] says so when that
+///           folder is not named as the pressed one
+///   tags    the layout, by the songs' own tags ([tags], ≤ 100 of them read
+///           once): {{ARTIST}}, {{YEAR}}, {{GENRE}} (known for every song)
+///           and {{SERVERFOLDER}} the value every song agrees on, else its
+///           slot; {{ALBUM}} the album every song agrees on, else the first
+///           folder that names an album ({{ALBUM}}, {{YEAR}} or
+///           {{SERVERFOLDER}}) and every one after it are "one folder per
+///           album" ([ScopeTarget.perAlbum]); {{ALBUMARTIST}} the songs'
+///           album credit when every one names it and they agree, as
+///           {{ARTIST}} when none names one (a peer before 2026-10-23: the
+///           engine's own fallback), else its own ‹album artist› slot, as the
+///           webapp's — the copy files each song under its own album's
+///           credit, the rest under their artist. No tags
+///           (past 100 songs, or no answer): every one a slot, and one folder
+///           per album
+/// A place the copy would refuse is refused here ([PreviewTarget.field]
+/// `base`, `landing` or `layout`). The file list ([ScopeTarget.files]) only
+/// where the path is one exact folder.
+ScopeTarget folderTarget({
+  String? vpath,
+  Object? base,
+  Object? layout,
+  Object? landing,
+  String? folder,
+  List<FolderSong>? songs,
+  List<FolderSongTags>? tags,
+  String? peerName,
+}) {
+  final mode = landingMode(landing);
+  if (mode == FolderLanding.tags) {
+    return _taggedFolder(
+      vpath: vpath,
+      base: base,
+      layout: layout,
+      songs: songs,
+      tags: tags,
+      peerName: peerName,
+    );
+  }
+  var library = vpath ?? '';
+  var baseOut = '';
+  final String fixed;
+  var peerPath = '';
+  ({String folder, String name})? straightIn;
+  if (mode == FolderLanding.folder) {
+    final l = landing as Map;
+    final lv = l['vpath'];
+    if (lv is String && lv.isNotEmpty) library = lv;
+    final chosen = normalizeBase(l['path']);
+    if (!chosen.valid) {
+      return ScopeTarget(_refused(chosen.error, 'landing', library), '',
+          landing: mode);
+    }
+    fixed = normalizePeerPath(chosen.base);
+    final name = normalizePeerPath(folder).split('/').last;
+    final into = fixed.split('/').last;
+    if (sanitizeSegment(into).toLowerCase() !=
+        sanitizeSegment(name).toLowerCase()) {
+      straightIn = (folder: into.isNotEmpty ? into : library, name: name);
+    }
+  } else {
+    final b = normalizeBase(base);
+    if (!b.valid) {
+      return ScopeTarget(_refused(b.error, 'base', library), '', landing: mode);
+    }
+    baseOut = b.base;
+    fixed = [b.base, layoutLead(layout).folders]
+        .where((x) => x.isNotEmpty)
+        .join('/');
+    peerPath = insidePeerLibrary(folder);
+  }
+  final dir = [fixed, peerPath].where((x) => x.isNotEmpty).join('/');
+  if (dir.isNotEmpty) {
+    final check = validateResolvedPath(dir);
+    if (!check.valid) {
+      return ScopeTarget(_refused(check.error, 'landing', library), '',
+          landing: mode);
+    }
+  }
+  final rendered = baseOut.isEmpty
+      ? dir
+      : (dir.length > baseOut.length ? dir.substring(baseOut.length + 1) : '');
+  return ScopeTarget(
+    PreviewTarget(
+      valid: true,
+      library: library,
+      base: baseOut,
+      rendered: rendered,
+      file: '',
+      relDir: dir,
+      relPath: dir,
+    ),
+    rendered,
+    landing: mode,
+    files: folderFiles(songs),
+    straightIn: straightIn,
+  );
+}
+
+ScopeTarget _taggedFolder({
+  String? vpath,
+  Object? base,
+  Object? layout,
+  List<FolderSong>? songs,
+  List<FolderSongTags>? tags,
+  String? peerName,
+}) {
+  final listed = tags != null && tags.isNotEmpty ? tags : null;
+  // The value every song agrees on, else [slot]'s mark (none read: the
+  // mark).
+  Object? agree(
+    Iterable<Object?> Function(List<FolderSongTags>) values,
+    LayoutSlot slot, {
+    String Function(Object?) folders = sanitizeSegment,
+  }) =>
+      listed == null
+          ? slotMark(slot)
+          : _agreed(values(listed), slot, folders: folders);
+  bool known(Iterable<Object?> values) =>
+      values.every((v) => sanitizeSegment(v).isNotEmpty);
+
+  // {{ALBUM}}: the one album every song is on, else none here — one folder
+  // per album below the cut.
+  final shared = listed == null ? null : _shared(listed.map((x) => x.album));
+  final byAlbum = shared == null;
+  final artist = agree((l) => l.map((x) => x.artist), LayoutSlot.artist);
+  final genre = listed != null && known(listed.map((x) => x.genre))
+      ? _agreed(listed.map((x) => x.genre), LayoutSlot.genre)
+      : slotMark(LayoutSlot.genre);
+  // The songs' album credit: every one names it and they agree → it; none
+  // names one (or none was read) → none, the engine files under ARTIST;
+  // else — credits that disagree, or only some named — its own slot (the
+  // webapp's ‹ALBUMARTIST›): the copy files each song under its own album's
+  // credit, the rest under their artist.
+  Object? albumArtist;
+  if (listed != null) {
+    final named =
+        listed.where((x) => sanitizeSegment(x.albumArtist).isNotEmpty).length;
+    if (named == listed.length) {
+      albumArtist =
+          _agreed(listed.map((x) => x.albumArtist), LayoutSlot.albumArtist);
+    } else if (named > 0) {
+      albumArtist = slotMark(LayoutSlot.albumArtist);
+    }
+  }
+  final v = <String, Object?>{
+    'artist': artist,
+    'album': shared?.value,
+    'year': agree((l) => l.map((x) => x.year), LayoutSlot.year),
+    'genre': genre,
+    'albumartist': albumArtist,
+  };
+  final onServer = agree((l) => l.map((x) => x.serverFolder),
+      LayoutSlot.serverFolder,
+      folders: sanitizeFolders);
+  final target = previewTarget(
+    vpath: vpath,
+    base: base,
+    layout: layout,
+    tags: v,
+    peerName: peerName,
+    serverFolder: onServer,
+  );
+  if (!target.valid) {
+    return ScopeTarget(target, target.rendered, landing: FolderLanding.tags);
+  }
+  if (byAlbum) {
+    final folders = (layout as String).split(RegExp(r'[/\\]+'));
+    final at = folders.indexWhere(_albumFolderRe.hasMatch);
+    if (at != -1) {
+      final head = resolveLayout(folders.sublist(0, at).join('/'), {
+        'artist': artist,
+        'genre': genre,
+        'albumartist': albumArtist,
+        'peer': peerName,
+      });
+      return ScopeTarget(target, head.path,
+          perAlbum: true, landing: FolderLanding.tags);
+    }
+  }
+  final out = ScopeTarget(target, target.rendered, landing: FolderLanding.tags);
+  return out.slots.isEmpty
+      ? ScopeTarget(target, target.rendered,
+          landing: FolderLanding.tags, files: folderFiles(songs, flat: true))
+      : out;
 }
 
 // ── a job as a row ───────────────────────────────────────────────────────
@@ -905,6 +1608,17 @@ class JobRow {
   final String? filepath;
   final bool live;
 
+  /// A folder copy's own account (its result's `folder.landed`): where its
+  /// files went, '/'-joined from the library ("copies/Boukmanflow/Borrowed
+  /// Tapes") — the "In copies › …" line. Null for every other copy, and
+  /// for a folder filed by the layout (each song went its own way).
+  final String? landed;
+
+  /// The files a folder copy left out (its result's `skippedFiles`: not
+  /// music this server plays, or hidden) — "2 files left out: …"; 0 for
+  /// every other copy.
+  final int skippedFiles;
+
   const JobRow({
     this.kind = JobRowKind.idle,
     this.tag,
@@ -918,6 +1632,8 @@ class JobRow {
     this.actions = const [JobAction.start],
     this.filepath,
     this.live = false,
+    this.landed,
+    this.skippedFiles = 0,
   });
 
   JobRow _with({
@@ -946,6 +1662,8 @@ class JobRow {
         actions: actions ?? this.actions,
         filepath: filepath ?? this.filepath,
         live: live,
+        landed: landed,
+        skippedFiles: skippedFiles,
       );
 
   /// The first part's phrase (what a marker reads the reason from).
@@ -960,6 +1678,8 @@ JobRow jobRowState(DiscoveryJob? job, {String? plugin}) {
   final idle = JobRow(
     icon: copy ? JobIcon.folder : JobIcon.download,
     live: job != null && isLive(job),
+    landed: job?.view.folderLanded,
+    skippedFiles: job?.view.skippedFiles ?? 0,
   );
   if (job == null) return idle;
   final row = idle;
@@ -1003,6 +1723,8 @@ JobRow jobRowState(DiscoveryJob? job, {String? plugin}) {
       sub: sub,
       actions: stopping ? const [] : const [JobAction.cancel],
       live: true,
+      landed: row.landed,
+      skippedFiles: row.skippedFiles,
     );
   }
   if (job.state == JobState.failed) {
@@ -1319,12 +2041,13 @@ Map<String, DiscoveryJob> jobsBySlot(Iterable<DiscoveryJob>? jobs) {
 }
 
 /// What a job acts on beyond a song, for the Copies list's kind label.
-enum JobKind { album, artist, artistMissing }
+enum JobKind { album, artist, artistMissing, folder }
 
 JobKind? jobKind(DiscoveryJob? job) => switch (jobScope(job)) {
       kScopeAlbum => JobKind.album,
       kScopeArtist => JobKind.artist,
       kScopeArtistMissing => JobKind.artistMissing,
+      kScopeFolder => JobKind.folder,
       _ => null,
     };
 
@@ -1364,6 +2087,24 @@ bool isDiscoverCopy(DiscoveryJob? job) {
   if (!kDiscoverJobScopes.contains(jobScope(job))) return false;
   final p = job.params;
   return p == null || (p['landing'] == null && p['choice'] == null);
+}
+
+/// A copy the phone carries now that it keeps a copy while browsing a
+/// connected server too ([isDiscoverCopy]'s, plus a folder copy with
+/// whatever landing it was started with): its Copies list, the strip's and
+/// the home card's counts, the polls, the end toasts, and Retry / Add again
+/// (which send the job's own landing back). Discover's own row and card
+/// markers still read [isDiscoverCopy] — Discover never offers a folder.
+/// A landing on any other scope, or a lookup plug-in's `choice`, is not the
+/// phone's to start again.
+bool isKeepCopy(DiscoveryJob? job) {
+  if (job == null || job.plugin != kCopyPlugin) return false;
+  final scope = jobScope(job);
+  if (!kKeepJobScopes.contains(scope)) return false;
+  final p = job.params;
+  if (p == null) return true;
+  if (p['choice'] != null) return false;
+  return p['landing'] == null || scope == kScopeFolder;
 }
 
 int _trayRank(DiscoveryJob job) => job.state == JobState.running
@@ -1454,7 +2195,16 @@ String jobTitle(DiscoveryJob? job) {
   if (scope == kScopeArtist || scope == kScopeArtistMissing) {
     return s('artist') ?? '';
   }
+  if (scope == kScopeFolder) return folderTitle(rec);
   return [s('title'), s('artist')].whereType<String>().join(' — ');
+}
+
+/// A folder copy's name: its recommendation's title, else the last folder
+/// of its path on the connected server.
+String folderTitle(Map<String, dynamic> rec) {
+  final t = rec['title'];
+  if (t is String && t.trim().isNotEmpty) return t.trim();
+  return normalizePeerPath(rec['filepath']).split('/').last;
 }
 
 /// What changed between two polls, for the toasts: only a job this client

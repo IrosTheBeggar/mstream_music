@@ -211,7 +211,8 @@ class DestPreviewShell extends StatelessWidget {
 
 /// A library choice (FedChipRow's chip in the canvas's size): 40 px, radius
 /// 10, on a [minHit] band; the chosen one primary-dim with a 1.5 px primary
-/// edge and a check. A [locked] one is the library another setting fixes
+/// edge and a check (Keep a copy's "Into a folder…" lists the libraries
+/// with it too). A [locked] one is the library another setting fixes
 /// (Add from YouTube's "Same as Discover"): on the card ground (a step
 /// under the raised controls, as the canvas draws it), a lock for the
 /// check, read as off and deaf to taps; the caption beside it says what
@@ -240,6 +241,8 @@ class DestLibraryChip extends StatelessWidget {
       checked: locked ? null : selected,
       button: locked ? null : true,
       enabled: locked ? false : null,
+      // The hit band leaves itself out of semantics: the tap is the chip's.
+      onTap: locked ? null : onTap,
       child: KeepHitArea(
         onTap: locked ? null : onTap,
         minHeight: minHit,

@@ -11,6 +11,12 @@
 library;
 
 import '../objects/discovery_plugins.dart';
+import 'discover_badges.dart' show nameKey;
+
+/// Where a way into Keep a copy is: Discover's sheets, a connected server's
+/// browse views (its album, artist and search pages, Recent, the queue), or
+/// that server's file explorer — the only one that may offer Folder.
+enum KeepEntry { discover, browse, explorer }
 
 enum CopyGateStatus {
   /// Keep a copy can start.
@@ -86,7 +92,8 @@ const String kKeepNoLibraryKey = 'discoverKeepNoLibrary';
 /// while unasked or in flight, and [listingFailed] / [destinationFailed]
 /// say they could not be read; [noUpload] is the account's flag
 /// (Server.noUpload: null from a server too old to say — then the
-/// destination alone decides, worded as "no library").
+/// destination alone decides, worded as "no library"). [entry] is where the
+/// way in is: Folder only from a connected server's file explorer.
 CopyGate copyGate({
   required bool? pluginsAvailable,
   PluginListing? listing,
@@ -95,6 +102,7 @@ CopyGate copyGate({
   bool destinationFailed = false,
   bool? noUpload,
   String scope = kScopeSong,
+  KeepEntry entry = KeepEntry.discover,
 }) {
   if (pluginsAvailable != true) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.pluginsOff);
@@ -108,8 +116,10 @@ CopyGate copyGate({
   if (copy == null) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.notListed);
   }
-  // Never Folder from Discover; a scope the server does not list is hidden.
-  if (scope == kScopeFolder || !copy.hasScope(scope)) {
+  // Folder only from the file explorer (never from Discover); a scope the
+  // server does not list is hidden.
+  if ((scope == kScopeFolder && entry != KeepEntry.explorer) ||
+      !copy.hasScope(scope)) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.noScope);
   }
   if (!listing.jobsAllowed) {
@@ -155,19 +165,41 @@ bool _hasText(Object? v) => v is String && v.trim().isNotEmpty;
 ///   artist,         the row names its artist — not on a compilation card,
 ///   artist-missing  whose rows' artists are guests on someone's album
 /// Never folder.
+///
+/// [browse]: the rec comes from a connected server's browse views (the
+/// spec's browse rule, which differs where a guess would copy the wrong
+/// thing):
+///   album           only with the album's KNOWN credit (`albumArtist`, a
+///                   resolved one) — never the track artist, which on a
+///                   compilation is one guest of many
+///   artist, …       not for Various Artists (by [nameKey]): no one's own
+///                   albums
+///   folder          [folder]: an explorer file row whose folder is below
+///                   its library's root (the Folder chip)
 List<String> offeredCopyScopes(
   Map<String, dynamic> rec,
   DiscoveryPlugin? copy, {
   bool card = false,
   bool compilation = false,
+  bool browse = false,
+  bool folder = false,
 }) {
   if (copy == null) return const [];
   final album = _hasText(rec['album']);
   final artist = _hasText(rec['artist']);
   final albumArtist = _hasText(rec['albumArtist']);
+  final various = browse && nameKey(rec['artist']) == kVariousArtistsKey;
   return [
     if (!card) kScopeSong,
-    if (album && (albumArtist || artist)) kScopeAlbum,
-    if (artist && !compilation) ...[kScopeArtist, kScopeArtistMissing],
+    if (album && (albumArtist || (artist && !browse))) kScopeAlbum,
+    if (artist && !compilation && !various) ...[
+      kScopeArtist,
+      kScopeArtistMissing,
+    ],
+    if (browse && folder) kScopeFolder,
   ].where(copy.hasScope).toList();
 }
+
+/// "Various Artists" by [nameKey]: the credit a compilation files under,
+/// never an artist with albums of their own.
+const String kVariousArtistsKey = 'various artists';

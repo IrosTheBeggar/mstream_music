@@ -25,7 +25,9 @@ import 'keep_toast.dart';
 /// phone saw end since), each row with its title, "Kind · Artist · from
 /// Server", a bar while it copies and its state line with one verb —
 /// Cancel, Retry, Play (and Add to queue), Add again. "Clear finished" is
-/// pinned at the bottom.
+/// pinned at the bottom. A connected server's folder copy (kept while
+/// browsing it) is a row too — the folder's name, "Folder · from Server", a
+/// folder tile — whose Retry and Add again send its own landing again.
 ///
 /// States: loading (still rows at the real row height), the list failing
 /// (Try again), nothing copying (from home: Open Discover), and a cancel
@@ -254,7 +256,6 @@ class _CopiesSheetState extends State<CopiesSheet> {
         icon: Icons.library_add_outlined,
         iconColor: VelvetColors.textTertiary,
         title: l.discoverCopiesEmpty,
-        sub: l.discoverCopiesEmptySub,
         pill: widget.fromHome && _discoverReachable
             ? KeepPill(
                 l.discoverCopiesOpenDiscover,
@@ -421,6 +422,8 @@ class _CopyRow extends StatelessWidget {
         return l.discoverCopiesEveryAlbumBy(_s('artist'));
       case kScopeArtistMissing:
         return l.discoverCopiesMissingOf(_s('artist'));
+      case kScopeFolder:
+        return folderTitle(_rec);
       default:
         final t = _s('title');
         return t.isNotEmpty ? t : safeFileName(_rec['filepath']);
@@ -441,6 +444,7 @@ class _CopyRow extends StatelessWidget {
       ],
       kScopeArtist => [l.discoverCopiesKindEvery, ?from],
       kScopeArtistMissing => [l.discoverCopiesKindMissing, ?from],
+      kScopeFolder => [l.discoverCopiesKindFolder, ?from],
       _ => [l.discoverCopiesKindSong, ?nonEmpty(_s('artist')), ?from],
     }.join(' · ');
   }
@@ -501,7 +505,6 @@ class _CopyRow extends StatelessWidget {
         r.glyph = icon(Icons.schedule, text2);
         r.line1 = l.discoverJobQueued;
         r.line1Color = text2;
-        r.line2 = l.discoverJobQueuedSub;
         r.verbs.add(_Verb.cancel);
       case JobRowKind.running:
         final stopping = job.cancelRequested;
@@ -541,7 +544,7 @@ class _CopyRow extends StatelessWidget {
       case JobRowKind.owned:
         r.glyph = icon(Icons.check_circle_outline, text2);
         r.line1 = l.discoverJobOwned;
-        r.line2 = many != null ? parts() : l.discoverJobOwnedSub;
+        if (many != null) r.line2 = parts();
         if (_files().isNotEmpty) r.verbs.add(_Verb.play);
       case JobRowKind.exists:
         final warn = keepTone(VelvetColors.warning);
@@ -559,7 +562,7 @@ class _CopyRow extends StatelessWidget {
           r.line1 = copyFailedWords(l, job);
         } else {
           r.line1 = l.discoverJobFailed;
-          r.line2 = copyFailedWords(l, job);
+          r.line2 = copyFailedReason(l, job);
         }
         if (jobNeedsNewSeeds(job)) {
           if (canNewSeeds) r.verbs.add(_Verb.newSeeds);
@@ -585,7 +588,6 @@ class _CopyRow extends StatelessWidget {
         r.line1 = copied > 0
             ? l.discoverJobCancelledSome(copied)
             : l.discoverJobCancelledNothing;
-        r.line2 = l.discoverJobCancelledSub;
         r.verbs.add(_Verb.addAgain);
       case JobRowKind.nothing:
         final guest = row.leadPhrase == JobPhrase.onlyAppearances;
@@ -609,20 +611,27 @@ class _CopyRow extends StatelessWidget {
   }
 
   /// The row's cover: the Discover row's art when the page holds it, else a
-  /// tile (a person for the artist scopes).
+  /// tile (a person for the artist scopes, a folder for a folder copy).
   Widget _cover() {
-    Widget tile(IconData i) => Container(
+    Widget tile(IconData i, {double size = 22, Color? color}) => Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
         color: VelvetColors.raised,
         borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
       ),
-      child: Icon(i, size: 22, color: VelvetColors.textSecondary),
+      child: Icon(i, size: size, color: color ?? VelvetColors.textSecondary),
     );
     final scope = job.scope;
     if (scope == kScopeArtist || scope == kScopeArtistMissing) {
       return tile(Icons.person_outline);
+    }
+    if (scope == kScopeFolder) {
+      return tile(
+        Icons.folder,
+        size: 24,
+        color: keepTone(VelvetColors.warning),
+      );
     }
     DiscoveryLead? lead;
     for (final l in jobs.leads) {
@@ -958,14 +967,14 @@ class _StateCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
-  final String sub;
+  final String? sub;
   final Widget? pill;
   const _StateCard({
     super.key,
     required this.icon,
     required this.iconColor,
     required this.title,
-    required this.sub,
+    this.sub,
     this.pill,
   });
 
@@ -988,19 +997,21 @@ class _StateCard extends StatelessWidget {
               height: 20 / 15,
             ),
           ),
-          const SizedBox(height: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 290),
-            child: Text(
-              sub,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: VelvetColors.textSecondary,
-                fontSize: 13,
-                height: 18 / 13,
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 290),
+              child: Text(
+                sub!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 13,
+                  height: 18 / 13,
+                ),
               ),
             ),
-          ),
+          ],
           if (pill != null) ...[const SizedBox(height: 12), pill!],
         ],
       ),

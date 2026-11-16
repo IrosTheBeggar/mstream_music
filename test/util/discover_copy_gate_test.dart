@@ -104,4 +104,44 @@ void main() {
       expect(offeredCopyScopes(row, null), isEmpty);
     });
   });
+
+  // Keep a copy while browsing a connected server (the phone spec's "the
+  // gate on the phone"): Folder only from that server's file explorer; the
+  // browse rule offers Album only with the album's known credit.
+  group('browsing a connected server', () {
+    test('Folder only from the file explorer — Discover and every other browse view never', () {
+      final explorer = copyGate(pluginsAvailable: true, listing: listing(), destination: dest(), scope: 'folder', entry: KeepEntry.explorer);
+      expect(explorer.ready, isTrue);
+      for (final entry in [KeepEntry.discover, KeepEntry.browse]) {
+        final g = copyGate(pluginsAvailable: true, listing: listing(), destination: dest(), scope: 'folder', entry: entry);
+        expect([g.status, g.block], [CopyGateStatus.hidden, CopyGateBlock.noScope], reason: '$entry');
+      }
+      // an older server: no folder in its scopes, no folder way in
+      final old = copyGate(pluginsAvailable: true, listing: listing(scopes: ['song', 'album', 'artist', 'artist-missing']), destination: dest(), scope: 'folder', entry: KeepEntry.explorer);
+      expect([old.status, old.block], [CopyGateStatus.hidden, CopyGateBlock.noScope]);
+      // the rest of the gate reads as for every scope
+      expect(copyGate(pluginsAvailable: true, listing: listing(), destination: dest(none: true), noUpload: true, scope: 'folder', entry: KeepEntry.explorer).status,
+          CopyGateStatus.line);
+    });
+
+    test('the browse rule: Album only with a known credit (never the track artist); no artist copy of Various Artists; Folder from an explorer file row', () {
+      final copy = listing().copy;
+      const song = {'artist': 'Boukmanflow', 'title': 'Late Train Verse', 'album': 'Borrowed Tapes'};
+      expect(offeredCopyScopes(song, copy), ['song', 'album', 'artist', 'artist-missing'],
+          reason: "Discover's rule: the track artist names the album");
+      expect(offeredCopyScopes(song, copy, browse: true), ['song', 'artist', 'artist-missing'],
+          reason: 'browsing: no credit known yet, no Album');
+      expect(offeredCopyScopes({...song, 'albumArtist': 'Boukmanflow'}, copy, browse: true), ['song', 'album', 'artist', 'artist-missing']);
+      expect(offeredCopyScopes({...song, 'albumArtist': 'Boukmanflow'}, copy, browse: true, folder: true),
+          ['song', 'album', 'artist', 'artist-missing', 'folder']);
+      expect(offeredCopyScopes({...song, 'albumArtist': 'Various Artists', 'artist': 'Various Artists'}, copy, browse: true),
+          ['song', 'album'], reason: 'no one\'s own albums');
+      expect(offeredCopyScopes(song, copy, folder: true), ['song', 'album', 'artist', 'artist-missing'],
+          reason: 'never Folder from Discover');
+      expect(offeredCopyScopes({...song, 'albumArtist': 'Boukmanflow'}, listing(scopes: ['song', 'album']).copy, browse: true, folder: true), ['song', 'album'],
+          reason: 'limited to what the server lists');
+      // an album focus from a card: no song
+      expect(offeredCopyScopes(const {'album': 'Night Market Sampler', 'albumArtist': 'Various Artists'}, copy, browse: true, card: true, compilation: true), ['album']);
+    });
+  });
 }

@@ -159,4 +159,29 @@ void main() {
           reason: 'the primary artist rides along for the name lookups');
     });
   });
+
+  // mStream since 2026-10-23 (the copy contract's S2): every song names its
+  // album's credit, so Keep a copy keys an album copy on it — never on the
+  // track's artist.
+  group("the album's credit (album-artist)", () {
+    test('fromServerMap reads album-artist; an older server, or a song in no album, leaves it null', () {
+      final m = MusicMetadata.fromServerMap({
+        'artist': 'Color Out',
+        'album': 'Night Market Sampler',
+        'album-artist': 'Various Artists',
+        'hash': 'h',
+      });
+      expect([m.artist, m.albumArtist], ['Color Out', 'Various Artists']);
+      expect(MusicMetadata.fromServerMap({'artist': 'Ann', 'hash': 'h'}).albumArtist, isNull);
+      expect(MusicMetadata.fromServerMap({'artist': 'Ann', 'album-artist': ' ', 'hash': 'h'}).albumArtist, isNull);
+    });
+
+    test('it round-trips through toJson / fromJson and rides in queueExtras (null when unknown)', () {
+      final m = MusicMetadata.fromServerMap({'artist': 'Color Out', 'album-artist': 'Various Artists', 'hash': 'h'});
+      expect(MusicMetadata.fromJson(m.toJson()).albumArtist, 'Various Artists');
+      expect(queueExtras(m, server: 's', path: '/p')['albumArtist'], 'Various Artists');
+      final none = queueExtras(null, server: 's', path: '/p');
+      expect([none.containsKey('albumArtist'), none['albumArtist']], [true, null]);
+    });
+  });
 }

@@ -7,6 +7,7 @@ import '../objects/discovery_plugins.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import 'discover_badges.dart' show lookupChunks;
+import 'discover_jobs.dart' show wireLanding;
 
 /// A non-2xx answer from a plug-in route, or a call that never got one.
 ///
@@ -137,14 +138,23 @@ class DiscoveryPluginsApi {
   /// Refused with 400 (a scope's field missing), 403 (jobs gate, "Uploading
   /// Disabled"), 404 (plug-in missing or unavailable), 409 (another
   /// account's live job for the key) or 429 (the queue cap).
+  ///
+  /// [landing] is a folder job's (scope folder only — the route refuses it
+  /// on any other): none as on the connected server, `{vpath, path}` into a
+  /// folder, `{tags: true}` by the layout ([wireLanding] shapes it). A
+  /// `{vpath, path}` landing reads nothing of the destination, so the
+  /// server never answers it `destination_changed`.
   Future<StartedJob> startJob(Map<String, dynamic> recommendation,
       {String plugin = kCopyPlugin,
       String? scope,
-      ShownPlace? destination}) async {
+      ShownPlace? destination,
+      Map<String, dynamic>? landing}) async {
     final location = '/api/v1/discovery/plugins/$plugin/jobs';
+    final land = scope == kScopeFolder ? wireLanding(landing) : null;
     final body = <String, dynamic>{
       'recommendation': recommendation,
       if (scope != null && scope != kScopeSong) 'scope': scope,
+      'landing': ?land,
       if (destination != null) 'destination': destination.toJson(),
     };
     dynamic answer;
