@@ -33,6 +33,18 @@ subprojects {
             }
         }
     }
+    // Media3 1.11 requires whatever depends on it to compile against API 36,
+    // and just_audio's module declares 35. AGP only checks that for release
+    // variants (checkReleaseAarMetadata), so a debug build passes and the
+    // tagged release build is the one that fails. Compile just_audio against
+    // the app's own level instead. The hook has to be registered here, ahead
+    // of evaluationDependsOn below: that line evaluates the module, and this
+    // must already be waiting to run before AGP reads the value.
+    afterEvaluate { project ->
+        if (project.name == 'just_audio') {
+            project.android.compileSdk = rootProject.project(':app').android.compileSdk
+        }
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
