@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "Impossible d’ouvrir ce lien",
   "discoverToastSaved": "Enregistré · les copies vont dans {path}",
   "discoverDestTitle": "Où arrivent les copies",
-  "discoverDestSub": "Un réglage pour votre compte · chaque copie l’utilise",
   "discoverDestTagDefault": "par défaut de la bibliothèque",
   "discoverDestTagYours": "le vôtre",
   "discoverDestLandsAt": "{title} arrive dans",

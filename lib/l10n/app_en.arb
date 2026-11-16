@@ -5437,10 +5437,6 @@
   "@discoverDestTitle": {
     "description": "Title of the destination picker sheet (where on the user's server copies from connected servers are put)."
   },
-  "discoverDestSub": "One setting for your account · every copy uses it",
-  "@discoverDestSub": {
-    "description": "Destination picker subtitle: the destination is one setting per account, shared by every copy."
-  },
   "discoverDestTagDefault": "library default",
   "@discoverDestTagDefault": {
     "description": "Destination picker tag beside the title: the library's own default destination is in force."

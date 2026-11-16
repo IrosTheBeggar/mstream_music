@@ -129,10 +129,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.text('Where copies land'), findsOneWidget);
         expect(find.text('library default'), findsOneWidget);
-        expect(
-          find.text('One setting for your account · every copy uses it'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('One setting'), findsNothing);
         // The picker reads the destination afresh (after Discover's visit
         // and the Keep card's open).
         expect(k.fake.count('GET', _dest), 3);

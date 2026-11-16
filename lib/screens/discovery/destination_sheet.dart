@@ -563,15 +563,6 @@ class _DestinationSheetState extends State<DestinationSheet> {
                     ),
                 ],
               ),
-              if (!compact)
-                Text(
-                  l.discoverDestSub,
-                  style: TextStyle(
-                    color: VelvetColors.textSecondary,
-                    fontSize: 13,
-                    height: 18 / 13,
-                  ),
-                ),
             ],
           ),
         ),

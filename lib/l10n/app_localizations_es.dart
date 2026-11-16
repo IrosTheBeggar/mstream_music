@@ -4939,10 +4939,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverDestTitle => 'Dónde se guardan las copias';
 
   @override
-  String get discoverDestSub =>
-      'Un ajuste para tu cuenta · lo usan todas las copias';
-
-  @override
   String get discoverDestTagDefault => 'predeterminado de la biblioteca';
 
   @override

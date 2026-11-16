@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "Impossibile aprire il link",
   "discoverToastSaved": "Salvato · le copie finiscono in {path}",
   "discoverDestTitle": "Dove finiscono le copie",
-  "discoverDestSub": "Un’unica impostazione per il tuo account · la usano tutte le copie",
   "discoverDestTagDefault": "predefinito della libreria",
   "discoverDestTagYours": "tuo",
   "discoverDestLandsAt": "{title} finisce in",

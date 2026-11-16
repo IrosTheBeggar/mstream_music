@@ -5053,10 +5053,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverDestTitle => 'Куда попадают копии';
 
   @override
-  String get discoverDestSub =>
-      'Одна настройка для вашей учётной записи · её используют все копии';
-
-  @override
   String get discoverDestTagDefault => 'по умолчанию для библиотеки';
 
   @override

@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "Der Link ließ sich nicht öffnen",
   "discoverToastSaved": "Gespeichert · Kopien landen in {path}",
   "discoverDestTitle": "Wo Kopien landen",
-  "discoverDestSub": "Eine Einstellung für dein Konto · jede Kopie nutzt sie",
   "discoverDestTagDefault": "Bibliotheksstandard",
   "discoverDestTagYours": "deine",
   "discoverDestLandsAt": "{title} landet in",

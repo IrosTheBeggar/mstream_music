@@ -4928,10 +4928,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get discoverDestTitle => 'Para onde vão as cópias';
 
   @override
-  String get discoverDestSub =>
-      'Uma configuração para sua conta · todas as cópias a usam';
-
-  @override
   String get discoverDestTagDefault => 'padrão da biblioteca';
 
   @override

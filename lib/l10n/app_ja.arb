@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "そのリンクを開けませんでした",
   "discoverToastSaved": "保存しました · コピーは {path} に保存されます",
   "discoverDestTitle": "コピーの保存先",
-  "discoverDestSub": "アカウント共通の設定 · すべてのコピーに使われます",
   "discoverDestTagDefault": "ライブラリの既定",
   "discoverDestTagYours": "あなたの設定",
   "discoverDestLandsAt": "{title} の保存先",

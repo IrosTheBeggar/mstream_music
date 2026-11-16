@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "Não foi possível abrir esse link",
   "discoverToastSaved": "Salvo · as cópias vão para {path}",
   "discoverDestTitle": "Para onde vão as cópias",
-  "discoverDestSub": "Uma configuração para sua conta · todas as cópias a usam",
   "discoverDestTagDefault": "padrão da biblioteca",
   "discoverDestTagYours": "seu",
   "discoverDestLandsAt": "{title} vai para",

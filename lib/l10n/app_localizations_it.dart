@@ -4926,10 +4926,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get discoverDestTitle => 'Dove finiscono le copie';
 
   @override
-  String get discoverDestSub =>
-      'Un’unica impostazione per il tuo account · la usano tutte le copie';
-
-  @override
   String get discoverDestTagDefault => 'predefinito della libreria';
 
   @override

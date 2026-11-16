@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "Не удалось открыть ссылку",
   "discoverToastSaved": "Сохранено · копии попадут в {path}",
   "discoverDestTitle": "Куда попадают копии",
-  "discoverDestSub": "Одна настройка для вашей учётной записи · её используют все копии",
   "discoverDestTagDefault": "по умолчанию для библиотеки",
   "discoverDestTagYours": "ваш",
   "discoverDestLandsAt": "«{title}» попадёт в",

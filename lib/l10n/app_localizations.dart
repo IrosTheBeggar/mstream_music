@@ -7854,12 +7854,6 @@ abstract class AppLocalizations {
   /// **'Where copies land'**
   String get discoverDestTitle;
 
-  /// Destination picker subtitle: the destination is one setting per account, shared by every copy.
-  ///
-  /// In en, this message translates to:
-  /// **'One setting for your account · every copy uses it'**
-  String get discoverDestSub;
-
   /// Destination picker tag beside the title: the library's own default destination is in force.
   ///
   /// In en, this message translates to:

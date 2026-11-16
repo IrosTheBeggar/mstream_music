@@ -5043,10 +5043,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverDestTitle => 'Gdzie trafiają kopie';
 
   @override
-  String get discoverDestSub =>
-      'Jedno ustawienie dla twojego konta · używa go każda kopia';
-
-  @override
   String get discoverDestTagDefault => 'domyślne biblioteki';
 
   @override

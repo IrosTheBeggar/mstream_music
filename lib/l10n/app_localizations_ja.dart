@@ -4712,9 +4712,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverDestTitle => 'コピーの保存先';
 
   @override
-  String get discoverDestSub => 'アカウント共通の設定 · すべてのコピーに使われます';
-
-  @override
   String get discoverDestTagDefault => 'ライブラリの既定';
 
   @override

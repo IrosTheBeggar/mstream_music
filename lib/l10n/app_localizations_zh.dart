@@ -4648,9 +4648,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverDestTitle => '副本存放位置';
 
   @override
-  String get discoverDestSub => '账户的统一设置 · 所有副本都使用它';
-
-  @override
   String get discoverDestTagDefault => '曲库默认';
 
   @override

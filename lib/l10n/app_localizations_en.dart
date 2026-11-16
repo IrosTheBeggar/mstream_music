@@ -4888,10 +4888,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverDestTitle => 'Where copies land';
 
   @override
-  String get discoverDestSub =>
-      'One setting for your account · every copy uses it';
-
-  @override
   String get discoverDestTagDefault => 'library default';
 
   @override

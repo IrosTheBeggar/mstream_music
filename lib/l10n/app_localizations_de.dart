@@ -4943,10 +4943,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverDestTitle => 'Wo Kopien landen';
 
   @override
-  String get discoverDestSub =>
-      'Eine Einstellung für dein Konto · jede Kopie nutzt sie';
-
-  @override
   String get discoverDestTagDefault => 'Bibliotheksstandard';
 
   @override

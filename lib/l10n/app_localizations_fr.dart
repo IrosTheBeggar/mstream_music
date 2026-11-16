@@ -4948,10 +4948,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverDestTitle => 'Où arrivent les copies';
 
   @override
-  String get discoverDestSub =>
-      'Un réglage pour votre compte · chaque copie l’utilise';
-
-  @override
   String get discoverDestTagDefault => 'par défaut de la bibliothèque';
 
   @override

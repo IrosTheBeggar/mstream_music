@@ -1289,7 +1289,6 @@
   "discoverToastLinkFailed": "无法打开该链接",
   "discoverToastSaved": "已保存 · 副本将存放到 {path}",
   "discoverDestTitle": "副本存放位置",
-  "discoverDestSub": "账户的统一设置 · 所有副本都使用它",
   "discoverDestTagDefault": "曲库默认",
   "discoverDestTagYours": "你的",
   "discoverDestLandsAt": "{title} 将存放到",
