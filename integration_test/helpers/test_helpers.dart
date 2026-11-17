@@ -16,9 +16,11 @@
 // test to serve audio bytes for /media/*).
 //
 // Handler return values: null → 404; List<int> → returned as
-// audio/wav bytes (used for media); anything else → JSON-encoded. A
-// Future of any of these is awaited first, so a handler can read the
-// request body or hold its response to stage a race.
+// audio/wav bytes (used for media); anything else → JSON-encoded, with a
+// 200 unless the handler set req.response.statusCode first (an error
+// answer, such as a 400 with its `error` message). A Future of any of
+// these is awaited first, so a handler can read the request body or hold
+// its response to stage a race.
 //
 // seedServer writes a single-server servers.json so MStreamApp's
 // initState loads it on startup, skipping the welcome screen.
@@ -138,7 +140,8 @@ class MockServer {
           req.response.add(body);
         }
       } else {
-        req.response.statusCode = 200;
+        // The status stays the handler's: 200, dart:io's default, unless it
+        // set another before returning its body.
         req.response.headers.contentType = ContentType.json;
         req.response.write(jsonEncode(body));
       }

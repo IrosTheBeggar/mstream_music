@@ -55,6 +55,69 @@ void main() {
       expect(got.map((c) => c.song['filepath']), ['a', 'c']);
       expect(got.map((c) => c.similarity), [0.9, 0.7]);
     });
+
+    // mStream #1108: a body that carried Less like negatives gets an echo
+    // whose `avoided` flags the songs like one of them, aligned with `songs`.
+    test('the avoided flags of an aligned echo ride on their songs', () {
+      final got = AudioPlayerHandler.scoredSongs({
+        'songs': [song('a'), song('b'), song('c')],
+        'sonic': {'similarities': [0.9, 0.8, 0.7]},
+        'lessLike': {
+          'used': 1,
+          'ignored': 0,
+          'threshold': 0.8,
+          'avoided': [false, true, false],
+        },
+      });
+      expect(got.map((c) => c.avoided), [false, true, false]);
+    });
+
+    test('no echo — a server that took no negatives — is all clean', () {
+      final got = AudioPlayerHandler.scoredSongs({
+        'songs': [song('a'), song('b')],
+      });
+      expect(got.map((c) => c.avoided), [false, false]);
+    });
+
+    test('a short avoided list leaves the songs past its end clean', () {
+      final got = AudioPlayerHandler.scoredSongs({
+        'songs': [song('a'), song('b'), song('c')],
+        'lessLike': {
+          'avoided': [true],
+        },
+      });
+      expect(got.map((c) => c.avoided), [true, false, false]);
+    });
+
+    test('a junk echo or junk entries count as clean, not a crash', () {
+      for (final echo in [
+        'junk',
+        {'avoided': 'junk'},
+        {'avoided': null},
+        {
+          'avoided': [1, 'true', null],
+        },
+      ]) {
+        final got = AudioPlayerHandler.scoredSongs({
+          'songs': [song('a'), song('b'), song('c')],
+          'lessLike': echo,
+        });
+        expect(got.map((c) => c.avoided), [false, false, false],
+            reason: '$echo');
+      }
+    });
+
+    test('a non-object row ahead of an avoided song: the flag is read by the '
+        'song\'s own index in the answer, not its place in the output', () {
+      final got = AudioPlayerHandler.scoredSongs({
+        'songs': [song('a'), 'junk', song('c')],
+        'lessLike': {
+          'avoided': [false, false, true],
+        },
+      });
+      expect(got.map((c) => c.song['filepath']), ['a', 'c']);
+      expect(got.map((c) => c.avoided), [false, true]);
+    });
   });
 
   group('AudioPlayerHandler.bestBySimilarity', () {
@@ -96,6 +159,61 @@ void main() {
       final copy = List.of(items);
       AudioPlayerHandler.bestBySimilarity(items, (i) => i.$2, 2);
       expect(items, copy);
+    });
+
+    // A merge across servers: a song a server flagged as like a Less like
+    // row comes after every clean one, as it does in that server's answer.
+    group('with avoided songs', () {
+      final mixed = [
+        ('clean-low', 0.40, false),
+        ('avoided-high', 0.95, true),
+        ('clean-high', 0.70, false),
+        ('avoided-low', 0.50, true),
+      ];
+
+      test('every clean song ranks before every avoided one, then by '
+          'similarity', () {
+        final got = AudioPlayerHandler.bestBySimilarity(
+            mixed, (i) => i.$2, 4,
+            avoided: (i) => i.$3);
+        expect(got.map((i) => i.$1),
+            ['clean-high', 'clean-low', 'avoided-high', 'avoided-low']);
+      });
+
+      test('an avoided song fills a batch only when the clean ones run out',
+          () {
+        expect(
+            AudioPlayerHandler.bestBySimilarity(mixed, (i) => i.$2, 2,
+                    avoided: (i) => i.$3)
+                .map((i) => i.$1),
+            ['clean-high', 'clean-low']);
+        expect(
+            AudioPlayerHandler.bestBySimilarity(mixed, (i) => i.$2, 3,
+                    avoided: (i) => i.$3)
+                .map((i) => i.$1),
+            ['clean-high', 'clean-low', 'avoided-high']);
+      });
+
+      test('ties keep their order on either side of the line', () {
+        final tied = [
+          ('a1', 0.9, true),
+          ('c1', 0.5, false),
+          ('a2', 0.9, true),
+          ('c2', 0.5, false),
+        ];
+        expect(
+            AudioPlayerHandler.bestBySimilarity(tied, (i) => i.$2, 4,
+                    avoided: (i) => i.$3)
+                .map((i) => i.$1),
+            ['c1', 'c2', 'a1', 'a2']);
+      });
+
+      test('without the avoided key the ranking is by similarity alone', () {
+        expect(
+            AudioPlayerHandler.bestBySimilarity(mixed, (i) => i.$2, 4)
+                .map((i) => i.$1),
+            ['avoided-high', 'clean-high', 'avoided-low', 'clean-low']);
+      });
     });
   });
 }

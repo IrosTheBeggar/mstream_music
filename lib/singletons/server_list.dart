@@ -371,6 +371,7 @@ class ServerManager {
       final bool? prevP2pAvailable = server.p2pAvailable;
       final int? prevFedInbox = server.federationInbox;
       final int? prevStats = server.statsVersion;
+      final int? prevAutoDj = server.autoDjGeneration;
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
       final bool? prevMoodFilters = server.moodFiltersAvailable;
@@ -443,6 +444,9 @@ class ServerManager {
           server.noMkdir != prevNoMkdir ||
           !sameAudioFormats(server.supportedAudioFormats, prevFormats) ||
           !setEquals(server.autoDJPaths.keys.toSet(), prevLibraries) ||
+          // The Auto DJ screen's Learn from skips row and the Seeds page's
+          // Less like card follow it, and they redraw on capabilityChanges.
+          server.autoDjGeneration != prevAutoDj ||
           server.statsVersion != prevStats) {
         unawaited(writeServerFile());
         _capabilities.add(server);
@@ -569,6 +573,13 @@ class ServerManager {
     // Stats API v2 (mStream 6.27+): an integer generation, absent before.
     server.statsVersion =
         features is Map && features['stats'] is int ? features['stats'] as int : null;
+    // The Auto DJ picker's generation (mStream #1108), an integer like
+    // `stats`: from 1 it takes the DJ's negatives. Server-wide, so under
+    // `features` here (top-level on ping). A refresh without it — a server
+    // rolled back — turns them off again.
+    server.autoDjGeneration = features is Map && features['autoDj'] is int
+        ? features['autoDj'] as int
+        : null;
     // The Discover page (an integer generation too — see Server) and the
     // plug-in flag; both server-wide, so under `features` here.
     server.discoveryTasteAvailable =
@@ -635,6 +646,10 @@ class ServerManager {
         res['federationInbox'] is int ? res['federationInbox'] as int : null;
     server.p2pAvailable = res.containsKey('discoveryP2p');
     server.statsVersion = res['stats'] is int ? res['stats'] as int : null;
+    // Flat here, listed by hand beside `stats` (mStream src/api/playlist.js).
+    // Ping carries no readiness, so a server folded on this path still gets
+    // no negatives: Server.lessLikeUsable wants discoveryReady.
+    server.autoDjGeneration = res['autoDj'] is int ? res['autoDj'] as int : null;
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     // Ping lists its capability keys by hand (mStream src/api/playlist.js),
     // and carries `discoveryTaste` beside `discoveryPlugins` from the build
@@ -2712,6 +2727,10 @@ class ServerManager {
     server.noMkdir = null;
     server.supportedAudioFormats = null;
     server.statsVersion = null; // its plays post to the parent, whose flag governs
+    // autoDjGeneration is left as reported, like the raw engine flags. The
+    // DJ's negatives ride random-songs and the embeddings route, which are
+    // both allowlisted, so a peer that hosts or joins the DJ takes them on
+    // its own answer. Pinned, no peer would ever get one.
     server.playlists.clear();
   }
 

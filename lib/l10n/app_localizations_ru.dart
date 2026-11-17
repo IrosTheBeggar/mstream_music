@@ -5394,12 +5394,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Выбрать';
 
   @override
-  String get autoDjMustMatch => 'Обязательно';
-
-  @override
-  String get autoDjPrefer => 'Предпочитать';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5519,6 +5513,77 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Недавние';
+
+  @override
+  String get autoDjFilters => 'Фильтры';
+
+  @override
+  String get autoDjMatch => 'Сочетаемость';
+
+  @override
+  String get autoDjLearnFromSkips => 'Учитывать пропуски';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Если пропустить трек, похожие треки не будут выбираться';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Нужна новая версия сервера';
+
+  @override
+  String get autoDjSeeds => 'Исходные треки';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Треки регулярно сменяются. Закрепите трек, чтобы он остался.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Теперь все треки закреплены. Новые треки не будут добавляться.';
+
+  @override
+  String get autoDjMoreLike => 'Больше похожих';
+
+  @override
+  String get autoDjLessLike => 'Меньше похожих';
+
+  @override
+  String get autoDjAddSong => 'Добавить трек';
+
+  @override
+  String get autoDjUpNext => 'Далее';
+
+  @override
+  String get autoDjMoreLikeThis => 'Больше похожих';
+
+  @override
+  String get autoDjLessLikeThis => 'Меньше похожих';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Закрепить «$title»';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Действия для «$title»';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Степень сходства звучания';
+
+  @override
+  String get autoDjSearchSongs => 'Поиск треков';
+
+  @override
+  String get autoDjSeedMode => 'Дрейфовать или держаться рядом';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Удалять закреплённые треки при очистке очереди';
+
+  @override
+  String get autoDjSkipped => 'Пропущенные';
 
   @override
   String get browseLoadFailed =>

@@ -444,6 +444,16 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   set duration(Duration? value) => _duration = value;
   @override
   int? get currentIndex => _index < 0 ? null : _index;
+  // [nextIndex] as seekToNext asks it (onComplete false), without its shuffle
+  // draw: an explicit Next advances even under repeat-one, picks another row
+  // at random under shuffle, and wraps only under repeat-all. A one-row list
+  // has no other row to move to.
+  @override
+  bool get hasNext =>
+      _items.isNotEmpty &&
+      ((_shuffle && _items.length > 1) ||
+          _index + 1 < _items.length ||
+          (_repeat == BackendRepeat.all && _items.length > 1));
   @override
   BackendProcessingState get processingState => _state;
 

@@ -20,7 +20,7 @@ import 'media.dart';
 import '../util/decode_json.dart';
 import '../util/album_songs_body.dart';
 import '../util/media_format.dart';
-import '../util/seed_vector.dart';
+import '../util/auto_dj_wire.dart' show EmbeddingsReading, readEmbeddingsAnswer;
 import '../util/server_version.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
@@ -1370,9 +1370,29 @@ class ApiManager {
   /// Works for a federated peer too: the route is on the federation
   /// allowlist (mStream #946), and [Server.apiUri] / [Server.authToken] put
   /// the request on the parent's proxy or the peer's own tunnel.
+  ///
+  /// [readEmbeddings] without what the route said about each path: only the
+  /// vectors that came back. notAnalyzed tracks come back with a null
+  /// embedding, a normal transient state while the worker catches up, not a
+  /// failure, and a payload that isn't exactly dim floats is skipped.
   Future<({String modelId, int dim, List<Float32List> vectors})?>
-      fetchEmbeddings(Server server, List<String> filePaths) async {
-    if (filePaths.isEmpty) return null;
+      fetchEmbeddings(Server server, List<String> filePaths) async =>
+          (await readEmbeddings(server, filePaths)).found;
+
+  /// The embeddings route asked about [filePaths] on [server] (at most
+  /// eight: the route caps at 8 to match the sonic seed cap, so the rest are
+  /// left out rather than the whole request 400 on a longer anchor), and
+  /// what it said about each one ([readEmbeddingsAnswer]): its vector, not
+  /// analysed yet, gone (a path asked alone), or nothing known. Nothing is
+  /// known when nothing answered within 15 s or the connection dropped, and
+  /// from an answer about the server rather than the song: discovery off, a
+  /// build without the route, any other status. So the Auto DJ can tell a
+  /// seed the server can't use from a server that just didn't answer, and
+  /// drop only the first. Never throws.
+  Future<EmbeddingsReading> readEmbeddings(
+      Server server, List<String> filePaths) async {
+    final asked = filePaths.take(8).toList();
+    if (asked.isEmpty) return readEmbeddingsAnswer(asked);
     try {
       final res = await _direct
           .post(
@@ -1381,41 +1401,17 @@ class ApiManager {
               'Content-Type': 'application/json',
               'x-access-token': server.authToken ?? '',
             },
-            // The route caps at 8 to match the sonic seed cap; trim here
-            // rather than let the whole request 400 on a longer anchor.
-            body: jsonEncode({'filePaths': filePaths.take(8).toList()}),
+            body: jsonEncode({'filePaths': asked}),
           )
           .timeout(const Duration(seconds: 15));
       if (res.statusCode > 299) {
         verboseLog('[dj] embeddings HTTP ${res.statusCode} on ${server.localname}');
-        return null;
       }
-      final decoded = jsonDecode(res.body);
-      if (decoded is! Map) return null;
-      final modelId = (decoded['model'] is Map)
-          ? decoded['model']['id']?.toString()
-          : null;
-      final dim = decoded['dim'];
-      if (modelId == null || dim is! int || dim <= 0) return null;
-
-      final vectors = <Float32List>[];
-      for (final t in (decoded['tracks'] as List? ?? const [])) {
-        if (t is! Map) continue;
-        final b64 = t['embedding'];
-        // notAnalyzed tracks come back with a null embedding — a normal
-        // transient state while the worker catches up, not a failure.
-        if (b64 is! String || b64.isEmpty) continue;
-        // Null for a payload that isn't exactly dim floats — a server
-        // answering with a different dim than it advertised is skipped.
-        final vec = decodeWireVector(b64, dim);
-        if (vec == null) continue;
-        vectors.add(vec);
-      }
-      if (vectors.isEmpty) return null;
-      return (modelId: modelId, dim: dim, vectors: vectors);
+      return readEmbeddingsAnswer(asked,
+          status: res.statusCode, body: res.body);
     } catch (e) {
       verboseLog('[dj] embeddings failed on ${server.localname}: $e');
-      return null;
+      return readEmbeddingsAnswer(asked);
     }
   }
 
@@ -1456,7 +1452,8 @@ class ApiManager {
     }
   }
 
-  /// Pick Auto DJ's opening track for a "Surprise me" start.
+  /// Pick Auto DJ's opening track for a "Surprise me" start, and for
+  /// Discover's random start, which opens an Auto DJ session the same way.
   ///
   /// Unlike [fetchRandomSong] this honours the Auto DJ library filters. The
   /// opener is part of the session, and handing back a track the user has
@@ -1530,9 +1527,10 @@ class ApiManager {
     }
   }
 
-  /// An unconstrained random track. Used by Discover and the song picker,
-  /// which are not Auto DJ sessions and must not inherit its filters — see
-  /// [fetchAutoDjSeed] for the one caller that should.
+  /// An unconstrained random track. Used by the song picker, which is no
+  /// Auto DJ session and must not inherit its filters — see
+  /// [fetchAutoDjSeed] for the openers that should (Auto DJ's Random start,
+  /// Discover's random start).
   Future<DisplayItem?> fetchRandomSong(Server server) async {
     final ignoreVPaths = <String>[
       for (final e in server.autoDJPaths.entries)

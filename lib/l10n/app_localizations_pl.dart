@@ -5386,12 +5386,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Wybierz';
 
   @override
-  String get autoDjMustMatch => 'Musi pasować';
-
-  @override
-  String get autoDjPrefer => 'Preferuj';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5511,6 +5505,77 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Ostatnie';
+
+  @override
+  String get autoDjFilters => 'Filtry';
+
+  @override
+  String get autoDjMatch => 'Dopasowanie';
+
+  @override
+  String get autoDjLearnFromSkips => 'Ucz się na pominięciach';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Pominięcie utworu sprawi, że podobne utwory nie będą wybierane';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Wymaga nowszego serwera';
+
+  @override
+  String get autoDjSeeds => 'Utwory bazowe';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Utwory są regularnie wymieniane. Przypnij utwór, aby go zachować.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Wszystkie utwory są teraz przypięte. Nowe utwory nie będą dodawane.';
+
+  @override
+  String get autoDjMoreLike => 'Więcej takich';
+
+  @override
+  String get autoDjLessLike => 'Mniej takich';
+
+  @override
+  String get autoDjAddSong => 'Dodaj utwór';
+
+  @override
+  String get autoDjUpNext => 'Następne';
+
+  @override
+  String get autoDjMoreLikeThis => 'Więcej takich';
+
+  @override
+  String get autoDjLessLikeThis => 'Mniej takich';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Przypnij $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Opcje dla $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Stopień podobieństwa brzmienia';
+
+  @override
+  String get autoDjSearchSongs => 'Szukaj utworów';
+
+  @override
+  String get autoDjSeedMode => 'Dryfuj lub trzymaj się blisko';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Usuń przypięte utwory po wyczyszczeniu kolejki';
+
+  @override
+  String get autoDjSkipped => 'Pominięte';
 
   @override
   String get browseLoadFailed =>

@@ -8,8 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../media/audio_stuff.dart';
 import '../objects/play_event.dart';
-import '../util/media_item_credits.dart';
-import '../util/stream_url.dart';
+import '../util/track_facts.dart';
 import '../util/write_chain.dart';
 import 'log_manager.dart';
 import 'media.dart';
@@ -494,27 +493,10 @@ class PlayTracker {
     return AudioPlayerHandler.trackKey(item);
   }
 
-  /// Copy what an event needs out of a queue item. The peer id comes from
-  /// the server record: a federated server's own id on its parent.
-  static TrackFacts factsFor(MediaItem item) {
-    final extras = item.extras ?? const <String, dynamic>{};
-    final server = extras['server'] as String? ?? '';
-    final artUrl = extras['artUrl'];
-    return TrackFacts(
-      server: server,
-      peerId: server.isEmpty
-          ? null
-          : ServerManager().byLocalname(server)?.federationPeerId,
-      path: extras['path'] as String? ?? item.id,
-      hash: extras['hash'] as String?,
-      title: item.title.isEmpty ? null : item.title,
-      // The primary artist, not the "A feat. B" credit the item displays:
-      // the phone's Top artists and the server's snapshot fallback both group
-      // plays by this name.
-      artist: primaryArtistOf(item),
-      album: item.album,
-      artFile: artUrl is String ? albumArtFileFromUrl(artUrl) : null,
-      durationMs: item.duration?.inMilliseconds,
-    );
-  }
+  /// Copy what an event needs out of a queue item ([trackFactsFor]). The
+  /// peer id comes from the server record: a federated server's own id on
+  /// its parent, which the sync layer routes the play by.
+  static TrackFacts factsFor(MediaItem item) => trackFactsFor(item,
+      peerIdOf: (server) =>
+          ServerManager().byLocalname(server)?.federationPeerId);
 }
