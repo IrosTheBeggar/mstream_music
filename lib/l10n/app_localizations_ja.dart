@@ -5017,12 +5017,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjFirstSongChoose => '選ぶ';
 
   @override
-  String get autoDjMustMatch => '必須条件';
-
-  @override
-  String get autoDjPrefer => '優先';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5142,6 +5136,73 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => '最近再生した曲';
+
+  @override
+  String get autoDjFilters => 'フィルター';
+
+  @override
+  String get autoDjMatch => 'マッチング';
+
+  @override
+  String get autoDjLearnFromSkips => 'スキップから学習';
+
+  @override
+  String get autoDjLearnFromSkipsHint => 'スキップした曲に似た曲は選ばれなくなります';
+
+  @override
+  String get autoDjNeedsNewerServer => 'サーバーの更新が必要';
+
+  @override
+  String get autoDjSeeds => 'もとにする曲';
+
+  @override
+  String get autoDjSeedsDriftHint => '曲は定期的に入れ替わります。曲を固定すると削除されなくなります。';
+
+  @override
+  String get autoDjSeedsStayCloseHint => 'すべての曲が固定されました。新しい曲は追加されません。';
+
+  @override
+  String get autoDjMoreLike => '増やしたい曲';
+
+  @override
+  String get autoDjLessLike => '減らしたい曲';
+
+  @override
+  String get autoDjAddSong => '曲を追加';
+
+  @override
+  String get autoDjUpNext => '次に再生';
+
+  @override
+  String get autoDjMoreLikeThis => '似た曲を増やす';
+
+  @override
+  String get autoDjLessLikeThis => '似た曲を減らす';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return '$title を固定';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return '$title のオプション';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'サウンドの一致度';
+
+  @override
+  String get autoDjSearchSongs => '曲を検索';
+
+  @override
+  String get autoDjSeedMode => '流れに任せるか近くに留まるか';
+
+  @override
+  String get autoDjClearPinsOnQueueClear => 'キューのクリア時に固定した曲を削除';
+
+  @override
+  String get autoDjSkipped => 'スキップした曲';
 
   @override
   String get browseLoadFailed =>

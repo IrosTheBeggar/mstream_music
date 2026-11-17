@@ -5,7 +5,8 @@
 //
 // Only the paths that never reach MediaManager().audioHandler are driven
 // here (a VM test has no audio service): Sonic's and Play from's Done, and
-// Rating's and Genres' Done after an edit, poke the handler.
+// Rating's and Genres' Done after an edit, poke the handler. Sonic's Done is
+// driven from the screen in auto_dj_screen_test.dart, on a fake handler.
 //
 // The setters save auto_dj.json through path_provider — real file IO, which
 // never finishes on the fake clock — so a tap that saves runs under
@@ -83,7 +84,8 @@ void main() {
       ..keywordFilterWords = []
       ..sonicSimilarityEnabled = true
       ..sonicMinSimilarity = 0.55
-      ..sonicAnchorMode = SonicAnchorMode.rolling;
+      ..sonicAnchorMode = SonicAnchorMode.rolling
+      ..learnFromSkips = false;
   });
 
   /// A page whose button opens [sheet] in the Auto DJ chrome. A sheet
@@ -403,23 +405,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(value(tester), 'Off');
       expect(tester.widget<Slider>(slider).onChanged, isNull);
-      expect(
-          tester
-              .widget<SegmentedButton<SonicAnchorMode>>(
-                  find.byKey(const ValueKey('auto-dj-sonic-anchor')))
-              .onSelectionChanged,
-          isNull);
+    });
+
+    testWidgets('no Drift | Stay close: the Seeds page has it',
+        (tester) async {
+      await open(tester, (_) => const SonicSheet());
+      expect(find.byType(SegmentedButton<SonicAnchorMode>), findsNothing);
+      expect(find.text('Stay close'), findsNothing);
     });
 
     testWidgets('closing discards the draft', (tester) async {
       await open(tester, (_) => const SonicSheet());
-      await tester.tap(find.text('Stay close'));
+      await tester.drag(slider, const Offset(2000, 0));
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       await close(tester);
       expect(mgr.sonicSimilarityEnabled, isTrue);
       expect(mgr.sonicMinSimilarity, 0.55);
-      expect(mgr.sonicAnchorMode, SonicAnchorMode.rolling);
     });
   });
 

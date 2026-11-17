@@ -501,6 +501,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   /// through the setAutoDJ action.
   Future<void> _restoreAutoDj() async {
     await AutoDJManager().load();
+    // The seed rows auto_dj.json kept come back whether or not the DJ does:
+    // the pins in Drift, every row the Seeds page showed in Stay close.
+    await MediaManager().audioHandler.loadPinnedSeeds();
     final name = AutoDJManager().enabledServer;
     if (name == null) return;
     final matches =

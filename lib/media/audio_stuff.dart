@@ -10,6 +10,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 import 'package:wifi_lock_shim/wifi_lock_shim.dart';
 import 'playback_backend.dart';
 import 'dynamics_equalizer.dart';
@@ -27,11 +28,13 @@ import '../native/iroh_tunnel.dart';
 import '../objects/server.dart';
 import '../objects/metadata.dart';
 import '../objects/mood_filter.dart';
+import '../objects/play_event.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/downloads.dart';
 import '../singletons/log_manager.dart';
+import '../singletons/play_tracker.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_capabilities.dart';
@@ -47,6 +50,11 @@ import '../util/session_model_cache.dart';
 import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
+import '../util/auto_dj_play_from.dart';
+import '../util/auto_dj_seeds.dart';
+import '../util/auto_dj_skips.dart';
+import '../util/auto_dj_wire.dart';
+import '../util/track_facts.dart';
 
 /// What the queue's end does: stop (the normal end, or the user's intent is
 /// pause); park waiting for a deferred Auto DJ pick while the tunnel is down;
@@ -91,6 +99,23 @@ typedef DirectAuthVerdict = ({
   DirectAuthAction action,
   DirectAccessOutcome? outcome,
   StreamProbe probe
+});
+
+/// A quick skip as [AudioPlayerHandler.skipToNext] judged it, before its
+/// seek: the song's seed [key], the lane ([epoch]) it happened in, whether
+/// the Next moved [forward] through the queue, whether the skip was
+/// [learned] (it changed the negatives a pick sends), the fetch of its
+/// vector ([vectors]) when it joined Less like in a session across several
+/// servers, and whether a vector cached for it was already going to another
+/// server the next pick asks before the skip ([vectorWasSent]), so that its
+/// landing again teaches that server nothing.
+typedef _QuickSkip = ({
+  String key,
+  int epoch,
+  bool forward,
+  bool learned,
+  Future<void>? vectors,
+  bool vectorWasSent,
 });
 
 /// Whether a direct peer that answered 429 has room for the track after all:
@@ -215,24 +240,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   // queue-end retriggers autoDJ, and each would re-toast otherwise.
   bool _autoDJAuthWarned = false;
 
-  // Session-only: rolling sonic anchor — the last few DJ-picked filepaths,
-  // sent as random-songs' `similarTo` seeds so the server centroids the
-  // session's own recent sound (webapp auto-dj.js parity). Reset alongside
-  // the ignoreList on every new-lane event (see _resetAutoDJSession).
-  List<String> _sonicHistory = const [];
-  // Which server each sonic-history path came from. A single-server session
-  // could assume autoDJServer, but a multi-server one draws picks from
-  // several — and a seed path only resolves on the server that holds it.
-  final Map<String, String> _sonicSeedOwners = {};
-  // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
-  // lazily locked on the session's first pick (explicit seed, else the
-  // playing track; same pattern as [_camelotAnchor]) and reused for every
-  // subsequent similarTo — with the server holding it, since a session
-  // across several servers may pin a track from any of them (see
-  // [sonicPin]). Cleared with the history on new-lane events, and dropped
-  // when its server reports it unanalyzed/unknown, or gives no vector for
-  // it, so a dead pin can't wedge the whole session.
-  ({String path, String server})? _sonicLock;
   /// Why this session dropped sonic similarity and is picking without it, or
   /// null while it hasn't. The Auto DJ screen shows it on the Sonic similarity
   /// row, in place of the toast that used to say so. Session state: a new
@@ -244,6 +251,360 @@ class AudioPlayerHandler extends BaseAudioHandler
   // under the old ones and is told "nothing within the range" was asking about
   // a threshold that is no longer set, so its verdict must not stand.
   int _sonicGen = 0;
+
+  // ── Auto DJ seeds (design E) ───────────────────────────────────────────
+  //
+  // The session's More like and Less like lists: what the Seeds page shows
+  // and edits, what a pick sends as its positive and negative sonic seeds,
+  // and what quick skips teach. The rules are the pure model's
+  // (util/auto_dj_seeds.dart); this block only holds the sets, keeps their
+  // clocks and tells the page. The page's own surface (seedsStream, seeds,
+  // the edits, setSeedMode, seedServers) sits with the other public Auto DJ
+  // getters, next to multiServerSitOut.
+
+  // The LIVE set: the one the engine reads and feeds. Every new lane in
+  // Drift starts it over except for what the user keeps
+  // ([AutoDjSeeds.carryOver]): the rows they pinned, in both lists, and the
+  // unpinned Less like rows with their clocks; the DJ's own unpinned picks
+  // go. In Stay close every row it shows stays. Before the first arm it
+  // stands at AutoDjSeeds.empty, with the rows a launch took back in
+  // ([loadPinnedSeeds]).
+  AutoDjSeeds _seeds = AutoDjSeeds.empty;
+
+  // The rows the page adds while the DJ is off, or on before its lane's
+  // first pick ([_lanePicked]), held aside so the resets at Start
+  // (setAutoDJ's fresh session, then the seeded start's own clear) and a
+  // Play from here can't wipe them. The lane's first pick merges them into
+  // [_seeds] and lets this go. Until then the page shows the two merged
+  // ([seeds]) and new rows land here. Null while nothing is held.
+  AutoDjSeeds? _pendingSeeds;
+
+  // Whether this lane's first pick has run, and so taken in the rows held
+  // aside ([_pendingSeeds]). Every lane edge clears it: a queue clear keeps
+  // the DJ armed on a lane that has not picked yet, and the Start from the
+  // empty queue then clears once more, which would wipe a row added to the
+  // live set meanwhile. Set at the pick's merge.
+  bool _lanePicked = false;
+
+  // A whole-queue teardown is under way ([_guardedClear]: a clear, or the
+  // removal of the server the whole queue belonged to). Its reset opens the
+  // new lane at once, but the old rows stay in the queue until the player
+  // has stopped, and just_audio re-emits the playing index on every event
+  // meanwhile. A pick started in that window would be the new lane's first:
+  // its blend would take the row being thrown away into More like, and its
+  // answer would land in the emptied queue. So no pick starts until the
+  // teardown is done ([shouldTopUpAutoDJ], [_autoDJPick]).
+  bool _clearingQueue = false;
+
+  // The song this lane's start blended into More like (Drift's blend,
+  // [blendsOnLaneStart]), by its seed key ([seedKey]), while no server has
+  // judged it as a seed. Nothing checks that the DJ's server can seed from
+  // the song the user just put on (a new album still being scanned, a track
+  // the analyser can't read, one deleted since it was downloaded). So when a
+  // body that carried it is refused and no probe can say which row the
+  // server meant, it is the row taken out ([blendCulprit]), and the rows it
+  // joined keep the lane's sonic similarity. Null again once a body that
+  // carried it is taken, once a server refuses it ([_dropSeedCulprits]), and
+  // at every lane edge ([_resetAutoDJSession], [restoreAutoDJ]).
+  String? _laneBlendKey;
+
+  // The same song, by its seed key, for the whole lane: a server taking it
+  // as a seed changes nothing here. A quick skip of it, while it is the
+  // user's own row and More like holds it unpinned, takes it out of More
+  // like as a quick-skipped DJ pick leaves, and learns nothing from it
+  // ([quickSkipsBlend], [_judgeQuickSkip]). Null at every lane edge.
+  String? _laneBlendedSong;
+
+  // That song once the user quick-skipped it out of More like. The DJ never
+  // served it, so no ignoreList holds it, and it is no seed any more:
+  // nothing else would keep the next pick from bringing it straight back.
+  // So both pick routes pass over it for the rest of the lane
+  // ([isSkippedBlend], [fanOutRecentKeys]). Null at every lane edge.
+  TrackFacts? _laneSkippedBlend;
+
+  // Whether this Stay close lane has had something to stay close to: a More
+  // like row its requests can carry (the rows carried over from earlier
+  // lanes count: Stay close keeps every row it shows, their anchors
+  // included), or the one song it admitted to start ([stayCloseAdmission]).
+  // Until then a Stay close pick admits one song; after it nothing is
+  // added, so a row the user removes stays removed, and with every row gone
+  // the picks send no positives until the user adds a song, switches the
+  // mode or a new lane starts. One exception: a lane that has not admitted a
+  // song of its own ([_stayCloseAdmitted]) and whose last row it could carry
+  // a server then refused looks for its one song again ([_dropSeedCulprits],
+  // [stayCloseReleases]). Cleared at every lane edge
+  // ([_resetAutoDJSession], [restoreAutoDJ], the clearSonicSession action)
+  // and by a switch into Stay close.
+  bool _stayCloseAnchored = false;
+
+  // Whether this Stay close lane has taken in its one song ([stayCloseAdmit]).
+  // After it nothing more comes in, not even when a server refuses that
+  // song; before it, a refusal of the last row the lane could carry lets it
+  // look for its song again ([_dropSeedCulprits]). Cleared wherever
+  // [_stayCloseAnchored] is.
+  bool _stayCloseAdmitted = false;
+
+  // What the stored rows were at the last save ([pinnedSeedsSignature]):
+  // set once this run has taken the stored rows back in ([loadPinnedSeeds]),
+  // and null until then, when nothing is saved: the save hook runs the load
+  // first instead, once a server is known and the user has pinned a row
+  // ([_savePinnedSeeds]).
+  String? _pinnedSeedsSaved;
+
+  // The page's view of the seeds, re-sent after every change. A stream of its
+  // own, never customState: CarPlay re-pushes its modes on every customState
+  // event, and the seeds change on nearly every track.
+  final BehaviorSubject<AutoDjSeeds> _seedsSubject =
+      BehaviorSubject<AutoDjSeeds>.seeded(AutoDjSeeds.empty);
+
+  // Fires when the next unpinned Less like row runs out of time, so the page
+  // never lists an expired row. One timer for both sets, re-armed by
+  // [_publishSeeds], and none while the lists are frozen. A timer can sleep
+  // through a backgrounded app; the picks prune for themselves as well.
+  Timer? _seedExpiry;
+
+  // The minute tick while the DJ is on and a Less like row can run out: it
+  // drops the expired rows and tells the page only when one went. It backs
+  // up [_seedExpiry], whose one-shot wait runs on the monotonic clock while
+  // the rows' clocks are wall time, so a device that slept or had its clock
+  // set would otherwise list an expired row until the next pick.
+  Timer? _seedPruneTick;
+
+  // The key ([trackKey]) of the row the index listener last saw playing.
+  // just_audio re-emits the current index on every sequence and playback
+  // event, so a pick joins More like only when the playing row changes: a
+  // push on each re-emission would lift the playing pick above every row
+  // added after it.
+  String? _lastSeedPushKey;
+
+  // This lane's stamp on the DJ rows it queues (extras 'djLane'). Only a row
+  // of this lane joins More like when it starts playing. DJ rows restored
+  // from an earlier run, or left by an earlier lane, still say djPick; the
+  // old ring never took them either, since only this lane's own queueing
+  // fed it. New at every reset.
+  String _djLaneId = const Uuid().v4();
+
+  // The More like rows a server refused as seeds (gone from its library, or
+  // not analysed yet) that the page shows pinned: the user's own pins, and
+  // in Stay close every row, its anchor included ([AutoDjSeeds.culprits]).
+  // They stay listed, theirs to remove, but are out of every request for the
+  // rest of the lane. In Drift an engine row found that way is dropped
+  // instead ([_dropSeedCulprits]). Seed keys ([seedKey]). Cleared with the
+  // lane, by 'retrySonic' and a mode switch ([_retrySonicBookkeeping]) and
+  // by the clearSonicSession action, after which they get another try; a
+  // removed server's keys go with it.
+  final Set<String> _seedUnusable = {};
+
+  // The Less like vectors being fetched ([_ensureNegativeVectors]), by seed
+  // key, each with the lane it was asked for: one call per row at a time,
+  // however many edits and picks ask for it meanwhile. A fetch from an
+  // earlier lane never holds up this lane's, and its answer is thrown away.
+  final Map<String, ({int epoch, Future<void> done})> _negativeVectorFetches =
+      {};
+
+  // The model of the vector the last pick across several servers sent as
+  // its seed, which every server it asked answers in: a Less like row's
+  // cached vector reaches those servers only in that model
+  // ([AutoDjSeeds.negativesFor]). Lane state; null until such a pick runs.
+  String? _fanOutSeedModel;
+
+  /// A new, empty seed set in the stored mode: frozen in Stay close. Every
+  /// pending set is made here, so its frozen flag matches
+  /// [AutoDJManager.sonicAnchorMode] from the start; the live set takes the
+  /// stored mode at every lane edge ([_carriedSeeds]); [setSeedMode] keeps
+  /// both in step after that.
+  AutoDjSeeds _freshSeeds() => AutoDjSeeds.fresh(
+      frozen: AutoDJManager().sonicAnchorMode == SonicAnchorMode.locked,
+      now: DateTime.now());
+
+  /// The live set as a new lane starts it, in the stored mode
+  /// ([AutoDjSeeds.carryOver]). In Drift: the rows the user pinned and the
+  /// unpinned Less like rows (with their clocks) carried over, the DJ's own
+  /// unpinned picks gone. In Stay close: every row the page shows, as it
+  /// is, its clock still paused.
+  AutoDjSeeds _carriedSeeds() => _seeds.carryOver(DateTime.now(),
+      frozen: AutoDJManager().sonicAnchorMode == SonicAnchorMode.locked);
+
+  /// The seeds as the page shows them at [now]: the live set, merged with the
+  /// held-aside one while it is held ([AutoDjSeeds.merge]).
+  AutoDjSeeds _seedsView(DateTime now) {
+    final pending = _pendingSeeds;
+    return pending == null ? _seeds : _seeds.merge(pending, now: now);
+  }
+
+  /// Store the seed sets and tell the page, after any change to either: drop
+  /// the Less like rows whose time ran out (in Drift only, since Stay close
+  /// stops the clocks), emit the view, save the pins when they changed
+  /// ([_savePinnedSeeds]), and re-arm [_seedExpiry] for the next row due,
+  /// and [_seedPruneTick] while the DJ is on. It also runs after every
+  /// change of [autoDJServer], which starts and stops the tick.
+  void _publishSeeds() {
+    final now = DateTime.now();
+    final drift = AutoDJManager().sonicAnchorMode == SonicAnchorMode.rolling;
+    if (drift) {
+      _seeds = _seeds.prune(now);
+      final pending = _pendingSeeds;
+      if (pending != null) _pendingSeeds = pending.prune(now);
+    }
+    final view = _seedsView(now);
+    _seedsSubject.add(view);
+    _savePinnedSeeds(view);
+    _seedExpiry?.cancel();
+    _seedExpiry = null;
+    DateTime? due;
+    if (drift) {
+      for (final s in [_seeds, ?_pendingSeeds]) {
+        final next = s.nextExpiry;
+        if (next != null && (due == null || next.isBefore(due))) due = next;
+      }
+    }
+    if (due != null && autoDJServer != null) {
+      _seedPruneTick ??=
+          Timer.periodic(const Duration(minutes: 1), (_) => _pruneSeeds());
+    } else {
+      _seedPruneTick?.cancel();
+      _seedPruneTick = null;
+    }
+    if (due == null) return;
+    final wait = due.difference(now);
+    _seedExpiry = Timer(wait.isNegative ? Duration.zero : wait, _publishSeeds);
+  }
+
+  /// What auto_dj.json keeps of [view] (the page's view: the live set merged
+  /// with the rows held aside; [AutoDjSeeds.storedRows]: in Drift the rows
+  /// the user pinned, in Stay close every row it shows) saved for the next
+  /// launch with when the lists froze ([AutoDJManager.setPinnedSeeds]), when
+  /// it changed since the last save ([pinnedSeedsToSave]). Only once this run
+  /// has taken the stored rows back in ([loadPinnedSeeds], which sets the
+  /// baseline): until then the file holds rows this run never read, and the
+  /// manager writes every key it holds. In Drift a change that only adds or
+  /// drops unpinned rows, a pick that starts playing, writes nothing; a
+  /// switch of mode writes when it changes what the file keeps.
+  ///
+  /// A pin the user makes before any load, with a server known, runs the
+  /// load instead ([pinsLoadOwed]), whose own publish then saves it: a run
+  /// that launched with no server (a fresh install) has no other load unless
+  /// the DJ is armed, and its pins would be lost at the next launch.
+  void _savePinnedSeeds(AutoDjSeeds view) {
+    if (pinsLoadOwed(view,
+        saved: _pinnedSeedsSaved,
+        serversKnown: ServerManager().serverList.isNotEmpty)) {
+      unawaited(loadPinnedSeeds());
+      return;
+    }
+    final save = pinnedSeedsToSave(view, saved: _pinnedSeedsSaved);
+    if (save == null) return;
+    _pinnedSeedsSaved = save.signature;
+    unawaited(
+        AutoDJManager().setPinnedSeeds(save.rows, frozenAt: save.frozenAt));
+  }
+
+  /// The seed rows auto_dj.json kept from an earlier run
+  /// ([AutoDJManager.pinnedSeeds]) taken back in, once per run
+  /// ([loadStoredPins]): those of the servers the app still has, at most the
+  /// newest eight of each list in Drift and sixteen in Stay close, where its
+  /// one song can carry More like past eight ([restorablePinnedRows]), at the
+  /// oldest end of the live lists, a song already there keeping its row
+  /// ([AutoDjSeeds.withPinnedRows]), in the stored mode. In Drift only the
+  /// stored pins come back; in Stay close every stored row, with its own pin,
+  /// its clock paused since the stored lists froze
+  /// ([AutoDJManager.seedsFrozenAt]). From here on a change to what the file
+  /// keeps is saved ([_savePinnedSeeds]); the first save comes only when the
+  /// page's rows differ from the stored ones (a row filtered out or capped, a
+  /// row pinned before this ran, a file of the other mode).
+  ///
+  /// Main calls it at launch, once the server list has landed, whether or
+  /// not the DJ comes back on; setAutoDJ calls it when it arms the DJ, since
+  /// a headless boot (Android Auto, media resumption) never runs main's
+  /// restore; and the save hook calls it at the user's first pin of a run
+  /// whose earlier calls found no server ([_savePinnedSeeds]). While the
+  /// server list is still empty it does nothing and leaves the load to a
+  /// later call: with no server known every pin would read as one of a
+  /// deleted server, and the next save would lose them all. A lane already
+  /// running takes the rows as they are: the rows held aside and the Stay
+  /// close flag ([_stayCloseAnchored]) are left alone.
+  Future<void> loadPinnedSeeds() async {
+    final mgr = AutoDJManager();
+    await mgr.load();
+    if (_pinnedSeedsSaved != null || ServerManager().serverList.isEmpty) {
+      return;
+    }
+    final load = loadStoredPins(_seeds, mgr.pinnedSeeds,
+        knownServer: (s) => ServerManager().byLocalname(s) != null,
+        frozen: mgr.sonicAnchorMode == SonicAnchorMode.locked,
+        frozenAt: mgr.seedsFrozenAt,
+        now: DateTime.now());
+    _pinnedSeedsSaved = load.saved;
+    _seeds = load.seeds;
+    _publishSeeds();
+    if (mgr.pinnedSeeds.isNotEmpty) {
+      appLog('[dj] seeds: ${mgr.pinnedSeeds.length} row(s) stored, '
+          '${_seeds.storedRows.length} kept now '
+          '(${_seeds.frozen ? 'stay close' : 'drift'})');
+    }
+    // The Less like rows among them have no vector yet. Nothing while the DJ
+    // is off or the session is on one server.
+    unawaited(_ensureNegativeVectors());
+  }
+
+  /// Drop the Less like rows whose time ran out (Drift only) and tell the
+  /// page, only when one did. A pick runs this before it reads the seeds and
+  /// again before each body it builds, so a request never carries an expired
+  /// row however late the timers fire; the minute tick runs it too.
+  void _pruneSeeds() {
+    if (AutoDJManager().sonicAnchorMode != SonicAnchorMode.rolling) return;
+    final now = DateTime.now();
+    final pending = _pendingSeeds;
+    if (!identical(_seeds.prune(now), _seeds) ||
+        (pending != null && !identical(pending.prune(now), pending))) {
+      _publishSeeds();
+    }
+  }
+
+  /// What 'retrySonic' does, shared with [setSeedMode]: the sonic settings
+  /// changed, so a pick that went out under the old ones can't have its
+  /// verdict stand, and a session that dropped sonic gets another go. So do
+  /// the rows set aside after a server refused them ([_seedUnusable]): a
+  /// scan that caught up, or a match the user loosened, may have changed
+  /// that.
+  void _retrySonicBookkeeping() {
+    _sonicGen++;
+    _seedUnusable.clear();
+    if (sonicDrop != null) {
+      sonicDrop = null;
+      customState.add(CustomEvent(autoDJServer));
+    }
+  }
+
+  /// The playing row ([index]) joins More like when it is a DJ pick of this
+  /// lane that just started, in Drift, while the DJ is on: the session's
+  /// seeds are what it has played. The index listener calls this before its
+  /// top-up, because a pick builds its seeds before its first await, and the
+  /// batch fetched as the last row starts must already carry that row, as
+  /// the old ring did when it took picks as they were queued.
+  ///
+  /// Once per row ([_lastSeedPushKey]), and the key moves on in either mode,
+  /// so a row that started in Stay close is not pushed by a later switch to
+  /// Drift. Into the live set only, never a song in Less like (the model
+  /// keeps those out), and whether sonic similarity is on or off, so turning
+  /// it on mid-lane finds the lane's sound already there.
+  void _seedPushOnPlay(int? index) {
+    final q = queue.value;
+    if (index == null || index < 0 || index >= q.length) return;
+    final item = q[index];
+    final key = _trackKey(item);
+    if (key == _lastSeedPushKey) return;
+    _lastSeedPushKey = key;
+    if (autoDJServer == null ||
+        AutoDJManager().sonicAnchorMode != SonicAnchorMode.rolling ||
+        item.extras?['djLane'] != _djLaneId) {
+      return;
+    }
+    final next = _seeds.pushPick(trackFactsFor(item), now: DateTime.now());
+    if (identical(next, _seeds)) return;
+    _seeds = next;
+    _publishSeeds();
+  }
 
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
@@ -257,10 +618,24 @@ class AudioPlayerHandler extends BaseAudioHandler
   // always in flight during a session (every advance onto the last row fires
   // the top-up), so without this a queue clear gets repopulated by the
   // landing pick — which also overwrites the just-reset ignoreList and
-  // pushes a dead-session track into the fresh sonic history, quietly
-  // undoing the reset it raced. The same check is what keeps a late pick
-  // from dereferencing autoDJServer after the DJ was switched off.
+  // hands the new lane a dead session's sonic verdicts, quietly undoing the
+  // reset it raced. The same check is what keeps a late pick from
+  // dereferencing autoDJServer after the DJ was switched off.
   int _djSessionEpoch = 0;
+
+  // The queue's generation, for the re-roll (design E). Bumped ONLY by a
+  // learned quick skip: one that changed the Less like negatives a server
+  // the next pick may ask would be sent. Every DJ row queued ahead, and any
+  // pick still out, was chosen without that negative, so a pick built under
+  // an older generation is stale: it is dropped where it would queue and
+  // run again (see autoDJ()). Never the epoch above, whose reset would wipe
+  // the ignoreList, the anchors and the deferred pick on every skip.
+  int _djQueueGen = 0;
+
+  // The last [_djQueueGen] a re-roll settled. A pick of a newer generation
+  // that lands replaces the stale picks ahead rather than adding to them
+  // ([_landReroll]); a re-roll is owed while this is behind.
+  int _rerolledGen = 0;
 
   /// Start a new Auto-DJ "lane": forget everything the session learned from
   /// the queue it was working, and invalidate any in-flight pick.
@@ -270,28 +645,91 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// equivalents of "the user steered somewhere new" all funnel through
   /// here: setAutoDJ off / on / server switch, a queue clear (which
   /// playFromHere also routes through), and a server removal that empties
-  /// the queue. The next pick then anchors on whatever the user plays, not
-  /// on the dead session.
+  /// the queue. In Drift the next pick then anchors on whatever the user
+  /// plays, beside the seeds they pinned (below), not on the dead session's
+  /// picks; in Stay close every row the page shows stays (below).
   ///
   /// The stored sonic seed is deliberately NOT cleared here: setAutoDJ
   /// resets BEFORE _startAutoDJFromSeed reads the seed, so clearing it in
   /// this helper would break every seeded start. The clear path consumes it
   /// separately (see _doClearPlaylist).
-  void _resetAutoDJSession() {
+  ///
+  /// The seeds start over too, except for what the user keeps
+  /// ([AutoDjSeeds.carryOver]). In Drift the rows they pinned stay, in both
+  /// lists, and so do the unpinned Less like rows, each with its 30-minute
+  /// clock as it was; the DJ's own unpinned picks (the opener among them)
+  /// go, and the lane's first pick blends in the song playing then
+  /// ([blendsOnLaneStart]). In Stay close every row the page shows stays as
+  /// it is: the user's pins, an earlier lane's anchor, the picks frozen from
+  /// Drift and the skips, their clocks still paused. The live set takes the
+  /// stored mode, a new lane stamp, so no row queued before this point ever
+  /// joins it, no refused rows carried over, and a Stay close lane looks for
+  /// its one song to start again ([_stayCloseAnchored]), which the rows it
+  /// carried over and can still use give it at once. The rows the Seeds page
+  /// holds aside are left alone: every Start resets (setAutoDJ's fresh
+  /// session, then a seeded start's own clear), and they join at the lane's
+  /// first pick instead. Until that pick, the page's new rows are held aside
+  /// as well ([_lanePicked]).
+  ///
+  /// [clearPins]: the user cleared a queue with the Seeds page's box ticked
+  /// ([clearsPinsOnClear]), so the rows the page shows pinned go as well,
+  /// from the live and the held-aside set and from the stored list
+  /// ([AutoDjSeeds.withoutPinned]). In Drift those are the user's pins: the
+  /// picks start over as at any new lane, and the unpinned skips keep their
+  /// clocks. In Stay close every row shows pinned, so both lists empty, and
+  /// the next lane takes in one song to start.
+  ///
+  /// A re-roll the old lane's skips asked for is settled here as well: the
+  /// new lane's queue owes nothing to them, and its rows are not theirs to
+  /// replace.
+  void _resetAutoDJSession({bool clearPins = false}) {
     _djSessionEpoch++;
     jsonAutoDJIgnoreList = null;
     _camelotAnchor = null;
-    _sonicHistory = const [];
-    _sonicSeedOwners.clear();
     _multiServerExcluded.clear();
     _multiServerExcludedWhy.clear();
     _multiServerIgnore.clear();
     _fanOutDeclined.clear();
     _sonicNotReadyLogged = false;
-    _sonicLock = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
     sonicDrop = null;
     _clearDeferredPick();
+    _seeds = _carriedSeeds();
+    if (clearPins) {
+      // The rows shown pinned: in Stay close every row, the held-aside set's
+      // too (frozen with the mode), so a row the user unpinned there in
+      // Drift goes as well.
+      _seeds = _seeds.withoutPinned();
+      final pending = _pendingSeeds;
+      if (pending != null) {
+        final rest = pending.withoutPinned();
+        _pendingSeeds = rest.isEmpty ? null : rest;
+      }
+      // Written here, not left to the save at the publish below: a run that
+      // never took the stored rows back in saves nothing, and the stored
+      // ones must go all the same. The box reads true only once the
+      // manager's load has run, so this never writes over a file unread.
+      unawaited(AutoDJManager().setPinnedSeeds(const []));
+      if (_pinnedSeedsSaved != null) {
+        _pinnedSeedsSaved = pinnedSeedsSignature(const []);
+      }
+      appLog('[dj] queue cleared — the seeds shown pinned go with it');
+    }
+    _lanePicked = false;
+    _laneBlendKey = null;
+    _laneBlendedSong = null;
+    _laneSkippedBlend = null;
+    _stayCloseAnchored = false;
+    _stayCloseAdmitted = false;
+    _seedUnusable.clear();
+    _lastSeedPushKey = null;
+    _djLaneId = const Uuid().v4();
+    _negativeVectorFetches.clear();
+    _fanOutSeedModel = null;
+    _rerolledGen = _djQueueGen;
+    _rerollOnSeek = false;
+    _rerollStale = null;
+    _publishSeeds();
   }
 
   // The repeat mode requested by the UI / Android Auto, and the source of truth
@@ -309,6 +747,47 @@ class AudioPlayerHandler extends BaseAudioHandler
     _init().whenComplete(() {
       if (!_initialized.isCompleted) _initialized.complete();
     });
+  }
+
+  /// The backend says which row is playing ([index]): on every move, and
+  /// again on every sequence and playback event, since just_audio re-emits
+  /// it. A DJ pick that started joins More like, the queue-end top-up fires,
+  /// the keep-offline window slides and now-playing follows. The index
+  /// listener runs this, and so does a re-roll's drop, for a move that its
+  /// reorder hold swallowed ([_dropRerolled]).
+  void _onCurrentIndex(int? index) {
+    // A reorder re-points the backend's currentIndex without playback
+    // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
+    // otherwise dragging the playing track to the last slot would append a
+    // spurious Auto-DJ track.
+    if (_reordering || _rebuilding || _restoring) return;
+    // A DJ pick that just started joins More like BEFORE the top-up below
+    // builds the next fetch's seeds (see _seedPushOnPlay).
+    _seedPushOnPlay(index);
+    if (shouldTopUpAutoDJ(
+        index: index,
+        queueLength: queue.value.length,
+        state: _backend.processingState,
+        inFailureWalk: _skipPending || _failedSkips > 0,
+        clearing: _clearingQueue)) {
+      autoDJ();
+    }
+    if (index != null && index >= 0 && index < queue.value.length) {
+      final item = queue.value[index];
+      if (item.id != _lastPlayLoggedId) {
+        _lastPlayLoggedId = item.id;
+        appLog('[play] track ${index + 1}/${queue.value.length}: '
+            '${item.title}');
+      }
+      // Keep-queue-offline: the cap caches a window of tracks AHEAD of the
+      // playing one, so advancing slides that window — sweep to pull in
+      // whatever just entered it. No-op when the setting is off, the cap is
+      // unlimited (window = whole queue, already swept on the queue change),
+      // or everything in range is on disk.
+      unawaited(DownloadManager().autoDownloadQueue(queue.value));
+      _playFromLocalCopy(index, item);
+    }
+    _emitCurrentMediaItem();
   }
 
   Future<void> _init() async {
@@ -388,36 +867,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     // These derived streams switchMap over the active backend so they keep
     // working across a cast backend swap — the new backend's streams are
     // subscribed automatically and the old ones cancelled.
-    _backendSubject.switchMap((b) => b.currentIndexStream).listen((index) {
-      // A reorder re-points the backend's currentIndex without playback
-      // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
-      // otherwise dragging the playing track to the last slot would append a
-      // spurious Auto-DJ track.
-      if (_reordering || _rebuilding || _restoring) return;
-      if (shouldTopUpAutoDJ(
-          index: index,
-          queueLength: queue.value.length,
-          state: _backend.processingState,
-          inFailureWalk: _skipPending || _failedSkips > 0)) {
-        autoDJ();
-      }
-      if (index != null && index >= 0 && index < queue.value.length) {
-        final item = queue.value[index];
-        if (item.id != _lastPlayLoggedId) {
-          _lastPlayLoggedId = item.id;
-          appLog('[play] track ${index + 1}/${queue.value.length}: '
-              '${item.title}');
-        }
-        // Keep-queue-offline: the cap caches a window of tracks AHEAD of the
-        // playing one, so advancing slides that window — sweep to pull in
-        // whatever just entered it. No-op when the setting is off, the cap is
-        // unlimited (window = whole queue, already swept on the queue change),
-        // or everything in range is on disk.
-        unawaited(DownloadManager().autoDownloadQueue(queue.value));
-        _playFromLocalCopy(index, item);
-      }
-      _emitCurrentMediaItem();
-    });
+    _backendSubject
+        .switchMap((b) => b.currentIndexStream)
+        .listen(_onCurrentIndex);
     // Tunnel-follows-queue: keep a tunnel up for every tunnel-carried server
     // the queue holds a song from, and let each go when none of its songs
     // remain. Recomputed on every queue edit. This is what makes a queue from
@@ -2605,19 +3057,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// increments both by one), and seekToNext never reaches the end because a
   /// fresh pick is always ahead. Starved of picks, the walk terminates
   /// through its own end-of-queue outage-vs-bad-source logic, and any track
-  /// reaching `ready` clears the budget and re-enables the DJ. Pure;
-  /// unit-tested.
+  /// reaching `ready` clears the budget and re-enables the DJ.
+  ///
+  /// [clearing] suppresses it while a queue clear is under way: the clear
+  /// has opened the new lane, but the old rows wait in the queue until the
+  /// player has stopped, and a top-up then would open the new lane on the
+  /// row being thrown away ([_clearingQueue]). Pure; unit-tested.
   static bool shouldTopUpAutoDJ({
     required int? index,
     required int queueLength,
     required BackendProcessingState state,
     required bool inFailureWalk,
+    required bool clearing,
   }) =>
       index != null &&
       queueLength > 0 &&
       index == queueLength - 1 &&
       state != BackendProcessingState.idle &&
-      !inFailureWalk;
+      !inFailureWalk &&
+      !clearing;
 
   /// What the queue's end does. Park only when a pick is actually owed to a
   /// tunnel outage AND playback is wanted AND this backend/server pair can be
@@ -2765,6 +3223,23 @@ class AudioPlayerHandler extends BaseAudioHandler
   void restoreAutoDJ(Server server) {
     if (autoDJServer != null) return;
     autoDJServer = server;
+    // The lane's seeds as a reset would start them, though nothing else is
+    // reset here, in the stored mode (main loads the mode before it calls
+    // this). Main has just taken the stored rows back in (loadPinnedSeeds).
+    // In Drift the rows the user pinned stay and so do the unpinned skips,
+    // the picks go, and the first pick blends in the queue's playing row
+    // ([_lanePicked] is cleared below). In Stay close the load's frozen set
+    // stays as it is, every row it shows. Rows held aside on the Seeds page
+    // join at the first pick, as at any start, and so do the ones added
+    // until then. A Stay close lane looks for its one song again.
+    _seeds = _carriedSeeds();
+    _lanePicked = false;
+    _laneBlendKey = null;
+    _laneBlendedSong = null;
+    _laneSkippedBlend = null;
+    _stayCloseAnchored = false;
+    _stayCloseAdmitted = false;
+    _publishSeeds();
     // A multi-server session's fan-out servers are tunnel targets from the
     // moment the DJ is armed — this path arms too, so it nudges too (the
     // mode's own edge fired while nothing was armed yet).
@@ -2892,11 +3367,293 @@ class AudioPlayerHandler extends BaseAudioHandler
     return MediaToggleAction.play;
   }
 
+  // Every Next, numbered; the newest one whose seek is still out (null once
+  // it is back), and when it was pressed. A Next pressed while one is out
+  // lands on a row the player hasn't left yet, or on one barely begun (a
+  // cast loads the next song over the network, its position still the last
+  // song's), so it is not judged again; and the last seek of the burst to
+  // come back starts the one re-roll the burst asked for. Bounded by
+  // [_skipBurstWindow], so a seek that never comes back can't leave every
+  // later Next unjudged.
+  int _skipSeq = 0;
+  int? _skipSeekOut;
+  DateTime? _skipSeekAt;
+  static const Duration _skipBurstWindow = Duration(seconds: 10);
+
+  // A learned quick skip asked for a re-roll, which the burst's last seek
+  // to come back starts ([_afterSkipSeek]). Lane state.
+  bool _rerollOnSeek = false;
+
+  // The stale picks the owed re-roll is there to replace, by song
+  // ([rerollStaleKeys]): the DJ rows after the row the learned skip lands
+  // on, named when the skip is learned and again from the row it did land
+  // on as the re-roll starts ([_nameStalePicks]). A re-roll that lands after
+  // the user went back to an earlier row takes out only these, never the
+  // rows after the one playing then, which are songs already heard. Null
+  // when no skip named them; the re-roll then takes the nearest rows it
+  // may. Lane state, and let go when the re-roll is settled.
+  Set<String>? _rerollStale;
+
+  /// Names the stale picks the owed re-roll replaces ([_rerollStale]): the
+  /// DJ rows it may drop ([rerollDroppable]) after row [landing], the one
+  /// the learned skip lands on.
+  void _nameStalePicks(int landing) {
+    final q = queue.value;
+    _rerollStale = rerollStaleKeys(q, _rerollDroppable(q, landing));
+  }
+
   @override
   Future<void> skipToNext() async {
     _restoreSpot = null; // user navigation supersedes a failed-restore park
     _releasePark();
-    _backend.seekToNext();
+    // A quick skip is judged now, before the seek: once the player has
+    // moved, its position, its duration and the play tracker's session all
+    // belong to the next song.
+    final now = DateTime.now();
+    final since = _skipSeekAt;
+    final inBurst = _skipSeekOut != null &&
+        since != null &&
+        now.difference(since) < _skipBurstWindow;
+    final skip = inBurst ? null : _judgeQuickSkip();
+    final seq = ++_skipSeq;
+    _skipSeekOut = seq;
+    _skipSeekAt = now;
+    final backend = _backend;
+    final before = backend.currentIndex;
+    // Not awaited, as before: a cast loads the next song over the network,
+    // and the buttons, the lock screen and the car return at once.
+    unawaited(() async {
+      try {
+        await backend.seekToNext();
+      } catch (e) {
+        appLog('[play] next failed: $e');
+      }
+      if (_skipSeekOut == seq) _skipSeekOut = null;
+      await _afterSkipSeek(skip, backend: backend, before: before);
+    }());
+  }
+
+  /// The Next about to happen, judged before its seek. A quick skip of a DJ
+  /// pick ([isQuickSkip]: heard for a second or more but short of a play,
+  /// and the Next moves to another row) while the DJ is on in Drift changes
+  /// the seeds: the song leaves More like, unless the user pinned it there,
+  /// and with Learn from skips on (sonic similarity on, and a server in
+  /// scope that takes negatives) it joins Less like
+  /// ([AutoDjSeeds.quickSkip]). Stay close changes nothing, since both lists
+  /// stand frozen.
+  ///
+  /// The song this lane's start blended into More like ([_laneBlendedSong])
+  /// is, as the user's own row, no DJ pick, but a quick skip of it takes it
+  /// out of More like all the same while More like holds it unpinned.
+  /// Nothing is learned from it, Learn from skips or not, and the lane's
+  /// picks pass over it from then on ([_laneSkippedBlend]). A DJ pick the
+  /// start blended in keeps the rule above ([quickSkipsBlend]).
+  ///
+  /// The skip is LEARNED when that changed the negatives a server the next
+  /// pick may ask would be sent, and the Next moves forward through the
+  /// queue ([skipMovesForward]). Every pick queued ahead, and any still out,
+  /// was chosen without the new negative, so [_djQueueGen] moves on and
+  /// they are re-rolled. That happens here, before the seek, so a top-up the
+  /// seek's own index emission fires already carries the negative and the
+  /// new generation. Under shuffle, or on a wrap from the last row, the
+  /// lists still change but nothing is re-rolled; a skip that is not
+  /// learned leaves the queue as it is.
+  ///
+  /// Heard time is the play tracker's, which leaves seeks and pauses out,
+  /// when its open session is this row's; else the player's position, since
+  /// the tracker starts only with the app's window and a car or a headset
+  /// can skip before that. The duration is the session's, else the
+  /// player's, else the row's. Null when the seeds hear nothing of it.
+  _QuickSkip? _judgeQuickSkip() {
+    final mgr = AutoDJManager();
+    if (autoDJServer == null ||
+        mgr.sonicAnchorMode != SonicAnchorMode.rolling) {
+      return null;
+    }
+    final cur = _backend.currentIndex;
+    final item = _itemAt(cur);
+    if (cur == null || item == null) return null;
+    final session = PlayTracker().openSession;
+    final own = session != null && session.key == _trackKey(item);
+    final heardMs = own ? session.playedMs : _backend.position.inMilliseconds;
+    final durationMs = (own ? session.track.durationMs : null) ??
+        _backend.duration?.inMilliseconds ??
+        item.duration?.inMilliseconds;
+    final djPick = item.extras?['djPick'] == true;
+    final song = trackFactsFor(item);
+    final key = seedKey(song.server, song.path);
+    final blended = quickSkipsBlend(
+        key: key,
+        blended: _laneBlendedSong,
+        isDjPick: djPick,
+        unpinnedInMoreLike:
+            _seeds.moreLike.any((s) => s.key == key && !s.pinned));
+    if (!isQuickSkip(
+        djPick: djPick || blended,
+        heardMs: heardMs,
+        durationMs: durationMs,
+        hasNext: _backend.hasNext)) {
+      return null;
+    }
+    // A Less like row whose time ran out goes first, so that its going is
+    // not taken for this skip's doing.
+    _pruneSeeds();
+    final sentBefore = _negativesInScope();
+    // A re-skip of a Less like song whose vector the other servers were
+    // already being sent: its vector coming back is no news to them.
+    final vectorWasSent = _vectorSentElsewhere(key);
+    final learn = !blended &&
+        mgr.learnFromSkips &&
+        mgr.sonicSimilarityEnabled &&
+        seedsTakeNegatives;
+    final next = _seeds.quickSkip(song, learn: learn, now: DateTime.now());
+    if (!identical(next, _seeds)) {
+      _seeds = next;
+      _publishSeeds();
+    }
+    // The blended song out of More like: no seed, and never served, so the
+    // lane's picks pass over it from here on.
+    final blendLeft = blended && !_seeds.has(SeedList.moreLike, key);
+    if (blendLeft) _laneSkippedBlend = song;
+    final forward = skipMovesForward(
+        index: cur,
+        queueLength: queue.value.length,
+        shuffle: _backend.shuffleEnabled);
+    final learned = forward && _negativesInScope() != sentBefore;
+    if (learned) {
+      _djQueueGen++;
+      // A forward Next lands on the next row: the picks after it are the
+      // ones chosen without this negative.
+      _nameStalePicks(cur + 1);
+    }
+    // The other servers of a session across several take the song as its
+    // vector, which a new row doesn't have yet: asked of the song's own
+    // server now, while the seek runs.
+    final joined = learn && _seeds.has(SeedList.lessLike, key);
+    final vectors =
+        joined && mgr.multiServerEnabled ? _ensureNegativeVectors() : null;
+    appLog('[dj] quick skip after ${heardMs ~/ 1000}s: ${item.title}'
+        '${blendLeft ? ' — the blended song leaves More like' : ''}'
+        '${joined ? ' — less like it' : ''}'
+        '${learned ? ', re-rolling the picks ahead' : ''}');
+    return (
+      key: key,
+      epoch: _djSessionEpoch,
+      forward: forward,
+      learned: learned,
+      vectors: vectors,
+      vectorWasSent: vectorWasSent,
+    );
+  }
+
+  /// A Next's seek is back: [backend] moved on from row [before]. A quick
+  /// skip ([skip]) whose song joined Less like in a session across several
+  /// servers waits a few seconds for its vector, so the re-roll carries the
+  /// song to the servers that don't hold it; a skip that changed nothing
+  /// only because the song's own server takes no negatives is learned once
+  /// that vector reaches another server that does.
+  ///
+  /// The re-roll a learned skip asked for then starts, from the last seek of
+  /// the burst to come back, so the pick reads the row the burst ended on
+  /// for its tempo and key windows and its Drift fallback, not the rejected
+  /// one. Only when that seek moved forward, and while the re-roll is still
+  /// owed: a pick already out takes it over (autoDJ() runs once more when
+  /// that pick is done), and a lane started since owes nothing. A skip that
+  /// was not learned starts nothing.
+  Future<void> _afterSkipSeek(_QuickSkip? skip,
+      {required PlaybackBackend backend, required int? before}) async {
+    var learned = skip?.learned ?? false;
+    final vectors = skip?.vectors;
+    if (skip != null && vectors != null) {
+      await vectors.timeout(const Duration(seconds: 3), onTimeout: () {});
+      if (learnedOnceVectorLands(
+          learned: learned,
+          forward: skip.forward,
+          sameLane: skip.epoch == _djSessionEpoch,
+          sentBefore: skip.vectorWasSent,
+          sentNow: _vectorSentElsewhere(skip.key))) {
+        learned = true;
+        _djQueueGen++;
+        if (before != null) _nameStalePicks(before + 1);
+        appLog('[dj] quick skip learned once its vector came back — '
+            're-rolling the picks ahead');
+      }
+    }
+    if (learned && skip?.epoch == _djSessionEpoch) _rerollOnSeek = true;
+    if (_skipSeekOut != null || !_rerollOnSeek) return;
+    _rerollOnSeek = false;
+    final moved = identical(_backend, backend) &&
+        (backend.currentIndex ?? -1) > (before ?? -1);
+    if (!moved || autoDJServer == null || _rerolledGen >= _djQueueGen) return;
+    // The row the seek landed on is the one playing now: a DJ pick of this
+    // lane joins More like before the pick reads the seeds, as it would at
+    // the index listener's top-up, whichever of the two the player
+    // delivered first. Once per row, so the listener's turn adds nothing.
+    if (!_reordering && !_rebuilding && !_restoring) {
+      _seedPushOnPlay(backend.currentIndex);
+    }
+    // The picks it replaces, named again while the row the burst ended on
+    // is the one playing: it may land after the user has gone back to rows
+    // already heard, and those are not its to take. A pick already out that
+    // takes the re-roll over replaces these too, and a later learned skip
+    // names its own.
+    final landed = backend.currentIndex;
+    if (landed != null) _nameStalePicks(landed);
+    unawaited(autoDJ());
+  }
+
+  /// The Less like negatives the next pick would send, as one comparable
+  /// value ([negativesSnapshot], which leaves their order out, as the
+  /// servers do): for each server it would send them to
+  /// ([_negativeTargets]), its own songs as paths and, in a session across
+  /// several servers, the other servers' songs as their vectors in the model
+  /// the session's seed was last in ([_fanOutSeedModel]). Empty while sonic
+  /// similarity is off, since no negative goes out then. A quick skip that
+  /// changes it is a learned one.
+  String _negativesInScope() {
+    final mgr = AutoDJManager();
+    if (!mgr.sonicSimilarityEnabled) return '';
+    final model = mgr.multiServerEnabled ? _fanOutSeedModel : null;
+    return negativesSnapshot({
+      for (final s in _negativeTargets())
+        s.localname: _seeds.negativesFor(s.localname, modelId: model),
+    });
+  }
+
+  /// The servers the next pick would send Less like negatives to
+  /// ([negativeTargets]): the DJ's own, and in a session across several the
+  /// servers it may ask ([multiServerCandidates]), each when it takes them.
+  /// Not every server of the session: one that sits every pick out (dropped
+  /// this session, or without mood scores while a mood is set) is sent
+  /// nothing, so what it would be sent changes no pick, and a skip that only
+  /// changes that re-rolls nothing. The others are sent theirs only by a
+  /// pick that goes across the servers; one that can't (Stay close with no
+  /// More like row it can carry, sonic similarity dropped for the session,
+  /// a DJ server with nothing to seed from) asks the DJ's own server alone,
+  /// with its own songs, and the rest wait for the next pick that does.
+  List<Server> _negativeTargets() => negativeTargets(
+      dj: autoDJServer,
+      multiServer: AutoDJManager().multiServerEnabled,
+      candidates: multiServerCandidates());
+
+  /// Whether the Less like row [key]'s cached vector is among the negatives
+  /// a server other than the song's own would be sent ([_negativeTargets]),
+  /// in the model the session's seed was last in, else the row's own: what
+  /// makes a quick skip of a song whose server takes no negatives count
+  /// after all.
+  bool _vectorSentElsewhere(String key) {
+    final mgr = AutoDJManager();
+    if (!mgr.sonicSimilarityEnabled || !mgr.multiServerEnabled) return false;
+    final row = _seeds.lessLike.where((s) => s.key == key).firstOrNull;
+    final vector = row?.vector;
+    if (row == null || vector == null) return false;
+    final model = _fanOutSeedModel ?? row.vectorModel;
+    return _negativeTargets().any((s) =>
+        s.localname != row.server &&
+        _seeds
+            .negativesFor(s.localname, modelId: model)
+            .vectors
+            .contains(vector));
   }
 
   @override
@@ -3074,6 +3831,17 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   Future<void> _removeServerQueueItems(String localname) async {
+    // Its seeds go first, from the live and the held-aside set, pinned or
+    // not: nothing else can resolve their paths, and a dead path in a body
+    // costs the pick its sonic seeds. First, so the DJ branch and the early
+    // returns below can't skip it; a server can own seeds and no queued row
+    // (an Add song from search, a frozen row). By the localname, since the
+    // server has already left the server list.
+    _seeds = _seeds.withoutServer(localname);
+    final pending = _pendingSeeds;
+    if (pending != null) _pendingSeeds = pending.withoutServer(localname);
+    _seedUnusable.removeWhere((k) => k.startsWith(seedKey(localname, '')));
+    _publishSeeds();
     if (autoDJServer?.localname == localname) {
       // Auto-DJ would keep topping the queue back up from the deleted server.
       autoDJServer = null;
@@ -3100,16 +3868,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       // including dropping the now-playing metadata and starting a new
       // Auto-DJ lane — the DJ can be armed on a DIFFERENT server than the
       // deleted one, and its session state described a queue that no
-      // longer exists.
-      _resetAutoDJSession();
-      unawaited(AutoDJManager().clearSonicSeed());
-      _intentionalStop = true;
-      await _backend.stop();
-      await super.stop();
-      await _backend.clearSources();
-      queue.add(queue.value..clear());
-      _emitCurrentMediaItem();
-      _broadcastState();
+      // longer exists. Held back from picks like any clear, so the armed DJ
+      // queues nothing into the emptied queue. Never a user clear: the pins
+      // stay.
+      await _guardedClear(clearPins: false);
       return;
     }
     final pos = plan.currentSurvives ? _backend.position : Duration.zero;
@@ -3136,15 +3898,46 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
-  Future<void> _doClearPlaylist() async {
+  /// Empty the queue: a new Auto DJ lane. [userClear] is false only for the
+  /// seeded start's own clear ([_startAutoDJFromSeed]); every
+  /// 'clearPlaylist' action is the user's (Clear queue, and every play that
+  /// replaces the queue, playFromHere and the rest).
+  Future<void> _doClearPlaylist({bool userClear = true}) async {
     appLog('[queue] cleared');
+    // Whether the Seeds page's box takes the pins with this clear, decided
+    // before anything else, while the queue still holds what the user threw
+    // away: a clear of theirs, of a queue that held a row.
+    final clearPins = clearsPinsOnClear(
+        userClear: userClear,
+        queueHadRows: queue.value.isNotEmpty,
+        setting: AutoDJManager().clearPinsOnQueueClear);
     // A cleared queue is a new Auto-DJ lane — the user threw the old one
     // away. The DJ stays ARMED and adds nothing here (no start menu, no
     // surprise pick): it resumes from a clean slate when the user queues
     // something, via the queue-end listener. Reset FIRST, synchronously —
     // an in-flight pick can land during the awaits below, and it must
-    // already see the new epoch to be discarded.
-    _resetAutoDJSession();
+    // already see the new epoch to be discarded. And no pick starts until
+    // the queue is empty ([_clearingQueue]).
+    await _guardedClear(clearPins: clearPins);
+  }
+
+  /// The whole-queue teardown, from the new lane's reset to the empty
+  /// queue, with [_clearingQueue] holding every pick back until it is done:
+  /// a clear ([_doClearPlaylist]) and the removal of the server the whole
+  /// queue belonged to ([_removeServerQueueItems]). Both run on the switch
+  /// chain, so they never overlap and one flag is enough.
+  Future<void> _guardedClear({required bool clearPins}) async {
+    _clearingQueue = true;
+    try {
+      await _clearQueueAfterReset(clearPins: clearPins);
+    } finally {
+      _clearingQueue = false;
+    }
+  }
+
+  /// The body of [_guardedClear]; call that, never this.
+  Future<void> _clearQueueAfterReset({required bool clearPins}) async {
+    _resetAutoDJSession(clearPins: clearPins);
     // The one-shot sonic seed is spent with the lane (webapp resetAnchors
     // "the seed is consumed" semantics). This is also what ends a seeded
     // start's use of it: _startAutoDJFromSeed reads the path into a local
@@ -3256,19 +4049,26 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'retrySonic':
         // The sonic settings changed (the Auto DJ screen's Sonic similarity
         // sheet): a session that dropped sonic gets another go with them.
-        _sonicGen++;
-        if (sonicDrop != null) {
-          sonicDrop = null;
-          customState.add(CustomEvent(autoDJServer));
-        }
+        _retrySonicBookkeeping();
         break;
       case 'clearSonicSession':
-        // "New lane": setting/clearing the explicit sonic seed (or toggling
-        // the feature off) restarts the sonic session — rolling history AND
-        // the locked pin — so the next pick anchors fresh rather than on
-        // stale state (webapp resetAnchors/clearSonicAnchors semantics).
-        _sonicHistory = const [];
-        _sonicLock = null;
+        // "New lane" for the sonic seeds alone (Discover's start, which
+        // names its own seed): the live More like and Less like carry over
+        // as at any new lane, in the stored mode ([_carriedSeeds]). In Drift
+        // that keeps the user's pins and the unpinned skips with their
+        // clocks and drops the DJ's picks, so the next pick anchors fresh
+        // rather than on the DJ's stale picks (webapp
+        // resetAnchors/clearSonicAnchors semantics). In Stay close every row
+        // it shows stays, and the lane looks for its one song again: the
+        // kept rows it can carry anchor it at once, and it takes in a song
+        // only when none of them is usable. Switching sonic similarity off
+        // no longer sends this: the seeds wait for it to come back on within
+        // the lane.
+        _seeds = _carriedSeeds();
+        _seedUnusable.clear();
+        _stayCloseAnchored = false;
+        _stayCloseAdmitted = false;
+        _publishSeeds();
         break;
       case 'setAutoDJ':
         final nextDJ = extras?['autoDJServer'] as Server?;
@@ -3283,6 +4083,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         final freshSession = autoDJServer == null || autoDJServer != nextDJ;
         if (freshSession) _resetAutoDJSession();
         autoDJServer = nextDJ;
+        // After the assignment: the seeds' minute tick runs only while the
+        // DJ is on, and the page's offers follow the DJ's server.
+        _publishSeeds();
+        // The pins an app restart keeps join at the arm too: a headless boot
+        // (Android Auto, media resumption) never runs main's launch restore,
+        // and its lanes would go without them. Once per run, so a no-op
+        // after main's call; the DJ's server came out of the loaded list.
+        if (nextDJ != null) unawaited(loadPinnedSeeds());
         _reconcileFanOutTunnels(nextDJ == null ? 'dj-off' : 'dj-fanout');
         // Remembered across restarts. Every toggle path funnels through here,
         // so this is the one place that has to record it.
@@ -3823,6 +4631,36 @@ class AudioPlayerHandler extends BaseAudioHandler
     ));
   }
 
+  /// Discover's "start a session" from a song on [server] (its [path] and a
+  /// display [title]; [chosen] when the user started from a song they could
+  /// see, false for a random draw): a new queue, then the DJ opening on that
+  /// song ([_startAutoDJFromSeed]).
+  ///
+  /// The clear comes first. A queue clear spends any one-shot seed, so a
+  /// stale one never takes over a later start ([_doClearPlaylist]); stored
+  /// before it, the song was gone by the time the DJ looked, and the session
+  /// opened on a random song instead. Then the seed, marked [chosen] so Stay
+  /// close adds the song to More like, pinned, as Choose and Recently played
+  /// do (a random draw adds nothing). Then the DJ: a fresh arm (off, or on
+  /// another server) reads the seed in setAutoDJ; on the same server
+  /// setAutoDJ is no new session and never reads it, so the armed DJ starts
+  /// from it directly, as the empty-queue prompt does.
+  Future<void> startSessionFromSong(
+      {required Server server,
+      required String path,
+      required String title,
+      required bool chosen}) async {
+    await customAction('clearSonicSession');
+    await customAction('clearPlaylist');
+    await AutoDJManager().setSonicSeed(
+        path: path, title: title, server: server.localname, chosen: chosen);
+    if (autoDJServer != null && autoDJServer == server) {
+      await customAction('startAutoDJFromSeed');
+    } else {
+      await customAction('setAutoDJ', {'autoDJServer': server});
+    }
+  }
+
   /// Open an Auto DJ session ON its seed song: replace the queue with the
   /// seed, play it, and pull its first followers. Returns false when there is
   /// no usable seed, leaving the caller's ordinary top-up path to run.
@@ -3845,6 +4683,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // nothing here.
     final path =
         mgr.sonicSeedServer == server?.localname ? mgr.sonicSeedPath : null;
+    // Whether the user chose this song (Recently played, Choose) rather than
+    // Random drawing it: Stay close adds a chosen one to More like (below).
+    // Read with the path, before the first await: the clear below empties
+    // the stored seed, the mark with it.
+    final chosen = path != null && mgr.sonicSeedChosen;
     if (server == null || path == null) return false;
     // Only the path and a display title are persisted, so the row is
     // reconstructed and buildServerFileMediaItem fetches the rest (it also
@@ -3862,11 +4705,61 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Same order as playFromHere — the one flow in the app that replaces a
     // queue and starts it. The clear also CONSUMES the stored seed (it is a
     // one-shot opener; see _doClearPlaylist) — [path] and [seed] are already
-    // in hand above, and the follow-up picks anchor the same either way: with
-    // the seed gone and the history fresh, sonicParams falls back to the
-    // playing track, which IS the seed song.
-    await customAction('clearPlaylist');
+    // in hand above, and the follow-up picks anchor on the seed song all the
+    // same, as a More like row (below) or as the playing track.
+    //
+    // The start's own clear, not the user's: it never takes the pins with it
+    // (the Seeds page's box counts only a clear of theirs), though a row
+    // queued during the await above would make this queue look like one
+    // they threw away. On _switchChain, exactly as the 'clearPlaylist'
+    // action runs it.
+    final cleared =
+        _switchChain.then((_) => _doClearPlaylist(userClear: false));
+    _switchChain = cleared.catchError((_) {});
+    await cleared;
+    // The lane the clear just started. A Stop, a server switch or another
+    // clear while the opener is being queued starts another, or leaves the
+    // DJ off, and the opener is no row of either.
+    final lane = _djSessionEpoch;
     await addQueueItem(seed);
+    // After the clear, whose reset would wipe what this adds, and before the
+    // seek, whose index emission can already fire the first follower's
+    // top-up. Only while the lane is still the clear's: a Stop or another
+    // clear while the opener was being queued would otherwise leave a row
+    // for a lane that is gone, or one held aside for the NEXT Start.
+    //
+    // Drift: the opener is the lane's first More like row, unpinned, so it
+    // rotates out like a played pick. Not a DJ pick, so the index listener
+    // never pushes it, and the first pick's blend finds it there
+    // ([blendsOnLaneStart]).
+    //
+    // Stay close: a song the user chose comes in as Add song brings one,
+    // pinned, the newest More like row ([addsChosenSong]): held aside, since
+    // the clear's lane has not picked yet, so the first follower's merge
+    // takes it in and that request carries it beside the rows Stay close
+    // kept. A Random opener adds nothing. Then the first follower admits the
+    // opener (by then the playing track, since the clear consumed the stored
+    // seed) as the lane's one song only when the lane has nothing to stay
+    // close to and the request can carry it ([stayCloseAdmit]), unless a
+    // server then refuses every such row before the lane took in a song:
+    // then the next pick takes in the song playing ([stayCloseReleases]).
+    if (lane == _djSessionEpoch && autoDJServer != null) {
+      final drift = mgr.sonicAnchorMode == SonicAnchorMode.rolling;
+      if (drift) {
+        final next = _seeds.pushPick(trackFactsFor(seed),
+            origin: SeedOrigin.opener, now: DateTime.now());
+        if (!identical(next, _seeds)) {
+          _seeds = next;
+          _publishSeeds();
+        }
+      } else if (addsChosenSong(
+          stayClose: !drift,
+          chosen: chosen,
+          canAdd: seeds.canAdd(SeedList.moreLike))) {
+        seedAdd(SeedList.moreLike, trackFactsFor(seed));
+        appLog('[dj] stay close: the chosen first song joins More like');
+      }
+    }
     await skipToQueueItem(0);
     // NOT awaited: just_audio's play() future completes only when playback
     // pauses or stops (see LocalPlaybackBackend.seek). Awaited, the follower
@@ -3900,6 +4793,21 @@ class AudioPlayerHandler extends BaseAudioHandler
   final Set<String> _multiServerExcluded = {};
   // Why each of [_multiServerExcluded] was dropped, for the Auto DJ screen.
   final Map<String, FanOutSitOut> _multiServerExcludedWhy = {};
+
+  /// The server [localname] dropped from this session's fan-out for [why].
+  /// What reads the drops as it builds hears of it through customState, as
+  /// of the DJ's other state: the Auto DJ screen's Play from sit-outs, and
+  /// the Seeds page's offers ([seedAddServers]), which would otherwise show
+  /// a server's songs on offer until a tap asked again. Only when something
+  /// changed: a server dropped again for the same reason tells nobody
+  /// anything new.
+  void _dropFromFanOut(String localname, FanOutSitOut why) {
+    final newReason = _multiServerExcludedWhy[localname] != why;
+    _multiServerExcludedWhy[localname] = why;
+    if (_multiServerExcluded.add(localname) || newReason) {
+      customState.add(CustomEvent(autoDJServer));
+    }
+  }
 
   // Which model each server answers in, by localname — the handshake mStream
   // #929 expects before a vector is sent, cached so a session pays one GET
@@ -4092,19 +5000,217 @@ class AudioPlayerHandler extends BaseAudioHandler
       tunnelUp: ServerManager().tunnelServes,
       moodSet: AutoDJManager().activeMoodFilter != null);
 
+  // ── Auto DJ seeds: the Seeds page's surface ────────────────────────────
+  //
+  // What the Seeds page, the Auto DJ screen's Seeds row and quick config read
+  // and do (the sets themselves sit with the sonic fields). Every edit goes
+  // through the pure model and ends in _publishSeeds, so [seedsStream] hears
+  // of it. What the page may offer also hangs on the DJ's state, Play from
+  // and the servers' flags ([seedServers], [seedsTakeNegatives],
+  // [seedAddServers]), so it rebuilds on customState, AutoDJManager's
+  // changes and ServerManager's capabilityChanges as well.
+
+  /// The seeds as the page shows them ([seeds]), re-sent on every change: an
+  /// edit, a mode switch, a lane edge, a pick that starts playing, a skip, a
+  /// row running out of time.
+  ValueStream<AutoDjSeeds> get seedsStream => _seedsSubject.stream;
+
+  /// The seeds as the page shows them: the live set, merged with the rows
+  /// held aside (the DJ off, or on before its lane's first pick), until that
+  /// pick takes them in. So those rows never vanish at Start.
+  AutoDjSeeds get seeds => _seedsView(DateTime.now());
+
+  /// [song] added to [list] by the user (Add song), pinned. It lands in the
+  /// held-aside set while one is held, or in a new one while the DJ is off
+  /// or its lane has not picked yet ([seedAddHeldAside]), since Start, a
+  /// seeded start's own clear and a Play from here all reset the live set;
+  /// otherwise in the live set. Nothing happens when the list the page shows
+  /// can't take a row ([AutoDjSeeds.canAdd], the test that disables Add
+  /// song), so an add held aside can't push a row out of the merged view
+  /// either.
+  void seedAdd(SeedList list, TrackFacts song) {
+    final now = DateTime.now();
+    if (!_seedsView(now).canAdd(list)) return;
+    final pending = _pendingSeeds;
+    if (seedAddHeldAside(
+        held: pending != null,
+        armed: autoDJServer != null,
+        lanePicked: _lanePicked)) {
+      _pendingSeeds =
+          (pending ?? _freshSeeds()).addManual(list, song, now: now);
+    } else {
+      _seeds = _seeds.addManual(list, song, now: now);
+    }
+    _publishSeeds();
+    // A session across several servers sends a Less like song to the
+    // servers that don't hold it as its vector, fetched now.
+    if (list == SeedList.lessLike) unawaited(_ensureNegativeVectors());
+  }
+
+  /// The row [key] removed from [list] by the user, in whichever of the
+  /// held-aside and the live set hold it there (both, when both do).
+  void seedRemove(SeedList list, String key) =>
+      _editSeeds(list, key, (s) => s.remove(list, key));
+
+  /// The row [key] moved by the user to the other list, where it is pinned.
+  /// It moves out of the list the page shows it in, in each set that holds it
+  /// there; a set that already has it in the other list is left to the
+  /// merge, where the held-aside row wins. Nothing happens when the other
+  /// list can't take a row, the test that disables the menu item.
+  void seedMove(String key) {
+    final now = DateTime.now();
+    final view = _seedsView(now);
+    final SeedList from;
+    if (view.has(SeedList.moreLike, key)) {
+      from = SeedList.moreLike;
+    } else if (view.has(SeedList.lessLike, key)) {
+      from = SeedList.lessLike;
+    } else {
+      return;
+    }
+    final to =
+        from == SeedList.moreLike ? SeedList.lessLike : SeedList.moreLike;
+    if (!view.canAdd(to)) return;
+    _editSeeds(from, key, (s) => s.move(key, now: now));
+    // As for Add song: a row moved into Less like needs its vector.
+    if (to == SeedList.lessLike) unawaited(_ensureNegativeVectors());
+  }
+
+  /// The row [key] in [list] pinned or unpinned by the user, in whichever set
+  /// holds it there. Stay close keeps every stored pin as it is until Drift
+  /// gives them back ([AutoDjSeeds.setPinned]).
+  void seedPin(SeedList list, String key, bool pinned) {
+    final now = DateTime.now();
+    _editSeeds(list, key, (s) => s.setPinned(list, key, pinned, now: now));
+  }
+
+  // [edit] applied to each set that holds [key] in [list] (the held-aside
+  // one, the live one, or both), then the page told when anything changed.
+  void _editSeeds(
+      SeedList list, String key, AutoDjSeeds Function(AutoDjSeeds) edit) {
+    var changed = false;
+    final pending = _pendingSeeds;
+    if (pending != null && pending.has(list, key)) {
+      final next = edit(pending);
+      changed |= !identical(next, pending);
+      _pendingSeeds = next;
+    }
+    if (_seeds.has(list, key)) {
+      final next = edit(_seeds);
+      changed |= !identical(next, _seeds);
+      _seeds = next;
+    }
+    if (changed) _publishSeeds();
+  }
+
+  /// Drift or Stay close, from the Seeds page. The mode is stored
+  /// ([AutoDJManager.setSonicAnchorMode]), the live and the held-aside set
+  /// both freeze or thaw with it, and, as after any change to the sonic
+  /// settings, a session that dropped sonic gets another go
+  /// ([_retrySonicBookkeeping]). The page is told once. Nothing happens when
+  /// the mode is already [mode].
+  Future<void> setSeedMode(SonicAnchorMode mode) async {
+    final mgr = AutoDJManager();
+    if (mgr.sonicAnchorMode == mode) return;
+    // The setter stores the mode before its first await, so the sets below
+    // and the prune in _publishSeeds already see the new one. Only the write
+    // to disk is waited for, last, so the page hears of the switch at once.
+    final saved = mgr.setSonicAnchorMode(mode);
+    final now = DateTime.now();
+    final lock = mode == SonicAnchorMode.locked;
+    _seeds = lock ? _seeds.freeze(now) : _seeds.thaw(now);
+    final pending = _pendingSeeds;
+    if (pending != null) {
+      _pendingSeeds = lock ? pending.freeze(now) : pending.thaw(now);
+    }
+    // Into Stay close: the lane stays close to the rows it froze, and with
+    // none its next pick takes in one song to start ([_stayCloseAnchored]).
+    if (lock) {
+      _stayCloseAnchored = false;
+      _stayCloseAdmitted = false;
+    }
+    _retrySonicBookkeeping();
+    _publishSeeds();
+    await saved;
+  }
+
+  /// The servers a seed may come from right now, the home first: the DJ's
+  /// own server (Play from's home while the DJ is off), or, in a session
+  /// across several servers, every server of the session ([_inSession]; Play
+  /// from's set while the DJ is off) that the picker still offers. The Seeds
+  /// page reads it, through [seedAddServers], as it builds and when Add song
+  /// opens, so it is a plain call, not a stream.
+  List<Server> seedServers() {
+    final dj = autoDJServer;
+    if (!AutoDJManager().multiServerEnabled) {
+      final home = dj ?? autoDjPlayFrom();
+      return [?home];
+    }
+    if (dj == null) {
+      final home = autoDjPlayFrom();
+      return [
+        ?home,
+        for (final s in autoDjPlayFromSet())
+          if (s.localname != home?.localname) s,
+      ];
+    }
+    return [
+      dj,
+      for (final s in ServerManager().serverList)
+        if (s.localname != dj.localname &&
+            s.isSelectable &&
+            _inSession(s.localname))
+          s,
+    ];
+  }
+
+  /// Whether a server a seed may come from ([seedServers]) takes Less like
+  /// negatives ([Server.lessLikeUsable]). While none does, the Seeds page
+  /// dims its Less like card and the Auto DJ screen its Learn from skips row,
+  /// and no skip is learned.
+  bool get seedsTakeNegatives => seedServers().any((s) => s.lessLikeUsable);
+
+  /// The servers a seed may come from ([seedServers], the home first) whose
+  /// songs the lane can use in [list], which is what Add song offers and a
+  /// row's move into [list] needs ([seedAddServersFor]): every one while the
+  /// DJ is off; for More like the DJ's own server and, across several
+  /// servers, the ones the fan-out may take a vector from; for Less like the
+  /// ones the next pick sends negatives to ([_negativeTargets]) and, across
+  /// several servers, the ones whose songs' vectors go to another server
+  /// there that takes them. Another server's Less like rows go out only on a
+  /// pick across the servers, so a pick that can't go across them leaves
+  /// them waiting for the next one that does. A plain call, cheap enough for
+  /// the page's build.
+  List<Server> seedAddServers(SeedList list) => seedAddServersFor(
+      list, seedServers(),
+      dj: autoDJServer?.localname,
+      multiServer: AutoDJManager().multiServerEnabled,
+      canSeed: (s) => canJoinMultiServer(s, _multiServerExcluded),
+      negativeTargets: _negativeTargets());
+
   /// Every song in a random-songs answer with its own similarity. A batch
   /// answer (mStream #966) carries `sonic.similarities` aligned with `songs`;
   /// a server from before batches reports only the first song's `similarity`.
   /// A song without a score competes with -1, so it never beats a scored one.
-  /// Pure; unit-tested.
-  static List<({Map<String, dynamic> song, double similarity})> scoredSongs(
-      Map<String, dynamic> decoded) {
+  ///
+  /// [avoided]: the server flagged the song as like one of the Less like
+  /// negatives the body carried (mStream #1108, `lessLike.avoided`). That
+  /// list is aligned with `songs` as the server sent them, so it is read by
+  /// the song's own index there: a row that is not an object is skipped
+  /// here, and pairing the flags by output position would move them onto
+  /// the wrong songs. False when the echo, the list, the entry or its bool is
+  /// missing, as from a server that took no negatives. Pure; unit-tested.
+  static List<({Map<String, dynamic> song, double similarity, bool avoided})>
+      scoredSongs(Map<String, dynamic> decoded) {
     final songs = decoded['songs'];
     if (songs is! List) return const [];
     final sonic = decoded['sonic'];
     final sims = sonic is Map ? sonic['similarities'] : null;
     final single = sonic is Map ? sonic['similarity'] : null;
-    final out = <({Map<String, dynamic> song, double similarity})>[];
+    final echo = decoded['lessLike'];
+    final flags = echo is Map ? echo['avoided'] : null;
+    final out =
+        <({Map<String, dynamic> song, double similarity, bool avoided})>[];
     for (var i = 0; i < songs.length; i++) {
       final song = songs[i];
       if (song is! Map) continue;
@@ -4114,18 +5220,34 @@ class AudioPlayerHandler extends BaseAudioHandler
       } else if (i == 0 && single is num) {
         sim = single.toDouble();
       }
-      out.add((song: Map<String, dynamic>.from(song), similarity: sim));
+      out.add((
+        song: Map<String, dynamic>.from(song),
+        similarity: sim,
+        avoided: flags is List && i < flags.length && flags[i] == true,
+      ));
     }
     return out;
   }
 
   /// The [n] best of [items] by [similarity], best first. Equal scores keep
   /// their order — List.sort is not stable, so the order is pinned by index —
-  /// which is what lets the server asked first win a tie. Pure; unit-tested.
+  /// which is what lets the server asked first win a tie.
+  ///
+  /// With [avoided], every song it flags ranks after every song it doesn't,
+  /// whatever their scores, and by similarity among themselves. Each server
+  /// ranks its own answer that way, its avoided songs last; a merge across
+  /// servers by cosine alone would throw that away, and a song like one the
+  /// user skipped on one server would beat a clean one from another.
+  /// Pure; unit-tested.
   static List<T> bestBySimilarity<T>(
-      List<T> items, double Function(T) similarity, int n) {
+      List<T> items, double Function(T) similarity, int n,
+      {bool Function(T)? avoided}) {
     final indexed = [for (var i = 0; i < items.length; i++) (i, items[i])];
     indexed.sort((a, b) {
+      if (avoided != null) {
+        final x = avoided(a.$2);
+        if (x != avoided(b.$2)) return x ? 1 : -1;
+      }
       final c = similarity(b.$2).compareTo(similarity(a.$2));
       return c != 0 ? c : a.$1.compareTo(b.$1);
     });
@@ -4150,33 +5272,121 @@ class AudioPlayerHandler extends BaseAudioHandler
     return false;
   }
 
+  /// The embedding of every live Less like row that has none, fetched from
+  /// the server that holds its song, one path per call, since one dead or
+  /// unanalysed path costs the embeddings route the whole batch. A session
+  /// across several servers sends a Less like song to the servers that don't
+  /// hold it as this vector (`lessLikeVectors`, [AutoDjSeeds.negativesFor]),
+  /// so each answer is cached on its row ([AutoDjSeeds.withVector]) while
+  /// the lane and the row are still there. A row whose vector never comes
+  /// is just not sent to them.
+  ///
+  /// Only while the DJ is on with the mode on: a single-server body sends
+  /// paths alone. Asked whenever a row can have come in without one: a quick
+  /// skip, Add song and a move into Less like, the lane's first pick (which
+  /// takes in the rows held aside), and the start of every pick across
+  /// several servers. A row whose fetch is running is not asked again. The
+  /// future completes when every fetch this call started or found running
+  /// is done, and never fails.
+  Future<void> _ensureNegativeVectors() {
+    if (autoDJServer == null || !AutoDJManager().multiServerEnabled) {
+      return Future<void>.value();
+    }
+    final epoch = _djSessionEpoch;
+    final waits = <Future<void>>[];
+    for (final row in _seeds.lessLike) {
+      if (row.vector != null) continue;
+      final running = _negativeVectorFetches[row.key];
+      if (running != null && running.epoch == epoch) {
+        waits.add(running.done);
+        continue;
+      }
+      final owner = _seedOwner(row.server);
+      if (owner == null) continue;
+      final done = _fetchNegativeVector(owner, row.key, row.wirePath, epoch);
+      _negativeVectorFetches[row.key] = (epoch: epoch, done: done);
+      waits.add(done);
+    }
+    if (waits.isEmpty) return Future<void>.value();
+    return Future.wait(waits).then((_) {});
+  }
+
+  /// One Less like row's vector ([_ensureNegativeVectors]): [wirePath] on
+  /// [owner], cached on the row [key] when it comes back in lane [epoch].
+  Future<void> _fetchNegativeVector(
+      Server owner, String key, String wirePath, int epoch) async {
+    try {
+      final got = await ApiManager().fetchEmbeddings(owner, [wirePath]);
+      if (got == null || epoch != _djSessionEpoch) return;
+      final vector = seedVectorBase64(got.vectors, got.dim);
+      if (vector == null || !_seeds.has(SeedList.lessLike, key)) return;
+      final next = _seeds.withVector(key, vector, got.modelId);
+      if (identical(next, _seeds)) return;
+      _seeds = next;
+      _publishSeeds();
+    } catch (e) {
+      verboseLog('[dj] less like vector from ${owner.localname} failed: $e');
+    } finally {
+      if (_negativeVectorFetches[key]?.epoch == epoch) {
+        _negativeVectorFetches.remove(key);
+      }
+    }
+  }
+
   /// Average the seed tracks' embeddings into one unit vector.
   ///
   /// Fetched from the server that OWNS each seed — that's the whole point:
   /// the anchor may hold tracks from several servers, and averaging them is
   /// what makes the session one session rather than several running side by
-  /// side. [anchors] names the owners of seeds that are not recorded picks
-  /// (see [_seedOwner]). Null when nothing usable came back, which drops
-  /// this pick to the single-server path rather than playing something
-  /// unrelated. [foreign]: a vector came from another server than the DJ's
-  /// own — a sound the single-server path, which seeds by filepath, can't
-  /// carry.
+  /// side. Each of [seeds] names its server ([fanOutSeeds]); one whose
+  /// server is gone is skipped ([_seedOwner]). Null when nothing usable came
+  /// back, which drops this pick to the single-server path rather than
+  /// playing something unrelated. [foreign]: a vector came from another
+  /// server than the DJ's own — a sound the single-server path, which seeds
+  /// by filepath, can't carry.
+  ///
+  /// Each server says of each of its paths whether it has the song's vector,
+  /// has the song but not analysed yet, or has no such song
+  /// ([ApiManager.readEmbeddings]). The paths it says it can't use (gone,
+  /// not analysed) leave the lane's requests ([_dropSeedCulprits]), a path
+  /// asked about alone as well. One dead path costs its server's whole batch
+  /// (the route's uniform 404 names none), so only such a batch is asked
+  /// again one path at a time, and the paths that answer serve this pick.
+  /// A server that did not answer (a timeout, a dropped connection) or
+  /// answered about itself (discovery off) sat this pick out, as before:
+  /// nothing of it is marked, and it is not asked again, which would only
+  /// make the pick wait out the same silence twice. [epoch] is the lane the
+  /// pick belongs to: a later lane's seeds are not this pick's to change.
   Future<({String modelId, String base64, bool foreign})?> _multiServerSeed(
-      List<String> seedPaths, Map<String, String> anchors) async {
-    if (seedPaths.isEmpty) return null;
+      List<({String server, String path})> seeds,
+      {required int epoch}) async {
+    if (seeds.isEmpty) return null;
     final byServer = <Server, List<String>>{};
-    for (final p in seedPaths) {
-      final owner = _seedOwner(p, anchors);
+    for (final s in seeds) {
+      final owner = _seedOwner(s.server);
       if (owner == null) continue;
-      byServer.putIfAbsent(owner, () => []).add(p);
+      byServer.putIfAbsent(owner, () => []).add(s.path);
     }
 
     String? modelId;
     int? dim;
     var foreign = false;
     final vectors = <Float32List>[];
+    final refused = <String>{};
     for (final entry in byServer.entries) {
-      final got = await ApiManager().fetchEmbeddings(entry.key, entry.value);
+      final paths = entry.value;
+      var read = await ApiManager().readEmbeddings(entry.key, paths);
+      if (read.someGone && paths.length > 1) {
+        read = EmbeddingsReading.ofProbes(await Future.wait([
+          for (final p in paths) ApiManager().readEmbeddings(entry.key, [p]),
+        ]));
+      }
+      for (var i = 0; i < paths.length; i++) {
+        if (read.refuses(i)) {
+          refused.add(seedKey(entry.key.localname, paths[i]));
+        }
+      }
+      final got = read.found;
       if (got == null) continue;
       // Mixing model spaces would average vectors that mean different
       // things — worse than using fewer seeds.
@@ -4194,6 +5404,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       // is done without a health call.
       _fanOutModels.record(entry.key.localname, got.modelId, DateTime.now());
     }
+    if (refused.isNotEmpty && epoch == _djSessionEpoch) {
+      _dropSeedCulprits(refused, 'gone or not analysed on their server');
+    }
     if (modelId == null || dim == null) return null;
     // The mean of near-opposite anchors can collapse to zero; the server
     // would refuse it, so don't spend the round trip (null here).
@@ -4202,27 +5415,171 @@ class AudioPlayerHandler extends BaseAudioHandler
     return (modelId: modelId, base64: base64, foreign: foreign);
   }
 
-  /// The server a seed path belongs to: [anchors] names the ones that are
-  /// not recorded picks (the playing track, the locked pin); a pick's server
-  /// was recorded when it was queued; anything else is the DJ's own (a
-  /// single-server history predates the owners map).
-  Server? _seedOwner(String path,
-      [Map<String, String> anchors = const <String, String>{}]) {
-    final ownerName = anchors[path] ?? _sonicSeedOwners[path];
-    return ownerName == null
-        ? autoDJServer
-        : (ServerManager().byLocalname(ownerName) ?? autoDJServer);
+  /// The server a seed's song is on, by the localname its row (or the
+  /// fallback anchor) names. Null once that server is gone, removed or
+  /// renamed: the seed is skipped then, never handed to the DJ's own server
+  /// the way the old owners map did, since its path names nothing there and
+  /// one such path 404s that server's whole embeddings batch.
+  Server? _seedOwner(String localname) =>
+      ServerManager().byLocalname(localname);
+
+  /// Whether the single-server body can carry the More like row [s]: one on
+  /// the DJ's own server ([dj], a localname), the only one that can read its
+  /// path, and never one a server refused this lane ([_seedUnusable]).
+  bool _carriedHere(AutoDjSeed s, String dj) =>
+      !_seedUnusable.contains(s.key) && s.server == dj;
+
+  /// Whether a pick across several servers can carry the More like row [s]
+  /// ([seedCarriedAcross]): never one a server refused this lane, and one on
+  /// any server of the session that is still there and can hand out its
+  /// song's vector at all (discovery on and scanned, not dropped this
+  /// session, new enough). A row on a server that never could would hold
+  /// off Stay close's one song, and Drift's fallback to the playing track,
+  /// for the whole lane.
+  bool _carriedAcross(AutoDjSeed s, String dj) => seedCarriedAcross(s,
+      dj: dj,
+      owner: _seedOwner,
+      inSession: _inSession,
+      canSeed: (owner) => canJoinMultiServer(owner, _multiServerExcluded),
+      unusable: _seedUnusable);
+
+  /// Whether the route a pick tries first can carry [s]: the pick across
+  /// several servers when the session spans them ([_carriedAcross]), else
+  /// the single-server body ([_carriedHere]). Stay close judges its lane by
+  /// it: the rows it has to stay close to and the song it would take in
+  /// ([stayCloseAdmit]), and what is left after a server refuses a row
+  /// ([_dropSeedCulprits]).
+  bool _seedCarried(AutoDjSeed s, String dj) =>
+      AutoDJManager().multiServerEnabled
+          ? _carriedAcross(s, dj)
+          : _carriedHere(s, dj);
+
+  /// An anchor row (the song a Stay close lane admitted to start) on another
+  /// server than the DJ's is the cross-server pick's alone. When that pick
+  /// can't carry it — nobody to ask, no vector from its server — Drift lets
+  /// it go, so a row nothing can send stops holding off Drift's fallback to
+  /// the explicit seed or the playing track. Only an anchor the engine
+  /// admitted: one the user pinned stays theirs, and so does an anchor on
+  /// the DJ's own server, which the single-server body still carries (a
+  /// network blip or a timeout must not move it).
+  ///
+  /// Nothing while the lists are frozen: Stay close never takes a row out.
+  /// The anchor stays listed, the single-server pick falls back for itself
+  /// alone while it can't be carried ([stayCloseFallsBack]), and the user
+  /// removes it if they want it gone.
+  void _dropForeignAnchor(String why) {
+    if (_seeds.frozen) return;
+    final dj = autoDJServer?.localname;
+    final gone = [
+      for (final s in _seeds.moreLike)
+        if (s.origin == SeedOrigin.anchor && !s.pinned && s.server != dj) s,
+    ];
+    if (gone.isEmpty) return;
+    _seeds = _seeds.withoutKeys({for (final s in gone) s.key});
+    _publishSeeds();
+    appLog('[dj] multi-server: let go of the anchor on '
+        '${gone.map((s) => s.server).toSet().join(', ')} — $why');
   }
 
-  /// A locked pin on another server than the DJ's is the cross-server
-  /// pick's alone. When that pick can't carry it — no vector from its
-  /// server, nobody to ask — it is let go, so the next pick pins what is
-  /// playing then rather than every pick going without it.
-  void _unpinForeignLock(String why) {
-    final lock = _sonicLock;
-    if (lock == null || lock.server == autoDJServer?.localname) return;
-    _sonicLock = null;
-    appLog('[dj] multi-server: unpinned the anchor on ${lock.server} — $why');
+  /// The More like rows [keys] that a server refused as sonic seeds: gone
+  /// from its library, or not analysed yet ([why] says how it showed). A row
+  /// the page shows pinned stays on it but leaves this lane's requests
+  /// ([_seedUnusable]); any other row is dropped ([AutoDjSeeds.culprits]).
+  /// In Drift that drops an engine row (a pick, the opener, an anchor), the
+  /// way the old ring let such a path rotate out, and keeps a row the user
+  /// pinned, since it is theirs to remove. In Stay close every row shows
+  /// pinned, so the engine takes none out: a dead row stays listed and
+  /// unusable until the user removes it. Nor does a lane that took in its
+  /// one song take another in its place ([_stayCloseAdmitted]). But a lane
+  /// that has not, whose last row it could carry this set aside (a row it
+  /// carried over, a song the user added, that the server turned down), had
+  /// nothing to stay close to after all: it looks for its one song again,
+  /// and its next pick takes in the explicit seed or the playing track
+  /// beside the refused rows ([stayCloseReleases]). The user's removals
+  /// never come through here, so a list the user emptied stays empty. Keys
+  /// that name no More like row (a fallback seed, a row the user removed
+  /// meanwhile) are passed over. A server has judged the song this lane's
+  /// start blended in when [keys] name it, so a later refusal no probe
+  /// explains is no longer laid on it ([_laneBlendKey]). Every caller checks
+  /// the pick's lane first, so a late answer never touches a newer lane.
+  /// Returns whether any row was dropped or newly set aside.
+  bool _dropSeedCulprits(Set<String> keys, String why) {
+    if (keys.contains(_laneBlendKey)) _laneBlendKey = null;
+    final verdict = _seeds.culprits(keys);
+    final setAside = [
+      for (final k in verdict.setAside)
+        if (_seedUnusable.add(k)) k,
+    ];
+    if (verdict.drop.isEmpty && setAside.isEmpty) return false;
+    if (verdict.drop.isNotEmpty) {
+      _seeds = _seeds.withoutKeys(verdict.drop);
+      _publishSeeds();
+    }
+    appLog('[dj] sonic seed(s) $why — ${verdict.drop.length} dropped'
+        '${setAside.isNotEmpty ? ', ${setAside.length} kept out of requests' : ''}');
+    final dj = autoDJServer?.localname;
+    if (_stayCloseAnchored &&
+        setAside.isNotEmpty &&
+        dj != null &&
+        stayCloseReleases(
+            frozen: _seeds.frozen,
+            admitted: _stayCloseAdmitted,
+            anyUsable: _seeds.moreLike.any((s) => _seedCarried(s, dj)))) {
+      _stayCloseAnchored = false;
+      appLog('[dj] stay close: no row left to stay close to — the next pick '
+          'takes in one song');
+    }
+    return true;
+  }
+
+  /// Which of the More like [rows] a single-server body carried made
+  /// [server] refuse it: its 404 "Track not found" ([gone]) and its 400
+  /// "not analyzed yet" name no path. The rows at fault leave the lane's
+  /// requests ([_dropSeedCulprits]). True when any was found, and the pick
+  /// goes again without them; false hands the failure back: the pick lays
+  /// it on the song its lane's start blended in when the body carried that
+  /// song ([blendCulprit]), and otherwise to the usual handling, which costs
+  /// this pick, or the session, its sonic seeds.
+  ///
+  /// One row sent is the one at fault. Of several, each is asked about on
+  /// its own, all at once and only on this failure, so at most eight calls:
+  /// after a 404, whether the server still has the track, where only its
+  /// "no" counts (a question it can't answer keeps the row); after a 400,
+  /// what the embeddings route says of it ([ApiManager.readEmbeddings]),
+  /// where only "not analysed yet" and "no such track" count. A probe that
+  /// timed out, or that the route answered about itself, blames no row.
+  /// [epoch] is the lane the pick belongs to: a later lane's seeds are not
+  /// this pick's to change.
+  Future<bool> _healSonicSeeds(
+      Server server, List<({String server, String path})> rows,
+      {required bool gone, required int epoch}) async {
+    if (rows.isEmpty) return false;
+    final Set<String> faulty;
+    if (rows.length == 1) {
+      faulty = {seedKey(rows.single.server, rows.single.path)};
+    } else if (gone) {
+      final there = await Future.wait(
+          [for (final r in rows) ApiManager().trackExists(server, r.path)]);
+      faulty = {
+        for (var i = 0; i < rows.length; i++)
+          if (there[i] == false) seedKey(rows[i].server, rows[i].path),
+      };
+    } else {
+      final read = await Future.wait([
+        for (final r in rows) ApiManager().readEmbeddings(server, [r.path]),
+      ]);
+      faulty = {
+        for (var i = 0; i < rows.length; i++)
+          if (read[i].refuses(0)) seedKey(rows[i].server, rows[i].path),
+      };
+    }
+    if (epoch != _djSessionEpoch || faulty.isEmpty) return false;
+    _dropSeedCulprits(faulty,
+        '${gone ? 'not found' : 'not analysed'} on ${server.localname}');
+    // The rows at fault are out of the next body whatever that found to
+    // change (a row the user removed meanwhile is out already), so the
+    // attempt that follows always sends less than this one did.
+    return true;
   }
 
   /// One pick, chosen across the eligible servers Play from names.
@@ -4232,23 +5589,33 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// ordinary single-server pick, so switching this on can never leave the
   /// queue empty where it would otherwise have filled.
   ///
+  /// [seeds] are the pick's positive seeds, each with the server holding it
+  /// ([fanOutSeeds]).
+  ///
   /// [epoch] is the lane this pick belongs to (see [_djSessionEpoch]): a
   /// clear or a server switch while the servers are being asked makes the
   /// answer worthless, so it is dropped — false, and the caller checks the
-  /// epoch itself before falling back.
-  Future<bool> _autoDJMultiServer(List<String> seedPaths,
-      {Map<String, String> anchors = const <String, String>{},
-      required int epoch,
+  /// epoch itself before falling back. [gen] is the queue generation the
+  /// pick was built under ([_djQueueGen]): a learned quick skip meanwhile
+  /// makes the answer stale in the same way, and the pick is run again.
+  Future<bool> _autoDJMultiServer(List<({String server, String path})> seeds,
+      {required int epoch,
+      required int gen,
       bool autoPlay = false,
       bool incrementIndex = false}) async {
+    // Less like rows still without the vector the other servers take them
+    // as: asked for now, for this pick if they come back in time, else for
+    // the next one.
+    unawaited(_ensureNegativeVectors());
     // A seed from another server than the DJ's is a sound the single-server
     // pick can't carry (it seeds by filepath), so any one server able to
-    // answer is worth asking; with every seed the DJ's own, it takes two.
-    final foreignSeed = seedPaths.any(
-        (p) => _seedOwner(p, anchors)?.localname != autoDJServer?.localname);
+    // answer is worth asking; with every seed the DJ's own, it takes two. A
+    // seed whose server is gone counts for neither: nobody can read it.
+    final foreignSeed = seeds.any((s) =>
+        _seedOwner(s.server) != null && s.server != autoDJServer?.localname);
     final candidates = multiServerCandidates();
     if (candidates.isEmpty || (candidates.length < 2 && !foreignSeed)) {
-      if (candidates.isEmpty) _unpinForeignLock('nobody to ask');
+      if (candidates.isEmpty) _dropForeignAnchor('nobody to ask');
       return _fanOutDecline('${candidates.length} eligible server(s) in Play '
           'from — the others lack discovery'
           '${AutoDJManager().activeMoodFilter != null ? ', mood filtering' : ''}'
@@ -4275,16 +5642,19 @@ class AudioPlayerHandler extends BaseAudioHandler
           timeout: const Duration(seconds: 8),
           extendWhileDialing: false,
           caller: 'dj-fanout')));
-      if (epoch != _djSessionEpoch) return false;
+      if (epoch != _djSessionEpoch || gen != _djQueueGen) return false;
     }
 
-    final seed = await _multiServerSeed(seedPaths, anchors);
-    if (epoch != _djSessionEpoch) return false;
+    final seed = await _multiServerSeed(seeds, epoch: epoch);
+    if (epoch != _djSessionEpoch || gen != _djQueueGen) return false;
     if (seed == null) {
-      _unpinForeignLock('no vector for it');
+      _dropForeignAnchor('no vector for it');
       return _fanOutDecline('no vector for the anchor (not analysed yet, or '
           'its server did not answer)');
     }
+    // The model every server below answers in, and so the one a Less like
+    // row's cached vector has to be in to reach them.
+    _fanOutSeedModel = seed.modelId;
 
     // The model handshake, before anything is sent: every candidate's model
     // space, from federation/health (the anchors' owners already answered it
@@ -4311,7 +5681,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 : '[dj] ${s.localname} answers in model ${health.modelId} '
                     '(${health.analyzedCount} analysed)');
       }));
-      if (epoch != _djSessionEpoch) return false;
+      if (epoch != _djSessionEpoch || gen != _djQueueGen) return false;
     }
     final eligible = <Server>[];
     for (final s in candidates) {
@@ -4322,8 +5692,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         verboseLog('[dj] ${s.localname} has no discovery model to answer '
             'with right now — sits this pick out');
       } else {
-        _multiServerExcluded.add(s.localname);
-        _multiServerExcludedWhy[s.localname] = FanOutSitOut.otherModel;
+        _dropFromFanOut(s.localname, FanOutSitOut.otherModel);
         appLog('[dj] ${s.localname} indexes model $model, the session is '
             '${seed.modelId} — dropped from this session');
         _reconcileFanOutTunnels('dj-fanout');
@@ -4349,29 +5718,24 @@ class AudioPlayerHandler extends BaseAudioHandler
     // each, as candidates are only servers that can filter by it).
     final mood = mgr.activeMoodFilter;
 
-    // What no server may answer with: the playing track, the recent anchors
-    // and the seed itself (a pin), keyed "<localname>|<path>" because a path
-    // only names a row on the server that holds it. A vector seed carries no
-    // hashes for the server to exclude on its own (the filepath form's seeds
-    // are dropped from the pool server-side), and ignoreList is only a soft
-    // cooldown that yields to the full pool once it covers every candidate —
-    // so this guard lives here, and a server offering a repeat is simply
-    // passed over.
-    final recent = <String>{};
-    final cur = mediaItem.valueOrNull;
-    final curServer = cur?.extras?['server'];
-    final curPath = _normSonicPath(cur?.extras?['path'] as String?);
-    if (curServer is String && curPath != null) {
-      recent.add('$curServer|$curPath');
-    }
-    for (final p in _sonicHistory) {
-      final owner = _seedOwner(p);
-      if (owner != null) recent.add('${owner.localname}|$p');
-    }
-    for (final p in seedPaths) {
-      final owner = _seedOwner(p, anchors);
-      if (owner != null) recent.add('${owner.localname}|$p');
-    }
+    // What no server may answer with: the playing track, the picks just
+    // played, everything queued after it, the More like rows, the seeds
+    // themselves and the blended song the user quick-skipped
+    // ([_laneSkippedBlend]), keyed "<localname>|<path>" because a path only
+    // names a row on the server that holds it ([fanOutRecentKeys]). A vector
+    // seed carries no hashes for the server to exclude on its own (the
+    // filepath form's seeds are dropped from the pool server-side), and
+    // ignoreList is only a soft cooldown that yields to the full pool once
+    // it covers every candidate — so this guard lives here, and a server
+    // offering a repeat is simply passed over.
+    final skippedBlend = _laneSkippedBlend;
+    final recent = fanOutRecentKeys(queue.value, index,
+        moreLike: _seeds.moreLike,
+        seeds: seeds,
+        avoid: [
+          if (skippedBlend != null)
+            (server: skippedBlend.server, path: skippedBlend.path),
+        ]);
 
     // Every server is asked at once — a session that waited for each in turn
     // would stall the queue on the slowest one. A server that times out or
@@ -4394,6 +5758,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           Map<String, dynamic> decoded,
           Map<String, dynamic> song,
           double similarity,
+          bool avoided,
         })> scored = const [];
     var answered = 0;
     for (var ask = 0; ask < maxAsks && scored.isEmpty; ask++) {
@@ -4402,12 +5767,26 @@ class AudioPlayerHandler extends BaseAudioHandler
           .where((s) => !_multiServerExcluded.contains(s.localname))
           .toList();
       if (round.isEmpty) return _fanOutDecline('every server was dropped');
+      // A Less like row that ran out while the last round was out is not
+      // sent in this one.
+      _pruneSeeds();
       final answers = await Future.wait(round.map((server) async {
+        // The Less like negatives this server takes (mStream #1108): its own
+        // songs as paths, the other servers' as their vectors cached in the
+        // session's model, which is the one this server answers in.
+        final negatives = mgr.sonicSimilarityEnabled && server.lessLikeUsable
+            ? _seeds.negativesFor(server.localname, modelId: seed.modelId)
+            : null;
         final payload = <String, dynamic>{
           'ignoreList': retryLists[server.localname] ?? const [],
           'similarToVector': seed.base64,
           'similarToModelId': seed.modelId,
           'minSimilarity': mgr.sonicMinSimilarity,
+          if (negatives != null)
+            ...lessLikeParams(
+                paths: negatives.paths,
+                vectors: negatives.vectors,
+                modelId: seed.modelId),
           // Each server's own library rules — rating, vpaths, genre — plus
           // the app-level ones that mean the same everywhere.
           ...mgr.libraryFilters(server),
@@ -4436,9 +5815,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 res.body.contains('Sonic seed is from model')) {
               // The handshake above should have caught this; a stale cache
               // (a rescan under a new model) still ends here.
-              _multiServerExcluded.add(server.localname);
-              _multiServerExcludedWhy[server.localname] =
-                  FanOutSitOut.otherModel;
+              _dropFromFanOut(server.localname, FanOutSitOut.otherModel);
               _fanOutModels.record(server.localname, null, DateTime.now());
               appLog('[dj] ${server.localname} indexes a different embedding '
                   'model — dropped from this session');
@@ -4453,9 +5830,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                   ServerCapabilities().noteRejection(server, res.body);
               if (learned == 'similarToVector' ||
                   learned == 'similarToModelId') {
-                _multiServerExcluded.add(server.localname);
-                _multiServerExcludedWhy[server.localname] =
-                    FanOutSitOut.olderServer;
+                _dropFromFanOut(server.localname, FanOutSitOut.olderServer);
                 appLog('[dj] ${server.localname} does not take a vector '
                     'seed — dropped from this session');
                 _reconcileFanOutTunnels('dj-fanout');
@@ -4464,6 +5839,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             return null;
           }
           final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+          _logLessLikeEcho(server, decoded);
           final offered = scoredSongs(decoded);
           if (offered.isEmpty) return null;
           // An answer that does not echo the mood was picked from outside it
@@ -4483,8 +5859,13 @@ class AudioPlayerHandler extends BaseAudioHandler
           // Each song competes on its own. The ones this session may not
           // play — keyword-blocked, or a repeat of what is playing or
           // anchoring — are passed over; a server whose whole answer is
-          // passed over still counts as having answered.
-          final usable = <({Map<String, dynamic> song, double similarity})>[];
+          // passed over still counts as having answered. A song keeps the
+          // avoided flag read at its own place in the answer.
+          final usable = <({
+            Map<String, dynamic> song,
+            double similarity,
+            bool avoided
+          })>[];
           var repeats = 0;
           for (final c in offered) {
             if (mgr.isKeywordBlocked(c.song)) continue;
@@ -4505,7 +5886,9 @@ class AudioPlayerHandler extends BaseAudioHandler
           return null;
         }
       }));
-      if (epoch != _djSessionEpoch) return false;
+      // A learned quick skip while the servers were out: their answers were
+      // chosen without its negative (the caller runs the pick again).
+      if (epoch != _djSessionEpoch || gen != _djQueueGen) return false;
       final got = answers.nonNulls.toList();
       answered = got.length;
       // Nobody answered — asking again would not change that.
@@ -4518,6 +5901,7 @@ class AudioPlayerHandler extends BaseAudioHandler
               decoded: a.decoded,
               song: c.song,
               similarity: c.similarity,
+              avoided: c.avoided,
             ),
       ];
       if (scored.isEmpty && ask + 1 < maxAsks) {
@@ -4535,14 +5919,18 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     // Best matches win. The whole reason for asking everyone is that one of
     // them holds something closer to the seed than the DJ's own server does
-    // — and with a batch, one server may well supply all of it.
-    final chosen =
-        bestBySimilarity(scored, (c) => c.similarity, mgr.songsPerFetch);
+    // — and with a batch, one server may well supply all of it. A song a
+    // server flagged as like a Less like row comes only after every clean
+    // one, as it does in that server's own answer.
+    final chosen = bestBySimilarity(scored, (c) => c.similarity,
+        mgr.songsPerFetch, avoided: (c) => c.avoided);
     final best = chosen.first;
+    final avoidedQueued = chosen.where((c) => c.avoided).length;
 
     appLog('[dj] multi-server: $answered/${eligible.length} answered, '
         '${scored.length} usable, queueing ${chosen.length}; best '
-        '${best.similarity.toStringAsFixed(4)} from ${best.server.localname}');
+        '${best.similarity.toStringAsFixed(4)} from ${best.server.localname}'
+        '${avoidedQueued > 0 ? '; $avoidedQueued like a Less like row' : ''}');
 
     // Only the cooldowns of servers whose songs are being queued advance —
     // the others' answers were not played. A contributing server's list also
@@ -4569,10 +5957,27 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     await _queueAutoDJSongs(
         [for (final c in chosen) (song: c.song, source: c.server)],
+        epoch: epoch,
+        gen: gen,
         autoPlay: autoPlay,
         incrementIndex: incrementIndex,
         sonicPick: true);
     return true;
+  }
+
+  /// The server's word on the Less like negatives a body carried (mStream
+  /// #1108): how many it used and how many it ignored (a path it can't
+  /// resolve, a vector in another model), the similarity a song had to reach
+  /// to count as like one, and how many of the songs it answered with did.
+  /// For the verbose log only. A server that took none sends no echo.
+  static void _logLessLikeEcho(Server server, Map<String, dynamic> decoded) {
+    final echo = decoded['lessLike'];
+    if (echo is! Map) return;
+    final flags = echo['avoided'];
+    final like = flags is List ? flags.where((a) => a == true).length : 0;
+    verboseLog('[dj] ${server.localname} less like: used ${echo['used']}, '
+        'ignored ${echo['ignored']}, threshold ${echo['threshold']}; '
+        '$like of ${flags is List ? flags.length : 0} answered like one');
   }
 
   /// The ignoreList to send [server]: the DJ's own server uses the list the
@@ -4595,20 +6000,45 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Fetch and queue one Auto-DJ pick. Overlapping calls are dropped — safe,
   /// because every trigger (the follow-up call, the next last-item index
   /// emit) re-fires the top-up once the in-flight run lands.
+  ///
+  /// The one trigger that does not come back by itself is a learned quick
+  /// skip's re-roll: the skip's own call is dropped while a pick is out, and
+  /// that pick, chosen without the new negative, is thrown away where it
+  /// would queue, or has just landed stale. So a call during which the
+  /// queue's generation moved runs once more when it is done, while the
+  /// re-roll is still owed and the lane the same. A deferred or failed pick
+  /// is left to the tunnel's return or the next top-up instead, which land
+  /// as the re-roll. It can't loop: a run is followed by another only when a
+  /// further learned skip came while it was out.
   Future<void> autoDJ(
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (_djInFlight) return;
     _djInFlight = true;
+    final epoch = _djSessionEpoch;
+    final gen = _djQueueGen;
     try {
       await _autoDJPick(autoPlay: autoPlay, incrementIndex: incrementIndex);
     } finally {
       _djInFlight = false;
+      if (shouldRerunPick(
+          genAtEntry: gen,
+          gen: _djQueueGen,
+          rerolledGen: _rerolledGen,
+          sameLane: _djSessionEpoch == epoch,
+          armed: autoDJServer != null,
+          pickPending: _djPickPending)) {
+        unawaited(autoDJ());
+      }
     }
   }
 
   Future<void> _autoDJPick(
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (autoDJServer == null) return;
+    // Mid-clear, the queue still holds the rows being thrown away: a pick
+    // now would open the new lane on them ([_clearingQueue]). The armed DJ
+    // resumes once the user queues something, as after any clear.
+    if (_clearingQueue) return;
     // The lane this call belongs to — checked when each response lands.
     final epoch = _djSessionEpoch;
 
@@ -4643,6 +6073,34 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
     }
 
+    // The rows the Seeds page held aside (the DJ off, or on before this
+    // lane's first pick) join the lane here, at its first pick, before
+    // anything reads the seeds: every start passes through this point, and
+    // an import any earlier would be wiped by the resets a start runs
+    // (setAutoDJ's fresh session, then a seeded start's own clear).
+    if (_pendingSeeds case final pending?) {
+      _seeds = _seeds.merge(pending, now: DateTime.now());
+      _pendingSeeds = null;
+      _publishSeeds();
+      // The Less like rows among them have no vector yet.
+      unawaited(_ensureNegativeVectors());
+    }
+    // Whether this is the lane's first pick: every lane edge clears the flag
+    // (a new queue, Stop/Start, a server switch), and so does the launch
+    // restore. Read before the flag is set just below. A pick that deferred
+    // in the tunnel wait returned before this, so its retry is still first.
+    final laneStart = !_lanePicked;
+    // From here on the live set is the lane's to keep: the page's next rows
+    // go straight into it.
+    _lanePicked = true;
+    // A Less like row whose time ran out goes before any body is built.
+    _pruneSeeds();
+    // The queue generation this pick is built under, taken where its seeds
+    // are read: after the tunnel wait, so a pick that waited across a
+    // learned skip, and so already carries its negative, is not thrown away
+    // as stale.
+    final gen = _djQueueGen;
+
     final mgr = AutoDJManager();
     Map<String, dynamic>? lastDecoded;
 
@@ -4667,14 +6125,59 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (seed != null) _camelotAnchor = seed;
     }
 
+    // Drift's blend: at the lane's first pick the song playing joins More
+    // like, unpinned, beside the pins the lane carried over, so a new queue
+    // (Stop/Start, a server switch, the first pick after a restart too)
+    // steers the picks with the music just put on, not the pins alone. It
+    // rotates out like any DJ pick. Here, before the seeds are read below,
+    // so this very request carries it. Only a song the route the pick tries
+    // first can carry (never a local file), not one in Less like, not one
+    // More like holds already (a pin, a seeded start's opener, a carried
+    // row), and not a DJ pick of this lane, which joins as it starts
+    // playing ([blendsOnLaneStart]). Whether or not sonic similarity is on,
+    // like every push. Nothing checks that the server can seed from it, so
+    // the lane remembers it until a server has ([_laneBlendKey]).
+    if (laneStart && currentItem != null) {
+      final now = DateTime.now();
+      final playing = trackFactsFor(currentItem);
+      final row =
+          AutoDjSeed(song: playing, origin: SeedOrigin.opener, addedAt: now);
+      if (blendsOnLaneStart(
+          drift: mgr.sonicAnchorMode == SonicAnchorMode.rolling,
+          laneStart: laneStart,
+          usable: _seedCarried(row, dj.localname),
+          inLessLike: _seeds.has(SeedList.lessLike, row.key),
+          alreadyMoreLike: _seeds.has(SeedList.moreLike, row.key),
+          isDjPick: currentItem.extras?['djLane'] == _djLaneId)) {
+        final next =
+            _seeds.pushPick(playing, origin: SeedOrigin.opener, now: now);
+        if (!identical(next, _seeds)) {
+          _seeds = next;
+          if (next.has(SeedList.moreLike, row.key)) {
+            _laneBlendKey = row.key;
+            _laneBlendedSong = row.key;
+          }
+          _publishSeeds();
+          appLog('[dj] seeds: the song playing joins More like at the lane '
+              'start');
+        }
+      }
+    }
+
     // Sonic similarity: constrain the pick pool to tracks within the
     // session's vibe — server-side, via `similarTo` + `minSimilarity` on
     // random-songs itself. The sonic pool is a HARD base constraint there
     // (the BPM/key waterfall relaxes WITHIN it, and ignoreList / rating /
-    // genre filters compose as usual). Seeds follow the webapp's rolling
-    // anchor: the last few DJ picks (session centroid), else the playing
-    // track; a cold start on an empty queue has no anchor and stays plain
-    // random until the first pick seeds the session.
+    // genre filters compose as usual). The seeds are the session's More like
+    // rows (util/auto_dj_seeds.dart). In Drift they are the DJ picks it has
+    // played, the song playing at the lane's start (the blend above) and the
+    // user's pins, averaged by the server into the session's centroid as the
+    // webapp's rolling anchor is; with no row the request can carry, the
+    // explicit seed, else the playing track. In Stay close they are the rows
+    // frozen in place, every one kept from lane to lane, with one song
+    // admitted to start a lane that has nothing to stay close to, and none
+    // after it. A cold start on an empty queue has no anchor and stays plain
+    // random until the first pick plays.
     // Dropped after a failure earlier this session (see the degradation
     // below), so skip building the params at all — that also keeps the error
     // branch from thinking sonic is still in play.
@@ -4693,110 +6196,192 @@ class AudioPlayerHandler extends BaseAudioHandler
           'but nothing analysed yet — picks stay random until the scan gets '
           'there');
     }
+    // A song in Less like never anchors a pick, as a fallback or as the
+    // Stay close anchor: the server keeps a positive that is also a negative
+    // and ignores the negative.
+    String? unlessLessLike(String server, String? path) => path != null &&
+            _seeds.has(SeedList.lessLike, seedKey(server, path))
+        ? null
+        : path;
     // The explicit seed ("start the session here") only counts when it was
     // picked from the DJ server — filepaths are per-library. Same rule for
     // the playing track on the single-server route.
-    final explicitSeed =
-        mgr.sonicSeedServer == dj.localname ? mgr.sonicSeedPath : null;
+    final explicitSeed = unlessLessLike(dj.localname,
+        mgr.sonicSeedServer == dj.localname ? mgr.sonicSeedPath : null);
     final curServer = currentItem?.extras?['server'];
     final curPath = currentItem?.extras?['path'] as String?;
-    final sonicCurrent = curServer == dj.localname ? curPath : null;
+    final sonicCurrent = curServer == dj.localname
+        ? unlessLessLike(dj.localname, curPath)
+        : null;
     // A session across several servers takes the playing track from any of
     // them: its sound travels as a vector read from the server holding it,
     // so the first pick follows what was playing rather than opening on a
     // random track from the DJ's own server.
-    final fanOutCurrent = mgr.multiServerEnabled
+    final playingAcross = mgr.multiServerEnabled
         ? fanOutCurrentSeed(
             path: curPath, server: curServer, inSession: _inSession)
         : null;
-    // Locked mode pins its anchor on the session's first pick — the explicit
-    // seed, else the playing track (the same lazy-lock pattern as the
-    // Camelot anchor above). A cold start with neither stays plain random
-    // and pins on the next call via the then-playing pick.
-    if (sonicEnabled &&
-        mgr.sonicAnchorMode == SonicAnchorMode.locked &&
-        _sonicLock == null) {
-      _sonicLock = sonicPin(
+    final fanOutCurrent = playingAcross == null ||
+            unlessLessLike(playingAcross.server, playingAcross.path) == null
+        ? null
+        : playingAcross;
+    // Which More like rows a request can carry ([_carriedHere],
+    // [_carriedAcross]): never one a server refused this lane, and only on a
+    // server that can read its path. The single-server body takes the DJ's
+    // own; a session across several takes those of any of its servers that
+    // can hand out its song's vector at all.
+    bool carriedHere(AutoDjSeed s) => _carriedHere(s, dj.localname);
+    bool carriedAcross(AutoDjSeed s) => _carriedAcross(s, dj.localname);
+    // Stay close anchors on its frozen More like. A lane with nothing to stay
+    // close to — no row the request can carry, the rows it carried over
+    // included (Stay close keeps every row it shows, an earlier lane's song
+    // among them, and a chosen first song came in pinned at the start when
+    // More like had room) —
+    // gets ONE song to start: the explicit seed, else the playing track, the
+    // very pin the old lazy lock took at this spot, so a Stay close lane
+    // opens as it always did. A row it carried and can't use (one on a
+    // server this lane doesn't ask) stays listed beside it. Judged by the
+    // route the pick tries
+    // first ([_seedCarried]), the song as well as the rows, and carried by
+    // this same request: a playing track on a server of the session that
+    // can't hand out its vector is no song to stay close to, and the lane
+    // keeps looking until one it can carry plays ([stayCloseAdmit]). After
+    // that nothing is added ([_stayCloseAnchored], set on every such pick
+    // before the song is taken in): a row the user removes or moves stays
+    // gone, and with no row left the picks send no positives, ignoring sonic
+    // similarity until the user adds a song, switches the mode or a new lane
+    // starts. Only a lane whose last row it could carry a server refused,
+    // before it took in a song of its own, looks again ([_dropSeedCulprits]).
+    // A cold start with neither song stays plain random and admits at the
+    // next call, from the then-playing pick. Rows on servers that just did
+    // not answer this pick anchor the lane all the same: the single-server
+    // body falls back for the pick instead ([stayCloseFallsBack]).
+    if (sonicEnabled && mgr.sonicAnchorMode == SonicAnchorMode.locked) {
+      final pin = sonicPin(
           own: explicitSeed ?? sonicCurrent,
           dj: dj.localname,
           elsewhere: fanOutCurrent);
-      if (_sonicLock case final pin? when pin.server != dj.localname) {
-        appLog('[dj] multi-server: pinned the playing track on ${pin.server}');
+      // The explicit seed has no queue row in hand (it is only read here
+      // when a seeded start could not open on it), so its row is its path
+      // and stored title; the playing track's is its queue row.
+      final seedPath = _normSonicPath(explicitSeed);
+      final song = pin == null
+          ? null
+          : seedPath != null
+              ? TrackFacts(
+                  server: dj.localname,
+                  path: '/$seedPath',
+                  title: mgr.sonicSeedTitle)
+              : trackFactsFor(currentItem!);
+      final admission = stayCloseAdmit(_seeds,
+          anchored: _stayCloseAnchored,
+          song: song,
+          usable: (s) => _seedCarried(s, dj.localname),
+          now: DateTime.now());
+      _stayCloseAnchored = admission.anchored;
+      // Anchored only by an admission that took: a refused one (a song
+      // already in a list) added nothing, so the lane is still looking for
+      // its one song. A full More like takes it in past eight.
+      if (admission.admitted && song != null) {
+        _seeds = admission.seeds;
+        _stayCloseAdmitted = true;
+        _publishSeeds();
+        if (song.server != dj.localname) {
+          appLog('[dj] multi-server: anchored on the playing track on '
+              '${song.server}');
+        }
       }
     }
-    final lock = _sonicLock;
     // The sonic settings these params are built from: a verdict on them only
     // stands while they are still the ones set (see [_sonicGen]).
     final sonicGen = _sonicGen;
-    // The session's anchors from every server that has contributed a pick
-    // — what a cross-server seed averages over — else the playing track on
-    // any of its servers.
-    final sonicAll = sonicParams(
-      enabled: sonicEnabled,
-      mode: mgr.sonicAnchorMode,
-      lockedAnchor: lock?.path,
-      history: _sonicHistory,
-      seedPath: explicitSeed,
-      currentPath: fanOutCurrent?.path ?? sonicCurrent,
-      minSimilarity: mgr.sonicMinSimilarity,
-    );
-    // The single-server body carries only what the DJ's own server can
-    // resolve: a filepath names a row on the server holding it, and every
-    // discovery route answers a uniform 404 for one it can't — so another
-    // server's path in this body would stop the session with "Track not
-    // found". With the whole recent history on other servers the policy
-    // falls back the way it does on a cold start: the explicit seed, else
-    // the playing track (both already restricted to the DJ's server above).
-    // A pin on another server is the cross-server pick's alone.
-    final sonic = sonicParams(
-      enabled: sonicEnabled,
-      mode: mgr.sonicAnchorMode,
-      lockedAnchor: lock?.server == dj.localname ? lock?.path : null,
-      history: historyOwnedBy(_sonicHistory, _sonicSeedOwners, dj.localname),
-      seedPath: explicitSeed,
-      currentPath: sonicCurrent,
-      minSimilarity: mgr.sonicMinSimilarity,
-    );
 
     // Multi-server first, when it's on and there is a sonic seed to carry —
     // from ANY server: a session that has wandered onto peers still has
     // anchors, just not local ones. It returns false whenever it can't run
     // — no seed, too few eligible servers, nobody answered — and the
-    // ordinary single-server pick below then runs unchanged, so switching
-    // this on can never leave the queue empty where it would otherwise
-    // have filled.
-    if (mgr.multiServerEnabled && sonicAll != null) {
-      final seedPaths =
-          (sonicAll['similarTo'] as List?)?.whereType<String>().toList() ??
-              const <String>[];
-      // Where the anchors that are not recorded picks live: the pin, and the
-      // playing track (a recorded pick keeps the server it came from).
-      final anchors = <String, String>{
-        if (fanOutCurrent != null &&
-            !_sonicSeedOwners.containsKey(fanOutCurrent.path))
-          fanOutCurrent.path: fanOutCurrent.server,
-        if (lock != null) lock.path: lock.server,
-      };
-      // The rolling policy's last resort, so only with no picks or opener.
-      if (mgr.sonicAnchorMode == SonicAnchorMode.rolling &&
-          _sonicHistory.isEmpty &&
-          explicitSeed == null &&
-          fanOutCurrent != null &&
-          fanOutCurrent.server != dj.localname) {
-        appLog('[dj] multi-server: seeded by the playing track on '
-            '${fanOutCurrent.server}');
+    // ordinary single-server pick below then runs, so switching this on can
+    // never leave the queue empty where it would otherwise have filled.
+    if (mgr.multiServerEnabled) {
+      // The More like rows of every server the session can ask, each with
+      // its server — what a cross-server seed averages over — else, in
+      // Drift, the explicit seed or the playing track on any of them.
+      final across = usableSeeds(_seeds.moreLike, carriedAcross);
+      final seeds = fanOutSeeds(
+          enabled: sonicEnabled,
+          mode: mgr.sonicAnchorMode,
+          rows: across,
+          dj: dj.localname,
+          seedPath: explicitSeed,
+          current: fanOutCurrent ??
+              (sonicCurrent == null
+                  ? null
+                  : (server: dj.localname, path: sonicCurrent)));
+      if (seeds.isNotEmpty) {
+        // Drift's last resort, so only with no row or explicit seed.
+        if (across.isEmpty && seeds.first.server != dj.localname) {
+          appLog('[dj] multi-server: seeded by the playing track on '
+              '${seeds.first.server}');
+        }
+        final picked = await _autoDJMultiServer(seeds,
+            epoch: epoch,
+            gen: gen,
+            autoPlay: autoPlay,
+            incrementIndex: incrementIndex);
+        // The lane changed while the servers were being asked: neither the
+        // cross-server pick nor a single-server fallback belongs to it now
+        // (same rule as the response check further down).
+        if (epoch != _djSessionEpoch) return;
+        // Nor after a learned quick skip: the fallback below would spend a
+        // request on seeds and negatives from before it (autoDJ() runs the
+        // pick again).
+        if (gen != _djQueueGen) return;
+        if (picked) return;
       }
-      final picked = await _autoDJMultiServer(seedPaths,
-          anchors: anchors,
-          epoch: epoch,
-          autoPlay: autoPlay,
-          incrementIndex: incrementIndex);
-      // The lane changed while the servers were being asked: neither the
-      // cross-server pick nor a single-server fallback belongs to it now
-      // (same rule as the response check further down).
-      if (epoch != _djSessionEpoch) return;
-      if (picked) return;
     }
+
+    // The single-server body carries only what the DJ's own server can
+    // resolve: a filepath names a row on the server holding it, and every
+    // discovery route answers a uniform 404 for one it can't — so another
+    // server's path in this body would stop the session with "Track not
+    // found". With every row on other servers Drift falls back the way it
+    // does on a cold start: the explicit seed, else the playing track (both
+    // already restricted to the DJ's server above). Built after the fan-out,
+    // whose heals may have taken rows out, and again after a heal below.
+    // [rows] are the More like rows the fields carry: none when they carry
+    // a fallback, which is no row. Stay close falls back the same way, for
+    // this pick only and without a row, when its frozen rows all sit on
+    // servers the pick across them could not get a vector from this time (a
+    // tunnel down, a timeout): its list is the same when they answer again.
+    // [oneOff] says the fields are that fallback: what the server says of
+    // its anchor is about this pick, not about the session's seeds.
+    ({
+      Map<String, dynamic>? fields,
+      List<({String server, String path})> rows,
+      bool oneOff,
+    }) singleServerSonic() {
+      final rows = usableSeeds(_seeds.moreLike, carriedHere);
+      final stranded = stayCloseFallsBack(
+          multiServer: mgr.multiServerEnabled,
+          locked: mgr.sonicAnchorMode == SonicAnchorMode.locked,
+          anyHere: rows.isNotEmpty,
+          anyAcross: _seeds.moreLike.any(carriedAcross));
+      final fields = sonicParams(
+        enabled: sonicEnabled,
+        mode: stranded ? SonicAnchorMode.rolling : mgr.sonicAnchorMode,
+        history: [for (final r in rows) r.path],
+        seedPath: explicitSeed,
+        currentPath: sonicCurrent,
+        minSimilarity: mgr.sonicMinSimilarity,
+      );
+      return (
+        fields: fields,
+        rows: fields == null ? const [] : rows,
+        oneOff: stranded && fields != null,
+      );
+    }
+
+    var sonic = singleServerSonic();
 
     // Keyword filter is client-side (the server doesn't see it).
     // Retry up to 5 times if responses get blocked, using the
@@ -4810,10 +6395,25 @@ class AudioPlayerHandler extends BaseAudioHandler
     var sonicOffThisPick = false;
     for (var attempt = 0; attempt < 5; attempt++) {
       // Left out once this session has dropped it (see [sonicDrop]).
-      sentSonic = sonic != null && sonicDrop == null && !sonicOffThisPick;
+      final fields = sonic.fields;
+      sentSonic = fields != null && sonicDrop == null && !sonicOffThisPick;
+      // The More like rows this attempt carries, for the heal below.
+      final sentRows =
+          sentSonic ? sonic.rows : const <({String server, String path})>[];
+      // A Less like row whose time ran out while an earlier attempt was out
+      // is not sent in this one.
+      _pruneSeeds();
       final payload = <String, dynamic>{
         'ignoreList': jsonAutoDJIgnoreList ?? [],
-        if (sentSonic) ...sonic,
+        if (sentSonic) ...fields,
+        // The Less like negatives (mStream #1108): the DJ server's own songs
+        // as paths. Beside the sonic fields, never inside them: they go out
+        // on a pick that dropped its positive seeds too, which the server
+        // takes, and never with a minSimilarity, which without a seed is a
+        // 400 that loses the pick (lessLikeParams).
+        if (mgr.sonicSimilarityEnabled && autoDJServer!.lessLikeUsable)
+          ...lessLikeParams(
+              paths: _seeds.negativesFor(autoDJServer!.localname).paths),
         // Rating, vpaths, genre and track length — shared with the
         // "Surprise me" opener so the two can't drift apart again.
         ...mgr.libraryFilters(autoDJServer!),
@@ -4924,14 +6524,55 @@ class AudioPlayerHandler extends BaseAudioHandler
               if (b is Map && b['error'] is String) serverMsg = b['error'];
             } catch (_) {}
             final lower = serverMsg.toLowerCase();
-            // Self-heal a dead locked pin (hardening the webapp lacks): a
-            // pinned anchor the server can't use — not analyzed yet (400) or
-            // moved/deleted (the uniform 404) — would wedge EVERY future
-            // pick, since locked mode never re-derives on its own. Dropping
-            // it lets the next attempt re-pin from the playing track.
-            if (mgr.sonicAnchorMode == SonicAnchorMode.locked &&
-                (res.statusCode == 404 || lower.contains('analyzed'))) {
-              _sonicLock = null;
+            // Self-heal a dead seed row (hardening the webapp lacks). A seed
+            // the server can't use — gone from its library (the uniform 404
+            // "Track not found") or not analysed yet (400) — names no path,
+            // and a pinned or Stay close row never rotates out the way the
+            // old ring's paths did, so one dead row would cost every later
+            // pick its sonic seeds. When this body carried More like rows,
+            // the ones at fault leave the lane's requests and this same
+            // pick goes again with what is left: Drift falls back as on a
+            // cold start, and Stay close, which keeps them listed, sends its
+            // rows still usable, or no positive at all, since its lane
+            // admits nothing after its one song; a lane that had not taken
+            // in its song yet takes it in at its next pick instead
+            // ([_dropSeedCulprits]). When no probe can say which row it was
+            // (a server from before the embeddings route, a probe that
+            // timed out), the song this lane's start blended in is the one
+            // taken out, if the body carried it ([blendCulprit]): no server
+            // has judged it, and the rows it joined went out without it
+            // before. Only a failure no row explains — the body carried a
+            // fallback, or the probe found nothing and no blended song rode
+            // along — goes on below, and so does one whose rows left would
+            // send the very seeds just refused ([sonicFieldsDiffer]).
+            final gone =
+                res.statusCode == 404 && lower.contains('track not found');
+            if ((gone || lower.contains('analyzed')) && sentRows.isNotEmpty) {
+              var healed = await _healSonicSeeds(autoDJServer!, sentRows,
+                  gone: gone, epoch: epoch);
+              if (epoch != _djSessionEpoch) return;
+              if (gen != _djQueueGen) return; // a learned skip: run again
+              final blend = blendCulprit(
+                  healed: healed, blend: _laneBlendKey, sent: sentRows);
+              if (blend != null) {
+                _dropSeedCulprits(
+                    {blend},
+                    'presumed ${gone ? 'not found' : 'not analysed'} on '
+                    '${autoDJServer!.localname} (the song blended in at the '
+                    'lane start; no probe could tell)');
+                // Out of the next body whatever that found to change (a row
+                // the user removed meanwhile is out already), as a heal's
+                // rows are.
+                healed = true;
+              }
+              if (healed) {
+                sonic = singleServerSonic();
+                // With the lane's one row out, Drift falls back to the song
+                // playing, which can be that very row (the blend, a seeded
+                // start's opener): the same seeds again would only be
+                // refused again, so this answer stands for that body too.
+                if (sonicFieldsDiffer(fields, sonic.fields)) continue;
+              }
             }
             // The three ways sonic can fail while the request itself is
             // fine. All used to `return` — no pick, and with the queue-end
@@ -4968,29 +6609,36 @@ class AudioPlayerHandler extends BaseAudioHandler
               drop = SonicDrop.discoveryOff;
             }
             // The anchor names a track the server no longer has (moved or
-            // deleted since it played — an opener from Recently played):
-            // this pick goes without it rather than not at all.
-            if (drop == null &&
-                res.statusCode == 404 &&
-                lower.contains('track not found')) {
-              _sonicLock = null;
+            // deleted since it played — an opener from Recently played), and
+            // it is no row a heal could take out (the explicit seed, the
+            // playing track): this pick goes without it rather than not at
+            // all.
+            if (drop == null && gone) {
               sonicOffThisPick = true;
               continue;
             }
             if (drop != null) {
-              if (sonicGen == _sonicGen) {
+              // A Stay close pick that fell back to the playing track for
+              // itself alone ([stayCloseFallsBack]) asked about that track,
+              // not about the session's frozen seeds: no match around it, or
+              // a track not analysed yet, costs only this pick its sonic
+              // keys, so the seeds pick up again once their servers answer.
+              // Discovery switched off is the server's, whatever was asked.
+              final oneOff = sonic.oneOff && drop != SonicDrop.discoveryOff;
+              if (sonicGen == _sonicGen && !oneOff) {
                 appLog('[dj] sonic dropped for this session — ${drop.name}');
                 sonicDrop = drop;
                 customState.add(CustomEvent(autoDJServer));
               } else {
                 // The sonic settings changed while this pick was out, so the
-                // verdict is about ones no longer set: this pick goes without
-                // sonic, and the next is built with the new settings.
+                // verdict is about ones no longer set (or it was about a
+                // one-pick fallback, above): this pick goes without sonic,
+                // and the next is built with the new settings.
                 sonicOffThisPick = true;
               }
-              // The anchor stays: these verdicts are about the threshold or
-              // the server, not the pinned song (a dead pin is unpinned
-              // above), so loosening the match resumes on the same anchor.
+              // The seeds stay: these verdicts are about the threshold or
+              // the server, not the seed songs (a row at fault was taken out
+              // above), so loosening the match resumes on the same seeds.
               // Retry this same pick without the constraint. Bounded by the
               // enclosing attempt loop, and cannot spin: with [sonicDrop] or
               // sonicOffThisPick set the next pass builds a payload that no
@@ -5018,6 +6666,11 @@ class AudioPlayerHandler extends BaseAudioHandler
           return;
         }
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        _logLessLikeEcho(autoDJServer!, decoded);
+        // The server took a body that carried the song this lane's start
+        // blended in, so it can seed from that song: a row like any other
+        // from here on ([_laneBlendKey]).
+        if (carriesBlend(_laneBlendKey, sentRows)) _laneBlendKey = null;
         // A working pick re-arms the auth warning: the once-per-session flag
         // exists to collapse queue-end retrigger spam of ONE expiry episode,
         // not to silence a NEW expiry after a recovery.
@@ -5049,10 +6702,14 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       // The lane changed while the request was out — the queue was cleared,
       // or the DJ was switched off / to another server. Drop the pick:
-      // landing it would smuggle a dead-session track into the fresh queue,
-      // overwrite the just-reset ignoreList with the old session's, and push
-      // the pick into the new lane's sonic history.
+      // landing it would smuggle a dead-session track into the fresh queue
+      // and overwrite the just-reset ignoreList with the old session's.
       if (epoch != _djSessionEpoch) return;
+      // A learned quick skip while it was out: this answer was chosen
+      // without the skip's negative, so it is dropped and its ignoreList
+      // with it (none of its songs is queued), and autoDJ() runs the pick
+      // again as the re-roll.
+      if (gen != _djQueueGen) return;
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
       final songs = _songsOf(decoded);
@@ -5060,15 +6717,21 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       lastDecoded = decoded;
 
-      // A batch keeps whatever part of it passes the keyword filter; only an
-      // answer blocked in full is retried.
+      // A batch keeps whatever part of it passes the keyword filter, and
+      // never the blended song the user quick-skipped in this lane
+      // ([_laneSkippedBlend]); only an answer blocked in full is retried.
+      final skippedKey = _skippedBlendKey();
       final accepted = [
         for (final s in songs)
-          if (!mgr.isKeywordBlocked(s)) s,
+          if (!mgr.isKeywordBlocked(s) &&
+              !isSkippedBlend(s, autoDJServer!.localname, skippedKey))
+            s,
       ];
       if (accepted.isNotEmpty) {
         await _queueAutoDJSongs(
             [for (final s in accepted) (song: s, source: autoDJServer!)],
+            epoch: epoch,
+            gen: gen,
             autoPlay: autoPlay,
             incrementIndex: incrementIndex,
             sonicPick: sentSonic);
@@ -5081,16 +6744,33 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (lastDecoded != null) {
       // Every retry was blocked in full: take the last answer whole rather
       // than stall the session (webapp parity — the server's fallback chain
-      // has already exhausted the alternatives).
+      // has already exhausted the alternatives). Whole but for the blended
+      // song the user quick-skipped, while anything else is left.
+      final last = _songsOf(lastDecoded);
+      final skippedKey = _skippedBlendKey();
+      final rest = [
+        for (final s in last)
+          if (!isSkippedBlend(s, autoDJServer!.localname, skippedKey)) s,
+      ];
       await _queueAutoDJSongs(
           [
-            for (final s in _songsOf(lastDecoded))
+            for (final s in rest.isEmpty ? last : rest)
               (song: s, source: autoDJServer!),
           ],
+          epoch: epoch,
+          gen: gen,
           autoPlay: autoPlay,
           incrementIndex: incrementIndex,
           sonicPick: sentSonic);
     }
+  }
+
+  /// The seed key of the blended song the user quick-skipped in this lane
+  /// ([_laneSkippedBlend]), which the single-server picks pass over; null
+  /// when there is none.
+  String? _skippedBlendKey() {
+    final s = _laneSkippedBlend;
+    return s == null ? null : seedKey(s.server, s.path);
   }
 
   /// The song rows of a random-songs answer — one before mStream #966, up to
@@ -5104,13 +6784,32 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Queue a batch in the server's order (best first). The flags belong to
   /// the FIRST song — it is the one a seek lands on and playback starts from;
   /// the rest simply follow it in the queue.
+  ///
+  /// [epoch] and [gen] are the lane and the queue generation the pick was
+  /// built under, tested again before every song, the lane first: a clear
+  /// that lands mid-batch gets none of the rest and owes nothing, and a
+  /// learned quick skip mid-batch stops it too, the pick being run again
+  /// (autoDJ()). A pick whose generation no re-roll has settled yet IS the
+  /// re-roll: it takes the stale picks ahead out as its songs come in, and
+  /// queues one for each rather than adding a batch ([_landReroll]).
   Future<void> _queueAutoDJSongs(
       List<({Map<String, dynamic> song, Server source})> picks,
-      {bool autoPlay = false,
+      {required int epoch,
+      required int gen,
+      bool autoPlay = false,
       bool incrementIndex = false,
       bool sonicPick = false}) async {
+    if (epoch != _djSessionEpoch || gen != _djQueueGen) return;
+    var batch = picks;
+    if (_rerolledGen < gen) {
+      final count = await _landReroll(picks.length, epoch: epoch, gen: gen);
+      if (count == null) return;
+      batch = picks.take(count).toList();
+    }
     var first = true;
-    for (final p in picks) {
+    for (final p in batch) {
+      if (epoch != _djSessionEpoch) return;
+      if (gen != _djQueueGen) return;
       await _queueAutoDJSong(p.song,
           autoPlay: first && autoPlay,
           incrementIndex: first && incrementIndex,
@@ -5118,6 +6817,131 @@ class AudioPlayerHandler extends BaseAudioHandler
           source: p.source);
       first = false;
     }
+  }
+
+  /// A re-roll landing: a pick of a learned skip's generation [gen], which
+  /// no re-roll has settled yet. The stale picks ahead go now, as their
+  /// replacements arrive, never before: dropped first and refilled later, a
+  /// refill that failed for a moment could leave only the playing row, and
+  /// the queue would end where the old rows would still have played.
+  ///
+  /// The rows that may go ([rerollDroppable]) are the DJ's picks after the
+  /// playing row that are neither on the phone nor on their way there, and
+  /// none under shuffle; of those, only the stale picks the skip named as
+  /// the re-roll started ([_rerollStale]), when it named them. The nearest
+  /// go first, one for each of the pick's [picks] songs at most. Then as
+  /// many songs are queued as rows went, or every one when the playing row
+  /// is now the last, as at any top-up; with nothing to drop and rows still
+  /// ahead, none, and the pick is spent ([rerollQueueCount]). Either way the
+  /// re-roll is settled.
+  ///
+  /// Returns how many of the songs to queue, or null when the pick went
+  /// stale while the rows were going: the lane changed, or a further learned
+  /// skip came (the pick then runs again).
+  Future<int?> _landReroll(int picks,
+      {required int epoch, required int gen}) async {
+    final q = queue.value;
+    // The row the user sees playing: a failed restore's parked spot, while
+    // there is one, whatever the idle player reads.
+    final current = _restoreSpot?.index ?? _backend.currentIndex;
+    var dropped = 0;
+    // A first look, so a re-roll with nothing to replace doesn't wait on
+    // the chain; the rows themselves are chosen when the drop runs.
+    if (current != null &&
+        current >= 0 &&
+        current < q.length &&
+        rerollDrops(q, _rerollDroppable(q, current),
+                picks: picks, stale: _rerollStale)
+            .isNotEmpty) {
+      // On the chain, like every other edit of the backend's list, so a
+      // reload, a restore or a cast switch can't land in the middle of it.
+      final drop =
+          _switchChain.then((_) => _dropRerolled(picks, epoch: epoch));
+      _switchChain = drop.catchError((_) => 0);
+      dropped = await drop;
+      if (epoch != _djSessionEpoch) return null;
+      if (gen != _djQueueGen) return null;
+    }
+    _rerolledGen = gen;
+    _rerollStale = null;
+    final now = _restoreSpot?.index ?? _backend.currentIndex;
+    final count = rerollQueueCount(
+        picks: picks,
+        dropped: dropped,
+        atEnd: now == null || now >= queue.value.length - 1);
+    appLog(dropped == 0 && count == 0
+        ? '[dj] re-roll: nothing ahead can be replaced — the queue stays'
+        : '[dj] re-roll: $dropped stale pick(s) ahead replaced, '
+            'queueing $count');
+    return count;
+  }
+
+  /// [rerollDroppable] on the live state: the queue's downloaded copies, the
+  /// transfers under way, and the player's shuffle.
+  List<int> _rerollDroppable(List<MediaItem> q, int current) =>
+      rerollDroppable(q, current,
+          onDisk: hasLocalCopy,
+          inFlight: DownloadManager().isInFlight,
+          shuffle: _backend.shuffleEnabled);
+
+  /// The stale picks a landing re-roll of [picks] songs takes out of the
+  /// queue ([_landReroll]), on [_switchChain]. They are chosen here, when
+  /// the drop's turn comes ([rerollDrops]: the rows it may drop after the
+  /// one playing now, the nearest first, only the ones the skip named): a
+  /// URL rebuild or a reseed that ran ahead of it on the chain swaps every
+  /// row for a new one, so rows taken any earlier would be found nowhere,
+  /// and the skip's re-roll spent with nothing replaced. Each is then found
+  /// again by identity when its turn comes, and passed over once a re-roll
+  /// may no longer drop it: it is gone, a second Next has reached it, or its
+  /// file landed or started coming meanwhile. Each goes the way
+  /// removeQueueItemAt takes a row, the queue first and then the backend,
+  /// one at a time, and the queue is never put back from a copy: a Play next
+  /// or Add to queue landing meanwhile stays where it went.
+  ///
+  /// Under the reorder hold, so a removal's index re-emission neither tops
+  /// up nor re-derives now-playing halfway; a move the hold swallowed (a
+  /// Next pressed meanwhile) is played out once at the end
+  /// ([_onCurrentIndex]). Stops when the lane changes. Returns how many rows
+  /// went, and never throws.
+  Future<int> _dropRerolled(int picks, {required int epoch}) async {
+    final indexBefore = _backend.currentIndex;
+    var dropped = 0;
+    _reordering = true;
+    try {
+      final now = queue.value;
+      final at = _restoreSpot?.index ?? _backend.currentIndex;
+      final stale = epoch != _djSessionEpoch ||
+              at == null ||
+              at < 0 ||
+              at >= now.length
+          ? const <MediaItem>[]
+          : [
+              for (final i in rerollDrops(now, _rerollDroppable(now, at),
+                  picks: picks, stale: _rerollStale))
+                now[i],
+            ];
+      for (final m in stale) {
+        if (epoch != _djSessionEpoch) break;
+        final q = queue.value;
+        final i = q.indexWhere((x) => identical(x, m));
+        final current = _restoreSpot?.index ?? _backend.currentIndex;
+        if (i < 0 ||
+            current == null ||
+            !_rerollDroppable(q, current).contains(i)) {
+          continue;
+        }
+        queue.add(q..removeAt(i));
+        dropped++;
+        await _backend.removeSourceAt(i);
+      }
+    } catch (e) {
+      appLog('[dj] re-roll: taking a stale pick out failed: $e');
+    } finally {
+      _reordering = false;
+    }
+    final index = _backend.currentIndex;
+    if (index != indexBefore) _onCurrentIndex(index);
+    return dropped;
   }
 
   /// [source] is the server the pick came FROM, which is only the DJ's own
@@ -5177,6 +7001,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         // distinguishable from user-queued tracks.
         'djPick': true,
         'djSonic': sonicPick,
+        // The lane that queued it: only its own picks join its More like
+        // as they play (see [_djLaneId]).
+        'djLane': _djLaneId,
       },
     );
 
@@ -5213,14 +7040,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     final resume = wasParked && _parkedForDJ;
     _releasePark();
 
-    // Feed the rolling sonic anchor with every DJ pick (kept even while the
-    // mode is off, so toggling it on mid-session already has the session's
-    // recent sound to centroid on).
-    _sonicHistory = pushSonicHistory(_sonicHistory, filepath);
-    _sonicSeedOwners[filepath] = from.localname;
-    // The history is a bounded ring; drop owners that fell out of it.
-    _sonicSeedOwners.removeWhere((path, _) => !_sonicHistory.contains(path));
-
     if ((incrementIndex || resume) && queue.value.isNotEmpty) {
       final last = queue.value.length - 1;
       final target = (index != null ? index! + 1 : last).clamp(0, last);
@@ -5240,40 +7059,42 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
-  /// The `similarTo`/`minSimilarity` fields for a random-songs body, or
-  /// null when sonic mode is off / no anchor is resolvable (cold start on
-  /// an empty queue with no seed — the pick stays plain random and then
-  /// seeds the session). Rolling-anchor policy, mirroring the webapp's
-  /// auto-dj.js buildSonicParams: the recent DJ picks first (server
-  /// averages them into a session centroid), else the explicit seed song,
-  /// else the playing track. Pure; unit-tested.
+  /// The `similarTo`/`minSimilarity` fields for a single-server random-songs
+  /// body, or null when sonic mode is off or nothing anchors the pick.
+  ///
+  /// [history] is the session's More like rows that body can carry, oldest
+  /// first ([usableSeeds]); the server averages them into the session's
+  /// centroid, at most eight, the newest kept. In either mode they come
+  /// first. With none, Drift falls back as the webapp's auto-dj.js
+  /// buildSonicParams does: the explicit seed song, else the playing track.
+  /// A lane's first pick rarely needs it: the song playing has just joined
+  /// More like there (Drift's blend, [blendsOnLaneStart]). So it serves a
+  /// pick that finds no row this body can carry: the user removed them, a
+  /// server refused them, eight pins elsewhere left the blend no room, or
+  /// the song playing is a local file or on another server and only the
+  /// explicit seed is left. Stay close has no fallback: its
+  /// anchor is a row, the one song a lane with nothing to stay close to
+  /// admits before this is built, and with no row this body can carry (a
+  /// cold start on an empty queue, a lane whose rows sit elsewhere, one
+  /// whose rows the user removed) the pick goes without sonic similarity.
+  /// Pure; unit-tested.
   static Map<String, dynamic>? sonicParams({
     required bool enabled,
     SonicAnchorMode mode = SonicAnchorMode.rolling,
-    String? lockedAnchor,
     required List<String> history,
     String? seedPath,
     String? currentPath,
     required double minSimilarity,
   }) {
     if (!enabled) return null;
-    if (mode == SonicAnchorMode.locked) {
-      // The caller pins [lockedAnchor] lazily (see autoDJ); before a pin
-      // resolves, the pick stays plain random — history/seed/current are
-      // the ROLLING policy's inputs and deliberately ignored here.
-      final anchor = _normSonicPath(lockedAnchor);
-      if (anchor == null) return null;
+    final rows = [for (final p in history) ?_normSonicPath(p)];
+    if (rows.isNotEmpty) {
       return {
-        'similarTo': [anchor],
+        'similarTo': rows.length <= 8 ? rows : rows.sublist(rows.length - 8),
         'minSimilarity': minSimilarity,
       };
     }
-    if (history.isNotEmpty) {
-      return {
-        'similarTo': List<String>.of(history),
-        'minSimilarity': minSimilarity,
-      };
-    }
+    if (mode == SonicAnchorMode.locked) return null;
     final anchor = _normSonicPath(seedPath) ?? _normSonicPath(currentPath);
     if (anchor == null) return null;
     return {
@@ -5282,12 +7103,54 @@ class AudioPlayerHandler extends BaseAudioHandler
     };
   }
 
-  /// Locked mode's pin for a session that has none yet: [own] — the
+  /// The seeds a pick across several servers averages into its vector, each
+  /// with the server that holds it, since a path is read only there: the
+  /// same policy as [sonicParams]. The More like rows the session can carry
+  /// ([rows], oldest first, at most eight, the newest kept) come first. With
+  /// none, Drift falls back to the explicit seed song, on the DJ's server
+  /// ([dj]), else the playing track on whichever of the session's servers
+  /// holds it ([current], see [fanOutCurrentSeed]); Stay close has no
+  /// fallback. Empty when sonic mode is off or nothing anchors the pick.
+  /// Pure; unit-tested.
+  static List<({String server, String path})> fanOutSeeds({
+    required bool enabled,
+    SonicAnchorMode mode = SonicAnchorMode.rolling,
+    required List<({String server, String path})> rows,
+    required String dj,
+    String? seedPath,
+    ({String server, String path})? current,
+  }) {
+    if (!enabled) return const [];
+    final carried = [
+      for (final r in rows)
+        if (_normSonicPath(r.path) case final p? when r.server.isNotEmpty)
+          (server: r.server, path: p),
+    ];
+    if (carried.isNotEmpty) {
+      return carried.length <= 8
+          ? carried
+          : carried.sublist(carried.length - 8);
+    }
+    if (mode == SonicAnchorMode.locked) return const [];
+    final seed = _normSonicPath(seedPath);
+    if (seed != null) return [(server: dj, path: seed)];
+    final playing = _normSonicPath(current?.path);
+    if (current == null || playing == null || current.server.isEmpty) {
+      return const [];
+    }
+    return [(server: current.server, path: playing)];
+  }
+
+  /// Stay close's one song for a lane with nothing to stay close to yet (no
+  /// More like row its request can carry, [stayCloseAdmission]): [own] — the
   /// explicit seed, else the playing track, both on the DJ's server ([dj])
-  /// and so carried by either route — else the playing track on another of
-  /// a multi-server session's servers ([elsewhere], see [fanOutCurrentSeed]),
-  /// which only the cross-server pick can carry. Null leaves the pick plain
-  /// random until something plays to pin. Pure; unit-tested.
+  /// and so carried by either route — else the playing track on another of a
+  /// multi-server session's servers ([elsewhere], see [fanOutCurrentSeed]),
+  /// which only the cross-server pick can carry. The pick admits it as a row
+  /// ([AutoDjSeeds.admitAnchor]) when its request can carry that row
+  /// ([stayCloseAdmit]): the server holding it must hand out vectors.
+  /// Null leaves the pick plain random until something plays to anchor on.
+  /// Pure; unit-tested.
   static ({String path, String server})? sonicPin(
       {String? own,
       required String dj,
@@ -5295,37 +7158,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     final mine = _normSonicPath(own);
     if (mine != null) return (path: mine, server: dj);
     return elsewhere;
-  }
-
-  /// The part of a sonic history that [localname] holds — a path with no
-  /// owner recorded predates the owners map and is the DJ server's own.
-  /// Pure; unit-tested.
-  static List<String> historyOwnedBy(
-      List<String> history, Map<String, String> owners, String localname) {
-    return [
-      for (final p in history)
-        if ((owners[p] ?? localname) == localname) p,
-    ];
-  }
-
-  /// Appends a DJ pick to the rolling sonic ring buffer: normalized,
-  /// deduped (a re-pick moves to the most-recent slot rather than
-  /// double-weighting the server's centroid), capped at [limit] — the
-  /// webapp keeps 5 of the up-to-8 seeds the server accepts. Pure;
-  /// unit-tested.
-  static List<String> pushSonicHistory(List<String> history, String? rawPath,
-      {int limit = 5}) {
-    final norm = _normSonicPath(rawPath);
-    if (norm == null) return history;
-    final next = [
-      for (final p in history)
-        if (p != norm) p,
-      norm,
-    ];
-    while (next.length > limit) {
-      next.removeAt(0);
-    }
-    return next;
   }
 
   /// Seed paths on the wire never carry a leading slash (they resolve via

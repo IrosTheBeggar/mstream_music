@@ -3,8 +3,12 @@
 // switch; close; then Clear and Done. Done applies, and closing the sheet any
 // other way changes nothing. First song is the exception: a tap applies it.
 //
-// The Mood row opens the browse lists' own mood sheet (mood_filter_sheet.dart),
-// which already has this shape.
+// The Smart filters row opens the browse lists' own mood sheet
+// (mood_filter_sheet.dart), which already has this shape. The Seeds row under
+// Sonic similarity opens a page rather than a sheet (auto_dj_seeds.dart), and
+// Drift | Stay close lives there, so the Sonic similarity sheet is its switch
+// and its match alone. Quick config applies through the same steps
+// (applySonic, applyPlayFrom) and borrows the slider (autoDjSlider).
 
 import 'dart:async';
 
@@ -122,6 +126,18 @@ String? autoDjMoodBlocked(AppLocalizations l,
       ? set.any((s) => s.moodFiltersAvailable == true)
       : home?.moodFiltersAvailable == true;
   return can ? null : l.autoDjNoMoodData;
+}
+
+/// Why a session on [set] run from [home] can't learn from skips, or null
+/// when it can: a skip is learned as a Less like seed, which only a server
+/// that takes the DJ's negatives can use (Server.lessLikeUsable). With
+/// several servers it is enough that one taking part does, as with a mood.
+String? autoDjLearnBlocked(AppLocalizations l,
+    {required Server? home, required List<Server> set}) {
+  final can = set.length > 1
+      ? set.any((s) => s.lessLikeUsable)
+      : home?.lessLikeUsable == true;
+  return can ? null : l.autoDjNeedsNewerServer;
 }
 
 /// A server's name without the scheme: "music.home.arpa", "laptop.local:3000".
@@ -336,7 +352,15 @@ Widget _titleSwitch(String label, bool value, ValueChanged<bool> onChanged,
       ),
     );
 
-Widget _slider({
+/// The Auto DJ slider: an amber track, named [label] for screen readers,
+/// which hear [spoken] for its value rather than a raw percentage. The
+/// sheets draft every step through [onChanged] and apply on Done. Quick
+/// config has no Done: it drafts through [onChanged] while the thumb moves
+/// and applies once, from [onChangeEnd], when the drag lets go, so a drag
+/// saves auto_dj.json and asks the DJ again once rather than on every step.
+/// [inactiveTrack] is the track past the thumb, the border colour unless
+/// given: quick config's raised popover needs a lighter one to show it.
+Widget autoDjSlider({
   required double value,
   required double min,
   required double max,
@@ -344,13 +368,15 @@ Widget _slider({
   required String label,
   required String Function(double) spoken,
   ValueChanged<double>? onChanged,
+  ValueChanged<double>? onChangeEnd,
+  Color? inactiveTrack,
   Key? key,
 }) =>
     Builder(
       builder: (context) => SliderTheme(
         data: SliderTheme.of(context).copyWith(
           activeTrackColor: VelvetColors.primary,
-          inactiveTrackColor: VelvetColors.border,
+          inactiveTrackColor: inactiveTrack ?? VelvetColors.border,
           thumbColor: VelvetColors.primary,
           overlayColor: VelvetColors.primaryDim,
           activeTickMarkColor: Colors.transparent,
@@ -366,6 +392,7 @@ Widget _slider({
               max: max,
               divisions: divisions,
               onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
               // What the title row shows, not the slider's raw percentage.
               semanticFormatterCallback: spoken,
             ),
@@ -952,22 +979,25 @@ class FirstSongSheet extends StatelessWidget {
 // ── Sonic similarity ───────────────────────────────────────────────────
 
 /// Sonic similarity's settings: the sheet's Done, and quick config's switch
-/// and Drift | Stay close.
-Future<void> applySonic(
-    {required bool on,
-    required double match,
-    required SonicAnchorMode anchor}) async {
+/// and match slider. Drift | Stay close is not one of them: the Seeds page
+/// sets it, through the audio handler, which freezes or thaws the seeds
+/// with it.
+///
+/// Switching it off leaves the session's seeds as they are. The Seeds page's
+/// lists hold the user's own pins, adds and moves, which a tap that only
+/// pauses sonic picks must not throw away; once it is back on, the picks are
+/// drawn towards and away from the same songs again. The webapp's
+/// clearSonicAnchors drops its anchors here, but those are the DJ's alone.
+/// A new lane still carries the seeds over as every lane edge does (in Drift
+/// the DJ's picks go, in Stay close every row stays): Discover's
+/// play-similar sends 'clearSonicSession' itself.
+Future<void> applySonic({required bool on, required double match}) async {
   final mgr = AutoDJManager();
   final wasOn = mgr.sonicSimilarityEnabled;
-  final changed = on != wasOn ||
-      match != mgr.sonicMinSimilarity ||
-      anchor != mgr.sonicAnchorMode;
-  await mgr.setSonic(enabled: on, minSimilarity: match, anchor: anchor);
+  final changed = on != wasOn || match != mgr.sonicMinSimilarity;
+  await mgr.setSonic(enabled: on, minSimilarity: match);
   final handler = MediaManager().audioHandler;
   if (wasOn && !on) {
-    // Webapp parity (clearSonicAnchors): switching it off drops the session
-    // anchors — rolling history and the locked pin.
-    unawaited(handler.customAction('clearSonicSession'));
     // Several servers run on sonic picks: without them Play from is back to
     // the one the session runs on.
     final home = handler.autoDJServer ?? autoDjPlayFrom();
@@ -980,6 +1010,8 @@ Future<void> applySonic(
   if (changed) unawaited(handler.customAction('retrySonic'));
 }
 
+/// Sonic similarity's switch and how close a match it asks for. How the
+/// seeds move (Drift | Stay close) is the Seeds page's, not this sheet's.
 class SonicSheet extends StatefulWidget {
   const SonicSheet({super.key});
 
@@ -991,10 +1023,9 @@ class _SonicSheetState extends State<SonicSheet> {
   final _mgr = AutoDJManager();
   late bool _on = _mgr.sonicSimilarityEnabled;
   late double _match = _mgr.sonicMinSimilarity.clamp(0.30, 0.80);
-  late SonicAnchorMode _anchor = _mgr.sonicAnchorMode;
 
-  Future<void> _done() => _applyThenClose(
-      context, () => applySonic(on: _on, match: _match, anchor: _anchor));
+  Future<void> _done() =>
+      _applyThenClose(context, () => applySonic(on: _on, match: _match));
 
   @override
   Widget build(BuildContext context) {
@@ -1009,37 +1040,18 @@ class _SonicSheetState extends State<SonicSheet> {
       onDone: _done,
       child: Opacity(
         opacity: _on ? 1 : 0.4,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // Raw cosine threshold; the useful band in practice — the webapp's
-          // slider covers the same range.
-          _slider(
-            key: const ValueKey('auto-dj-sonic-slider'),
-            value: _match,
-            min: 0.30,
-            max: 0.80,
-            divisions: 50,
-            label: l.autoDjSonicTitle,
-            spoken: (v) => l.autoDjPercent((v * 100).round()),
-            onChanged: _on ? (v) => setState(() => _match = v) : null,
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<SonicAnchorMode>(
-            key: const ValueKey('auto-dj-sonic-anchor'),
-            segments: [
-              ButtonSegment(
-                  value: SonicAnchorMode.rolling, label: Text(l.autoDjDrift)),
-              ButtonSegment(
-                  value: SonicAnchorMode.locked,
-                  label: Text(l.autoDjStayClose)),
-            ],
-            selected: {_anchor},
-            showSelectedIcon: false,
-            onSelectionChanged: _on
-                ? (set) => setState(() => _anchor = set.first)
-                : null,
-            style: autoDjSegmentStyle(),
-          ),
-        ]),
+        // Raw cosine threshold; the useful band in practice — the webapp's
+        // slider covers the same range.
+        child: autoDjSlider(
+          key: const ValueKey('auto-dj-sonic-slider'),
+          value: _match,
+          min: 0.30,
+          max: 0.80,
+          divisions: 50,
+          label: l.autoDjSonicTitle,
+          spoken: (v) => l.autoDjPercent((v * 100).round()),
+          onChanged: _on ? (v) => setState(() => _match = v) : null,
+        ),
       ),
     );
   }
@@ -1072,7 +1084,7 @@ class _TempoSheetState extends State<TempoSheet> {
           context, () => _mgr.setTempo(enabled: _on, tolerance: _bpm)),
       child: Opacity(
         opacity: _on ? 1 : 0.4,
-        child: _slider(
+        child: autoDjSlider(
           key: const ValueKey('auto-dj-tempo-slider'),
           value: _bpm.toDouble(),
           min: 1,
@@ -1110,7 +1122,7 @@ class _BatchSheetState extends State<BatchSheet> {
       tone: AutoDjTone.neutral,
       onDone: () => _applyThenClose(
           context, () => AutoDJManager().setSongsPerFetch(_n)),
-      child: _slider(
+      child: autoDjSlider(
         key: const ValueKey('auto-dj-batch-slider'),
         value: _n.toDouble(),
         min: 1,

@@ -21,6 +21,7 @@ void main() {
     mgr.sonicSeedPath = null;
     mgr.sonicSeedTitle = null;
     mgr.sonicSeedServer = null;
+    mgr.sonicSeedChosen = false;
   });
 
   test('clearSonicSeed with nothing stored never reaches the save', () async {
@@ -41,20 +42,29 @@ void main() {
     mgr.sonicSeedPath = 'music/x.mp3';
     mgr.sonicSeedTitle = 'X';
     mgr.sonicSeedServer = 'srv';
+    mgr.sonicSeedChosen = true;
     // The trailing _save() needs path_provider and fails in a VM test; the
     // in-memory clear happens before it, which is the contract the queue
     // clear depends on (autoDJ() reads these fields synchronously).
-    await mgr.clearSonicSeed().catchError((_) {});
+    final cleared = mgr.clearSonicSeed().catchError((_) {});
+    // Synchronously: a seeded start reads the mark before its own clear.
+    expect(mgr.sonicSeedChosen, isFalse);
+    await cleared;
     expect(mgr.sonicSeedPath, isNull);
     expect(mgr.sonicSeedTitle, isNull);
     expect(mgr.sonicSeedServer, isNull);
+    expect(mgr.sonicSeedChosen, isFalse);
   });
 
   test('a partially stored seed (any field set) still gets cleaned up', () async {
-    // The guard keys on all three fields so a torn state is not mistaken for
+    // The guard keys on every field so a torn state is not mistaken for
     // "nothing stored".
     mgr.sonicSeedServer = 'some-server';
     await mgr.clearSonicSeed().catchError((_) {});
     expect(mgr.sonicSeedServer, isNull);
+    // The chosen mark alone too: it never outlives the seed it marked.
+    mgr.sonicSeedChosen = true;
+    await mgr.clearSonicSeed().catchError((_) {});
+    expect(mgr.sonicSeedChosen, isFalse);
   });
 }

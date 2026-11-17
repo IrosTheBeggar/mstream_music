@@ -43,9 +43,11 @@ String formatSampleRate(int hz) {
 
 /// The shared album-art placeholder (a raised tile + music-note glyph) shown
 /// while artwork loads, on a decode error, or when a track has no art.
-/// [iconSize] scales the glyph to the tile it fills.
-Widget albumArtFallback({double iconSize = 20}) => Container(
-      color: VelvetColors.raised,
+/// [iconSize] scales the glyph to the tile it fills. [color] fills the tile
+/// in place of the raised colour, for a placeholder that sits on a raised
+/// surface, where a raised tile would vanish and leave a bare glyph.
+Widget albumArtFallback({double iconSize = 20, Color? color}) => Container(
+      color: color ?? VelvetColors.raised,
       child: Icon(Icons.music_note,
           color: VelvetColors.textSecondary, size: iconSize),
     );

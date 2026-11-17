@@ -922,7 +922,8 @@ Future<bool> _seedSong(
   await AutoDJManager().setSonicSeed(
       path: song.path,
       title: song.title ?? song.path.split('/').last,
-      server: server.localname);
+      server: server.localname,
+      chosen: true);
   return true;
 }
 
@@ -978,7 +979,8 @@ void _armLibraryPick(
           .setSonicSeed(
               path: path,
               title: item.metadata?.title ?? item.name.split('/').last,
-              server: server.localname)
+              server: server.localname,
+              chosen: true)
           .then((_) => onSeeded()));
     },
   ));

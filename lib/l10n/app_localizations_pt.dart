@@ -5252,12 +5252,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Escolher';
 
   @override
-  String get autoDjMustMatch => 'Deve corresponder';
-
-  @override
-  String get autoDjPrefer => 'Preferir';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5377,6 +5371,77 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Recentes';
+
+  @override
+  String get autoDjFilters => 'Filtros';
+
+  @override
+  String get autoDjMatch => 'Afinidade';
+
+  @override
+  String get autoDjLearnFromSkips => 'Aprender com músicas puladas';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Pular uma música evitará que músicas parecidas sejam escolhidas';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Requer um servidor mais recente';
+
+  @override
+  String get autoDjSeeds => 'Músicas base';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'As músicas são trocadas regularmente. Fixe uma música para mantê-la.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Agora todas as músicas estão fixadas. Nenhuma música nova será adicionada.';
+
+  @override
+  String get autoDjMoreLike => 'Mais como estas';
+
+  @override
+  String get autoDjLessLike => 'Menos como estas';
+
+  @override
+  String get autoDjAddSong => 'Adicionar música';
+
+  @override
+  String get autoDjUpNext => 'A seguir';
+
+  @override
+  String get autoDjMoreLikeThis => 'Mais como esta';
+
+  @override
+  String get autoDjLessLikeThis => 'Menos como esta';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Fixar $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Opções de $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Grau de semelhança sonora';
+
+  @override
+  String get autoDjSearchSongs => 'Buscar músicas';
+
+  @override
+  String get autoDjSeedMode => 'Fluir ou ficar perto';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Remover as músicas fixadas ao limpar a fila';
+
+  @override
+  String get autoDjSkipped => 'Puladas';
 
   @override
   String get browseLoadFailed =>

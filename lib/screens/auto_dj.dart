@@ -1,17 +1,19 @@
 // Auto DJ configuration screen: every setting is one row showing its value,
-// and each row opens one sheet (auto_dj_sheets.dart).
+// and each row opens one sheet (auto_dj_sheets.dart). A plain yes or no is a
+// switch in its row instead, and Seeds opens a page (auto_dj_seeds.dart).
 //
 //   Start / Stop — the button is the status
-//   Play from · First song — how the session runs
-//   Must match — the limits that can empty the pool: Sonic similarity, Mood,
-//     Genres, Rating, Length
-//   Prefer — what the DJ leans towards and gives up when it must: Tempo,
-//     Harmonic mixing, Skip words
-//   Batch
+//   Play from · First song · Batch — how the session runs
+//   Filters — which songs may play at all: Smart filters, Genres, Rating,
+//     Length, Skip words
+//   Match — how each pick fits the music: Sonic similarity, with Learn from
+//     skips and Seeds indented under it, Beat matching, Harmonic mixing
 //
 // Rows never move between off and on, or between one server and several.
 // A setting the server can't do stays in place, greyed, with a reason of a few
 // words where its value would be. Values in amber are shaping the picks.
+// The two rows under Sonic similarity are about its picks: while it is off or
+// can't run they stay as drawn, dimmed, and take no taps until it is back.
 //
 // Per-server fields (folders, minimum rating, the genre filter) live on Server
 // objects, because each is the library's own vocabulary — a set of vpath
@@ -34,6 +36,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/auto_dj_play_from.dart';
+import '../util/auto_dj_seeds.dart' show AutoDjSeeds;
 import '../util/auto_dj_values.dart';
 import '../util/fan_out_readout.dart';
 import '../util/server_tree.dart';
@@ -41,7 +44,9 @@ import '../util/server_version.dart';
 import '../widgets/federation_widgets.dart';
 import '../widgets/mood_filter_sheet.dart' show moodLabels, showMoodFilterSheet;
 import '../widgets/queue_list.dart' show toggleAutoDJ;
+import '../widgets/seed_art.dart' show SeedTiles;
 import 'add_server.dart';
+import 'auto_dj_seeds.dart' show AutoDjSeedsScreen;
 import 'auto_dj_sheets.dart';
 
 class AutoDJScreen extends StatefulWidget {
@@ -56,9 +61,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   StreamSubscription<int>? _autoDjMgrSub;
   StreamSubscription? _tunnelSub;
   StreamSubscription? _capabilitiesSub;
+  StreamSubscription<AutoDjSeeds>? _seedsSub;
 
   /// The server the DJ is running on, or null while it is off.
   Server? _dj;
+
+  /// The session's seeds as the Seeds page shows them, for the Seeds row's
+  /// art.
+  late AutoDjSeeds _seeds;
 
   @override
   void initState() {
@@ -83,6 +93,15 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _capabilitiesSub = ServerManager().capabilityChanges.listen((_) {
       if (mounted) setState(() {});
     });
+    // The Seeds row shows the newest More like seeds. They change as the
+    // DJ's picks start playing and the Seeds page edits them, which none of
+    // the streams above tells of. Read now as well, so the first frame
+    // already has their art rather than the one after the stream's replay.
+    final seeds = MediaManager().audioHandler.seedsStream;
+    _seeds = seeds.value;
+    _seedsSub = seeds.listen((s) {
+      if (mounted) setState(() => _seeds = s);
+    });
   }
 
   @override
@@ -91,6 +110,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _autoDjMgrSub?.cancel();
     _tunnelSub?.cancel();
     _capabilitiesSub?.cancel();
+    _seedsSub?.cancel();
     super.dispose();
   }
 
@@ -154,19 +174,19 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               _firstSongRow(l),
               _batchRow(l),
             ]),
-            _header(l.autoDjMustMatch),
+            _header(l.autoDjFilters),
             FedCard(children: [
-              _sonicRow(l),
               _moodRow(l),
               _genresRow(l),
               _ratingRow(l),
               _lengthRow(l),
+              _skipWordsRow(l),
             ]),
-            _header(l.autoDjPrefer),
+            _header(l.autoDjMatch),
             FedCard(children: [
+              _sonicGroup(l),
               _tempoRow(l),
               _harmonicRow(l),
-              _skipWordsRow(l),
             ]),
           ],
         ),
@@ -337,42 +357,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         onTap: () => _open((_) => const FirstSongSheet()),
       );
 
-  // ── must match ───────────────────────────────────────────────────
-
-  Widget _sonicRow(AppLocalizations l) {
-    final mgr = AutoDJManager();
-    final home = _home;
-    const key = ValueKey('auto-dj-row-sonic');
-    // Three reasons it can't run, and the row says which.
-    final reason = autoDjSonicBlocked(l, home);
-    if (reason != null) {
-      return _ValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
-    }
-    void open() => _open((_) => const SonicSheet());
-    // A running session that had to drop it says why, where the user goes to
-    // loosen it.
-    final drop =
-        _dj != null && mgr.sonicSimilarityEnabled ? MediaManager().audioHandler.sonicDrop : null;
-    if (drop != null) {
-      return _ValueRow(
-        key: key,
-        title: l.autoDjSonicTitle,
-        value: sonicDropLabel(l, drop),
-        tone: AutoDjTone.warning,
-        onTap: open,
-      );
-    }
-    final on = mgr.sonicSimilarityEnabled;
-    return _ValueRow(
-      key: key,
-      title: l.autoDjSonicTitle,
-      value: on
-          ? l.autoDjPercent((mgr.sonicMinSimilarity * 100).round())
-          : l.commonOff,
-      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
-      onTap: open,
-    );
-  }
+  // ── filters ──────────────────────────────────────────────────────
 
   Widget _moodRow(AppLocalizations l) {
     final mgr = AutoDJManager();
@@ -496,7 +481,159 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  // ── prefer ───────────────────────────────────────────────────────
+  Widget _skipWordsRow(AppLocalizations l) {
+    // Applied on the phone, after the server answers, so it works against
+    // any server however old.
+    final mgr = AutoDJManager();
+    final on = mgr.keywordFilterEnabled && mgr.keywordFilterWords.isNotEmpty;
+    return _ValueRow(
+      key: const ValueKey('auto-dj-row-skip-words'),
+      title: l.autoDjSkipWords,
+      value: on ? mgr.keywordFilterWords.join(' · ') : l.commonOff,
+      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
+      onTap: () => _open((_) => const SkipWordsSheet()),
+    );
+  }
+
+  // ── match ────────────────────────────────────────────────────────
+
+  /// Sonic similarity with the two rows that belong to it under it. They
+  /// are one child of the card: the card's hairline between its children
+  /// runs from its edge, while the ones over these two start at their
+  /// indent.
+  Widget _sonicGroup(AppLocalizations l) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [_sonicRow(l), _sonicSubRows(l)],
+      );
+
+  Widget _sonicRow(AppLocalizations l) {
+    final mgr = AutoDJManager();
+    final home = _home;
+    const key = ValueKey('auto-dj-row-sonic');
+    // Three reasons it can't run, and the row says which.
+    final reason = autoDjSonicBlocked(l, home);
+    if (reason != null) {
+      return _ValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
+    }
+    void open() => _open((_) => const SonicSheet());
+    // A running session that had to drop it says why, where the user goes to
+    // loosen it.
+    final drop =
+        _dj != null && mgr.sonicSimilarityEnabled ? MediaManager().audioHandler.sonicDrop : null;
+    if (drop != null) {
+      return _ValueRow(
+        key: key,
+        title: l.autoDjSonicTitle,
+        value: sonicDropLabel(l, drop),
+        tone: AutoDjTone.warning,
+        onTap: open,
+      );
+    }
+    final on = mgr.sonicSimilarityEnabled;
+    return _ValueRow(
+      key: key,
+      title: l.autoDjSonicTitle,
+      value: on
+          ? l.autoDjPercent((mgr.sonicMinSimilarity * 100).round())
+          : l.commonOff,
+      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
+      onTap: open,
+    );
+  }
+
+  /// Learn from skips and Seeds, indented under Sonic similarity, each with
+  /// a hairline of its own. They are about sonic picks, so while sonic
+  /// similarity is off, switched off or unable to run from [_home], both dim
+  /// together, hairlines and all, and take no taps. The flag alone would not
+  /// do: it is on by default, and stays on where the server can't do it.
+  Widget _sonicSubRows(AppLocalizations l) {
+    final mgr = AutoDJManager();
+    final blocked = autoDjSonicBlocked(l, _home);
+    final off = blocked != null || !mgr.sonicSimilarityEnabled;
+    // A skip is learned only where a server taking part takes negatives.
+    // Where none does, the row says so in place of its line, and stays dim
+    // and inert with sonic on too. Where sonic can't run at all, its own row
+    // already says why, so this one keeps its line.
+    final cantLearn =
+        blocked == null ? autoDjLearnBlocked(l, home: _home, set: _set) : null;
+    return Opacity(
+      opacity: off ? 0.38 : 1,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _subHairline(),
+        Opacity(
+          // Dimmed alone only while the rows around it are lit.
+          opacity: !off && cantLearn != null ? 0.38 : 1,
+          child: _SwitchRow(
+            key: const ValueKey('auto-dj-row-learn-skips'),
+            switchKey: const ValueKey('auto-dj-learn-skips-switch'),
+            title: l.autoDjLearnFromSkips,
+            line: cantLearn ?? l.autoDjLearnFromSkipsHint,
+            value: mgr.learnFromSkips,
+            onChanged: (v) => mgr.setLearnFromSkips(v),
+            enabled: !off && cantLearn == null,
+            indent: 30,
+            minHeight: 72,
+            vertical: 10,
+          ),
+        ),
+        _subHairline(),
+        _seedsRow(l, enabled: !off),
+      ]),
+    );
+  }
+
+  /// The hairline over a row under Sonic similarity, from that row's indent.
+  Widget _subHairline() => Divider(
+      height: 1,
+      thickness: 1,
+      indent: 30,
+      endIndent: 14,
+      color: VelvetColors.border);
+
+  /// Seeds: the newest More like seeds' art (none while there are none) and
+  /// a chevron. It opens the Seeds page, which holds both lists and Drift |
+  /// Stay close.
+  Widget _seedsRow(AppLocalizations l, {required bool enabled}) {
+    final tiles = [for (final s in _seeds.tiles()) s.song];
+    return _oneNode(
+      key: const ValueKey('auto-dj-row-seeds'),
+      enabled: enabled,
+      label: l.autoDjSeeds,
+      button: true,
+      row: InkWell(
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+                builder: (_) => const AutoDjSeedsScreen())),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(30, 0, 10, 0),
+            child: Row(children: [
+              Expanded(
+                child: Text(l.autoDjSeeds,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary)),
+              ),
+              if (tiles.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                // Ringed in the card's colour, so each tile cuts a clean
+                // edge into the one under it.
+                SeedTiles(songs: tiles, size: 26, ring: VelvetColors.card),
+              ],
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right,
+                  size: 18, color: VelvetColors.textTertiary),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _tempoRow(AppLocalizations l) {
     const key = ValueKey('auto-dj-row-tempo');
@@ -527,70 +664,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           value: _needs(l, ServerParam.musicalKeys));
     }
     final mgr = AutoDJManager();
-    // The one switch on the screen: a plain yes or no with nothing to tune,
-    // so a line under the title says what it does. One node for screen
-    // readers: the title and that line, then on or off.
-    return MergeSemantics(
+    return _SwitchRow(
       key: key,
-      child: Semantics(
-        toggled: mgr.harmonicMixingEnabled,
-        child: InkWell(
-          onTap: () =>
-              mgr.setHarmonicMixingEnabled(!mgr.harmonicMixingEnabled),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 52),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-              child: Row(children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l.autoDjHarmonicTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: VelvetColors.textPrimary)),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(l.autoDjHarmonicHint,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: VelvetColors.textSecondary)),
-                      ),
-                    ],
-                  ),
-                ),
-                ExcludeSemantics(
-                  child: Switch(
-                    key: const ValueKey('auto-dj-harmonic-switch'),
-                    value: mgr.harmonicMixingEnabled,
-                    onChanged: (v) => mgr.setHarmonicMixingEnabled(v),
-                    activeThumbColor: VelvetColors.primary,
-                    inactiveThumbColor: VelvetColors.textSecondary,
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _skipWordsRow(AppLocalizations l) {
-    // Applied on the phone, after the server answers, so it works against
-    // any server however old.
-    final mgr = AutoDJManager();
-    final on = mgr.keywordFilterEnabled && mgr.keywordFilterWords.isNotEmpty;
-    return _ValueRow(
-      key: const ValueKey('auto-dj-row-skip-words'),
-      title: l.autoDjSkipWords,
-      value: on ? mgr.keywordFilterWords.join(' · ') : l.commonOff,
-      tone: on ? AutoDjTone.active : AutoDjTone.neutral,
-      onTap: () => _open((_) => const SkipWordsSheet()),
+      switchKey: const ValueKey('auto-dj-harmonic-switch'),
+      title: l.autoDjHarmonicTitle,
+      line: l.autoDjHarmonicHint,
+      value: mgr.harmonicMixingEnabled,
+      onChanged: (v) => mgr.setHarmonicMixingEnabled(v),
     );
   }
 
@@ -711,4 +791,120 @@ class _ValueRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A setting that is a plain yes or no, with nothing to tune: its name, a
+/// line under it saying what it does, and a switch; the whole row flips it.
+/// Harmonic mixing, and Learn from skips under Sonic similarity, which
+/// [indent] sets in under the row it belongs to.
+///
+/// While [enabled] is false the row is drawn just as it is, in its usual
+/// colours with its switch as set, for whatever is around it to dim, and it
+/// takes no tap ([_oneNode]). A Switch with no onChanged would paint the
+/// disabled palette instead, which the dimming would then dim a second time.
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    super.key,
+    required this.title,
+    required this.line,
+    required this.value,
+    required this.onChanged,
+    required this.switchKey,
+    this.enabled = true,
+    this.indent = 14,
+    this.minHeight = 52,
+    this.vertical = 8,
+  });
+
+  final String title;
+
+  /// Under the title: what the switch does, or why it can't be used.
+  final String line;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Key switchKey;
+  final bool enabled;
+
+  /// The room before the title: the card's 14, or more under another row.
+  final double indent;
+  final double minHeight;
+  final double vertical;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = InkWell(
+      onTap: () => onChanged(!value),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(indent, vertical, 8, vertical),
+          child: Row(children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(line,
+                        style: TextStyle(
+                            fontSize: 13, color: VelvetColors.textSecondary)),
+                  ),
+                ],
+              ),
+            ),
+            ExcludeSemantics(
+              child: Switch(
+                key: switchKey,
+                value: value,
+                onChanged: onChanged,
+                activeThumbColor: VelvetColors.primary,
+                inactiveThumbColor: VelvetColors.textSecondary,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+    // One node for screen readers: the title and the line under it, then on
+    // or off.
+    return _oneNode(
+        enabled: enabled, label: '$title\n$line', toggled: value, row: row);
+  }
+}
+
+/// [row] as one node for screen readers, with its [toggled] or [button]
+/// state. While [enabled] is false the row is drawn as it is but inert: no
+/// tap, focus or screen-reader action reaches it, and the node reads as a
+/// disabled [label] — as the merged node would read it, the row's own
+/// words being shut out with the rest.
+Widget _oneNode(
+    {Key? key,
+    required bool enabled,
+    required String label,
+    bool? toggled,
+    bool? button,
+    required Widget row}) {
+  if (enabled) {
+    return MergeSemantics(
+        key: key,
+        child: Semantics(toggled: toggled, button: button, child: row));
+  }
+  return Semantics(
+    key: key,
+    container: true,
+    enabled: false,
+    toggled: toggled,
+    button: button,
+    label: label,
+    child: ExcludeSemantics(
+      child: ExcludeFocus(child: IgnorePointer(child: row)),
+    ),
+  );
 }

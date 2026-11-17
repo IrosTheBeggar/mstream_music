@@ -471,47 +471,51 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     Server? server = _seedServer;
     String? path = _seedPath;
     String? title = _seedTitle;
-    String? artist = _seedArtist;
+    // The page's seed is a song the user can see and starts from on purpose
+    // (the one Discover was opened on, else the one playing); with none, a
+    // random draw stands in, and like Auto DJ's Random it is no choice.
+    final chosen = server != null && path != null;
     if (server == null || path == null) {
       final target = ServerManager().currentServer;
       if (target == null || target.discoveryAvailable != true) {
         setState(() => _startingSession = false);
         return;
       }
-      final item = await ApiManager().fetchRandomSong(target);
+      // The filtered draw Auto DJ's own Random start makes: this song opens
+      // the session, so it obeys the rating, genre, length and mood filters
+      // every later pick does ([ApiManager.fetchAutoDjSeed]).
+      final seed = await ApiManager().fetchAutoDjSeed(target);
       if (!mounted) return;
+      final item = seed.item;
       if (item == null || item.data == null) {
-        messenger
-            .showSnackBar(SnackBar(content: Text(l.autoDjSonicSeedFailed)));
+        messenger.showSnackBar(SnackBar(
+            content: Text(seed.noMatch
+                ? l.autoDjSeedNoMatch
+                : l.autoDjSonicSeedFailed)));
         setState(() => _startingSession = false);
         return;
       }
       server = target;
       path = item.data!;
       title = item.metadata?.title ?? item.name;
-      artist = item.metadata?.artist;
     }
 
-    final seedTitle = [
-      if ((title ?? '').trim().isNotEmpty) title!.trim(),
-      if ((artist ?? '').trim().isNotEmpty) artist!.trim(),
-    ].join(' · ');
+    // The bare title, as the other seeded starts store it: it names the
+    // opening row when the song's tags can't be fetched.
+    final seedTitle = (title ?? '').trim();
 
     final mgr = AutoDJManager();
     if (!mgr.sonicSimilarityEnabled) {
       await mgr.setSonicSimilarityEnabled(true);
     }
-    await mgr.setSonicSeed(
+    // A new queue, then the DJ opening on the song, whether it was off, on
+    // another server or already on this one (the handler's method says why
+    // the order matters).
+    await MediaManager().audioHandler.startSessionFromSong(
+        server: server,
         path: path,
         title: seedTitle.isEmpty ? path.split('/').last : seedTitle,
-        server: server.localname);
-
-    final handler = MediaManager().audioHandler;
-    // New lane + fresh queue, then (re)arm the DJ — with an empty queue the
-    // setAutoDJ handler makes the first (seed-anchored) pick and plays it.
-    await handler.customAction('clearSonicSession');
-    await handler.customAction('clearPlaylist');
-    await handler.customAction('setAutoDJ', {'autoDJServer': server});
+        chosen: chosen);
     if (!mounted) return;
     messenger
         .showSnackBar(SnackBar(content: Text(l.discoverSessionStarted)));

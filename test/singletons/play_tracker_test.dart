@@ -1,7 +1,10 @@
 import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/play_event.dart';
+import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/play_tracker.dart';
+import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/util/track_facts.dart';
 
 void main() {
   final t0 = DateTime.utc(2026, 9, 4, 19, 0);
@@ -120,6 +123,42 @@ void main() {
       // its displayed artist is the primary anyway.
       final old = MediaItem(id: 'https://h/y.flac', title: 'Y', artist: 'Ann');
       expect(PlayTracker.factsFor(old).artist, 'Ann');
+    });
+
+    test('a federated play keeps its peer id on the parent; seeds omit it',
+        () {
+      // The peer's row id on its parent is what the play sync routes a
+      // federated play by, so the tracker's facts must carry it. A seed sends
+      // nothing that is routed by peer, so trackFactsFor leaves it out.
+      final peer = Server('federated://home/lab', null, null, null, 'lab')
+        ..federationParent = 'home'
+        ..federationPeerId = 7;
+      ServerManager().serverList.add(peer);
+      addTearDown(() => ServerManager().serverList.remove(peer));
+      final item = MediaItem(
+          id: 'https://h/z.flac',
+          title: 'Z',
+          extras: <String, dynamic>{
+            'server': 'lab',
+            'path': 'music/z.flac',
+            'artUrl': 'https://h/api/v1/federation/peers/7/art/abc.jpg'
+                '?compress=l',
+          });
+      final facts = PlayTracker.factsFor(item);
+      expect(facts.server, 'lab');
+      expect(facts.peerId, 7);
+      // A DJ pick's path has no leading slash and is kept as it came.
+      expect(facts.path, 'music/z.flac');
+      expect(facts.artFile, 'abc.jpg');
+      expect(trackFactsFor(item).peerId, isNull);
+      expect(trackFactsFor(item).artFile, 'abc.jpg');
+      // A local file has no server, and so no peer to ask about.
+      final local = MediaItem(
+          id: '/sdcard/a.mp3',
+          title: 'A',
+          extras: <String, dynamic>{'path': '/sdcard/a.mp3'});
+      expect(trackFactsFor(local, peerIdOf: (_) => 9).server, '');
+      expect(trackFactsFor(local, peerIdOf: (_) => 9).peerId, isNull);
     });
   });
 

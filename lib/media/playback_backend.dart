@@ -80,6 +80,15 @@ abstract class PlaybackBackend {
   double get speed;
   Duration? get duration;
   int? get currentIndex;
+
+  /// Whether an explicit [seekToNext] would move to ANOTHER row, in play
+  /// order (shuffle and repeat honoured): false at the end of a list that
+  /// doesn't repeat, wherever a Next only restarts the current row (the
+  /// phone's player under repeat-one), and while a Next would be dropped
+  /// (the phone's player while it loads, whose seek does nothing then). The
+  /// handler reads it before it skips, to tell a Next that leaves a song
+  /// from one that doesn't.
+  bool get hasNext;
   BackendProcessingState get processingState;
 
   // ── Streams ──

@@ -2,12 +2,15 @@
 // the label toggles the DJ, the chevron opens a popover against its bar; the
 // popover's Play from (a checklist in place up to four servers, a page of
 // its own past that), Sonic similarity and Smart filters apply each change
-// at once. The changes go out through the widget's callbacks here — the
-// real ones reach MediaManager().audioHandler, which a VM test has not got.
+// at once, and the match slider once a drag lets go. While sonic similarity
+// runs, a Seeds row shows the newest seeds' art and opens the Seeds page.
+// The changes go out through the widget's callbacks here — the real ones
+// reach MediaManager().audioHandler, which a VM test has not got.
 
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,10 +19,13 @@ import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/media/audio_stuff.dart'
     show FanOutSitOut, SonicDrop;
 import 'package:mstream_music/objects/mood_filter.dart';
+import 'package:mstream_music/objects/play_event.dart' show TrackFacts;
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/auto_dj_sheets.dart';
 import 'package:mstream_music/singletons/auto_dj_manager.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
 import 'package:mstream_music/widgets/auto_dj_quick_config.dart';
+import 'package:mstream_music/widgets/seed_art.dart' show SeedTiles;
 
 Server _server(String name, {bool? discovery = true, bool? moods = true}) =>
     Server('https://$name.example.com', 'u', 'p', 'JWT', name)
@@ -54,21 +60,26 @@ void main() {
       ..sonicSimilarityEnabled = true
       ..sonicMinSimilarity = 0.55
       ..sonicAnchorMode = SonicAnchorMode.rolling
+      ..learnFromSkips = false
       ..moodFilterEnabled = false
       ..moodFilter = MoodFilter.empty;
   });
 
   group('AutoDjQuickConfig', () {
     late List<List<String>> playFrom;
-    late List<({bool on, SonicAnchorMode anchor})> sonic;
+    late List<bool> sonic;
+    late List<double> matches;
     late List<MoodFilter> moods;
     late int settings;
+    late int seeds;
 
     setUp(() {
       playFrom = [];
       sonic = [];
+      matches = [];
       moods = [];
       settings = 0;
+      seeds = 0;
     });
 
     Finder server(String name) =>
@@ -91,11 +102,18 @@ void main() {
         Map<String, FanOutSitOut> sitOut = const {},
         Set<String> connecting = const {},
         SonicDrop? drop,
+        List<TrackFacts> tiles = const [],
+        double textScale = 1,
         bool settle = true}) async {
       final picked = chosen ?? [servers.first];
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: appSupportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: Scaffold(
           body: Center(
             child: SizedBox(
@@ -111,13 +129,14 @@ void main() {
                   sitOut: (s) => sitOut[s.localname],
                   connecting: (s) => connecting.contains(s.localname),
                   sonicDrop: drop,
+                  seedTiles: tiles,
                   onPlayFrom: (set) async =>
                       playFrom.add([for (final s in set) s.localname]),
-                  onSonic: ({required bool on,
-                          required SonicAnchorMode anchor}) async =>
-                      sonic.add((on: on, anchor: anchor)),
+                  onSonic: ({required bool on}) async => sonic.add(on),
+                  onMatch: (m) async => matches.add(m),
                   onMood: (m) async => moods.add(m),
                   onOpenSettings: () => settings++,
+                  onOpenSeeds: () => seeds++,
                 ),
               ),
             ),
@@ -253,27 +272,115 @@ void main() {
           findsNothing);
     });
 
-    testWidgets('Sonic similarity: the switch, and Drift | Stay close',
+    final match = find.byKey(const ValueKey('quick-config-match'));
+    final seedsRow = find.byKey(const ValueKey('quick-config-seeds'));
+
+    testWidgets('Sonic similarity: the switch, and no Drift | Stay close',
         (tester) async {
       await show(tester, [_server('home')]);
       expect(find.text('55%'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quick-config-anchor')), findsOneWidget);
-
-      await tester.tap(find.text('Stay close'));
-      await tester.pump();
-      expect(sonic.last, (on: true, anchor: SonicAnchorMode.locked));
+      expect(find.byType(SegmentedButton<SonicAnchorMode>), findsNothing,
+          reason: 'the Seeds page has it now');
 
       await tester.tap(find.byKey(const ValueKey('quick-config-sonic')));
       await tester.pump();
-      expect(sonic.last, (on: false, anchor: SonicAnchorMode.rolling));
+      expect(sonic, [false]);
+      expect(matches, isEmpty);
     });
 
-    testWidgets('Sonic similarity off: Off, and no Drift | Stay close',
+    testWidgets('the match slider follows a drag and applies once it lets go',
+        (tester) async {
+      await show(tester, [_server('home')]);
+      final drag = await tester.startGesture(tester.getCenter(match));
+      await drag.moveBy(const Offset(2000, 0));
+      await tester.pump();
+      expect(find.text('80%'), findsOneWidget, reason: 'the line follows');
+      expect(matches, isEmpty, reason: 'nothing applied mid-drag');
+      await drag.up();
+      await tester.pump();
+      expect(matches, [closeTo(0.80, 1e-9)]);
+      expect(find.text('80%'), findsOneWidget);
+
+      await tester.drag(match, const Offset(-2000, 0));
+      await tester.pump();
+      expect(matches, [closeTo(0.80, 1e-9), closeTo(0.30, 1e-9)],
+          reason: 'one apply per drag, at its end');
+      expect(find.text('30%'), findsOneWidget);
+      expect(sonic, isEmpty, reason: 'the switch is left as it is');
+    });
+
+    testWidgets('the match slider has a name of its own', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await show(tester, [_server('home')]);
+      expect(tester.getSemantics(match),
+          isSemantics(label: 'Sonic similarity match', value: '55%'));
+      semantics.dispose();
+    });
+
+    testWidgets('Seeds opens the Seeds page', (tester) async {
+      await show(tester, [_server('home')]);
+      await tester.tap(seedsRow);
+      expect(seeds, 1);
+    });
+
+    testWidgets('the Seeds row shows the newest seeds’ art, none while there '
+        'are none', (tester) async {
+      await show(tester, [_server('home')]);
+      expect(find.descendant(of: seedsRow, matching: find.byType(SeedTiles)),
+          findsNothing);
+
+      await show(tester, [_server('home')], tiles: const [
+        TrackFacts(server: 'home', path: '/c.mp3', title: 'C'),
+        TrackFacts(server: 'home', path: '/b.mp3', title: 'B'),
+        TrackFacts(server: 'home', path: '/a.mp3', title: 'A'),
+      ]);
+      final tiles = tester.widget<SeedTiles>(
+          find.descendant(of: seedsRow, matching: find.byType(SeedTiles)));
+      expect(tiles.songs.map((s) => s.title), ['C', 'B', 'A']);
+      expect(tiles.size, 24);
+      expect(tiles.ring, VelvetColors.raised,
+          reason: 'ringed in the popover’s own colour');
+      // These songs have no art, so each tile shows the placeholder. Its
+      // usual fill is the raised colour too, which would leave a bare note
+      // on the popover with no tile around it.
+      final fills = tester
+          .widgetList<Container>(find.descendant(
+              of: find.byWidget(tiles), matching: find.byType(Container)))
+          .map((c) => c.color)
+          .whereType<Color>()
+          .toList();
+      expect(fills, hasLength(3));
+      expect(fills, everyElement(VelvetColors.border),
+          reason: 'a placeholder stands out from the ring around it');
+    });
+
+    testWidgets('the Seeds row is 48 high as drawn, and grows with the text '
+        'instead of clipping it', (tester) async {
+      await show(tester, [_server('home')]);
+      expect(tester.getSize(seedsRow).height, 48);
+
+      // Three times the text, about the largest iOS accessibility size.
+      await show(tester, [_server('home')], textScale: 3);
+      final label = tester.renderObject<RenderParagraph>(
+          find.descendant(of: seedsRow, matching: find.text('Seeds')));
+      expect(label.size.height,
+          greaterThanOrEqualTo(label.getMaxIntrinsicHeight(label.size.width)),
+          reason: 'the whole line shows');
+      expect(tester.getSize(seedsRow).height, greaterThan(48));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Sonic similarity off: Off, and no match or Seeds',
         (tester) async {
       mgr.sonicSimilarityEnabled = false;
       await show(tester, [_server('home')]);
       expect(find.text('Off'), findsOneWidget);
-      expect(find.byKey(const ValueKey('quick-config-anchor')), findsNothing);
+      expect(match, findsNothing);
+      expect(seedsRow, findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('quick-config-sonic')));
+      await tester.pump();
+      expect(sonic, [true]);
     });
 
     testWidgets('where sonic can’t run, the reason, and no switch to flip',
@@ -284,6 +391,8 @@ void main() {
           find.byKey(const ValueKey('quick-config-sonic')));
       expect(toggle.onChanged, isNull);
       expect(toggle.value, isFalse);
+      expect(match, findsNothing, reason: 'blocked counts as off');
+      expect(seedsRow, findsNothing);
     });
 
     testWidgets('a session that dropped sonic says why, in amber',
@@ -449,6 +558,29 @@ void main() {
         ..federationParent = 'home'
         ..federationPeerId = 3;
       expect(autoDjMoodBlocked(l, home: peer, set: [peer]), 'Not on peers');
+    });
+
+    test('learning from skips: a server that takes negatives, or why not',
+        () {
+      Server learns(String n) => _server(n)
+        ..discoveryReady = true
+        ..autoDjGeneration = 1;
+      final a = learns('a');
+      final old = _server('old')..discoveryReady = true;
+      final unready = learns('unready')..discoveryReady = null;
+      expect(autoDjLearnBlocked(l, home: a, set: [a]), isNull);
+      expect(autoDjLearnBlocked(l, home: old, set: [old]),
+          'Needs a newer server');
+      expect(autoDjLearnBlocked(l, home: unready, set: [unready]),
+          'Needs a newer server',
+          reason: 'readiness it can’t report counts against it');
+      expect(autoDjLearnBlocked(l, home: old, set: [old, a]), isNull,
+          reason: 'one taking part takes them');
+      expect(autoDjLearnBlocked(l, home: a, set: [old, unready]),
+          'Needs a newer server',
+          reason: 'with several, the set decides, not the home');
+      expect(autoDjLearnBlocked(l, home: null, set: const []),
+          'Needs a newer server');
     });
   });
 }

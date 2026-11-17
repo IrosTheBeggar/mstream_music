@@ -249,6 +249,30 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   int? get currentIndex => _player.currentIndex;
 
+  // just_audio's own hasNext is true wherever it has a next index, and under
+  // LoopMode.one that index is the current one: its seekToNext then restarts
+  // the row. A one-row queue on repeat-all wraps onto itself the same way.
+  // Play order is the player's, so shuffle is honoured as it plays.
+  @override
+  bool get hasNext => advancesOnNext(
+      nextIndex: _player.nextIndex,
+      currentIndex: _player.currentIndex,
+      state: _player.processingState);
+
+  /// Whether just_audio's seekToNext on a player at [currentIndex], whose
+  /// next row in play order is [nextIndex] (null: none) and whose state is
+  /// [state], moves to another row. Not while it is loading: its seek
+  /// returns without doing anything then (a reload at the spot, after a
+  /// URL rebuild, an EQ rebuild or a restore, puts the row it reloads at the
+  /// current index first), so the Next is dropped and the song plays on.
+  /// Not where the next row is the current one (LoopMode.one), where the
+  /// Next only restarts it. Pure; unit-tested.
+  static bool advancesOnNext(
+          {int? nextIndex, int? currentIndex, required ProcessingState state}) =>
+      state != ProcessingState.loading &&
+      nextIndex != null &&
+      nextIndex != currentIndex;
+
   @override
   BackendProcessingState get processingState =>
       _mapState(_player.processingState);

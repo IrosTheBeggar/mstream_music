@@ -19,18 +19,49 @@ import 'package:rxdart/rxdart.dart';
 
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
+import '../util/auto_dj_seeds.dart';
 import '../util/write_chain.dart';
 import 'log_manager.dart';
 
-/// Which paths feed random-songs' `similarTo` when sonic mode is on — a
-/// pure client-side policy (the server statelessly averages whatever
-/// arrives; webapp auto-dj.js parity):
-///   rolling — the last-N DJ picks (session centroid; the session follows
-///             its own vibe and can slowly evolve)
-///   locked  — one pinned anchor for the whole session lane ("stay on
-///             seed"); the pin itself is session state on the audio handler
-/// Persisted under the JSON 'sonicAnchorMode' key by name. Localized
-/// labels: SonicAnchorModeLabel in lib/l10n/enum_labels.dart.
+/// How the session's sonic seeds move: the Seeds page's Drift | Stay close.
+/// The seeds are two lists, More like (sent as random-songs' `similarTo`)
+/// and Less like (sent as its `lessLike` negatives, mStream #1108). They live
+/// on the audio handler, modelled in lib/util/auto_dj_seeds.dart. The rows
+/// the user pinned stay through new queues, Stop/Start and app restarts
+/// ([AutoDJManager.pinnedSeeds]) until they are unpinned or removed, or a
+/// queue clear takes them with the Seeds page's box ticked
+/// ([AutoDJManager.clearPinsOnQueueClear]). The server keeps nothing between
+/// picks and reads whatever lists arrive, so this is a pure client-side
+/// policy:
+///   rolling — Drift: each DJ pick joins More like when it starts playing,
+///             and the oldest unpinned one rotates out, so the session
+///             follows its own vibe and can slowly evolve. The DJ's own
+///             unpinned picks start over with each new start (a new queue,
+///             Stop/Start, a server switch, an app restart), and at its
+///             first pick the song playing joins, unpinned, beside the pins.
+///             A quick skip of a DJ pick takes the song out of More like
+///             and, with Learn from skips on ([AutoDJManager.learnFromSkips]),
+///             puts it in Less like, whose unpinned rows expire after 30
+///             minutes. A quick skip of the user's own song that a start
+///             blended in only takes it out, and the lane's picks pass over
+///             it from then on. A row the user pins stays.
+///   locked  — Stay close: both lists are frozen, and every row shows as
+///             pinned. Nothing joins, leaves or expires on its own, though
+///             the user can still add, move and remove rows. A lane with
+///             nothing to stay close to (rows a server refused count as
+///             nothing) gets one song to start: the explicit seed, else the
+///             playing track, at the first sonic pick whose request can
+///             carry it. A start from a song the user chose adds that song
+///             as Add song does, pinned. After that nothing is added or
+///             removed, so with every row removed the picks ignore sonic
+///             similarity until the user adds a song.
+///             Every row it shows outlives new queues, Stop/Start and app
+///             restarts, the skips with their clocks paused.
+/// Switching back to Drift restores the user's own pins, which Stay close
+/// never changed. Persisted under the JSON 'sonicAnchorMode' key by name.
+/// The names predate the Seeds page and are kept, so a stored choice reads
+/// the same. Changed only through [AutoDJManager.setSonicAnchorMode]; the UI
+/// names them Drift and Stay close (autoDjDrift, autoDjStayClose).
 enum SonicAnchorMode { rolling, locked }
 
 /// What Auto DJ does when it is switched on with NOTHING queued. With a queue
@@ -162,9 +193,10 @@ class AutoDJManager {
   // Sonic similarity — constrain picks to the session's vibe, server-side
   // via the `similarTo` + `minSimilarity` fields on POST
   // /api/v1/db/random-songs (the sonic pool is a hard base constraint the
-  // BPM/key waterfall relaxes within). Seeds are the rolling anchor kept in
-  // audio_stuff.dart. Only effective when the DJ server advertised
-  // `discovery` on ping (Server.discoveryAvailable).
+  // BPM/key waterfall relaxes within). Its seeds are the session's More like
+  // and Less like lists on the audio handler (see [SonicAnchorMode]). Only
+  // effective when the DJ server advertised `discovery` on ping
+  // (Server.discoveryAvailable).
   /// On by default. It is the feature that makes Auto DJ feel like a DJ
   /// rather than shuffle, and leaving it off meant most people never found it.
   ///
@@ -183,14 +215,57 @@ class AutoDJManager {
   // webapp default 0.55). The Auto DJ screen's slider exposes 0.30–0.80.
   double sonicMinSimilarity = 0.55;
 
-  // Anchor policy for the sonic seeds — see [SonicAnchorMode].
+  // Drift | Stay close for the session's seeds — see [SonicAnchorMode].
   SonicAnchorMode sonicAnchorMode = SonicAnchorMode.rolling;
+
+  /// Learn from skips, the Auto DJ screen's switch under Sonic similarity: a
+  /// quick skip of a DJ pick puts the song in the session's Less like seeds,
+  /// so the picks steer away from songs like it. Off by default. It counts
+  /// only in Drift, with sonic similarity on and a server in the session
+  /// that takes negatives (Server.lessLikeUsable). Sonic similarity going off
+  /// leaves it as it was: the screen only dims the switch then, so it comes
+  /// back the way the user left it. A quick skip of the user's own song that
+  /// a lane's start blended into More like only takes it out: nothing is
+  /// learned from it, whatever this says.
+  bool learnFromSkips = false;
+
+  /// The Seeds page's "Clear pins when the queue is cleared" checkbox. Off
+  /// by default: the songs pinned in either seed list stay through new
+  /// queues, Stop/Start and app restarts until the user unpins or removes
+  /// them. On, a clear by the user of a queue that held a song (Clear queue,
+  /// or a play that replaces the queue) also removes the rows the Seeds page
+  /// shows pinned, in both lists, the stored ones included: in Drift the
+  /// user's pins, while the DJ's unpinned picks start over as at any new
+  /// queue and skips keep their 30-minute timer; in Stay close, where every
+  /// row shows pinned, every row, and the next queue takes in one song to
+  /// start (AudioPlayerHandler._resetAutoDJSession).
+  bool clearPinsOnQueueClear = false;
+
+  /// The seed rows auto_dj.json keeps, as the audio handler last saved them
+  /// (AudioPlayerHandler.loadPinnedSeeds takes them back in at launch), each
+  /// with its own pin: in Drift the rows the user pinned, in Stay close
+  /// every row the Seeds page showed (AutoDjSeeds.storedRows). In list
+  /// order, More like's rows oldest first, then Less like's. Read entry by
+  /// entry, an entry that isn't one skipped, and held as read: no server
+  /// filter and no cap here, since the load runs before the server list is
+  /// filled and a filter then would drop every row for good at the next
+  /// save. The handler filters and caps ([restorablePinnedRows]). The name
+  /// and its key predate the rows Stay close keeps.
+  List<StoredSeed> pinnedSeeds = const [];
+
+  /// When the lists [pinnedSeeds] holds stood frozen (Stay close) since, as
+  /// the handler saved them with the rows; null when it saved them in Drift.
+  /// A stored skip's clock stood still from then, so the launch load counts
+  /// none of the time since as Drift time. Data only, like [pinnedSeeds],
+  /// and read with storedTimeFromJson, which never throws.
+  DateTime? seedsFrozenAt;
 
   // Explicit sonic seed — "start the session from THIS song" (webapp
   // sonicSeed parity). It wins over the playing track for a session's
-  // first pick; the rolling history takes over after that. Tied to the
-  // server it was picked from ([sonicSeedServer], a Server.localname) —
-  // audio_stuff only sends it when the DJ runs on that server.
+  // first pick; the session's More like seeds take over once it has some.
+  // Tied to the server it was picked from ([sonicSeedServer], a
+  // Server.localname) — audio_stuff only sends it when the DJ runs on that
+  // server.
   //
   // ONE-SHOT, like the webapp's (resetAnchors consumes it there): set by the
   // empty-queue start flow moments before the DJ is armed, and consumed by
@@ -198,9 +273,15 @@ class AutoDJManager {
   // outlives the session it opened. It used to persist forever, which made
   // any later empty-queue setAutoDJ — Android Auto's Shuffle All — silently
   // replay the last seed song instead of starting fresh.
+  //
+  // [sonicSeedChosen] marks a song the user chose (Recently played, or a
+  // pick from the library), not one Random drew: a Stay close start adds a
+  // chosen song to More like, pinned, as Add song does, and a Random one
+  // not at all. Stored and cleared with the seed.
   String? sonicSeedPath; // vpath-form, no leading slash
   String? sonicSeedTitle; // display only
   String? sonicSeedServer;
+  bool sonicSeedChosen = false;
 
   /// See [EmptyQueueStart]. Defaults to asking, because guessing wrong here
   /// either plays a song nobody chose or dumps the user in a browser they
@@ -297,11 +378,28 @@ class AutoDJManager {
       // back to rolling instead of rippling junk into request building.
       sonicAnchorMode = SonicAnchorMode.values.asNameMap()[m['sonicAnchorMode']] ??
           SonicAnchorMode.rolling;
+      // A newer key, read with == true like moodFilterEnabled: a file from
+      // before Learn from skips, or a junk value, reads as off instead of
+      // throwing away every key after it.
+      learnFromSkips = m['learnFromSkips'] == true;
+      clearPinsOnQueueClear = m['clearPinsOnQueueClear'] == true;
+      // One entry at a time, and the reader never throws: this is one try
+      // block, and a throw would drop every key after it.
+      final pins = m['pinnedSeeds'];
+      final readAt = DateTime.now();
+      pinnedSeeds = pins is List
+          ? List.unmodifiable([
+              for (final e in pins) ?storedSeedFromJson(e, now: readAt),
+            ])
+          : const <StoredSeed>[];
+      // Range-checked, and never a throw, for the same reason.
+      seedsFrozenAt = storedTimeFromJson(m['seedsFrozenAt']);
       sonicSeedPath = m['sonicSeedPath'] is String ? m['sonicSeedPath'] : null;
       sonicSeedTitle =
           m['sonicSeedTitle'] is String ? m['sonicSeedTitle'] : null;
       sonicSeedServer =
           m['sonicSeedServer'] is String ? m['sonicSeedServer'] : null;
+      sonicSeedChosen = m['sonicSeedChosen'] == true;
       // Hardened like sonicAnchorMode: an unknown stored value falls back to
       // asking rather than silently committing the user to a behaviour.
       emptyQueueStart =
@@ -406,9 +504,14 @@ class AutoDJManager {
       'sonicSimilarityEnabled': sonicSimilarityEnabled,
       'sonicMinSimilarity': sonicMinSimilarity,
       'sonicAnchorMode': sonicAnchorMode.name,
+      'learnFromSkips': learnFromSkips,
+      'clearPinsOnQueueClear': clearPinsOnQueueClear,
+      'pinnedSeeds': [for (final s in pinnedSeeds) storedSeedToJson(s)],
+      'seedsFrozenAt': seedsFrozenAt?.millisecondsSinceEpoch,
       'sonicSeedPath': sonicSeedPath,
       'sonicSeedTitle': sonicSeedTitle,
       'sonicSeedServer': sonicSeedServer,
+      'sonicSeedChosen': sonicSeedChosen,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
       'playFromServer': playFromServer,
@@ -759,14 +862,14 @@ class AutoDJManager {
     await _save();
   }
 
-  /// The Auto DJ screen's Sonic similarity sheet, applied at once.
+  /// The Auto DJ screen's Sonic similarity sheet, applied at once. The mode
+  /// is not part of it: the Seeds page owns Drift | Stay close and changes it
+  /// through [setSonicAnchorMode], so a sheet left open across a change there
+  /// cannot put the old mode back on Done.
   Future<void> setSonic(
-      {required bool enabled,
-      required double minSimilarity,
-      required SonicAnchorMode anchor}) async {
+      {required bool enabled, required double minSimilarity}) async {
     sonicSimilarityEnabled = enabled;
     sonicMinSimilarity = minSimilarity.clamp(0.0, 1.0);
-    sonicAnchorMode = anchor;
     _notify();
     await _save();
   }
@@ -777,21 +880,62 @@ class AutoDJManager {
     await _save();
   }
 
+  /// Drift | Stay close, and the one way the mode changes. The Seeds page
+  /// calls it through the audio handler's setSeedMode, which also freezes or
+  /// thaws the session's seeds to match.
   Future<void> setSonicAnchorMode(SonicAnchorMode v) async {
     sonicAnchorMode = v;
     _notify();
     await _save();
   }
 
+  /// The Auto DJ screen's Learn from skips switch, applied at once.
+  Future<void> setLearnFromSkips(bool v) async {
+    if (learnFromSkips == v) return;
+    learnFromSkips = v;
+    _notify();
+    await _save();
+  }
+
+  /// The Seeds page's "Clear pins when the queue is cleared" checkbox,
+  /// applied at once. See [clearPinsOnQueueClear].
+  Future<void> setClearPinsOnQueueClear(bool v) async {
+    if (clearPinsOnQueueClear == v) return;
+    clearPinsOnQueueClear = v;
+    _notify();
+    await _save();
+  }
+
+  /// The seed rows auto_dj.json keeps, saved for the next launch (see
+  /// [pinnedSeeds]), with when their lists froze ([frozenAt], null in
+  /// Drift; see [seedsFrozenAt]): always the two from one view, so the file
+  /// agrees with itself. The audio handler calls this when what the file
+  /// keeps changes. No notify: the Seeds page follows the handler's seeds
+  /// stream already, and a tick here would rebuild the Auto DJ screen on
+  /// every pin. Nothing is written when there were no rows and there are
+  /// none.
+  Future<void> setPinnedSeeds(List<StoredSeed> rows,
+      {DateTime? frozenAt}) async {
+    if (rows.isEmpty && pinnedSeeds.isEmpty) return;
+    pinnedSeeds = List.unmodifiable(rows);
+    seedsFrozenAt = frozenAt;
+    await _save();
+  }
+
+  /// The one-shot opening song (see [sonicSeedPath]). [chosen]: the user
+  /// chose it (Recently played, or a pick from the library), rather than
+  /// Random drawing it.
   Future<void> setSonicSeed(
       {required String path,
       required String title,
-      required String server}) async {
+      required String server,
+      bool chosen = false}) async {
     final norm = path.startsWith('/') ? path.substring(1) : path;
     if (norm.isEmpty) return;
     sonicSeedPath = norm;
     sonicSeedTitle = title;
     sonicSeedServer = server;
+    sonicSeedChosen = chosen;
     _notify();
     await _save();
   }
@@ -809,12 +953,14 @@ class AutoDJManager {
     // screen on each clear for nothing.
     if (sonicSeedPath == null &&
         sonicSeedTitle == null &&
-        sonicSeedServer == null) {
+        sonicSeedServer == null &&
+        !sonicSeedChosen) {
       return;
     }
     sonicSeedPath = null;
     sonicSeedTitle = null;
     sonicSeedServer = null;
+    sonicSeedChosen = false;
     _notify();
     await _save();
   }

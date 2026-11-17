@@ -5207,12 +5207,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Choose';
 
   @override
-  String get autoDjMustMatch => 'Must match';
-
-  @override
-  String get autoDjPrefer => 'Prefer';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5332,6 +5326,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Recently played';
+
+  @override
+  String get autoDjFilters => 'Filters';
+
+  @override
+  String get autoDjMatch => 'Match';
+
+  @override
+  String get autoDjLearnFromSkips => 'Learn from skips';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Skipping a song will prevent similar songs from being selected';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Needs a newer server';
+
+  @override
+  String get autoDjSeeds => 'Seeds';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Songs are rotated out regularly. Pin a song to keep it from being removed.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'All songs are now pinned. No new songs will be added.';
+
+  @override
+  String get autoDjMoreLike => 'More like';
+
+  @override
+  String get autoDjLessLike => 'Less like';
+
+  @override
+  String get autoDjAddSong => 'Add song';
+
+  @override
+  String get autoDjUpNext => 'Up next';
+
+  @override
+  String get autoDjMoreLikeThis => 'More like this';
+
+  @override
+  String get autoDjLessLikeThis => 'Less like this';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Pin $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return '$title options';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Sonic similarity match';
+
+  @override
+  String get autoDjSearchSongs => 'Search songs';
+
+  @override
+  String get autoDjSeedMode => 'Drift or stay close';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Clear pins when the queue is cleared';
+
+  @override
+  String get autoDjSkipped => 'Skipped';
 
   @override
   String get browseLoadFailed =>

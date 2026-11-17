@@ -1,10 +1,20 @@
 // Auto DJ across a queue clear.
 //
 // The bug this pins: clearing the queue used to leave the whole DJ session
-// standing — the round-tripped ignoreList, the sonic history/locked pin, the
-// Camelot anchor, and any in-flight random-songs request, whose response
-// would repopulate the queue the user just emptied. The next picks were then
-// anchored on the dead session instead of whatever the user queued next.
+// standing — the round-tripped ignoreList, the sonic anchors (today the DJ's
+// own unpinned picks in the session's More like seeds), the Camelot anchor,
+// and any in-flight random-songs request, whose response would repopulate
+// the queue the user just emptied. The next picks were then anchored on the
+// dead session instead of whatever the user queued next.
+//
+// In Drift a clear starts the DJ's unpinned picks over and keeps the seeds
+// the user pinned and the unpinned Less like skips, with their timers; the
+// next lane's first pick then blends in the song playing (here 'User pick'),
+// unpinned, beside the pins. In Stay close a clear keeps every row the Seeds
+// page shows. With its "Clear pins when the queue is cleared" ticked, a
+// clear removes the pins too, which in Stay close means every row. No
+// assertion here reads the seeds, and this server takes no sonic seeds, so
+// the bodies are the same either way.
 //
 // Contract under test (AudioPlayerHandler._resetAutoDJSession +
 // _doClearPlaylist):

@@ -5276,12 +5276,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Choisir';
 
   @override
-  String get autoDjMustMatch => 'Doit correspondre';
-
-  @override
-  String get autoDjPrefer => 'Préférer';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct %';
   }
@@ -5401,6 +5395,77 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Récents';
+
+  @override
+  String get autoDjFilters => 'Filtres';
+
+  @override
+  String get autoDjMatch => 'Affinité';
+
+  @override
+  String get autoDjLearnFromSkips => 'Apprendre des morceaux passés';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Passer un morceau évitera que des morceaux similaires soient choisis';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Nécessite un serveur plus récent';
+
+  @override
+  String get autoDjSeeds => 'Morceaux de départ';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Les morceaux sont renouvelés régulièrement. Épinglez-en un pour le garder.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Tous les morceaux sont désormais épinglés. Aucun nouveau morceau ne sera ajouté.';
+
+  @override
+  String get autoDjMoreLike => 'Plus dans ce style';
+
+  @override
+  String get autoDjLessLike => 'Moins dans ce style';
+
+  @override
+  String get autoDjAddSong => 'Ajouter un morceau';
+
+  @override
+  String get autoDjUpNext => 'À suivre';
+
+  @override
+  String get autoDjMoreLikeThis => 'Plus dans ce style';
+
+  @override
+  String get autoDjLessLikeThis => 'Moins dans ce style';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Épingler $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Options pour $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Degré de similarité sonore';
+
+  @override
+  String get autoDjSearchSongs => 'Rechercher des morceaux';
+
+  @override
+  String get autoDjSeedMode => 'Dériver ou rester proche';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Retirer les morceaux épinglés quand la file est vidée';
+
+  @override
+  String get autoDjSkipped => 'Morceaux passés';
 
   @override
   String get browseLoadFailed =>
