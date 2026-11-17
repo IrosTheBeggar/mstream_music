@@ -12,6 +12,10 @@
 #      stopped: only a queue that played out starts over.
 #   3. with a track queued after the end, PLAY goes on to it instead of
 #      through the finished one again.
+#   4. a relaunch onto a snapshot that names the END of its last track opens
+#      at the track's start, and the first PLAY plays it. The app saves 0:00
+#      for a track whose length it knows, so the snapshot is planted with no
+#      lengths in it: the one the snapshot's own clamp cannot judge.
 #
 #   SMOKE_SRC           mStream checkout to boot (default ~/code/mstream)
 #   SMOKE_HOST          how the phone reaches this Mac: 10.0.2.2 on the
@@ -239,6 +243,40 @@ else
     fi
   else
     fail "could not queue a fourth track through File Explorer"; shot queue-after-end
+  fi
+fi
+
+# ── 4. a relaunch onto a snapshot saved at the end of its last track ──
+# The three tracks again, restored on the last one just past its fifteen
+# seconds, with no length on any item. The restore used to park there, ready
+# and paused on the last sample, and the first PLAY completed on the spot.
+app_stop
+python3 - "$OUT/queue.json" <<'PY'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p))
+d['index'] = len(d['items']) - 1; d['positionMs'] = 15050
+for i in d['items']: i['durationMs'] = None
+json.dump(d, open(p, 'w'))
+PY
+cfg_write queue.json "$OUT/queue.json"
+T6=$(now_ts); wake; app_start
+if ! wait_for_log_after "$T6" "\[app\] default server ready: $NAME" 40; then
+  fail "the relaunch did not settle on $NAME"
+else
+  sleep 10 # as at the first launch: an early PLAY key is dropped
+  P6=$(pos_ms); P6=${P6:--1}; I6=$(queue_index)
+  if ! is_playing && [ "$I6" = 2 ] && [ "$P6" -ge 0 ] && [ "$P6" -le 1000 ]; then
+    pass "a snapshot at the end of its last track opens at the track's start"
+  else
+    fail "after the relaunch: $(session_state), row ${I6:-?}, ${P6} ms (expected paused on row 2 at its start)"
+  fi
+  T7=$(now_ts); media_key play
+  wait_playing 10; sleep 5
+  P7=$(pos_ms); P7=${P7:--1}; I7=$(queue_index); E7=$(count_after "$T7" "$ENDED")
+  if is_playing && [ "$I7" = 2 ] && [ "$E7" = 0 ] && [ "$P7" -ge 2500 ] && [ "$P7" -le 12000 ]; then
+    pass "the first PLAY after that relaunch plays the last track (${P7} ms in, five seconds on)"
+  else
+    fail "the first PLAY after the relaunch: $(session_state), row ${I7:-?}, ${P7} ms, $E7 queue end(s) — it completed on the spot?"
   fi
 fi
 

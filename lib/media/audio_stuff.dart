@@ -2385,10 +2385,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
       try {
+        var loaded = false;
         try {
         // No play call after it: the restore deliberately opens PAUSED at the
         // saved spot rather than blasting audio on launch.
           await _loadAtSpot(_backend, items, (index: i, position: position));
+          loaded = true;
         } catch (e) {
           // A dead-server cold start (offline, stale tunnel loopback) makes
           // the load throw AFTER the queue is published. _loadAtSpot has
@@ -2397,6 +2399,20 @@ class AudioPlayerHandler extends BaseAudioHandler
           // Swallowed rather than rethrown because repeat/shuffle below are
           // player-level flags that still apply without sources.
           appLog('[queue] restore load failed: $e');
+        }
+        // The load is the first moment the track's real length is known, and
+        // the saved spot can turn out to be its end (restoredAtTrackEnd).
+        // Parked there, the first play would complete on the spot.
+        if (loaded &&
+            restoredAtTrackEnd(
+                position: position, duration: _backend.duration)) {
+          appLog('[queue] restored at the end of track ${i + 1} — '
+              'it opens at its start');
+          try {
+            await _backend.seek(Duration.zero, index: i);
+          } catch (e) {
+            appLog('[queue] restore rewind failed: $e');
+          }
         }
         try {
           _repeatMode = repeat;
@@ -2428,6 +2444,32 @@ class AudioPlayerHandler extends BaseAudioHandler
     _emitCurrentMediaItem();
     _broadcastState();
   }
+
+  /// Whether a launch restore that has just loaded sits at the END of its
+  /// track, going by the length the player measured. Pure; unit-tested.
+  ///
+  /// The snapshot already drops a saved position at or past the end
+  /// ([QueueStore.clampResumePositionMs]), but it can only judge one against
+  /// a length it has. A position saved with none — the queue item carried no
+  /// duration, and the player had not measured that track either — reaches
+  /// the load as it was written. It happens: play a queue out, remove its
+  /// last row, and the row left current is saved under the removed track's
+  /// end, which a shorter file the server has no tags for is already past.
+  ///
+  /// The restore then parks on the last sample: ready, paused, and one Play
+  /// away from completing on the spot. On a queue's last track that Play
+  /// ends the queue instead of starting anything, and only the one after it
+  /// is heard.
+  ///
+  /// The guard is the snapshot's own, so a track opens the same way whether
+  /// or not its length was stored. False when the player has no length
+  /// either (a transcode's stream has none): nothing to judge against.
+  static bool restoredAtTrackEnd(
+          {required Duration position, required Duration? duration}) =>
+      position.inMilliseconds > 0 &&
+      QueueStore.clampResumePositionMs(
+              position.inMilliseconds, duration?.inMilliseconds) ==
+          0;
 
   // Where a FAILED launch-restore load intended to park. Read by the revive
   // paths (they load here instead of the never-loaded backend's index 0) and
