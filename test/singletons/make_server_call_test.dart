@@ -11,7 +11,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/api.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/util/decode_json.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -68,5 +70,51 @@ void main() {
   test('no server named: the current one, as before', () async {
     final seen = await albumSongsVia(null);
     expect(seen.single.url.path, '/api/v1/db/album-songs');
+  });
+
+  // A whole-library answer: big enough that decodeJsonBody hands it to a
+  // background isolate, so the decode spans event-loop turns of its own.
+  // Until Dart 3.13 flagged it (unawaited_return_in_try_block) the decode ran
+  // after makeServerCall's finally, with the load already ended.
+  final library = jsonEncode([
+    for (var i = 0; i < 100000; i++) {'name': 'Artist $i', 'album_count': i % 7}
+  ]);
+
+  test('a library-sized answer keeps the tap-guard up until it is decoded',
+      () async {
+    expect(library.length, greaterThan(kIsolateDecodeThreshold));
+    var done = false;
+    var guardDropped = false;
+    await http.runWithClient(() async {
+      final call = ApiManager()
+          .makeServerCall(home, '/api/v1/db/artists', {}, 'GET')
+          .whenComplete(() => done = true);
+      while (!done) {
+        if (!BrowserManager().isLoading) guardDropped = true;
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(await call, hasLength(100000));
+    }, () => MockClient((req) async => http.Response(library, 200)));
+    expect(guardDropped, isFalse,
+        reason: 'a second tap must stay blocked while the answer decodes');
+  });
+
+  test('Back while a library-sized answer decodes drops it', () async {
+    var answered = false;
+    await http.runWithClient(() async {
+      final call = ApiManager()
+          .makeServerCall(home, '/api/v1/db/artists', {}, 'GET');
+      // By the first timer turn after the answer, its body is read and the
+      // decode is under way on the other isolate.
+      while (!answered) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(BrowserManager().cancelLoading(), isTrue,
+          reason: 'Back cancels the call: it is still decoding');
+      await expectLater(call, throwsA(isA<BrowseCancelled>()));
+    }, () => MockClient((req) async {
+          answered = true;
+          return http.Response(library, 200);
+        }));
   });
 }

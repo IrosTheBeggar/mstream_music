@@ -353,8 +353,15 @@ class ApiManager {
       }
 
       // Whole-library payloads (artists / albums / playlist loads / recursive
-      // listings) run multi-MB — decode those off the UI isolate.
-      return decodeJsonBody(response.body);
+      // listings) run multi-MB — decode those off the UI isolate. Awaited
+      // here, inside the try, so the loading bar, the tap-guard and
+      // Back-to-cancel cover the decode as well: a big library takes long
+      // enough to decode that a second tap or a Back press lands in it.
+      final decoded = await decodeJsonBody(response.body);
+      if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
+        throw const BrowseCancelled();
+      }
+      return decoded;
     } finally {
       client.close();
       BrowserManager().endLoading(loadToken);
