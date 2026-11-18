@@ -18,7 +18,9 @@ pluginManagement {
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    id "com.android.application" version "9.1.0" apply false
+    // 9.1.1, not 9.1.0: 9.1.0 can't find the API 37 platform (installed as
+    // platforms/android-37.0) that compileSdk 37 needs.
+    id "com.android.application" version "9.1.1" apply false
     id "org.jetbrains.kotlin.android" version "2.4.0" apply false
 }
 
