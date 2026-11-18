@@ -5551,6 +5551,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjAddSong => 'Добавить трек';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Выбрать трек в библиотеке';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Выберите трек для «Больше похожих» — коснитесь любого трека в библиотеке';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Выберите трек для «Меньше похожих» — коснитесь любого трека в библиотеке';
+
+  @override
   String get autoDjUpNext => 'Далее';
 
   @override

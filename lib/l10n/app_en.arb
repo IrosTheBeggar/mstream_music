@@ -5930,6 +5930,18 @@
   "@autoDjAddSong": {
     "description": "Seeds page: the last row of each list, and the title of the sheet it opens to choose a song for that list."
   },
+  "autoDjAddSongFromLibrary": "Pick a song from the library",
+  "@autoDjAddSongFromLibrary": {
+    "description": "Add song sheet: the row under its title that closes the sheet and lets the user tap a song anywhere in the library instead, as Sonic path's Browse library does."
+  },
+  "autoDjSeedPickBannerMore": "Pick a song for More like — tap a track anywhere in the library",
+  "@autoDjSeedPickBannerMore": {
+    "description": "Banner over the library while the user picks a song to add to the Seeds page's More like list (autoDjMoreLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart."
+  },
+  "autoDjSeedPickBannerLess": "Pick a song for Less like — tap a track anywhere in the library",
+  "@autoDjSeedPickBannerLess": {
+    "description": "Banner over the library while the user picks a song to add to the Seeds page's Less like list (autoDjLessLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart."
+  },
   "autoDjUpNext": "Up next",
   "@autoDjUpNext": {
     "description": "Add song sheet: header over the songs coming up in the queue."

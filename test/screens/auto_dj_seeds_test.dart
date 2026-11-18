@@ -11,7 +11,12 @@
 // song and the move into it are off. So are they for a list that can use no
 // server's songs, and a move for a song from a server the other list can't
 // use. Less like's Add song sheet has a Skipped section: the song playing now,
-// then the songs skipped lately.
+// then the songs skipped lately. Its "Pick a song from the library" is Sonic
+// path's library mode for the list: on the server being browsed when the list
+// can use it, the page drops to the library under a banner naming the list,
+// and a track tapped there, or the banner's Cancel, puts back what the page
+// was opened over, the page on top: the Auto DJ screen showing its Seeds
+// row, and the home told once the page covers it.
 //
 // AutoDjSeedsView is driven through its callbacks. The live page around it
 // is checked against a stand-in audio handler: it draws the handler's seeds,
@@ -20,21 +25,31 @@
 // page's last build), hands every edit back, and keeps the checkbox in
 // AutoDJManager.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/media/audio_stuff.dart';
+import 'package:mstream_music/objects/display_item.dart';
+import 'package:mstream_music/objects/metadata.dart';
 import 'package:mstream_music/objects/play_event.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/auto_dj.dart';
 import 'package:mstream_music/screens/auto_dj_seeds.dart';
 import 'package:mstream_music/singletons/auto_dj_manager.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/play_history.dart';
+import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/singletons/track_capture.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
 import 'package:mstream_music/util/auto_dj_seeds.dart';
 import 'package:mstream_music/widgets/federation_widgets.dart' show FedCard;
@@ -84,6 +99,11 @@ final _hint = find.byKey(const ValueKey('auto-dj-seeds-hint'));
 final _reason = find.byKey(const ValueKey('auto-dj-seeds-less-reason'));
 final _move = find.byKey(const ValueKey('auto-dj-seed-move'));
 final _remove = find.byKey(const ValueKey('auto-dj-seed-remove'));
+// Add song's "Pick a song from the library".
+final _fromLibrary = find.byKey(const ValueKey('auto-dj-add-song-library'));
+// The library's banner while a pick is armed, and its Cancel.
+final _banner = find.byKey(const ValueKey('capture-banner'));
+final _bannerCancel = find.byKey(const ValueKey('capture-banner-cancel'));
 final _clearPins = find.byKey(const ValueKey('auto-dj-seeds-clear-pins'));
 final _clearPinsBox =
     find.byKey(const ValueKey('auto-dj-seeds-clear-pins-box'));
@@ -140,13 +160,16 @@ void _tall(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-/// The audio handler's seeds surface and nothing more: the page's reads
-/// come from these fields, and its edits are written down in [calls].
+/// The audio handler's seeds surface, and what the Auto DJ screen under the
+/// page reads (nothing playing, the DJ off): the page's reads come from these
+/// fields, and its edits are written down in [calls].
 class _FakeHandler implements AudioPlayerHandler {
   final BehaviorSubject<AutoDjSeeds> seedsSubject =
       BehaviorSubject.seeded(AutoDjSeeds.empty);
   @override
   ValueStream<AutoDjSeeds> get seedsStream => seedsSubject.stream;
+  @override
+  AutoDjSeeds get seeds => seedsSubject.value;
   @override
   final BehaviorSubject<dynamic> customState = BehaviorSubject.seeded(null);
   @override
@@ -155,6 +178,14 @@ class _FakeHandler implements AudioPlayerHandler {
   @override
   final BehaviorSubject<PlaybackState> playbackState =
       BehaviorSubject.seeded(PlaybackState());
+  @override
+  final BehaviorSubject<MediaItem?> mediaItem = BehaviorSubject.seeded(null);
+  @override
+  SonicDrop? sonicDrop;
+  @override
+  Server? autoDJServer;
+  @override
+  FanOutSitOut? multiServerSitOut(Server s) => null;
   @override
   bool seedsTakeNegatives = true;
 
@@ -169,9 +200,14 @@ class _FakeHandler implements AudioPlayerHandler {
   List<Server> seedAddServers(SeedList list) => addServers[list] ?? servers;
 
   final List<String> calls = [];
+
+  /// The songs [seedAdd] was handed, as handed.
+  final List<TrackFacts> added = [];
   @override
-  void seedAdd(SeedList list, TrackFacts song) =>
-      calls.add('add ${list.name} ${song.server}:${song.path}');
+  void seedAdd(SeedList list, TrackFacts song) {
+    added.add(song);
+    calls.add('add ${list.name} ${song.server}:${song.path}');
+  }
   @override
   void seedRemove(SeedList list, String key) =>
       calls.add('remove ${list.name} $key');
@@ -918,6 +954,93 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The app's one navigator, with the page on it as in the app: the
+    // library is the first route and [over], the routes the user came
+    // through, are pushed on it, so a pick from the library has somewhere to
+    // drop to. Over the library, the banner of an armed pick, as main.dart's
+    // home draws it: it listens to the pick from under every route pushed
+    // over the library, and its Cancel is the home's.
+    late GlobalKey<NavigatorState> nav;
+    Future<void> showOverLibrary(
+        WidgetTester tester, List<WidgetBuilder> over) async {
+      _tall(tester);
+      nav = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: nav,
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        home: Scaffold(
+          body: Column(children: [
+            ValueListenableBuilder<TrackCaptureRequest?>(
+              valueListenable: TrackCapture.active,
+              builder: (context, req, _) => req == null
+                  ? const SizedBox.shrink()
+                  : Row(key: const ValueKey('capture-banner'), children: [
+                      Expanded(
+                          child: Text(
+                              req.bannerLabel(AppLocalizations.of(context)))),
+                      TextButton(
+                        key: const ValueKey('capture-banner-cancel'),
+                        onPressed: () => TrackCapture.cancelAndGoBack(
+                            Navigator.of(context)),
+                        child: const Text('Cancel'),
+                      ),
+                    ]),
+            ),
+            const Text('library'),
+          ]),
+        ),
+      ));
+      for (final route in over) {
+        unawaited(
+            nav.currentState!.push(MaterialPageRoute<void>(builder: route)));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    // Add song for [list], then "Pick a song from the library": the request
+    // that arms.
+    Future<TrackCaptureRequest> pickFromLibrary(
+        WidgetTester tester, SeedList list) async {
+      await tester.tap(_add(list));
+      await tester.pumpAndSettle();
+      await tester.tap(inSheet(_fromLibrary));
+      await tester.pumpAndSettle();
+      final req = TrackCapture.pending;
+      expect(req, isNotNull, reason: 'the library pick is armed');
+      return req!;
+    }
+
+    // A library row as the browser and the album page hand it to the
+    // capture.
+    DisplayItem track(Server s, String path) =>
+        DisplayItem(s, path.split('/').last, 'file', path, null, null);
+
+    // The route the screen of [type] is on, covered or not.
+    ModalRoute<Object?> routeOf(WidgetTester tester, Type type) =>
+        ModalRoute.of(tester.element(find.byType(type, skipOffstage: false)))!;
+
+    // [servers] in the server list, [browsing] the one being browsed; undone
+    // after the test as the browse tests' harness does.
+    void inServerList(List<Server> servers, {required Server browsing}) {
+      ServerManager().serverList.addAll(servers);
+      ServerManager().currentServer = browsing;
+      addTearDown(() {
+        BrowserManager().goToNavScreen();
+        ServerManager().serverList.clear();
+        ServerManager().currentServer = null;
+      });
+    }
+
+    // A home server that runs sonic similarity, so the Auto DJ screen's
+    // Seeds row is live.
+    Server sonicHome() =>
+        Server('https://home.example.com', 'u', 'p', 'JWT', 'home')
+          ..serverVersion = '6.33.0'
+          ..discoveryEnabled = true
+          ..discoveryReady = true
+          ..autoDjGeneration = 1;
+
     testWidgets("draws the handler's seeds and follows every new value",
         (tester) async {
       handler.seedsSubject.add(_lists(more: [_seed('/a.mp3')]));
@@ -1034,6 +1157,348 @@ void main() {
       await tester.tap(inSheet(find.text('elsewhere.mp3')));
       await tester.pumpAndSettle();
       expect(handler.calls.last, 'add lessLike office:elsewhere.mp3');
+    });
+
+    testWidgets("Add song's library pick is Sonic path's library mode for the "
+        'list: the sheet closes and the page drops to the library under a '
+        "banner naming the list; only a track on the pick's server lands, and "
+        'it joins the list with the names and art the library shows',
+        (tester) async {
+      addTearDown(TrackCapture.cancel);
+      handler.servers = [home, office];
+      // Straight over the library, as quick config opens the page.
+      await showOverLibrary(tester, [(_) => const AutoDjSeedsScreen()]);
+      final l =
+          AppLocalizations.of(tester.element(find.byType(AutoDjSeedsScreen)));
+      // A row as the album page lists it: the names and art the Seeds row
+      // will show.
+      DisplayItem alpha(Server s, String path) =>
+          DisplayItem(s, 'A - Alpha', 'file', path, null, null)
+            ..metadata = MusicMetadata.fromServerMap(
+                {'title': 'Alpha', 'artist': 'A', 'album-art': 'alpha.jpg'});
+
+      for (final (list, path, banner) in [
+        (SeedList.moreLike, '/a.mp3', l.autoDjSeedPickBannerMore),
+        (SeedList.lessLike, '/b.mp3', l.autoDjSeedPickBannerLess),
+      ]) {
+        expect(TrackCapture.active.value, isNull);
+        final req = await pickFromLibrary(tester, list);
+        expect(find.byType(DraggableScrollableSheet), findsNothing);
+        expect(find.byType(AutoDjSeedsScreen, skipOffstage: false),
+            findsNothing);
+        expect(find.text('library'), findsOneWidget);
+        expect(req.server, same(home),
+            reason: "the list's first server, with none being browsed");
+        expect(req.bannerLabel(l), banner);
+        expect(handler.calls, isEmpty, reason: 'nothing is added until a tap');
+        // As in Sonic path, only a track on that server is a pick.
+        expect(TrackCapture.tryCapture(alpha(office, path)),
+            CaptureResult.rejected);
+        expect(TrackCapture.tryCapture(alpha(home, path)),
+            CaptureResult.captured);
+        expect(handler.calls, ['add ${list.name} home:$path']);
+        final song = handler.added.single;
+        expect((song.title, song.artist, song.artFile),
+            ('Alpha', 'A', 'alpha.jpg'),
+            reason: "the track's names and art, as a search hit's");
+        handler
+          ..calls.clear()
+          ..added.clear();
+        TrackCapture.goBack(nav.currentState!, req);
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('the library pick stays on the server being browsed when the '
+        'list can use its songs, the library left where the user was in it; '
+        "for a server it can't use, the library opens on the list's first",
+        (tester) async {
+      addTearDown(TrackCapture.cancel);
+      handler.servers = [home, office];
+      // Home in the middle of the server list, first in the list's servers:
+      // only the server list's own index of home lands on it.
+      inServerList([lab, home, office], browsing: office);
+      final switched = <String?>[];
+      final sub = ServerManager()
+          .currentServerStream
+          .skip(1)
+          .listen((s) => switched.add(s?.localname));
+      addTearDown(sub.cancel);
+      // What the switch asks of the server it opens on, answered here.
+      final asked = <String>[];
+      final client = MockClient((r) async {
+        asked.add('${r.url.host}${r.url.path}');
+        return http.Response('', 404);
+      });
+      await http.runWithClient(() async {
+        await showOverLibrary(tester, [(_) => const AutoDjSeedsScreen()]);
+        final album =
+            DisplayItem(office, 'Album', 'album', 'Album', null, null);
+        for (final (browsing, pickOn, opens) in [
+          // One of the list's servers, the first or not: the pick stays on
+          // it.
+          (office, office, false),
+          (home, home, false),
+          // One whose songs the list can't use: the library opens on home.
+          (lab, home, true),
+        ]) {
+          final why = 'browsing ${browsing.localname}';
+          ServerManager().currentServer = browsing;
+          BrowserManager().openAlbumDetail(album);
+          final req = await pickFromLibrary(tester, SeedList.moreLike);
+          expect(req.server, same(pickOn), reason: why);
+          expect(ServerManager().currentServer, same(pickOn), reason: why);
+          expect(switched, opens ? ['home'] : isEmpty, reason: why);
+          expect(BrowserManager().albumDetail, opens ? isNull : same(album),
+              reason: '$why: ${opens ? 'the library opens on home' : 'the '
+                  'browse is where the user left it'}');
+          expect(asked.map((a) => a.split('/').first).toSet(),
+              opens ? {'home.example.com'} : isEmpty,
+              reason: '$why: the switch reads the server it opens on');
+          switched.clear();
+          asked.clear();
+          BrowserManager().closeAlbumDetail();
+          TrackCapture.cancel();
+          TrackCapture.goBack(nav.currentState!, req);
+          await tester.pumpAndSettle();
+        }
+      }, () => client);
+    });
+
+    testWidgets("over the Auto DJ screen, from its Seeds row: the pick drops "
+        "both to the library, and a track tapped there or the banner's "
+        'Cancel puts the Auto DJ screen back at once, the page sliding in '
+        'over it, so Back leads where it did, and tells the home once the '
+        'page covers it; the next pick does the same', (tester) async {
+      addTearDown(TrackCapture.cancel);
+      // What the home is told: its cue to open the player again under the
+      // screens put back, had the pick closed it.
+      final covered = <TrackCaptureRequest>[];
+      TrackCapture.onHomeCovered = covered.add;
+      addTearDown(() => TrackCapture.onHomeCovered = null);
+      final dj = sonicHome();
+      inServerList([dj], browsing: dj);
+      handler.servers = [dj];
+      await showOverLibrary(tester, [(_) => const AutoDJScreen()]);
+      await tester.tap(find.byKey(const ValueKey('auto-dj-row-seeds')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AutoDjSeedsScreen), findsOneWidget);
+
+      for (final (list, cancel) in [
+        (SeedList.moreLike, false),
+        (SeedList.lessLike, true),
+      ]) {
+        final how = cancel ? "the banner's Cancel" : 'a track';
+        final req = await pickFromLibrary(tester, list);
+        expect(find.text('library'), findsOneWidget);
+        expect(find.byType(AutoDjSeedsScreen, skipOffstage: false),
+            findsNothing);
+        expect(find.byType(AutoDJScreen, skipOffstage: false), findsNothing,
+            reason: 'dropped with the page, to reach the library');
+        if (cancel) {
+          await tester.tap(_bannerCancel);
+          expect(TrackCapture.pending, isNull,
+              reason: 'Cancel disarms the pick at once');
+        } else {
+          // A track tapped in the library, as the tap sites take it.
+          expect(TrackCapture.tryCapture(track(dj, '/a.mp3')),
+              CaptureResult.captured);
+          TrackCapture.goBack(nav.currentState!, req);
+        }
+        await tester.pump();
+        expect(find.byType(AutoDJScreen, skipOffstage: false), findsOneWidget,
+            reason: '$how: the Auto DJ screen is put back');
+        expect(routeOf(tester, AutoDJScreen).animation!.status,
+            AnimationStatus.completed,
+            reason: '$how: the Auto DJ screen is back at once');
+        expect(routeOf(tester, AutoDjSeedsScreen).animation!.status,
+            AnimationStatus.forward,
+            reason: '$how: only the page slides in');
+        expect(covered, isEmpty,
+            reason: '$how: nothing told while the page slides in');
+        await tester.pumpAndSettle();
+        expect(find.byType(AutoDjSeedsScreen), findsOneWidget, reason: how);
+        expect(find.byType(AutoDJScreen, skipOffstage: false), findsOneWidget,
+            reason: '$how: the Auto DJ screen under the page');
+        expect(find.text('library', skipOffstage: false), findsOneWidget,
+            reason: how);
+        expect(TrackCapture.pending, isNull, reason: how);
+        expect(covered, [same(req)],
+            reason: '$how: the home is told once the page covers it');
+        covered.clear();
+      }
+      expect(handler.calls, ['add moreLike home:/a.mp3'],
+          reason: 'Cancel adds nothing');
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AutoDJScreen), findsOneWidget,
+          reason: 'Back from the page');
+      expect(find.byType(AutoDjSeedsScreen, skipOffstage: false),
+          findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('library'), findsOneWidget);
+      expect(find.byType(AutoDJScreen, skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('on a phone, where the Seeds row sits below the fold, the '
+        'Auto DJ screen put back after a pick shows the row the page was '
+        'opened from, scrolled no further than it needs; opened any other '
+        'way, the screen starts at its top', (tester) async {
+      addTearDown(TrackCapture.cancel);
+      final dj = sonicHome();
+      inServerList([dj], browsing: dj);
+      handler.servers = [dj];
+      await showOverLibrary(tester, const []);
+      // A 360 x 780 phone at 3x, under a status bar and a gesture bar.
+      tester.view
+        ..physicalSize = const Size(1080, 2340)
+        ..devicePixelRatio = 3
+        ..padding = const FakeViewPadding(top: 96, bottom: 48)
+        ..viewPadding = const FakeViewPadding(top: 96, bottom: 48);
+      await tester.pumpAndSettle();
+      final list = find
+          .descendant(
+              of: find.byType(AutoDJScreen), matching: find.byType(Scrollable))
+          .first;
+      final row = find.byKey(const ValueKey('auto-dj-row-seeds'));
+      double offset() => tester.state<ScrollableState>(list).position.pixels;
+      // How much of the Seeds row the Auto DJ screen shows, in pixels high.
+      double shown() {
+        final seen = tester.getRect(list).intersect(tester.getRect(row));
+        return seen.height < 0 ? 0 : seen.height;
+      }
+
+      Future<void> openAutoDj() async {
+        unawaited(nav.currentState!.push(
+            MaterialPageRoute<void>(builder: (_) => const AutoDJScreen())));
+        await tester.pumpAndSettle();
+      }
+
+      await openAutoDj();
+      expect(offset(), 0);
+      expect(shown(), 0, reason: 'the Seeds row starts below the fold');
+      // The user scrolls to it, and opens the page.
+      await tester.ensureVisible(row);
+      await tester.pumpAndSettle();
+      expect(shown(), tester.getRect(row).height);
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      final req = await pickFromLibrary(tester, SeedList.moreLike);
+      expect(TrackCapture.tryCapture(track(dj, '/a.mp3')),
+          CaptureResult.captured);
+      TrackCapture.goBack(nav.currentState!, req);
+      await tester.pump();
+      await tester.pump();
+      expect(routeOf(tester, AutoDjSeedsScreen).animation!.status,
+          AnimationStatus.forward);
+      expect(shown(), tester.getRect(row).height,
+          reason: 'shown while the page is still sliding in over the screen');
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AutoDjSeedsScreen, skipOffstage: false), findsNothing);
+      expect(shown(), tester.getRect(row).height,
+          reason: 'Back from the page finds the Seeds row');
+      expect(tester.getRect(row).bottom, tester.getRect(list).bottom,
+          reason: 'scrolled just far enough to show it');
+
+      // Opened any other way, as the Auto DJ card or quick config opens it.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AutoDJScreen, skipOffstage: false), findsNothing);
+      await openAutoDj();
+      expect(offset(), 0);
+      expect(shown(), 0);
+    });
+
+    testWidgets('opened straight over the library, as quick config opens it, '
+        'the page comes back alone after a pick, and the home is told once '
+        'it covers it: Back from it leads to the library', (tester) async {
+      addTearDown(TrackCapture.cancel);
+      final covered = <TrackCaptureRequest>[];
+      TrackCapture.onHomeCovered = covered.add;
+      addTearDown(() => TrackCapture.onHomeCovered = null);
+      handler.servers = [home];
+      await showOverLibrary(tester, [(_) => const AutoDjSeedsScreen()]);
+      // Add song closed without the library row stays on the page, nothing
+      // armed.
+      await tester.tap(_add(SeedList.moreLike));
+      await tester.pumpAndSettle();
+      await closeSheet(tester);
+      expect(TrackCapture.pending, isNull);
+      expect(find.byType(AutoDjSeedsScreen), findsOneWidget);
+
+      for (final cancel in [false, true]) {
+        final how = cancel ? "the banner's Cancel" : 'a track';
+        final req = await pickFromLibrary(tester, SeedList.moreLike);
+        expect(find.byType(AutoDjSeedsScreen, skipOffstage: false),
+            findsNothing);
+        if (cancel) {
+          await tester.tap(_bannerCancel);
+          expect(TrackCapture.pending, isNull,
+              reason: 'Cancel disarms the pick at once');
+        } else {
+          expect(TrackCapture.tryCapture(track(home, '/a.mp3')),
+              CaptureResult.captured);
+          TrackCapture.goBack(nav.currentState!, req);
+        }
+        await tester.pump();
+        expect(covered, isEmpty,
+            reason: '$how: the page is still sliding in over the library');
+        await tester.pumpAndSettle();
+        expect(find.byType(AutoDjSeedsScreen), findsOneWidget, reason: how);
+        expect(find.byType(AutoDJScreen, skipOffstage: false), findsNothing,
+            reason: '$how: nothing under the page to put back');
+        expect(covered, [same(req)],
+            reason: '$how: the home is told once the page covers it');
+        covered.clear();
+      }
+      expect(handler.calls, ['add moreLike home:/a.mp3']);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('library'), findsOneWidget);
+      expect(find.byType(AutoDjSeedsScreen, skipOffstage: false),
+          findsNothing);
+    });
+
+    testWidgets('opened again while its library pick is still armed, the page '
+        'drops it, as Sonic path does, once it is built, so the banner over '
+        'the library goes too and the next library tap plays; another '
+        "feature's pick is left armed", (tester) async {
+      addTearDown(TrackCapture.cancel);
+      handler.servers = [home];
+      await showOverLibrary(tester, [(_) => const AutoDjSeedsScreen()]);
+      await pickFromLibrary(tester, SeedList.moreLike);
+      expect(_banner, findsOneWidget);
+      // Opened again another way (quick config, the Auto DJ screen).
+      Future<void> reopen() async {
+        unawaited(nav.currentState!.push(MaterialPageRoute<void>(
+            builder: (_) => const AutoDjSeedsScreen())));
+        await tester.pumpAndSettle();
+      }
+
+      await reopen();
+      expect(tester.takeException(), isNull,
+          reason: "the banner can't be told while the page is being built");
+      expect(TrackCapture.pending, isNull,
+          reason: 'the pick it left armed is dropped');
+      nav.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(_banner, findsNothing, reason: 'the banner went with the pick');
+      expect(TrackCapture.tryCapture(track(home, '/x.mp3')), CaptureResult.pass,
+          reason: 'a library tap is a tap again');
+      expect(handler.calls, isEmpty);
+
+      // The Auto DJ start's pick, say: not the page's to drop.
+      final other = TrackCaptureRequest(
+          server: home, bannerLabel: (_) => '', onPicked: (_) {});
+      TrackCapture.arm(other);
+      await reopen();
+      expect(TrackCapture.pending, same(other));
     });
 
     testWidgets('Add song with no server to draw from is off and opens '

@@ -5409,6 +5409,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get autoDjAddSong => 'Adicionar música';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Escolher uma música da biblioteca';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Escolha uma música para “Mais como estas” — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Escolha uma música para “Menos como estas” — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
   String get autoDjUpNext => 'A seguir';
 
   @override

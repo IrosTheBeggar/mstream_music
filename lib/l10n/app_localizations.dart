@@ -8602,6 +8602,24 @@ abstract class AppLocalizations {
   /// **'Add song'**
   String get autoDjAddSong;
 
+  /// Add song sheet: the row under its title that closes the sheet and lets the user tap a song anywhere in the library instead, as Sonic path's Browse library does.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song from the library'**
+  String get autoDjAddSongFromLibrary;
+
+  /// Banner over the library while the user picks a song to add to the Seeds page's More like list (autoDjMoreLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song for More like — tap a track anywhere in the library'**
+  String get autoDjSeedPickBannerMore;
+
+  /// Banner over the library while the user picks a song to add to the Seeds page's Less like list (autoDjLessLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song for Less like — tap a track anywhere in the library'**
+  String get autoDjSeedPickBannerLess;
+
   /// Add song sheet: header over the songs coming up in the queue.
   ///
   /// In en, this message translates to:

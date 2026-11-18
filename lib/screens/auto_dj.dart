@@ -50,7 +50,13 @@ import 'auto_dj_seeds.dart' show AutoDjSeedsScreen;
 import 'auto_dj_sheets.dart';
 
 class AutoDJScreen extends StatefulWidget {
-  const AutoDJScreen({super.key});
+  const AutoDJScreen({super.key, this.revealSeeds = false});
+
+  /// Whether to open scrolled just far enough to show the Seeds row: only
+  /// when a pick from the library on the Seeds page puts this screen back
+  /// under the page, so Back from it finds the row it was opened from.
+  /// Opened any other way, the screen starts at its top.
+  final bool revealSeeds;
 
   @override
   State<AutoDJScreen> createState() => _AutoDJScreenState();
@@ -70,9 +76,23 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// art.
   late AutoDjSeeds _seeds;
 
+  /// The Seeds row, for [AutoDJScreen.revealSeeds].
+  final _seedsKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+    // After the first layout, while the Seeds page put back over the screen
+    // is only beginning to slide in, so the scroll happens under it. Only as
+    // far as the row needs, about where the user's own scroll left it.
+    if (widget.revealSeeds) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final row = _seedsKey.currentContext;
+        if (!mounted || row == null) return;
+        unawaited(Scrollable.ensureVisible(row,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd));
+      });
+    }
     // BehaviorSubject emits seeded value on subscribe, so this fires
     // immediately with the current state. It also fires when a session drops
     // sonic similarity, which the Sonic similarity row shows.
@@ -577,7 +597,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           ),
         ),
         _subHairline(),
-        _seedsRow(l, enabled: !off),
+        KeyedSubtree(key: _seedsKey, child: _seedsRow(l, enabled: !off)),
       ]),
     );
   }
@@ -592,7 +612,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 
   /// Seeds: the newest More like seeds' art (none while there are none) and
   /// a chevron. It opens the Seeds page, which holds both lists and Drift |
-  /// Stay close.
+  /// Stay close, over this screen, which a pick from the library on that
+  /// page puts back under it, with this row in view
+  /// ([AutoDJScreen.revealSeeds]).
   Widget _seedsRow(AppLocalizations l, {required bool enabled}) {
     final tiles = [for (final s in _seeds.tiles()) s.song];
     return _oneNode(
@@ -604,7 +626,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute<void>(
-                builder: (_) => const AutoDjSeedsScreen())),
+                builder: (_) => const AutoDjSeedsScreen(overAutoDj: true))),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 52),
           child: Padding(
