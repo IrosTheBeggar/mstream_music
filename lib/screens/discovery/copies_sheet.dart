@@ -476,6 +476,7 @@ class _CopiesSheetState extends State<CopiesSheet> {
               children: [
                 Semantics(
                   header: true,
+                  headingLevel: 1,
                   child: Text(
                     l.discoverCopiesTitle,
                     style: TextStyle(

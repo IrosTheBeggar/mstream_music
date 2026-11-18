@@ -713,6 +713,7 @@ class _Section extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
             child: Semantics(
               header: true,
+              headingLevel: 2,
               child: Text(
                 header.toUpperCase(),
                 style: TextStyle(

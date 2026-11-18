@@ -961,6 +961,8 @@ void main() {
     expect(header.label, contains('Borrowed Tapes'));
     expect(header.label, contains('Stage Peer B online'));
     expect(header, isSemantics(isHeader: true));
+    expect(header.getSemanticsData().headingLevel, 1,
+        reason: 'VoiceOver and TalkBack take the heading from headingLevel, not isHeader');
     expect(
       topOf(tester, find.text('Add album')),
       greaterThan(topOf(tester, find.text('Change'))),

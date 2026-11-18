@@ -323,6 +323,7 @@ class _SectionHeader extends StatelessWidget {
           children: [
             Semantics(
               header: true,
+              headingLevel: 2,
               child: Text(
                 title.toUpperCase(),
                 style: TextStyle(

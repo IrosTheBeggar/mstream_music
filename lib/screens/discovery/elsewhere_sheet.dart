@@ -243,6 +243,7 @@ class _ElsewhereSheetState extends State<ElsewhereSheet> {
                       children: [
                         Semantics(
                           header: true,
+                          headingLevel: 1,
                           child: Text(
                             l.discoverSheetOpenElsewhere,
                             style: TextStyle(
