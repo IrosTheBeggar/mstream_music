@@ -27,10 +27,12 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/play_event.dart';
+import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/play_history.dart';
 import '../singletons/server_list.dart';
+import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
 import '../util/auto_dj_recent.dart';
 import '../util/auto_dj_seed_facts.dart';
@@ -38,6 +40,7 @@ import '../util/auto_dj_seeds.dart';
 import '../widgets/auto_dj_add_song_sheet.dart';
 import '../widgets/federation_widgets.dart' show FedCard;
 import '../widgets/seed_art.dart';
+import 'auto_dj.dart' show AutoDJScreen;
 import 'auto_dj_sheets.dart' show autoDjSegmentStyle;
 
 /// The Seeds page, live: the session's seeds as the audio handler shows them
@@ -57,13 +60,28 @@ import 'auto_dj_sheets.dart' show autoDjSegmentStyle;
 /// again, with that control off. The queue and the play history are read
 /// only when Add song opens.
 class AutoDjSeedsScreen extends StatefulWidget {
-  const AutoDjSeedsScreen({super.key});
+  const AutoDjSeedsScreen({super.key, this.overAutoDj = false});
+
+  /// Whether the page was opened over the Auto DJ screen, from its Seeds
+  /// row. A pick from the library drops both routes to reach the library, so
+  /// the way back puts the Auto DJ screen back under the page, and Back from
+  /// the page still leads there. Quick config opens the page straight over
+  /// the home, with no route under it to put back: over the library, or over
+  /// the open player from the queue's header, which the home opens again
+  /// ([TrackCapture.onHomeCovered]).
+  final bool overAutoDj;
 
   @override
   State<AutoDjSeedsScreen> createState() => _AutoDjSeedsScreenState();
 }
 
 class _AutoDjSeedsScreenState extends State<AutoDjSeedsScreen> {
+  // The library pick this page armed last. Opened again another way while
+  // it is still armed (quick config, the Auto DJ screen), the page drops it,
+  // as Sonic path does: left armed, it would catch the next library tap
+  // after the page closes. Another feature's pick is left alone.
+  static TrackCaptureRequest? _armed;
+
   final List<StreamSubscription<dynamic>> _subs = [];
 
   // Set while Add song gathers what its sheet offers, so a second tap in
@@ -73,6 +91,16 @@ class _AutoDjSeedsScreenState extends State<AutoDjSeedsScreen> {
   @override
   void initState() {
     super.initState();
+    // The way back from a pick has cleared it by now, so this drops only a
+    // pick the user walked away from. Once the frame is built: the page is
+    // built with its route, and the home's banner, which listens to the
+    // pick, can't be marked for a rebuild in the middle of that.
+    final pending = TrackCapture.pending;
+    if (pending != null && identical(pending, _armed)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (identical(TrackCapture.pending, pending)) TrackCapture.cancel();
+      });
+    }
     final handler = MediaManager().audioHandler;
     void redraw(dynamic _) {
       if (mounted) setState(() {});
@@ -147,7 +175,8 @@ class _AutoDjSeedsScreenState extends State<AutoDjSeedsScreen> {
               ? recentlySkippedIn(events, eligible, exclude: taken)
               : const [],
           recent: recentlyPlayedIn(events, eligible, exclude: taken),
-          taken: taken);
+          taken: taken,
+          onPickFromLibrary: () => _pickFromLibrary(list, servers));
       // Added even if the page was left while a pick from the history was
       // being checked: the pick was the user's, and the lists outlive the
       // page.
@@ -155,6 +184,50 @@ class _AutoDjSeedsScreenState extends State<AutoDjSeedsScreen> {
     } finally {
       _adding = false;
     }
+  }
+
+  // Add song's "Pick a song from the library": the library pick Sonic path's
+  // Browse library arms (TrackCapture), for [list]. [servers] are the ones
+  // whose songs the list can use, asked when Add song was tapped. As in
+  // Sonic path, the pick is on the server being browsed, the library left
+  // where the user was in it, when it is one of them; only when it isn't is
+  // the pick on the first of them, which the library then opens on. As with
+  // the sheet's own picks, that answer holds through the browse: seedAdd's
+  // capacity check is the only one when the track lands.
+  //
+  // The page drops back to the library, whose banner names the list, along
+  // with the Auto DJ screen under it ([AutoDjSeedsScreen.overAutoDj]). A
+  // track tapped there joins [list] as a pick in the sheet does; that, or
+  // the banner's Cancel, puts back what was there, this page on top, which
+  // stays over the Auto DJ screen for the next pick too. The Auto DJ screen
+  // put back shows its Seeds row, which the user may have scrolled to.
+  void _pickFromLibrary(SeedList list, List<Server> servers) {
+    if (!mounted) return;
+    final manager = ServerManager();
+    final browsed = manager.currentServer?.localname;
+    final server = servers.firstWhere((s) => s.localname == browsed,
+        orElse: () => servers.first);
+    if (server.localname != browsed) {
+      final i = manager.serverList
+          .indexWhere((s) => s.localname == server.localname);
+      if (i >= 0) unawaited(manager.changeCurrentServer(i));
+    }
+    final overAutoDj = widget.overAutoDj;
+    TrackCapture.arm(_armed = TrackCaptureRequest(
+      server: server,
+      bannerLabel: (l) => list == SeedList.lessLike
+          ? l.autoDjSeedPickBannerLess
+          : l.autoDjSeedPickBannerMore,
+      returnStack: [
+        if (overAutoDj) (_) => const AutoDJScreen(revealSeeds: true),
+        (_) => AutoDjSeedsScreen(overAutoDj: overAutoDj),
+      ],
+      // Runs once this page is gone: the handler only.
+      onPicked: (item) => MediaManager()
+          .audioHandler
+          .seedAdd(list, seedFactsFromItem(item)),
+    ));
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   // A row's "Less like this" / "More like this": the row [key] moved to the

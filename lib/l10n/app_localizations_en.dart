@@ -5364,6 +5364,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoDjAddSong => 'Add song';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Pick a song from the library';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Pick a song for More like — tap a track anywhere in the library';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Pick a song for Less like — tap a track anywhere in the library';
+
+  @override
   String get autoDjUpNext => 'Up next';
 
   @override

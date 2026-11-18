@@ -19,6 +19,7 @@ import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/album_detail_view.dart';
 import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/singletons/track_capture.dart';
 import 'package:mstream_music/util/browse_keep_leads.dart';
 
 import 'browse_keep_fixtures.dart';
@@ -296,6 +297,36 @@ void main() {
   });
 
   group('the songs', () {
+    // An armed pick from the library takes the row's tap, and the way back
+    // is TrackCapture.goBack's: every screen the pick dropped put back,
+    // bottom first, the asking one on top.
+    testWidgets("a row's tap is an armed pick's, and it puts back the pick's whole way back, the asking screen on top", (tester) async {
+      h.setUp();
+      await open(tester, tapes(), gate: false);
+      DisplayItem? picked;
+      TrackCapture.arm(TrackCaptureRequest(
+          server: h.peerB,
+          bannerLabel: (_) => '',
+          returnStack: [
+            (_) => const Scaffold(body: Text('under')),
+            (_) => const Scaffold(body: Text('asking')),
+          ],
+          onPicked: (i) => picked = i));
+      addTearDown(TrackCapture.cancel);
+      await tester.tap(find.text('Rooftop Cypher'));
+      await BrowseHarness.frames(tester, 10);
+      expect(picked?.data, '/music/Boukmanflow/Borrowed Tapes/01 - Rooftop Cypher.mp3');
+      expect(find.text('asking'), findsOneWidget);
+      expect(find.text('under', skipOffstage: false), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await BrowseHarness.frames(tester, 10);
+      expect(find.text('under'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await BrowseHarness.frames(tester, 10);
+      expect(find.text('Rooftop Cypher'), findsOneWidget, reason: 'the album page');
+      await close(tester);
+    });
+
     testWidgets('the ⋮ opens the track sheet: "Keep a copy…" after the queue verbs, before Download; its tap opens the song sheet with the page credit', (tester) async {
       h.setUp();
       await open(tester, tapes());

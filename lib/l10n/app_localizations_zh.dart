@@ -5104,6 +5104,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjAddSong => '添加歌曲';
 
   @override
+  String get autoDjAddSongFromLibrary => '从曲库中选择歌曲';
+
+  @override
+  String get autoDjSeedPickBannerMore => '为“多听类似的”选择歌曲 — 在曲库中点击任意曲目';
+
+  @override
+  String get autoDjSeedPickBannerLess => '为“少听类似的”选择歌曲 — 在曲库中点击任意曲目';
+
+  @override
   String get autoDjUpNext => '接下来播放';
 
   @override

@@ -5543,6 +5543,17 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjAddSong => 'Dodaj utwór';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Wybierz utwór z biblioteki';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Wybierz utwór do listy „Więcej takich” — dotknij dowolnego utworu w bibliotece';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Wybierz utwór do listy „Mniej takich” — dotknij dowolnego utworu w bibliotece';
+
+  @override
   String get autoDjUpNext => 'Następne';
 
   @override

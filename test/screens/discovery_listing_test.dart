@@ -690,6 +690,34 @@ void main() {
           reason: "a connected server's row is a file on that peer");
     });
 
+    // The way back from a captured pick is TrackCapture.goBack's: every
+    // screen the pick dropped is put back, bottom first, the asking one on
+    // top.
+    testWidgets("a song row's captured pick puts back the pick's whole way "
+        'back, the asking screen on top', (tester) async {
+      await pumpBrowser(tester,
+          answer: (r) async => DiscoveryFetchResult.ok(parse(mainPayload())));
+      TrackCapture.arm(TrackCaptureRequest(
+          server: server,
+          bannerLabel: (_) => '',
+          returnStack: [
+            (_) => const Scaffold(body: Text('under')),
+            (_) => const Scaffold(body: Text('asking')),
+          ],
+          onPicked: (_) {}));
+      addTearDown(TrackCapture.cancel);
+      await tester.tap(find.text('Cirrus'));
+      await tester.pumpAndSettle();
+      expect(find.text('asking'), findsOneWidget);
+      expect(find.text('under', skipOffstage: false), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('under'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Cirrus'), findsOneWidget, reason: 'the browser');
+    });
+
     testWidgets('an album card opens where albums open — the library\'s, '
         "and a connected server's from its own strip", (tester) async {
       ServerManager().serverList.addAll([peer(7), peer(8)]);

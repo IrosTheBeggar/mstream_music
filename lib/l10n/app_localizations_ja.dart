@@ -5171,6 +5171,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjAddSong => '曲を追加';
 
   @override
+  String get autoDjAddSongFromLibrary => 'ライブラリから曲を選ぶ';
+
+  @override
+  String get autoDjSeedPickBannerMore => '「増やしたい曲」に追加する曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
+  String get autoDjSeedPickBannerLess => '「減らしたい曲」に追加する曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
   String get autoDjUpNext => '次に再生';
 
   @override

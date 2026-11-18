@@ -9,7 +9,9 @@
 // is, a song from the play history (Recently played, a past skip) only once
 // its server says it still has it (a snackbar when it says no). A song the
 // list already has shows, dimmed, and can't be picked; closing picks
-// nothing.
+// nothing. When the page offers it, "Pick a song from the library" sits under
+// the header: a tap closes the sheet, picks nothing, and hands the pick to
+// the page, which closing the sheet or a song's tap never does.
 
 import 'dart:async';
 
@@ -40,6 +42,7 @@ DisplayItem _hit(String path, String title) =>
 
 final _field = find.byKey(const ValueKey('auto-dj-add-song-search'));
 final _none = find.byKey(const ValueKey('auto-dj-add-song-none'));
+final _library = find.byKey(const ValueKey('auto-dj-add-song-library'));
 Finder _upNext(int i) => find.byKey(ValueKey('auto-dj-add-song-upnext-$i'));
 Finder _skipped(int i) => find.byKey(ValueKey('auto-dj-add-song-skipped-$i'));
 Finder _recent(int i) => find.byKey(ValueKey('auto-dj-add-song-recent-$i'));
@@ -74,7 +77,8 @@ void main() {
   /// A page whose button opens the sheet for [taken], offering [upNext],
   /// [playing] and [skipped] (Less like's Skipped) and [recent]; [search]
   /// answers the field (nothing, by default), and [exists] the server's check
-  /// of a pick from the play history (yes, by default).
+  /// of a pick from the play history (yes, by default). [onLibrary] is the
+  /// page's library pick (none, by default: no row for it).
   Future<void> open(WidgetTester tester,
       {List<TrackFacts> upNext = const [],
       TrackFacts? playing,
@@ -82,7 +86,8 @@ void main() {
       List<TrackFacts> recent = const [],
       Set<String> taken = const {},
       Future<List<DisplayItem>> Function(String term)? search,
-      Future<bool?> Function(TrackFacts song)? exists}) async {
+      Future<bool?> Function(TrackFacts song)? exists,
+      VoidCallback? onLibrary}) async {
     // A tall phone, so every section's rows are on screen at once.
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1;
@@ -110,6 +115,7 @@ void main() {
                 checked.add(song);
                 return exists == null ? true : exists(song);
               },
+              onPickFromLibrary: onLibrary,
             )),
             child: const Text('open'),
           ),
@@ -461,6 +467,100 @@ void main() {
     await open(tester);
     expect(tester.getSemantics(_field),
         isSemantics(label: 'Search songs', isTextField: true));
+    semantics.dispose();
+  });
+
+  testWidgets('"Pick a song from the library" sits under the header, only '
+      'when the page offers it', (tester) async {
+    await open(tester, upNext: [_song('/a.mp3')]);
+    expect(_library, findsNothing);
+    expect(find.text('Pick a song from the library'), findsNothing);
+
+    var asked = 0;
+    await open(tester, upNext: [_song('/a.mp3')], onLibrary: () => asked++);
+    expect(
+        find.descendant(
+            of: _library, matching: find.text('Pick a song from the library')),
+        findsOneWidget);
+    final row = tester.getRect(_library);
+    expect(row.top, greaterThanOrEqualTo(tester.getRect(find.text('Add song')).bottom),
+        reason: 'under the header');
+    expect(row.bottom, lessThanOrEqualTo(tester.getRect(_field).top),
+        reason: 'above the field');
+    expect(row.height, greaterThanOrEqualTo(48), reason: 'a full touch target');
+    expect(asked, 0);
+  });
+
+  testWidgets('a tap on it closes the sheet, picks nothing, and hands the '
+      'pick to the page', (tester) async {
+    var asked = 0;
+    await open(tester,
+        upNext: [_song('/a.mp3')],
+        recent: [_song('/r.mp3')],
+        onLibrary: () => asked++);
+    await tester.tap(_library);
+    await tester.pumpAndSettle();
+    expect(find.byType(DraggableScrollableSheet), findsNothing);
+    expect(answers, [null]);
+    expect(asked, 1);
+    expect(checked, isEmpty, reason: 'no song was picked to check');
+  });
+
+  testWidgets('with it on offer, closing the sheet by its X, Back or a tap '
+      'above it picks nothing and hands nothing to the page', (tester) async {
+    var asked = 0;
+    await open(tester, upNext: [_song('/a.mp3')], onLibrary: () => asked++);
+    await tester.tap(find.byKey(const ValueKey('auto-dj-add-song-close')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(400, 100));
+    await tester.pumpAndSettle();
+    expect(find.byType(DraggableScrollableSheet), findsNothing);
+    expect(answers, [null, null, null]);
+    expect(asked, 0, reason: 'only the row hands the pick to the page');
+  });
+
+  testWidgets('with it on offer, a song tap picks that song, and a refused '
+      'one picks nothing; neither hands the pick to the page', (tester) async {
+    var asked = 0;
+    final next = _song('/a.mp3', title: 'Alpha');
+    await open(tester, upNext: [next], onLibrary: () => asked++);
+    await tester.tap(_upNext(0));
+    await tester.pumpAndSettle();
+    expect(answers, [same(next)]);
+
+    await open(tester,
+        search: (term) async => [_hit('/Music/sky.mp3', 'SkyWalk')],
+        onLibrary: () => asked++);
+    await tester.enterText(_field, 'sky');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    await tester.tap(_hitRow(0));
+    await tester.pumpAndSettle();
+    expect(answers.last?.title, 'SkyWalk');
+
+    // Refused: its server says it no longer has it.
+    final old = _song('/gone.mp3', title: 'Gone');
+    await open(tester,
+        recent: [old], exists: (_) async => false, onLibrary: () => asked++);
+    await tester.tap(_recent(0));
+    await tester.pumpAndSettle();
+    expect(checked, [same(old)]);
+    expect(answers.last, isNull);
+    expect(asked, 0, reason: 'only the row hands the pick to the page');
+  });
+
+  testWidgets('it is a button to screen readers, named by its words',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await open(tester, onLibrary: () {});
+    expect(tester.getSemantics(_library),
+        isSemantics(label: 'Pick a song from the library', isButton: true));
     semantics.dispose();
   });
 }

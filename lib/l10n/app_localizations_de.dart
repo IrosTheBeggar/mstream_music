@@ -5428,6 +5428,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjAddSong => 'Song hinzufügen';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Song aus der Bibliothek wählen';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Song für „Mehr davon“ wählen – tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Song für „Weniger davon“ wählen – tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
   String get autoDjUpNext => 'Als Nächstes';
 
   @override

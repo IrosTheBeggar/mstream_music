@@ -5407,6 +5407,17 @@ class AppLocalizationsIt extends AppLocalizations {
   String get autoDjAddSong => 'Aggiungi brano';
 
   @override
+  String get autoDjAddSongFromLibrary => 'Scegli un brano dalla libreria';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Scegli un brano per “Più brani così” — tocca un brano ovunque nella libreria';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Scegli un brano per “Meno brani così” — tocca un brano ovunque nella libreria';
+
+  @override
   String get autoDjUpNext => 'Prossimi brani';
 
   @override

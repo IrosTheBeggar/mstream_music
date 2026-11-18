@@ -3,7 +3,9 @@
 // song playing now and the ones skipped lately (Skipped), and the ones this
 // phone played lately (Recently played) while fewer than two characters are
 // typed, and the search's hits from two on. A tap on a row picks that song
-// for the list the sheet was opened from.
+// for the list the sheet was opened from. When the page asks for it, a
+// "Pick a song from the library" row under the header hands the pick to the
+// library instead, as Sonic path's Browse library does.
 //
 // It is modelled on SongPickerSheet, without that sheet's Random song row:
 // a seed is a song the user means, and a random one would teach the DJ
@@ -31,8 +33,9 @@ import '../util/auto_dj_seeds.dart';
 import 'seed_art.dart';
 
 // What a tap in the sheet picked, and whether it came from the play history,
-// the one source that can name a song the library no longer has.
-typedef _Pick = ({TrackFacts song, bool fromHistory});
+// the one source that can name a song the library no longer has. No song:
+// the user chose to pick one from the library instead.
+typedef _Pick = ({TrackFacts? song, bool fromHistory});
 
 /// Opens the Add song sheet and answers the song picked, or null when the
 /// sheet was closed without a pick or the pick was refused.
@@ -60,6 +63,11 @@ typedef _Pick = ({TrackFacts song, bool fromHistory});
 /// as the Auto DJ start's Recently played does. Up next, the playing row and
 /// the search hits come from the live queue and library and are taken as
 /// they are.
+///
+/// With [onPickFromLibrary], a "Pick a song from the library" row sits under
+/// the header: a tap closes the sheet, answers null, and then runs it, for
+/// the page to hand the pick to the library the way Sonic path's Browse
+/// library does.
 Future<TrackFacts?> showAutoDjAddSongSheet(
   BuildContext context, {
   required Server searchServer,
@@ -70,6 +78,7 @@ Future<TrackFacts?> showAutoDjAddSongSheet(
   List<TrackFacts> skipped = const [],
   Future<List<DisplayItem>> Function(Server, String)? search,
   Future<bool?> Function(TrackFacts song)? exists,
+  VoidCallback? onPickFromLibrary,
 }) async {
   final pick = await showAutoDjSheet<_Pick>(
     context,
@@ -81,18 +90,25 @@ Future<TrackFacts?> showAutoDjAddSongSheet(
       recent: recent,
       taken: taken,
       search: search ?? ApiManager().fetchSongSearch,
+      library: onPickFromLibrary != null,
     ),
   );
   if (pick == null) return null;
-  if (pick.fromHistory &&
-      await (exists ?? _trackExists)(pick.song) == false) {
+  final song = pick.song;
+  if (song == null) {
+    // Run once the sheet is gone, so the page leaves for the library from
+    // under no sheet of its own.
+    onPickFromLibrary?.call();
+    return null;
+  }
+  if (pick.fromHistory && await (exists ?? _trackExists)(song) == false) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(AppLocalizations.of(context).autoDjSonicSeedFailed)));
     }
     return null;
   }
-  return pick.song;
+  return song;
 }
 
 // Whether [song]'s server still has it. A server that has left the list can't
@@ -112,6 +128,7 @@ class _AddSongSheet extends StatefulWidget {
     required this.recent,
     required this.taken,
     required this.search,
+    required this.library,
   });
 
   final Server searchServer;
@@ -121,6 +138,9 @@ class _AddSongSheet extends StatefulWidget {
   final List<TrackFacts> recent;
   final Set<String> taken;
   final Future<List<DisplayItem>> Function(Server, String) search;
+
+  /// Whether to offer "Pick a song from the library" under the header.
+  final bool library;
 
   @override
   State<_AddSongSheet> createState() => _AddSongSheetState();
@@ -205,6 +225,7 @@ class _AddSongSheetState extends State<_AddSongSheet> {
         children: [
           _handle(),
           _titleRow(context, l),
+          if (widget.library) _libraryRow(l),
           _field(l),
           Expanded(child: _body(context, l, scroll)),
         ],
@@ -248,6 +269,38 @@ class _AddSongSheetState extends State<_AddSongSheet> {
               onPressed: () => Navigator.of(context).pop(),
             ),
           ]),
+        ),
+      );
+
+  // "Pick a song from the library", drawn as the Seeds page's own Add song
+  // row is, with Sonic path's Browse library icon. A tap answers no song;
+  // the page takes it from there.
+  Widget _libraryRow(AppLocalizations l) => MergeSemantics(
+        child: Semantics(
+          button: true,
+          child: InkWell(
+            key: const ValueKey('auto-dj-add-song-library'),
+            onTap: () => Navigator.of(context)
+                .pop<_Pick>((song: null, fromHistory: false)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(children: [
+                  Icon(Icons.library_music_outlined,
+                      size: 22, color: VelvetColors.primary),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(l.autoDjAddSongFromLibrary,
+                        style: TextStyle(
+                            color: VelvetColors.primary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
         ),
       );
 
@@ -349,7 +402,7 @@ class _AddSongSheetState extends State<_AddSongSheet> {
     // A song shows once, in the first section that has it: a song coming up
     // needs no check with the server, and the playing row none either.
     final shown = {for (final s in upNext) seedKey(s.server, s.path)};
-    final skipped = <_Pick>[
+    final skipped = <({TrackFacts song, bool fromHistory})>[
       for (final p in [
         if (widget.playing case final now?) (song: now, fromHistory: false),
         for (final s in widget.skipped) (song: s, fromHistory: true),
