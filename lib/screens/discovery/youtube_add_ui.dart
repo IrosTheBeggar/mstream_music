@@ -5,7 +5,7 @@ import '../../util/youtube_add_words.dart';
 
 /// A YouTube add's words in the user's language: a running add's step, why
 /// one failed, and why the server would not start one — from the pure
-/// readings in util/youtube_add_words.dart. What the network-song sheet's
+/// readings in util/youtube_add_words.dart. What the network-lead sheet's
 /// job line, the Copies rows and the toasts show. The server's own words
 /// pass through only where no reading knows them (a step a newer server
 /// names).

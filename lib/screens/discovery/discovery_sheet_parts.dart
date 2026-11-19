@@ -41,9 +41,10 @@ class DiscoverySheetGrabHandle extends StatelessWidget {
 ///
 /// [sourceLines] are where a row comes from when no connected server
 /// answers for it (the network-lead sheet's "From the network · Vinyl
-/// Vault" and "88% match to “Tidewater”"): one 12 px line each, after the
-/// spec line; a header with them gives the title two lines too. A header
-/// with no [peerName] draws no server line.
+/// Vault" and "88% match to “Tidewater”"): a 12 px line each, after the
+/// spec line, wrapping to three at most (German at 200 % needs all three
+/// to keep the seed's title); a header with them gives the title two lines
+/// too. A header with no [peerName] draws no server line.
 class DiscoverySheetHeader extends StatelessWidget {
   final Widget cover;
   final String title;
@@ -122,7 +123,7 @@ class DiscoverySheetHeader extends StatelessWidget {
                     padding: EdgeInsets.only(top: i == 0 ? 4 : 2),
                     child: Text(
                       line,
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: VelvetColors.textSecondary,

@@ -242,7 +242,9 @@ class NetworkPreviews extends ChangeNotifier {
 }
 
 /// A match tag ("match 97%"): 11/600 in [tone] on a tint of it — on a
-/// preview row and on a YouTube upload.
+/// preview row and on a YouTube upload. Where it is squeezed (an upload
+/// row at large text, a long word for "match") it takes a second line
+/// rather than lose its number.
 class LeadMatchTag extends StatelessWidget {
   final String label;
   final Color tone;
@@ -257,7 +259,7 @@ class LeadMatchTag extends StatelessWidget {
     ),
     child: Text(
       label,
-      maxLines: 1,
+      maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: tone,
