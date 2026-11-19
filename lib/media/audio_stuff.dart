@@ -2850,7 +2850,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// cleared and refilled. The position kept is then another track's end and
   /// means nothing here: tapping a song after clearing a finished queue loaded
   /// the new song AT the old one's end and stopped just the same. From the
-  /// top, whatever follows.
+  /// top, whatever follows. (Both edits now zero the kept position
+  /// themselves — [removalDropsKeptPosition], the clear — so that every
+  /// reader sees it; this is the net under them.)
   ///
   /// [spotParked] always wins. A parked spot ([_restoreSpot]) is a place
   /// someone chose — a tapped row, a failed restore's saved position — and
@@ -3206,6 +3208,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int index) async {
     _restoreSpot = null; // row indices shift -- a parked index would lie
+    // Read before anything moves: is this the row the stopped player is on?
+    final dropsPosition = removalDropsKeptPosition(
+        onLocalBackend: identical(_backend, _localBackend),
+        processingState: _backend.processingState,
+        currentIndex: _backend.currentIndex,
+        removed: index);
     await super.removeQueueItemAt(index);
     // Update the queue BEFORE the backend. removeSourceAt makes the backend emit
     // its new currentIndex, and the currentIndexStream listener re-derives the
@@ -3215,6 +3223,43 @@ class AudioPlayerHandler extends BaseAudioHandler
     // reorder flash. Reordering keeps the queue and the emitted index in sync.
     queue.add(queue.value..removeAt(index));
     await _backend.removeSourceAt(index);
+    if (dropsPosition) await _forgetKeptPosition();
+  }
+
+  /// Whether removing the row at [removed] takes the stopped player's kept
+  /// position with it. Pure; unit-tested.
+  ///
+  /// A stopped local player still reports the position it was released at,
+  /// and just_audio's idle stand-in keeps that through playlist edits: take
+  /// away the row it is on and another row slides under the same position.
+  /// After a queue has played out it is the finished track's END. The row
+  /// left behind showed it on screen and was saved under it, so the app
+  /// reopened that track partway in — or, for a shorter track with no length
+  /// stored, past its own end ([restoredAtTrackEnd]).
+  ///
+  /// A player that is not idle has a real source loaded and moves itself,
+  /// and another backend is not ours to seek.
+  static bool removalDropsKeptPosition({
+    required bool onLocalBackend,
+    required BackendProcessingState processingState,
+    required int? currentIndex,
+    required int removed,
+  }) =>
+      onLocalBackend &&
+      processingState == BackendProcessingState.idle &&
+      currentIndex == removed;
+
+  /// Zero the position the stopped local player kept: the row it belonged to
+  /// is gone (removed, or cleared with the rest), and nothing else resets it
+  /// — the idle stand-in only ever moves its index.
+  Future<void> _forgetKeptPosition() async {
+    _finishedTrack = null; // the end it marked was that row's
+    if (!identical(_backend, _localBackend)) return;
+    try {
+      await _localBackend.seek(Duration.zero);
+    } catch (e) {
+      appLog('[queue] could not reset the stopped position: $e');
+    }
   }
 
   /// The queue without [localname]'s items, plus the backend index playback
@@ -3295,8 +3340,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
-      await _backend.clearSources();
+      // The same order as clearPlaylist, for its reasons.
       queue.add(queue.value..clear());
+      await _backend.clearSources();
+      await _forgetKeptPosition();
       _emitCurrentMediaItem();
       _broadcastState();
       return;
@@ -3346,8 +3393,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     _intentionalStop = true;
     await _backend.stop();
     await super.stop();
-    await _backend.clearSources();
+    // The queue BEFORE the sources, as removeQueueItemAt does. Clearing the
+    // sources makes the player emit a null index, and the now-playing
+    // re-derived from that against a queue that still had its rows was row
+    // 1 — handed to the media session a millisecond ahead of the blank item.
+    // audio_service applies each update on a thread of its own, so the two
+    // could land in either order, and the session then kept row 1 (on the
+    // emulator, 3 clears of 15 with the sources cleared first and the
+    // position reset below in place).
     queue.add(queue.value..clear());
+    await _backend.clearSources();
+    // ...and the position the stop left behind goes with them: with nothing
+    // loaded the panel went on showing it.
+    await _forgetKeptPosition();
     // Explicit, not left to the currentIndex listener: clearSources may or
     // may not emit an index change, and "did the notification keep the old
     // song's art" should not depend on which.

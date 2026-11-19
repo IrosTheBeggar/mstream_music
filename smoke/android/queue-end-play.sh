@@ -19,6 +19,9 @@
 #   5. the same relaunch with the server down. The restore's load fails and
 #      the spot is parked, the retries run out, the server comes back, and
 #      the first PLAY is what loads the spot: it plays from the start too.
+#   6. once that replay has played out: the finished row is removed, and the
+#      row left current does not inherit its position; then Clear queue, and
+#      nothing is loaded at 0:00 with no track on the media session.
 #
 #   SMOKE_SRC           mStream checkout to boot (default ~/code/mstream)
 #   SMOKE_HOST          how the phone reaches this Mac: 10.0.2.2 on the
@@ -29,8 +32,8 @@
 #                       on a device where nothing has played yet (default: the
 #                       1080-wide layout, 134 px above the bottom edge)
 #
-# Step 3 finds its rows by label (English) and is skipped when it cannot:
-# build with --dart-define=SMOKE_SEMANTICS=true.
+# Steps 3 and 6 find their rows and buttons by label (English) and are
+# skipped when they cannot: build with --dart-define=SMOKE_SEMANTICS=true.
 source "$(dirname "$0")/../lib.sh"; pick_device
 SRC="${SMOKE_SRC:-$HOME/code/mstream}"
 HOST="${SMOKE_HOST:-10.0.2.2}"
@@ -71,6 +74,25 @@ st,pos,speed,upd=int(m.group(1)),int(m.group(2)),float(m.group(3)),int(m.group(4
 print(int(pos+(up-upd)*speed) if st==3 else pos)' "$up"
 }
 queue_index() { adbx shell dumpsys media_session 2>/dev/null | grep -A14 "$PKG" | grep -m1 -oE 'active item id=[0-9]+' | tr -dc '0-9'; }
+# What the media session says is playing, e.g. "Quiet Two, Queue End Rig, Queue End".
+now_playing() { adbx shell dumpsys media_session 2>/dev/null | grep -A14 "$PKG" | grep -m1 -oE 'description=.*' | cut -d= -f2-; }
+# Centres ("x y") of the nodes whose text or content-desc is <needle> — exactly
+# with a leading "=", as a substring otherwise. Top of the screen first.
+nodes() {
+  ui_dump | python3 -c '
+import re,sys
+needle=sys.argv[1]; exact=needle.startswith("=")
+if exact: needle=needle[1:]
+for m in re.finditer(r"<node [^>]*>", sys.stdin.read()):
+    n=m.group(0)
+    t=re.search(r"text=\"([^\"]*)\"", n); d=re.search(r"content-desc=\"([^\"]*)\"", n)
+    vals=[t.group(1) if t else "", d.group(1) if d else ""]
+    hit=any(v==needle for v in vals) if exact else any(needle in v for v in vals)
+    b=re.search(r"bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"", n)
+    if hit and b:
+        x1,y1,x2,y2=map(int,b.groups()); print((x1+x2)//2,(y1+y2)//2)
+' "$1"
+}
 # The app's log lines stamped at/after <ts> that match <regex>.
 count_after() { applog | awk -v s="$1" 'substr($1,1,12) >= s' | grep -cE "$2"; }
 TOP='\[play\] the queue had ended — track [0-9]+ starts from the top'
@@ -311,6 +333,56 @@ else
     else
       fail "server down at launch: after the first PLAY $(session_state), row ${I9:-?}, ${P9} ms, $E9 queue end(s) — the parked spot was loaded at its end?"
     fi
+  fi
+fi
+
+# ── 6. the stopped player's position goes with the row it belonged to ──
+# The replay plays out, so the player is stopped on the last row holding its
+# end. Removing that row slid the row above under the same position, and
+# Clear queue left it showing with nothing loaded; both were also what the
+# next snapshot saved.
+if is_playing; then wait_for_log_after "$T8" "$ENDED" 40 || fail "the replay did not play out"; fi
+sleep 2
+W=$(adbx shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f1)
+H=$(adbx shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f2)
+adbx shell input swipe $((W / 2)) $((H - 310)) $((W / 2)) $((H * 29 / 100)) 300; sleep 2 # the queue panel
+ROW=$(nodes "Quiet Three" | sort -k2,2n | tail -1) # the list row, below the header that names it too
+if is_playing || [ -z "$ROW" ]; then
+  skip "removed-row — the stopped last row is not on screen (a build without --dart-define=SMOKE_SEMANTICS=true, another language, or the queue panel did not open)"
+else
+  RY=${ROW#* }
+  adbx shell input swipe $((W * 74 / 100)) "$RY" $((W * 14 / 100)) "$RY" 250; sleep 2 # reveals Remove
+  XY=$(nodes "=Remove" | head -1)
+  # shellcheck disable=SC2086
+  [ -n "$XY" ] && tap $XY
+  sleep 4
+  P10=$(pos_ms); P10=${P10:--1}; I10=$(queue_index); N10=$(now_playing)
+  if [ -n "$XY" ] && [ "$I10" = 1 ] && [ "$P10" = 0 ]; then
+    pass "the finished row removed: the row left current is at 0:00 ($N10)"
+  else
+    fail "after removing the finished row: row ${I10:-?} at ${P10} ms ($N10) — expected row 1 at 0, not the removed track's end"
+  fi
+fi
+XY=$(nodes "=More" | head -1)
+if [ -z "$XY" ]; then
+  skip "clear-queue — no 'More' on the queue panel"
+else
+  T11=$(now_ts)
+  # shellcheck disable=SC2086
+  tap $XY; sleep 2
+  XY=$(nodes "=Clear queue" | head -1)
+  # shellcheck disable=SC2086
+  [ -n "$XY" ] && tap $XY
+  if wait_for_log_after "$T11" '\[queue\] cleared' 8; then
+    sleep 3
+    P11=$(pos_ms); P11=${P11:--1}; N11=$(now_playing)
+    if [ "$P11" = 0 ] && ! echo "$N11" | grep -q "Quiet"; then
+      pass "Clear queue: nothing loaded, at 0:00 ($N11)"
+    else
+      fail "after Clear queue: ${P11} ms, the session shows '$N11' — expected 0 and no track"
+    fi
+  else
+    fail "Clear queue did not reach the handler"; shot clear-queue
   fi
 fi
 
