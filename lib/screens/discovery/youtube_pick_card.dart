@@ -92,7 +92,7 @@ enum _Card {
   /// 429, too many searches on the server: Search again.
   busy,
 
-  /// 403, 502, 400 or no answer at all: Search again.
+  /// 502, 400 or no answer at all: Search again.
   couldNot,
 
   /// No answer in 120 s (the server may still finish): Search again.
@@ -274,14 +274,16 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       if (!mounted || gen != _gen) return;
       appLog('[lead] yt search failed ${e.timedOut ? 'timeout' : e.status}');
       _ticker?.cancel();
-      if (e.status == 404) {
-        // The plug-in is gone: so is the section.
-        slot.onRefused(AppLocalizations.of(context).discoverLeadOptionOff);
+      if (e.status == 404 || e.status == 403) {
+        // The plug-in is gone (404), or the jobs gate or the upload right
+        // closed (403): the section goes, and says why — as a start's
+        // refusal does. The sheet reads the gate again.
+        final l = AppLocalizations.of(context);
+        slot.onRefused(
+          e.status == 403 ? l.discoverLeadAddOff : l.discoverLeadOptionOff,
+        );
         return;
       }
-      // The jobs gate or the upload right moved: the gate is read again
-      // (the section goes if it closed).
-      if (e.status == 403) unawaited(jobs.regate());
       setState(
         () => _card = e.timedOut
             ? _Card.timedOut

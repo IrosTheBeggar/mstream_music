@@ -532,8 +532,7 @@ void main() {
       expect(find.text('5 uploads found · pick one'), findsOneWidget);
     });
 
-    testWidgets('BUSY (429), COULDN\'T (502; 403 reads the gate again): '
-        'Search again', (tester) async {
+    testWidgets('BUSY (429), COULDN\'T (502): Search again', (tester) async {
       fake.refuse[_ytResolve] = (429, 'too many YouTube lookups at once');
       await pumpBlock(tester);
       await tapKey(tester, 'yt-search');
@@ -546,12 +545,6 @@ void main() {
       fake.refuse[_ytResolve] = (502, 'the YouTube search failed');
       await tapKey(tester, 'yt-search-again');
       expect(find.text("Couldn't search YouTube right now."), findsOneWidget);
-
-      final listings = fake.count('GET', _listing);
-      fake.refuse[_ytResolve] = (403, 'Uploading Disabled');
-      await tapKey(tester, 'yt-search-again');
-      expect(find.text("Couldn't search YouTube right now."), findsOneWidget);
-      expect(fake.count('GET', _listing), listings + 1);
       expect(refusedWith, isEmpty);
     });
 
@@ -564,6 +557,17 @@ void main() {
       expect(refusedWith, [
         'That option was just switched off on this server.',
       ]);
+    });
+
+    testWidgets('403 on the search (adds turned off for the account): the '
+        'section goes, and says why — as a refused start does', (tester) async {
+      fake.refuse[_ytResolve] = (403, 'Uploading Disabled');
+      await pumpBlock(tester);
+      await tapKey(tester, 'yt-search');
+      expect(refusedWith, [
+        'Adding songs was just turned off for your account.',
+      ]);
+      expect(find.text("Couldn't search YouTube right now."), findsNothing);
     });
   });
 
