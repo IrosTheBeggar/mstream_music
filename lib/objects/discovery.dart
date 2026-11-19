@@ -132,8 +132,10 @@ class DiscoverySimilarArtists {
 
 /// One metadata-only lead from P2P ("From the network") or federation
 /// ("From your peers"). On the per-song Discover screen it is not playable:
-/// the track lives in someone else's library. Tap copies "Artist – Title";
-/// [recordingMbid] enables a MusicBrainz link-out.
+/// the track lives in someone else's library. Tap copies "Artist – Title"
+/// (or, for a network row where the server's plug-ins can offer something,
+/// opens the network-lead sheet); [recordingMbid] enables a MusicBrainz
+/// link-out.
 ///
 /// The Discover page's rows (`POST /api/v1/discovery/taste`) are the same
 /// shape plus provenance the server stamps on them (Discover page plan
@@ -144,7 +146,9 @@ class DiscoverySimilarArtists {
 /// plays. [raw] keeps the row exactly as sent: a recommendation is forwarded
 /// UNCHANGED to the plug-in resolve / jobs / lookup routes (their schema
 /// strips what it does not know), so nothing a later client needs is lost
-/// to this parser's view of it.
+/// to this parser's view of it — except a per-song network row's, which
+/// goes as [recommendation] (repaired: that route hands out a peer's tags
+/// as they are).
 class DiscoveryLead {
   final String artist;
   final String title;
@@ -165,6 +169,18 @@ class DiscoveryLead {
   final int? peerId; // the peer's row id on this server (federation)
   final String? source; // 'p2p' | 'federation' (taste rows)
   final String? seedHash; // taste p2p rows only
+
+  /// The catalogue facts a network row carries (discovery.db V3): the ISRC
+  /// as the recommendation sends it (dashes and spaces out, upper case;
+  /// null when it is no ISRC), the release group's MBID, and the snapshot's
+  /// own id for the track.
+  final String? isrc;
+  final String? releaseGroupMbid;
+  final String? exportId;
+
+  /// The network peer's id (`peer.endpointId`): a P2P row's only
+  /// provenance on the per-song route, which stamps no [source].
+  final String? endpointId;
   final Map<String, dynamic> raw;
 
   DiscoveryLead(this.artist, this.title, this.similarity,
@@ -176,6 +192,10 @@ class DiscoveryLead {
       this.peerId,
       this.source,
       this.seedHash,
+      this.isrc,
+      this.releaseGroupMbid,
+      this.exportId,
+      this.endpointId,
       this.raw = const {}});
 
   /// [peerId] / [peerName] stand in for a row that does not name its peer
@@ -204,6 +224,10 @@ class DiscoveryLead {
       peerId: (peer is Map ? _count(peer['id']) : null) ?? peerId,
       source: _str(m['source'], max: 32),
       seedHash: _hash(m['seedHash']),
+      isrc: _isrc(m['isrc']),
+      releaseGroupMbid: _str(m['releaseGroupMbid'], max: 64),
+      exportId: _str(m['exportId'], max: 256),
+      endpointId: peer is Map ? _str(peer['endpointId'], max: 128) : null,
       raw: _rawCopy(m),
     );
   }
@@ -211,6 +235,40 @@ class DiscoveryLead {
   /// The clipboard payload ("Artist – Title", or just the title when the
   /// artist is unknown) — same lead-following flow as the webapp.
   String get copyText => artist.isEmpty ? title : '$artist - $title';
+
+  /// A row from the P2P network ("From the network"): stamped `p2p` (taste
+  /// rows), or naming a network peer and no source (the per-song route's).
+  bool get isNetwork =>
+      source == 'p2p' || (source == null && endpointId != null);
+
+  /// [raw] as the plug-in routes take it ([sendableRecommendation]), or
+  /// null when it cannot be made one — the row then keeps its copy tap.
+  Map<String, dynamic>? get recommendation =>
+      sendableRecommendation(raw, network: isNetwork);
+
+  /// The same lead over another [raw] (its repaired [recommendation], what
+  /// a sheet then forwards everywhere); every parsed field stays as it was.
+  DiscoveryLead withRaw(Map<String, dynamic> raw) => DiscoveryLead(
+        artist,
+        title,
+        similarity,
+        durationSeconds,
+        recordingMbid,
+        genreTags,
+        peerName,
+        album: album,
+        albumArtist: albumArtist,
+        year: year,
+        filepath: filepath,
+        peerId: peerId,
+        source: source,
+        seedHash: seedHash,
+        isrc: isrc,
+        releaseGroupMbid: releaseGroupMbid,
+        exportId: exportId,
+        endpointId: endpointId,
+        raw: _rawCopy(raw),
+      );
 
   /// A federation row's album-art file on its peer: the row's `albumArt`
   /// (mStream plan §3.1, "Peer covers") — the file name the peer's own
@@ -231,6 +289,136 @@ class DiscoveryLead {
     }
     return null;
   }
+}
+
+/// The sources the plug-in routes' schema takes (mStream
+/// src/discovery-plugins/recommendation.js RECOMMENDATION_SOURCES).
+const Set<String> _recommendationSources = {'p2p', 'federation', 'local'};
+
+/// [raw] as the plug-in routes' recommendation schema takes it
+/// (recommendation.js recommendationSchema), the way the server's own
+/// repairRecommendation makes an untrusted row one: a catalogue fact the
+/// schema refuses is nulled — never the row; anything else it refuses
+/// makes the row unsendable (null).
+///
+/// The per-song P2P route (src/api/discovery-p2p.js) hands out a peer
+/// snapshot's tags as they are, while every plug-in route refuses a row its
+/// schema does not take — so a raw ISRC tag ('US-RC1-76-07839') or a year
+/// of 0 would turn every preview, search, start and lookup into a 400.
+/// Caps are measured after a trim, as the schema trims before it measures.
+///
+///   * Nulled: `album` and `albumArtist` (not text ≤ 512), `year` (not a
+///     whole number 1000–9999 — a numeric string is made one), `isrc`
+///     (dashes and spaces dropped and upper-cased first — the spelling a
+///     tag gives it, and the one a catalogue's ISRC lookup matches; not
+///     twelve letters and digits then), `recordingMbid` and
+///     `releaseGroupMbid` (not text ≤ 64), `duration` (not a number ≥ 0 —
+///     a numeric string is made one).
+///   * Unsendable: `artist` or `title` not text ≤ 512, `exportId` not text
+///     ≤ 256, `filepath` not text ≤ 2048, a `source` the schema does not
+///     know, a `peer` that is not an object or whose `endpointId` / `name`
+///     is not text ≤ 128 or whose `id` is not a whole number or a string ≤
+///     128.
+///   * A null `source` is left out (the schema would refuse it; left out
+///     it takes the schema's default), and a [network] row that names none
+///     is stamped `p2p`, as the webapp sends its network rows.
+///
+/// Every other key rides along as sent (similarity, seedIndex, genreTags):
+/// the routes strip what they do not know. The answer is read-only.
+Map<String, dynamic>? sendableRecommendation(Map raw, {bool network = false}) {
+  final row = <String, dynamic>{
+    for (final e in raw.entries)
+      if (e.key is String) e.key as String: e.value,
+  };
+  if (!_schemaText(row['artist'], 512) ||
+      !_schemaText(row['title'], 512) ||
+      !_schemaText(row['exportId'], 256) ||
+      !_schemaText(row['filepath'], 2048)) {
+    return null;
+  }
+  if (row.containsKey('source')) {
+    final source = row['source'];
+    if (source == null) {
+      row.remove('source');
+    } else if (source is! String || !_recommendationSources.contains(source)) {
+      return null;
+    }
+  }
+  final peer = row['peer'];
+  if (peer != null &&
+      (peer is! Map ||
+          !_schemaText(peer['endpointId'], 128) ||
+          !_schemaText(peer['name'], 128) ||
+          !_schemaPeerId(peer['id']))) {
+    return null;
+  }
+  void fact(String key, Object? Function(dynamic) read) {
+    if (row.containsKey(key)) row[key] = read(row[key]);
+  }
+
+  for (final k in const ['album', 'albumArtist']) {
+    fact(k, (v) => _schemaText(v, 512) ? v : null);
+  }
+  for (final k in const ['recordingMbid', 'releaseGroupMbid']) {
+    fact(k, (v) => _schemaText(v, 64) ? v : null);
+  }
+  fact('year', _catalogueYear);
+  fact('isrc', _isrc);
+  fact('duration', _catalogueLength);
+  if (network && !row.containsKey('source')) row['source'] = 'p2p';
+  return Map.unmodifiable(row);
+}
+
+/// The schema's optional text: null, or a string no longer than [max]
+/// once trimmed ('' and blanks are its null).
+bool _schemaText(dynamic v, int max) =>
+    v == null || (v is String && v.trim().length <= max);
+
+/// A `peer.id` the schema takes: null, a whole number (a safe one, as JS
+/// reads it), or a non-empty string ≤ 128.
+bool _schemaPeerId(dynamic v) {
+  if (v == null) return true;
+  if (v is String) return v.isNotEmpty && v.length <= 128;
+  return v is num &&
+      v.isFinite &&
+      v == v.roundToDouble() &&
+      v.abs() <= 9007199254740991;
+}
+
+/// A number from a num or a numeric string, or null.
+num? _number(dynamic v) {
+  if (v is num) return v.isFinite ? v : null;
+  if (v is String) {
+    final n = num.tryParse(v.trim());
+    return n != null && n.isFinite ? n : null;
+  }
+  return null;
+}
+
+/// A release year the schema takes: a whole number 1000–9999.
+int? _catalogueYear(dynamic v) {
+  final n = _number(v);
+  if (n == null || n != n.roundToDouble()) return null;
+  final year = n.round();
+  return year >= 1000 && year <= 9999 ? year : null;
+}
+
+/// A length in seconds the schema takes: a number ≥ 0.
+num? _catalogueLength(dynamic v) {
+  final n = _number(v);
+  return n != null && n >= 0 ? n : null;
+}
+
+final RegExp _isrcShape = RegExp(r'^[A-Z0-9]{12}$');
+final RegExp _isrcNoise = RegExp(r'[-\s]');
+
+/// An ISRC as the schema takes it: twelve letters and digits, upper case —
+/// a tag's dashes and spaces dropped first ('US-RC1-76-07839' is
+/// 'USRC17607839'); null for anything else.
+String? _isrc(dynamic v) {
+  if (v is! String) return null;
+  final s = v.replaceAll(_isrcNoise, '').toUpperCase();
+  return _isrcShape.hasMatch(s) ? s : null;
 }
 
 /// `POST /api/v1/discovery/{p2p,federation}/similar` response. The two routes

@@ -39,6 +39,40 @@ void main() {
       expect(l.copy, isNull, reason: 'a plug-in whose probe failed cannot run');
       expect(l.plugins.single.title, 'federation-copy', reason: 'the name stands in for a missing title');
     });
+
+    test('youtube: listed and available, with acquire and lookup, on the song scope — else null', () {
+      PluginListing withYoutube(Map<String, dynamic> yt) => PluginListing.fromServerMap({
+            'plugins': [
+              {'name': 'youtube', 'title': 'YouTube', ...yt}
+            ],
+            'jobs': {'allowed': true},
+          });
+      const full = {'capabilities': ['acquire', 'lookup'], 'scopes': ['song']};
+      expect(withYoutube(full).youtube?.title, 'YouTube');
+      expect(withYoutube({...full, 'capabilities': ['acquire']}).youtube, isNull, reason: 'no lookup: no pick to send');
+      expect(withYoutube({...full, 'capabilities': ['lookup']}).youtube, isNull, reason: 'no acquire: no job');
+      expect(withYoutube({...full, 'scopes': ['album']}).youtube, isNull, reason: 'not on the song scope');
+      expect(withYoutube({...full, 'scopes': null}).youtube, isNull);
+      expect(withYoutube({...full, 'available': false}).youtube, isNull, reason: 'its probe failed (no yt-dlp)');
+      expect(PluginListing.fromServerMap({'plugins': []}).youtube, isNull);
+    });
+
+    test('previews: the available preview plug-ins, deezer then itunes then the rest in listing order', () {
+      final l = PluginListing.fromServerMap({
+        'plugins': [
+          {'name': 'bandcamp', 'title': 'Preview on Bandcamp', 'capabilities': ['preview']},
+          {'name': 'itunes', 'title': 'Preview on iTunes', 'capabilities': ['preview']},
+          {'name': 'links', 'capabilities': ['links']},
+          {'name': 'soundcloud', 'capabilities': ['preview'], 'available': false},
+          {'name': 'deezer', 'title': 'Preview on Deezer', 'capabilities': ['preview']},
+          {'name': 'qobuz', 'capabilities': ['preview', 'links']},
+          {'name': 'deezer', 'title': 'again', 'capabilities': ['preview']},
+        ],
+      });
+      expect([for (final p in l.previews) p.name], ['deezer', 'itunes', 'bandcamp', 'qobuz']);
+      expect(l.previews.first.title, 'Preview on Deezer', reason: 'a plug-in named twice counts once: the first');
+      expect(PluginListing.fromServerMap({'plugins': [{'name': 'links', 'capabilities': ['links']}]}).previews, isEmpty);
+    });
   });
 
   group('DiscoveryJob', () {
@@ -123,6 +157,45 @@ void main() {
       expect(const JobResultView(null).isMany, isFalse);
     });
 
+    test("a YouTube add's pick (params.choice) and its landed file, match and size", () {
+      final yt = DiscoveryJob.fromServerMap({
+        ...wire,
+        'plugin': 'youtube',
+        'state': 'done',
+        'params': {
+          'choice': {'url': 'https://www.youtube.com/watch?v=abc123'},
+          'destination': {'vpath': 'music', 'base': '', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}', 'source': 'default'},
+        },
+        'result': {
+          'downloaded': {
+            'vpath': 'music', 'filepath': 'music/Static Bloom/Paper Satellites.mp3', 'trackId': 9, 'bytes': 6710886,
+            'format': 'mp3', 'title': 'Paper Satellites', 'artist': 'Static Bloom', 'album': null, 'downloadId': 3,
+          },
+          'match': {'score': 0.91, 'url': 'https://www.youtube.com/watch?v=abc123', 'title': 'Paper Satellites', 'channel': 'Static Bloom - Topic', 'durationSec': 238, 'chosen': true},
+          'missingVars': ['ALBUM'],
+        },
+      })!;
+      expect([yt.scope, yt.choice, yt.choiceUrl],
+          ['song', {'url': 'https://www.youtube.com/watch?v=abc123'}, 'https://www.youtube.com/watch?v=abc123']);
+      expect(() => yt.choice!['url'] = 'x', throwsUnsupportedError, reason: 'read-only: Retry sends it as it came');
+      final v = yt.view;
+      expect([v.downloadedFilepath, v.downloadedBytes, v.downloadedFormat, v.matchChannel],
+          ['music/Static Bloom/Paper Satellites.mp3', 6710886, 'mp3', 'Static Bloom - Topic']);
+      expect(yt.destination?.vpath, 'music');
+
+      // A job that searched for itself; odd shapes read as absent.
+      final searched = DiscoveryJob.fromServerMap({...wire, 'plugin': 'youtube', 'params': null})!;
+      expect([searched.choice, searched.choiceUrl], [null, null]);
+      final odd = DiscoveryJob.fromServerMap({
+        ...wire,
+        'params': {'choice': 'https://www.youtube.com/watch?v=abc'},
+        'result': {'downloaded': {'bytes': -1, 'format': 7}, 'match': 'x'},
+      })!;
+      expect([odd.choice, odd.choiceUrl, odd.view.downloadedBytes, odd.view.downloadedFormat, odd.view.matchChannel],
+          [null, null, null, null, null]);
+      expect(DiscoveryJob.fromServerMap({...wire, 'params': {'choice': {'url': 7}}})!.choiceUrl, isNull);
+    });
+
     test('withResult keeps everything else', () {
       final j = DiscoveryJob.fromServerMap(wire)!;
       final k = j.withResult({'counts': {'total': 1}});
@@ -184,6 +257,151 @@ void main() {
       expect(links.first.canonical, isTrue);
       expect(pluginLinksOf({'result': {'links': []}}), isEmpty);
       expect(pluginLinksOf(null), isEmpty);
+    });
+  });
+
+  group('PluginPreview.ofAnswer', () {
+    Map<String, dynamic> answer(Map<String, dynamic>? preview, {String plugin = 'deezer'}) => {
+          'plugin': plugin,
+          'capabilities': ['preview'],
+          'key': 'text:x',
+          'recommendation': {'artist': 'Static Bloom', 'title': 'Paper Satellites'},
+          'result': {'preview': preview},
+        };
+    const deezer = {
+      'provider': 'deezer',
+      'url': 'https://cdns-preview-d.dzcdn.net/stream/c-abc-1.mp3',
+      'seconds': 30,
+      'title': 'Paper Satellites',
+      'artist': 'Static Bloom',
+      'album': 'Tidewater',
+      'link': 'https://www.deezer.com/track/123',
+      'artwork': 'https://e-cdns-images.dzcdn.net/images/cover/abc/250x250.jpg',
+      'attribution': 'Preview from Deezer',
+      'match': 0.88,
+    };
+
+    test('the clip, what it matched, the attribution as sent, the store link and the cover', () {
+      final p = PluginPreview.ofAnswer(answer(deezer))!;
+      expect([p.provider, p.url.toString(), p.seconds, p.title, p.artist, p.album, p.attribution, p.match], [
+        'deezer', 'https://cdns-preview-d.dzcdn.net/stream/c-abc-1.mp3', 30, 'Paper Satellites', 'Static Bloom', 'Tidewater',
+        'Preview from Deezer', 0.88,
+      ]);
+      expect([p.link.toString(), p.artwork.toString()],
+          ['https://www.deezer.com/track/123', 'https://e-cdns-images.dzcdn.net/images/cover/abc/250x250.jpg']);
+    });
+
+    test('no clip found is null; so is one with no web url', () {
+      expect(PluginPreview.ofAnswer(answer(null)), isNull);
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'url': 'file:///etc/passwd'})), isNull);
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'url': 'javascript:alert(1)'})), isNull);
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'url': null})), isNull);
+      expect(PluginPreview.ofAnswer({'result': 'x'}), isNull);
+      expect(PluginPreview.ofAnswer(null), isNull);
+    });
+
+    test('a non-web link or cover is dropped, the clip kept; seconds default to 30; the match is clamped', () {
+      final p = PluginPreview.ofAnswer(answer({
+        ...deezer,
+        'link': 'itms://itunes.apple.com/x',
+        'artwork': 'data:image/png;base64,AAAA',
+        'seconds': 'soon',
+        'match': 4,
+        'attribution': null,
+      }))!;
+      expect([p.link, p.artwork, p.seconds, p.match, p.attribution], [null, null, 30, 1.0, null]);
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'seconds': 0}))!.seconds, 30);
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'match': 'high'}))!.match, isNull);
+    });
+
+    test("the provider is the preview's own name, else the answer's plug-in", () {
+      expect(PluginPreview.ofAnswer(answer({...deezer, 'provider': null}, plugin: 'itunes'))!.provider, 'itunes');
+      expect(PluginPreview.ofAnswer({'result': {'preview': {...deezer, 'provider': null}}}), isNull);
+    });
+  });
+
+  group('YoutubeSearch.ofAnswer', () {
+    Map<String, dynamic> answer(Map<String, dynamic> lookup) => {
+          'plugin': 'youtube',
+          'capabilities': ['acquire', 'lookup'],
+          'key': 'text:x',
+          'recommendation': {},
+          'result': {'lookup': lookup},
+        };
+    const top = {
+      'id': 'abc123',
+      'url': 'https://www.youtube.com/watch?v=abc123',
+      'title': 'Static Bloom - Paper Satellites (Official Audio)',
+      'channel': 'Static Bloom - Topic',
+      'durationSec': 238,
+      'thumbnail': 'https://i.ytimg.com/vi/abc123/hqdefault.jpg',
+      'topic': true,
+      'score': 0.93,
+    };
+
+    test('the query, the bar, the candidates best first — a thin one (no channel, no length) kept', () {
+      final s = YoutubeSearch.ofAnswer(answer({
+        'query': 'Static Bloom Paper Satellites',
+        'minScore': 0.62,
+        'candidates': [
+          top,
+          {'id': null, 'url': 'https://www.youtube.com/watch?v=thin1', 'title': 'Paper Satellites', 'channel': null, 'durationSec': null, 'thumbnail': null, 'topic': false, 'score': 0.41},
+        ],
+        'owned': null,
+      }));
+      expect([s.query, s.minScore, s.owned, s.ownedFilepath], ['Static Bloom Paper Satellites', 0.62, false, null]);
+      final c = s.candidates.first;
+      expect([c.id, c.url, c.title, c.channel, c.durationSec, c.thumbnail.toString(), c.topic, c.score], [
+        'abc123', 'https://www.youtube.com/watch?v=abc123', 'Static Bloom - Paper Satellites (Official Audio)', 'Static Bloom - Topic',
+        238, 'https://i.ytimg.com/vi/abc123/hqdefault.jpg', true, 0.93,
+      ]);
+      final thin = s.candidates.last;
+      expect([thin.id, thin.channel, thin.durationSec, thin.thumbnail, thin.topic, thin.score], [null, null, null, null, false, 0.41]);
+      expect([c.loose(s.minScore), thin.loose(s.minScore)], [false, true]);
+    });
+
+    test("a link the jobs route would refuse is dropped; so is a malformed candidate", () {
+      final s = YoutubeSearch.ofAnswer(answer({
+        'query': 'q',
+        'candidates': [
+          {...top, 'url': 'https://vimeo.com/123'},
+          {...top, 'url': 'https://www.youtube.com/channel/UC1'},
+          {...top, 'url': 'https://youtu.be/short1'},
+          {...top, 'url': null},
+          'junk',
+        ],
+      }));
+      expect([for (final c in s.candidates) c.url], ['https://youtu.be/short1']);
+    });
+
+    test('a fractional length is rounded; a non-web thumbnail, a missing score and an odd title read as absent', () {
+      final c = YoutubeSearch.ofAnswer(answer({
+        'candidates': [
+          {...top, 'durationSec': 237.6, 'thumbnail': 'ftp://x/y.jpg', 'score': null, 'title': 42, 'topic': 'yes'},
+          {...top, 'durationSec': -3},
+        ],
+      })).candidates;
+      expect([c.first.durationSec, c.first.thumbnail, c.first.score, c.first.title, c.first.topic], [238, null, 0.0, '', false]);
+      expect(c.last.durationSec, isNull);
+    });
+
+    test("the library's own copy, answered before YouTube is asked", () {
+      final s = YoutubeSearch.ofAnswer(answer({
+        'query': 'Static Bloom Paper Satellites',
+        'minScore': 0.62,
+        'candidates': [],
+        'owned': {'vpath': 'music', 'filepath': 'music/Static Bloom/Tidewater/04 Paper Satellites.flac', 'by': 'tags'},
+      }));
+      expect([s.owned, s.ownedFilepath, s.candidates], [true, 'music/Static Bloom/Tidewater/04 Paper Satellites.flac', isEmpty]);
+    });
+
+    test('the bar defaults to 0.62; no lookup reads as nothing found', () {
+      expect(YoutubeSearch.ofAnswer(answer({'query': 'q'})).minScore, kYoutubeMinScore);
+      expect(YoutubeSearch.ofAnswer(answer({'query': 'q', 'minScore': 7})).minScore, 0.62);
+      expect(YoutubeSearch.ofAnswer(answer({'query': 'q', 'minScore': 0.7})).minScore, 0.7);
+      final none = YoutubeSearch.ofAnswer({'result': {}});
+      expect([none.query, none.candidates, none.owned], ['', isEmpty, false]);
+      expect(YoutubeSearch.ofAnswer(null).candidates, isEmpty);
     });
   });
 }

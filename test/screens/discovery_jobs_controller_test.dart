@@ -714,10 +714,10 @@ void main() {
     // Retry would POST the YouTube job to federation-copy without its
     // plug-in: nothing is sent. The folder copy goes again with its landing.
     expect((await c.retry(c.jobs.firstWhere((j) => j.id == yt['id']))).ignored, isTrue);
-    expect(fake.count('POST', '/jobs'), 0);
+    expect(fake.count('POST', '/jobs'), 0, reason: 'no plug-in\'s start at all');
     final again = await c.retry(c.jobs.firstWhere((j) => j.id == folder['id']));
     expect(again.ok, isTrue);
-    final body = jsonDecode(fake.calls('POST', '/jobs').single.body) as Map;
+    final body = jsonDecode(fake.calls('POST', '/plugins/federation-copy/jobs').single.body) as Map;
     expect([body['scope'], body['landing']], ['folder', {'vpath': 'music', 'path': 'mine'}]);
     fake.jobs.removeWhere((j) => j['id'] == again.job!.id);
     await c.refreshJobs();

@@ -4753,7 +4753,7 @@
   },
   "discoverSheetKeepCopy": "Keep a copy",
   "@discoverSheetKeepCopy": {
-    "description": "Connected-server sheets: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone)."
+    "description": "Connected-server sheets and the network-song sheet: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone), or adds the song from YouTube into that library."
   },
   "discoverSheetOpenElsewhere": "Open elsewhere",
   "@discoverSheetOpenElsewhere": {
@@ -7483,5 +7483,402 @@
         "type": "String"
       }
     }
+  },
+  "discoverLeadPinned": "Staying on this song",
+  "@discoverLeadPinned": {
+    "description": "More like this, after the user previews, plays or adds a network song: the screen stops following what is playing and keeps showing songs like this one. Screen-reader label of the push-pin glyph before the seed line."
+  },
+  "discoverLeadMatchTo": "{percent}% match to “{seed}”",
+  "@discoverLeadMatchTo": {
+    "description": "Network-song sheet header, under 'From the network · <server>': how much this song sounds like the one More like this started from. {percent} is a whole number; {seed} is that song's title.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "seed": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadMatch": "{percent}% match",
+  "@discoverLeadMatch": {
+    "description": "Network-song sheet header, when the song More like this started from has no title. {percent} is a whole number.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadCopyTitle": "Copy title",
+  "@discoverLeadCopyTitle": {
+    "description": "Network-song sheet: row that copies 'Artist - Title' to the clipboard."
+  },
+  "discoverLeadPreviewLabel": "30-second preview",
+  "@discoverLeadPreviewLabel": {
+    "description": "Network-song sheet: small-caps label over the rows that play a 30-second clip of the song from Deezer or iTunes."
+  },
+  "discoverLeadPreviewTap": "Tap to hear 30 seconds",
+  "@discoverLeadPreviewTap": {
+    "description": "Network-song sheet, under 'Deezer' / 'iTunes' before the clip was asked for. Nothing is sent to Deezer or Apple until the user taps."
+  },
+  "discoverLeadPreviewLookingUp": "Looking up…",
+  "@discoverLeadPreviewLookingUp": {
+    "description": "Network-song sheet, under 'Deezer' / 'iTunes' while the server looks for the clip."
+  },
+  "discoverLeadPreviewNone": "No preview found",
+  "@discoverLeadPreviewNone": {
+    "description": "Network-song sheet, under 'Deezer' / 'iTunes': that catalogue has no clip of this song."
+  },
+  "discoverLeadPreviewBusy": "Busy — try again in a minute",
+  "@discoverLeadPreviewBusy": {
+    "description": "Network-song sheet, under 'Deezer' / 'iTunes': the catalogue is rate-limiting the server. A tap tries again."
+  },
+  "discoverLeadPreviewUnavailable": "Unavailable right now",
+  "@discoverLeadPreviewUnavailable": {
+    "description": "Network-song sheet, under 'Deezer' / 'iTunes': the clip could not be found or played just now. A tap tries again."
+  },
+  "discoverLeadPreviewProgress": "{position} of {length}",
+  "@discoverLeadPreviewProgress": {
+    "description": "Network-song sheet, while a clip plays: '0:12 of 0:30'. {position} and {length} are clock times (minutes:seconds).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      },
+      "length": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadPreviewPlayA11y": "Play the {provider} preview",
+  "@discoverLeadPreviewPlayA11y": {
+    "description": "Screen reader: the play button of a 30-second clip. {provider} is 'Deezer' or 'iTunes' (a brand name, not translated).",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadPreviewStopA11y": "Stop the {provider} preview",
+  "@discoverLeadPreviewStopA11y": {
+    "description": "Screen reader: the stop button of a playing 30-second clip. {provider} is 'Deezer' or 'iTunes' (a brand name, not translated).",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadPreviewOpenIn": "Open in {service}",
+  "@discoverLeadPreviewOpenIn": {
+    "description": "Tooltip of the link beside a clip that opens the song's store page. {service} is 'Deezer' or 'Apple Music' (a brand name, not translated).",
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadMatchPill": "match {percent}%",
+  "@discoverLeadMatchPill": {
+    "description": "Tag beside a clip or a YouTube upload: how closely it matches the song. A small tag: keep it short (about 12 characters fit at 360 dp). {percent} is a whole number.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadLooseMatchPill": "loose match {percent}%",
+  "@discoverLeadLooseMatchPill": {
+    "description": "Tag beside a YouTube upload that matches the song only loosely (it may be another version). A small tag: keep it short (about 12 characters fit at 360 dp). {percent} is a whole number.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadYtIdle": "Finds the closest upload for “{query}” · nothing is added yet",
+  "@discoverLeadYtIdle": {
+    "description": "Network-song sheet, YouTube card before a search: what pressing Search YouTube does. {query} is the 'Artist Title' it searches for. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadYtSearch": "Search YouTube",
+  "@discoverLeadYtSearch": {
+    "description": "Network-song sheet, YouTube card: the button that asks the server to look for uploads of the song. Nothing is added yet."
+  },
+  "discoverLeadYtSearchingTag": "Searching",
+  "@discoverLeadYtSearchingTag": {
+    "description": "Network-song sheet, YouTube card: tag beside the card's title while the search runs. A small tag: keep it short (about 12 characters fit at 360 dp)."
+  },
+  "discoverLeadYtAsking": "Asking YouTube for “{query}”…",
+  "@discoverLeadYtAsking": {
+    "description": "Network-song sheet, YouTube card while the search runs. {query} is the 'Artist Title' searched for.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadYtStopWaiting": "Stop waiting",
+  "@discoverLeadYtStopWaiting": {
+    "description": "Network-song sheet, YouTube card: button that stops waiting for the search (the server may finish it anyway)."
+  },
+  "discoverLeadYtSlowHint": "YouTube can take a minute. You can close this — the server keeps searching and remembers the answer for a few hours.",
+  "@discoverLeadYtSlowHint": {
+    "description": "Network-song sheet, YouTube card, shown once a search has run for 20 seconds."
+  },
+  "discoverLeadYtFound": "{count, plural, one{{count} upload found} other{{count} uploads found · pick one}}",
+  "@discoverLeadYtFound": {
+    "description": "Network-song sheet, YouTube card: how many uploads of the song the search found. The list under it lets the user pick one.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadYtMore": "{count, plural, other{{count} more}}",
+  "@discoverLeadYtMore": {
+    "description": "Network-song sheet, YouTube card: toggle that shows the other uploads found ('4 more').",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadYtFewer": "Fewer",
+  "@discoverLeadYtFewer": {
+    "description": "Network-song sheet, YouTube card: toggle that folds the list of uploads back to the picked one."
+  },
+  "discoverLeadYtUploadsA11y": "YouTube uploads",
+  "@discoverLeadYtUploadsA11y": {
+    "description": "Screen reader: the list of uploads the YouTube search found."
+  },
+  "discoverLeadYtOpenOnYoutube": "Open on YouTube",
+  "@discoverLeadYtOpenOnYoutube": {
+    "description": "Tooltip of the link beside an upload that opens it on YouTube."
+  },
+  "discoverLeadYtAddThis": "Add this one",
+  "@discoverLeadYtAddThis": {
+    "description": "Network-song sheet, YouTube card: the button that adds the picked upload. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadYtOnlyPick": "Only the upload you pick is added.",
+  "@discoverLeadYtOnlyPick": {
+    "description": "Network-song sheet, YouTube card: footnote under 'Add this one'. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadYtNothing": "YouTube has nothing close to “{query}”",
+  "@discoverLeadYtNothing": {
+    "description": "Network-song sheet, YouTube card: the search found no upload that could be this song. {query} is the 'Artist Title' searched for.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverLeadYtSearchAgain": "Search again",
+  "@discoverLeadYtSearchAgain": {
+    "description": "Network-song sheet, YouTube card: button that runs the search again."
+  },
+  "discoverLeadYtBusy": "YouTube is busy on this server — try again in a minute.",
+  "@discoverLeadYtBusy": {
+    "description": "Network-song sheet, YouTube card: the server is running as many YouTube searches as it allows."
+  },
+  "discoverLeadYtCouldnt": "Couldn't search YouTube right now.",
+  "@discoverLeadYtCouldnt": {
+    "description": "Network-song sheet, YouTube card: the search failed."
+  },
+  "discoverLeadYtTimedOut": "YouTube didn't answer in time. The server may still finish — search again in a minute.",
+  "@discoverLeadYtTimedOut": {
+    "description": "Network-song sheet, YouTube card: the phone stopped waiting for the search; the server keeps the answer once it has it."
+  },
+  "discoverLeadYtSomeoneElse": "Someone else on this server is adding this right now — try again in a moment.",
+  "@discoverLeadYtSomeoneElse": {
+    "description": "Network-song sheet and Copies: the add was not started because another account on the same server is adding the same song. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadYtQueueFull": "{count, plural, other{You have {count} waiting or running — let some finish first.}}",
+  "@discoverLeadYtQueueFull": {
+    "description": "Network-song sheet and Copies: the add was not started because the account already has as many adds waiting or running as the server allows. {count} is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverLeadYtQueueFullNoCount": "Too many waiting — let some finish first.",
+  "@discoverLeadYtQueueFullNoCount": {
+    "description": "Network-song sheet and Copies: the add was not started because the account already has as many adds waiting or running as the server allows (the server did not say how many)."
+  },
+  "discoverLeadYtStartFailed": "Couldn't start this. Try again.",
+  "@discoverLeadYtStartFailed": {
+    "description": "Network-song sheet: the server refused to start the add for a reason it did not explain."
+  },
+  "discoverLeadYtAlreadyAdding": "Already adding another upload of this song.",
+  "@discoverLeadYtAlreadyAdding": {
+    "description": "Network-song sheet: the add pressed was not started because an add of the same song, with another upload, is already waiting or running. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadAddOff": "Adding songs was just turned off for your account.",
+  "@discoverLeadAddOff": {
+    "description": "Toast: the server refused the add because the account may no longer add files. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadOptionOff": "That option was just switched off on this server.",
+  "@discoverLeadOptionOff": {
+    "description": "Toast: the preview or YouTube option the user pressed was turned off on the server since the sheet opened; its row goes away."
+  },
+  "discoverJobYtChecking": "Checking the upload",
+  "@discoverJobYtChecking": {
+    "description": "A running YouTube add's step: the server reads the picked upload's details."
+  },
+  "discoverJobYtSearching": "Searching YouTube",
+  "@discoverJobYtSearching": {
+    "description": "A running YouTube add's step: the server searches for the song (an add started without a pick)."
+  },
+  "discoverJobYtFetching": "Fetching from YouTube",
+  "@discoverJobYtFetching": {
+    "description": "A running YouTube add's step: the server is fetching the audio. Do not use the word for saving onto this phone: the file goes to the user's server."
+  },
+  "discoverJobYtFetchingPercent": "Fetching from YouTube · {percent}%",
+  "@discoverJobYtFetchingPercent": {
+    "description": "A running YouTube add's step with its progress: 'Fetching from YouTube · 42%'. {percent} is a whole number. The file goes to the user's server, not this phone.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverJobYtTagging": "Tagging",
+  "@discoverJobYtTagging": {
+    "description": "A running YouTube add's step: the server writes the song's tags into the file."
+  },
+  "discoverJobYtFiling": "Putting it in your library",
+  "@discoverJobYtFiling": {
+    "description": "A running YouTube add's step: the server files the song in the user's library."
+  },
+  "discoverJobYtFromChannel": "from {channel}",
+  "@discoverJobYtFromChannel": {
+    "description": "A finished YouTube add's details line ('MP3 · 6.4 MB · from Static Bloom - Topic'). {channel} is the YouTube channel's name.",
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobAddFailed": "Couldn't add",
+  "@discoverJobAddFailed": {
+    "description": "A YouTube add that failed: the first line of its row (the reason follows under it). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverJobYtCancelled": "Stopped · nothing was added",
+  "@discoverJobYtCancelled": {
+    "description": "A YouTube add the user stopped before anything landed. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverJobYtChooseAnother": "Choose another",
+  "@discoverJobYtChooseAnother": {
+    "description": "A failed YouTube add: button that searches again so the user can pick another upload."
+  },
+  "discoverJobYtErrBroken": "YouTube isn't working on this server right now.",
+  "@discoverJobYtErrBroken": {
+    "description": "Why a YouTube add failed: the server is missing a tool it needs (an admin can fix it)."
+  },
+  "discoverJobYtErrNotClose": "Nothing on YouTube was close enough (best match {percent}%).",
+  "@discoverJobYtErrNotClose": {
+    "description": "Why a YouTube add failed: no upload matched the song well enough. {percent} is the best match, a whole number.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverJobYtErrNoResults": "YouTube found nothing for “{query}”.",
+  "@discoverJobYtErrNoResults": {
+    "description": "Why a YouTube add failed: the search found no uploads. {query} is the 'Artist Title' searched for.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverJobYtErrLive": "That upload is a live stream — pick another.",
+  "@discoverJobYtErrLive": {
+    "description": "Why a YouTube add failed: the picked upload is a live stream, which is never added."
+  },
+  "discoverJobYtErrTooBig": "That upload is bigger than this server allows ({size} MB).",
+  "@discoverJobYtErrTooBig": {
+    "description": "Why a YouTube add failed: the file passed the server's size limit. {size} is that limit in megabytes.",
+    "placeholders": {
+      "size": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "discoverJobYtErrTooBigNoSize": "That upload is bigger than this server allows.",
+  "@discoverJobYtErrTooBigNoSize": {
+    "description": "Why a YouTube add failed: the file passed the server's size limit (the server did not say which)."
+  },
+  "discoverJobYtErrUnreadable": "That upload couldn't be read — pick another.",
+  "@discoverJobYtErrUnreadable": {
+    "description": "Why a YouTube add failed: YouTube no longer serves the picked upload (removed, private, region-locked…)."
+  },
+  "discoverJobYtErrTooLong": "It took longer than 30 minutes and was stopped.",
+  "@discoverJobYtErrTooLong": {
+    "description": "Why a YouTube add failed: the server stops an add after 30 minutes."
+  },
+  "discoverJobYtErrRefused": "YouTube wouldn't hand it over — try again later.",
+  "@discoverJobYtErrRefused": {
+    "description": "Why a YouTube add failed: YouTube refused the server (rate limiting, a bot check)."
+  },
+  "discoverJobYtErrNoTitle": "This song has no artist or title to search for.",
+  "@discoverJobYtErrNoTitle": {
+    "description": "Why a YouTube add failed: the song carries no artist or title."
+  },
+  "discoverJobYtErrNoLibrary": "There's no library you can add files to.",
+  "@discoverJobYtErrNoLibrary": {
+    "description": "Why a YouTube add failed: no library on the user's server takes their files. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverJobYtErrLayout": "Your folder layout can't place this song.",
+  "@discoverJobYtErrLayout": {
+    "description": "Why a YouTube add failed: the folder layout chosen for added songs makes no usable path for this song. Change (where added songs go) is the way out."
+  },
+  "discoverJobYtErrAccountGone": "The account that asked for this no longer exists.",
+  "@discoverJobYtErrAccountGone": {
+    "description": "Why a YouTube add failed: the account that started it was deleted while it waited."
+  },
+  "discoverJobYtErrOther": "Something went wrong.",
+  "@discoverJobYtErrOther": {
+    "description": "Why a YouTube add failed, when the server's words are none the app knows (they show under Details)."
+  },
+  "discoverToastAddingYt": "Adding {title} from YouTube",
+  "@discoverToastAddingYt": {
+    "description": "Toast once the sheet that started a YouTube add closes. {title} is the song's title. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverToastAddFailedYt": "Couldn't add from YouTube: {reason}",
+  "@discoverToastAddFailedYt": {
+    "description": "Toast when a YouTube add the phone saw running fails. {reason} is one of the 'Why a YouTube add failed' sentences. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverCopiesDestChangedYt": "Couldn't start: where files land changed — open the song and add again",
+  "@discoverCopiesDestChangedYt": {
+    "description": "Toast when Retry or Add again on a YouTube add in Copies was not started because where the account's added songs land changed since. The View action opens the song, which shows the new place. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverLeadYtChangeHint": "Change where added songs go",
+  "@discoverLeadYtChangeHint": {
+    "description": "Screen reader: the Change link beside 'Files go to …' on the network-song sheet's YouTube card. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
   }
 }

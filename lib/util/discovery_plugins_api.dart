@@ -20,8 +20,13 @@ class DiscoveryPluginsException implements Exception {
   final int status;
   final String message;
   final bool fromServer;
+
+  /// The call's bound ran out before any answer ([status] 0): the server
+  /// may still finish it (a YouTube search goes on, and its answer is kept
+  /// for a while), unlike a call that could not be sent at all.
+  final bool timedOut;
   const DiscoveryPluginsException(this.status, this.message,
-      {this.fromServer = false});
+      {this.fromServer = false, this.timedOut = false});
 
   /// The plug-in route is not there for this caller (plug-ins off since the
   /// ping, a jukebox session, an older server): 403 / 404.
@@ -74,19 +79,33 @@ Server? ownServerOf(Server? server) {
 }
 
 /// The discovery plug-in routes (mStream docs/openapi.yaml, tags
-/// "Discovery"): the listing, the copy jobs, the batch lookup, the
-/// collection destination and the links plug-in's resolve.
+/// "Discovery"): the listing, the plug-in jobs, the lookups, the collection
+/// destination, and the links, preview and YouTube plug-ins' resolves.
 ///
 /// Spoken to the user's own server ([ownServerOf]) over ApiManager's pooled
 /// direct client — the transport the Discover page's taste call uses —
 /// unless a client is injected (tests). Headless (no browser loading bar),
-/// bounded by [timeout]; every failure throws [DiscoveryPluginsException]
-/// carrying the server's words.
+/// bounded by [timeout] (a preview by [kPreviewTimeout], the YouTube search
+/// by [kYoutubeSearchTimeout]); every failure throws
+/// [DiscoveryPluginsException] carrying the server's words.
 ///
 /// Recommendations are sent exactly as received — a taste peers row is
 /// already a valid recommendation (the route's schema strips what it does
-/// not know: seedHash, similarity, genreTags, albumArt).
+/// not know: seedHash, similarity, genreTags, albumArt); a per-song network
+/// row is repaired first by the caller (objects/discovery.dart
+/// sendableRecommendation), because that route hands out a peer's tags as
+/// they are and the plug-in routes refuse what their schema does not take.
 class DiscoveryPluginsApi {
+  /// A preview resolve's bound: Deezer may ask its catalogue three times
+  /// (ISRC, then the artist and title, then the phrase), each bounded at 15
+  /// s idle on the server, so the client's usual 15 s would give up on an
+  /// answer the server is about to send — and cache.
+  static const Duration kPreviewTimeout = Duration(seconds: 30);
+
+  /// The YouTube search's bound: the server cuts a search at 90 s once it
+  /// has a slot, after a wait in line it does not bound.
+  static const Duration kYoutubeSearchTimeout = Duration(seconds: 120);
+
   /// The user's own server; null when [ownServerOf] found none (a connected
   /// server whose parent is not linked) — every call then throws.
   final Server? server;
@@ -144,17 +163,25 @@ class DiscoveryPluginsApi {
   /// folder, `{tags: true}` by the layout ([wireLanding] shapes it). A
   /// `{vpath, path}` landing reads nothing of the destination, so the
   /// server never answers it `destination_changed`.
+  ///
+  /// [choice] is a YouTube add's pick (`{url}`, a lookup candidate's link):
+  /// the job fetches that upload instead of searching. Only a plug-in with
+  /// a lookup takes one (400 otherwise). It stays in the body when a server
+  /// from before the destination key is asked again. The dedupe ignores it:
+  /// a 200 may answer a live job with another pick.
   Future<StartedJob> startJob(Map<String, dynamic> recommendation,
       {String plugin = kCopyPlugin,
       String? scope,
       ShownPlace? destination,
-      Map<String, dynamic>? landing}) async {
-    final location = '/api/v1/discovery/plugins/$plugin/jobs';
+      Map<String, dynamic>? landing,
+      Map<String, dynamic>? choice}) async {
+    final location = '/api/v1/discovery/plugins/${Uri.encodeComponent(plugin)}/jobs';
     final land = scope == kScopeFolder ? wireLanding(landing) : null;
     final body = <String, dynamic>{
       'recommendation': recommendation,
       if (scope != null && scope != kScopeSong) 'scope': scope,
       'landing': ?land,
+      'choice': ?choice,
       if (destination != null) 'destination': destination.toJson(),
     };
     dynamic answer;
@@ -255,6 +282,17 @@ class DiscoveryPluginsApi {
     return out;
   }
 
+  /// `POST /api/v1/discovery/plugin-jobs/lookup` — the single lookup, on
+  /// every server with plug-in jobs (the batch is newer): one
+  /// recommendation's keys and the caller's newest job per plug-in and
+  /// scope under any of them. What a reopened lead restores its YouTube add
+  /// from.
+  Future<JobLookup> lookupOne(Map<String, dynamic> recommendation) async {
+    final res = _map(await _send('POST', '/api/v1/discovery/plugin-jobs/lookup',
+        {'recommendation': recommendation}));
+    return JobLookup.fromServerMap(res)!;
+  }
+
   // ── links ───────────────────────────────────────────────────────────
 
   /// `POST /api/v1/discovery/plugins/links/resolve` — "Open elsewhere":
@@ -264,6 +302,44 @@ class DiscoveryPluginsApi {
       pluginLinksOf(await _send('POST',
           '/api/v1/discovery/plugins/$kLinksPlugin/resolve',
           {'recommendation': recommendation}));
+
+  // ── previews and the YouTube lookup ─────────────────────────────────
+
+  /// `POST /api/v1/discovery/plugins/:plugin/resolve` for a preview
+  /// plug-in (deezer, itunes): its 30-second clip, or null when it found
+  /// none (an answer the server keeps for ten minutes, the miss included).
+  /// Asked only when the user presses: the plug-in sends the song to its
+  /// catalogue. A 429 is the catalogue's rate budget; a 502 its failure.
+  Future<PluginPreview?> preview(
+          String plugin, Map<String, dynamic> recommendation,
+          {Duration timeout = kPreviewTimeout}) async =>
+      PluginPreview.ofAnswer(await _send(
+          'POST',
+          '/api/v1/discovery/plugins/${Uri.encodeComponent(plugin)}/resolve',
+          {'recommendation': recommendation},
+          timeout: timeout));
+
+  /// `POST /api/v1/discovery/plugins/youtube/resolve` — the YouTube lookup:
+  /// the uploads found for the song, scored, best first (or the library's
+  /// own copy), with nothing fetched. Asked only when the user presses. The
+  /// server keeps an answer for six hours, never a failure. Refused like a
+  /// job: 404 (not here), 403 (jobs gate, no upload right), 429 (too many
+  /// searches at once). One that runs past [timeout] throws with
+  /// [DiscoveryPluginsException.timedOut]: the search goes on, and asking
+  /// again later is answered from what it found.
+  Future<YoutubeSearch> searchYoutube(Map<String, dynamic> recommendation,
+      {Duration timeout = kYoutubeSearchTimeout}) async {
+    final answer = _map(await _send(
+        'POST',
+        '/api/v1/discovery/plugins/$kYoutubePlugin/resolve',
+        {'recommendation': recommendation},
+        timeout: timeout));
+    final result = answer['result'];
+    if (result is! Map || result['lookup'] is! Map) {
+      throw const DiscoveryPluginsException(0, 'the server answered no lookup');
+    }
+    return YoutubeSearch.ofAnswer(answer);
+  }
 
   // ── transport ───────────────────────────────────────────────────────
 
@@ -286,20 +362,27 @@ class DiscoveryPluginsApi {
         () => _http.get(s.apiUri(location), headers: _headers(s))));
   }
 
-  Future<dynamic> _send(String method, String location, Object body) async {
+  /// [timeout] bounds this one call instead of the client's own.
+  Future<dynamic> _send(String method, String location, Object body,
+      {Duration? timeout}) async {
     final s = _own();
     final uri = s.apiUri(location);
     final encoded = jsonEncode(body);
-    return _decode(await _guard(() => method == 'PUT'
-        ? _http.put(uri, headers: _headers(s), body: encoded)
-        : _http.post(uri, headers: _headers(s), body: encoded)));
+    return _decode(await _guard(
+        () => method == 'PUT'
+            ? _http.put(uri, headers: _headers(s), body: encoded)
+            : _http.post(uri, headers: _headers(s), body: encoded),
+        timeout: timeout));
   }
 
-  Future<http.Response> _guard(Future<http.Response> Function() call) async {
+  Future<http.Response> _guard(Future<http.Response> Function() call,
+      {Duration? timeout}) async {
     try {
-      return await call().timeout(timeout);
+      return await call().timeout(timeout ?? this.timeout);
     } on TimeoutException {
-      throw const DiscoveryPluginsException(0, 'your server did not answer in time');
+      throw const DiscoveryPluginsException(
+          0, 'your server did not answer in time',
+          timedOut: true);
     } on DiscoveryPluginsException {
       rethrow;
     } catch (e) {

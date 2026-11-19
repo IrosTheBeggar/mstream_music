@@ -82,6 +82,10 @@ void main() {
         (n) => t.browseKeepTakes(n, 'Boukmanflow'),
         t.discoverKeepLeftOutMany,
         (n) => t.discoverKeepFolderAriaCount(n, 'Borrowed Tapes'),
+        // The network-lead sheet's YouTube card
+        t.discoverLeadYtFound,
+        t.discoverLeadYtMore,
+        t.discoverLeadYtQueueFull,
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');
