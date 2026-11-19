@@ -1685,7 +1685,7 @@
   "discoverJobYtErrTooBigNoSize": "Ese vídeo supera el tamaño que permite este servidor.",
   "discoverJobYtErrUnreadable": "No se pudo leer ese vídeo — elige otro.",
   "discoverJobYtErrTooLong": "Tardó más de 30 minutos y se detuvo.",
-  "discoverJobYtErrRefused": "YouTube no lo entregó — inténtalo más tarde.",
+  "discoverJobYtErrRefused": "YouTube se negó a entregarlo — inténtalo más tarde.",
   "discoverJobYtErrNoTitle": "Esta canción no tiene artista ni título que buscar.",
   "discoverJobYtErrNoLibrary": "No hay ninguna biblioteca a la que puedas añadir archivos.",
   "discoverJobYtErrLayout": "Tu diseño de carpetas no puede ubicar esta canción.",

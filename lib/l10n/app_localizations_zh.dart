@@ -6242,7 +6242,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverLeadPreviewLookingUp => '正在查找…';
 
   @override
-  String get discoverLeadPreviewNone => '未找到试听';
+  String get discoverLeadPreviewNone => '未找到试听片段';
 
   @override
   String get discoverLeadPreviewBusy => '繁忙 — 请一分钟后重试';
@@ -6309,7 +6309,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverLeadYtSlowHint =>
-      'YouTube 可能需要一分钟。你可以关闭这里 — 服务器会继续搜索，并把结果保留几个小时。';
+      'YouTube 可能需要一分钟。你可以先关闭此窗口 — 服务器会继续搜索，并把结果保留几个小时。';
 
   @override
   String discoverLeadYtFound(int count) {
@@ -6384,13 +6384,13 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '你已有 $countString 个添加在等待或进行中 — 请先等一些完成。',
+      other: '你已有 $countString 个添加任务在等待或进行中 — 请先等其中一些完成。',
     );
     return '$_temp0';
   }
 
   @override
-  String get discoverLeadYtQueueFullNoCount => '等待中的太多了 — 请先等一些完成。';
+  String get discoverLeadYtQueueFullNoCount => '等待中的添加任务太多 — 请先等其中一些完成。';
 
   @override
   String get discoverLeadYtStartFailed => '无法开始。请重试。';
@@ -6399,7 +6399,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverLeadYtAlreadyAdding => '已在添加这首歌的另一个视频。';
 
   @override
-  String get discoverLeadAddOff => '你的账户刚刚被关闭了添加歌曲的功能。';
+  String get discoverLeadAddOff => '你账户的添加歌曲功能刚刚被关闭。';
 
   @override
   String get discoverLeadOptionOff => '此服务器刚刚关闭了该选项。';
@@ -6491,7 +6491,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverJobYtErrNoLibrary => '没有可供你添加文件的曲库。';
 
   @override
-  String get discoverJobYtErrLayout => '你的文件夹布局无法安放这首歌。';
+  String get discoverJobYtErrLayout => '按你的文件夹布局，无法确定这首歌的存放位置。';
 
   @override
   String get discoverJobYtErrAccountGone => '发起此请求的账户已不存在。';

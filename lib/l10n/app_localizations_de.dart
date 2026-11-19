@@ -6671,7 +6671,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String discoverLeadYtIdle(String query) {
-    return 'Sucht das passendste Video zu „$query“ · noch wird nichts hinzugefügt';
+    return 'Sucht das passendste Video zu „$query“ · es wird noch nichts hinzugefügt';
   }
 
   @override
@@ -6701,7 +6701,7 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString Videos gefunden · wähl eins',
+      other: '$countString Videos gefunden · wähle eins',
       one: '$countString Video gefunden',
     );
     return '$_temp0';
@@ -6856,7 +6856,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverJobYtErrLive =>
-      'Dieses Video ist ein Livestream – wähl ein anderes.';
+      'Dieses Video ist ein Livestream – wähle ein anderes.';
 
   @override
   String discoverJobYtErrTooBig(int size) {
@@ -6874,7 +6874,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverJobYtErrUnreadable =>
-      'Dieses Video ließ sich nicht lesen – wähl ein anderes.';
+      'Dieses Video ließ sich nicht lesen – wähle ein anderes.';
 
   @override
   String get discoverJobYtErrTooLong =>

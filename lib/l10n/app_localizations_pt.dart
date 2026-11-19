@@ -6652,7 +6652,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String discoverLeadYtIdle(String query) {
-    return 'Busca o vídeo mais próximo de “$query” · nada é adicionado ainda';
+    return 'Busca o vídeo mais parecido com “$query” · nada é adicionado por enquanto';
   }
 
   @override
@@ -6663,7 +6663,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String discoverLeadYtAsking(String query) {
-    return 'Perguntando ao YouTube por “$query”…';
+    return 'Pesquisando “$query” no YouTube…';
   }
 
   @override
@@ -6875,7 +6875,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get discoverJobYtErrLayout =>
-      'Seu layout de pastas não consegue posicionar esta música.';
+      'Seu layout de pastas não gera um caminho válido para esta música.';
 
   @override
   String get discoverJobYtErrAccountGone =>

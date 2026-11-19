@@ -6874,7 +6874,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get discoverJobYtErrRefused =>
-      'YouTube no lo entregó — inténtalo más tarde.';
+      'YouTube se negó a entregarlo — inténtalo más tarde.';
 
   @override
   String get discoverJobYtErrNoTitle =>

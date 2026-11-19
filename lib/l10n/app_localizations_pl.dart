@@ -6758,7 +6758,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverLeadPreviewBusy => 'Zajęte — spróbuj ponownie za minutę';
 
   @override
-  String get discoverLeadPreviewUnavailable => 'Teraz niedostępne';
+  String get discoverLeadPreviewUnavailable => 'Chwilowo niedostępne';
 
   @override
   String discoverLeadPreviewProgress(String position, String length) {

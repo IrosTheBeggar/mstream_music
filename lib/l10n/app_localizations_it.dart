@@ -6568,7 +6568,7 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get discoverLeadPinned => 'Resta su questo brano';
+  String get discoverLeadPinned => 'Fissato su questo brano';
 
   @override
   String discoverLeadMatchTo(int percent, String seed) {
@@ -6695,6 +6695,7 @@ class AppLocalizationsIt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'altri $countString',
+      one: '$countString altro',
     );
     return '$_temp0';
   }
@@ -6860,7 +6861,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get discoverJobYtErrRefused =>
-      'YouTube non l’ha fornito — riprova più tardi.';
+      'YouTube si è rifiutato di fornirlo — riprova più tardi.';
 
   @override
   String get discoverJobYtErrNoTitle =>

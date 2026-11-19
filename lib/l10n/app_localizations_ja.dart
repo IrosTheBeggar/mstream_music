@@ -6320,7 +6320,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverLeadPreviewLookingUp => '検索中…';
 
   @override
-  String get discoverLeadPreviewNone => '試聴が見つかりません';
+  String get discoverLeadPreviewNone => '試聴音源が見つかりません';
 
   @override
   String get discoverLeadPreviewBusy => '混雑中 — 1 分ほどしてからもう一度お試しください';
@@ -6435,7 +6435,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String discoverLeadYtNothing(String query) {
-    return 'YouTube に「$query」に近いものはありません';
+    return 'YouTube には「$query」に近い動画がありません';
   }
 
   @override
@@ -6533,7 +6533,7 @@ class AppLocalizationsJa extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return 'YouTube に十分近いものはありませんでした（最も近い一致は $percentString%）。';
+    return 'YouTube には十分近い動画がありませんでした（最高一致度 $percentString%）。';
   }
 
   @override

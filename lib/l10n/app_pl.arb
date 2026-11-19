@@ -1635,7 +1635,7 @@
   "discoverLeadPreviewLookingUp": "Wyszukiwanie…",
   "discoverLeadPreviewNone": "Nie znaleziono fragmentu",
   "discoverLeadPreviewBusy": "Zajęte — spróbuj ponownie za minutę",
-  "discoverLeadPreviewUnavailable": "Teraz niedostępne",
+  "discoverLeadPreviewUnavailable": "Chwilowo niedostępne",
   "discoverLeadPreviewProgress": "{position} z {length}",
   "discoverLeadPreviewPlayA11y": "Odtwórz fragment z {provider}",
   "discoverLeadPreviewStopA11y": "Zatrzymaj fragment z {provider}",

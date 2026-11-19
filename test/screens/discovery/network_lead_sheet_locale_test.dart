@@ -368,7 +368,7 @@ void main() {
       for (var i = 0; i < 5; i++) {
         expect(find.byKey(ValueKey('yt-candidate-$i')), findsOneWidget);
       }
-      expect(find.text('5 Videos gefunden · wähl eins'), findsOneWidget);
+      expect(find.text('5 Videos gefunden · wähle eins'), findsOneWidget);
       expect(find.text('Treffer 96\u00A0%'), findsOneWidget);
       expect(find.text('ungenau 55\u00A0%'), findsOneWidget);
       expect(find.text('Weniger'), findsOneWidget);

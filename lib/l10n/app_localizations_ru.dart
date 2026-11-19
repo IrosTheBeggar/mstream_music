@@ -6766,7 +6766,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverLeadPreviewNone => 'Фрагмент не найден';
 
   @override
-  String get discoverLeadPreviewBusy => 'Занято — попробуйте через минуту';
+  String get discoverLeadPreviewBusy =>
+      'Сервис занят — попробуйте через минуту';
 
   @override
   String get discoverLeadPreviewUnavailable => 'Сейчас недоступно';
@@ -6915,20 +6916,20 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'У вас уже $countString в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
+          'У вас уже $countString добавления в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
       many:
-          'У вас уже $countString в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
+          'У вас уже $countString добавлений в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
       few:
-          'У вас уже $countString в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
+          'У вас уже $countString добавления в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
       one:
-          'У вас уже $countString в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
+          'У вас уже $countString добавление в ожидании или в работе — дождитесь, пока что-нибудь завершится.',
     );
     return '$_temp0';
   }
 
   @override
   String get discoverLeadYtQueueFullNoCount =>
-      'Слишком много в ожидании — дождитесь, пока что-нибудь завершится.';
+      'Слишком много добавлений в ожидании — дождитесь, пока что-нибудь завершится.';
 
   @override
   String get discoverLeadYtStartFailed =>
@@ -7042,7 +7043,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverJobYtErrLayout =>
-      'Ваша структура папок не может разместить этот трек.';
+      'Ваша структура папок не подходит для этого трека.';
 
   @override
   String get discoverJobYtErrAccountGone =>
