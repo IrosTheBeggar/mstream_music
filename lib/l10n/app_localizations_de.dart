@@ -6919,4 +6919,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverLeadYtChangeHint => 'Ziel für hinzugefügte Titel ändern';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Start nicht möglich: Wo Dateien landen, hat sich geändert';
+
+  @override
+  String get discoverCopiesAddThere => 'Dort hinzufügen';
 }

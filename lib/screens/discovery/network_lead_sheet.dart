@@ -72,7 +72,8 @@ NetworkLeadTap networkLeadTapFor(
 /// caller may pass the lead as parsed or already repaired
 /// (`lead.withRaw(lead.recommendation!)`). [seedTitle] names the song the
 /// row sounds like ("88% match to “Tidewater”"); [autoSearch] starts the
-/// YouTube search as the sheet opens (Copies' "Choose another");
+/// YouTube search as the sheet opens (Copies' "Choose another", with
+/// [avoidUrl] the upload that failed: another is picked first);
 /// [onLeadAction] runs once, on the sheet's first lead action (a preview,
 /// Play, Add to queue, Add this one: More like this pins its seed). An add
 /// the sheet started is toasted once it closes, with "View" (Copies) while
@@ -83,6 +84,7 @@ Future<void> showNetworkLeadSheet(
   required DiscoveryLead lead,
   String? seedTitle,
   bool autoSearch = false,
+  String? avoidUrl,
   VoidCallback? onLeadAction,
 }) async {
   final l = AppLocalizations.of(context);
@@ -102,6 +104,7 @@ Future<void> showNetworkLeadSheet(
       lead: lead,
       seedTitle: seedTitle,
       autoSearch: autoSearch,
+      avoidUrl: avoidUrl,
       onLeadAction: onLeadAction,
       onStarted: started.add,
     ),
@@ -145,6 +148,10 @@ class NetworkKeepSlot {
   /// another").
   final bool autoSearch;
 
+  /// The upload not to pick first: the one Copies' "Choose another" row
+  /// failed with (the block's own lookup may find a newer add, or none).
+  final String? avoidUrl;
+
   /// A lead action (Play, Add to queue, Add this one): the sheet passes the
   /// first on (More like this pins its seed).
   final VoidCallback onLeadAction;
@@ -164,6 +171,7 @@ class NetworkKeepSlot {
     required this.jobs,
     required this.lead,
     required this.autoSearch,
+    this.avoidUrl,
     required this.onLeadAction,
     required this.onStarted,
     required this.onRefused,
@@ -176,6 +184,7 @@ class NetworkLeadSheet extends StatefulWidget {
   final DiscoveryLead lead;
   final String? seedTitle;
   final bool autoSearch;
+  final String? avoidUrl;
   final VoidCallback? onLeadAction;
 
   /// An add the server took as new: toasted once the sheet closes.
@@ -187,6 +196,7 @@ class NetworkLeadSheet extends StatefulWidget {
     required this.lead,
     this.seedTitle,
     this.autoSearch = false,
+    this.avoidUrl,
     this.onLeadAction,
     this.onStarted,
   });
@@ -460,6 +470,7 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
         jobs: jobs,
         lead: _lead,
         autoSearch: widget.autoSearch,
+        avoidUrl: widget.avoidUrl,
         onLeadAction: _leadAction,
         onStarted: _started,
         onRefused: _keepRefused,

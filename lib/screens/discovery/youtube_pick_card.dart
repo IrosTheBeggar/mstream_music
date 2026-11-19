@@ -156,6 +156,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   @override
   void initState() {
     super.initState();
+    _avoid = slot.avoidUrl;
     unawaited(_restore());
     if (slot.autoSearch) unawaited(_search());
   }
@@ -174,7 +175,8 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   /// its line, unless one this card started since is newer. Opened to
   /// choose another upload ([NetworkKeepSlot.autoSearch]), a failed or
   /// cancelled one gives way to the search, and its upload is the one not
-  /// picked.
+  /// picked — unless the slot named one ([NetworkKeepSlot.avoidUrl]: the
+  /// row the user chose another for).
   Future<void> _restore() async {
     final found = await jobs.youtubeJobFor(rec);
     if (!mounted || found == null) return;
@@ -186,7 +188,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       if (slot.autoSearch &&
           (state == JobState.failed || state == JobState.cancelled)) {
         _setAside = found.id;
-        _avoid = found.choiceUrl;
+        _avoid ??= found.choiceUrl;
         if (_card == _Card.ready && !_picked) _selected = _firstPick();
       }
     });

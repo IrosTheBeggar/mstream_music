@@ -6514,4 +6514,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverLeadYtChangeHint => '更改所添加歌曲的保存位置';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved => '无法开始：文件存放位置已变';
+
+  @override
+  String get discoverCopiesAddThere => '添加到新位置';
 }

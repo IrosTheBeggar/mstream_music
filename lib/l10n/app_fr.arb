@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "Ajout de {title} depuis YouTube",
   "discoverToastAddFailedYt": "Impossible d'ajouter depuis YouTube : {reason}",
   "discoverCopiesDestChangedYt": "Impossible de démarrer : l'emplacement des fichiers a changé — ouvrez le morceau et ajoutez-le à nouveau",
-  "discoverLeadYtChangeHint": "Modifier l'emplacement des morceaux ajoutés"
+  "discoverLeadYtChangeHint": "Modifier l'emplacement des morceaux ajoutés",
+  "discoverCopiesDestChangedYtMoved": "Impossible de démarrer : l'emplacement des fichiers a changé",
+  "discoverCopiesAddThere": "Ajouter au nouvel emplacement"
 }

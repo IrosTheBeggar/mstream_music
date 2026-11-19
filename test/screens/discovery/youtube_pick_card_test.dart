@@ -182,6 +182,7 @@ void main() {
   Future<void> pumpBlock(
     WidgetTester tester, {
     bool autoSearch = false,
+    String? avoidUrl,
     double width = 390,
     double textScale = 1,
   }) async {
@@ -212,6 +213,7 @@ void main() {
                   jobs: jobs,
                   lead: lead,
                   autoSearch: autoSearch,
+                  avoidUrl: avoidUrl,
                   onLeadAction: () => leadActions++,
                   onStarted: started.add,
                   onRefused: refusedWith.add,
@@ -1062,6 +1064,35 @@ void main() {
       final handle = tester.ensureSemantics();
       expectPicked(tester, 0, true);
       handle.dispose();
+    });
+
+    // Copies' Choose another names the row's upload (NetworkKeepSlot.avoidUrl).
+    testWidgets('…the upload Copies named is set aside even when the lookup '
+        'fails', (tester) async {
+      ytJob(
+        state: 'failed',
+        choice: watch('aaaaaaaaaa1'),
+        error: 'the chosen upload could not be read: Video unavailable',
+      );
+      fake.refuse['/plugin-jobs/lookup'] = (500, 'the job store is busy');
+      await pumpBlock(tester, autoSearch: true, avoidUrl: watch('aaaaaaaaaa1'));
+      expect(fake.count('POST', '/plugin-jobs/lookup'), 1);
+      expect(shown('yt-candidate-1'), isTrue);
+      expect(shown('yt-candidate-0'), isFalse);
+    });
+
+    testWidgets("…and over a newer add's upload the lookup finds", (
+      tester,
+    ) async {
+      ytJob(
+        state: 'failed',
+        choice: watch('bbbbbbbbbb2'),
+        error: 'the chosen upload could not be read: Video unavailable',
+      );
+      await pumpBlock(tester, autoSearch: true, avoidUrl: watch('aaaaaaaaaa1'));
+      expect(shown('yt-candidate-1'), isTrue, reason: 'not the named one');
+      expect(shown('yt-candidate-0'), isFalse);
+      expect(find.text("Couldn't add"), findsNothing, reason: 'set aside');
     });
 
     testWidgets('…a live add of the song keeps its line', (tester) async {

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
+import '../../singletons/app_messenger.dart' show rootNavigatorKey;
 import '../../singletons/log_manager.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_badges.dart' show nameKey;
@@ -79,11 +80,12 @@ class CopiesSheet extends StatefulWidget {
   /// from [job]'s recommendation — with the YouTube search running
   /// ([search]: a failed pick's Choose another) or not (the View on the
   /// toast after a Retry that found where files land had moved). [context]
-  /// is the Copies sheet's, still open. Offered only for a song from the
-  /// P2P network ([isNetworkRecommendation]) while the YouTube add can
-  /// start (DiscoveryJobsController.youtubeGate ready). [reopenLead] by
-  /// default (DiscoveryKeepRoutes.reset puts it back); tests set their own,
-  /// or none — then neither is offered.
+  /// is the Copies sheet's while it is open, else the navigator it was on
+  /// (the toast outlives it). Offered only for a song from the P2P network
+  /// ([isNetworkRecommendation]) that a lead can be made of (a title),
+  /// while the YouTube add can start (DiscoveryJobsController.youtubeGate
+  /// ready). [reopenLead] by default (DiscoveryKeepRoutes.reset puts it
+  /// back); tests set their own, or none — then neither is offered.
   static void Function(
     BuildContext context,
     DiscoveryJobsController jobs,
@@ -96,9 +98,9 @@ class CopiesSheet extends StatefulWidget {
   /// network lead (DiscoveryKeepRoutes.openNetworkLead) over what Copies
   /// was opened from — no match line (a job keeps no similarity), the peer
   /// that recommended it in its source line, [search] starting the YouTube
-  /// search as it opens. The sheet sets aside the failed pick by itself
-  /// (its own lookup of the song's newest YouTube add): another upload is
-  /// the one picked first.
+  /// search as it opens, [job]'s upload the one not picked first (the
+  /// sheet's own lookup of the song's newest YouTube add sets that add's
+  /// line aside, and names the upload when this one names none).
   static void reopenLead(
     BuildContext context,
     DiscoveryJobsController jobs,
@@ -119,6 +121,7 @@ class CopiesSheet extends StatefulWidget {
       jobs,
       lead,
       autoSearch: search,
+      avoidUrl: search ? job.choiceUrl : null,
     );
   }
 
@@ -178,17 +181,32 @@ class _CopiesSheetState extends State<CopiesSheet> {
   }
 
   /// [job]'s song can be opened again as its network lead
-  /// ([CopiesSheet.openLead]).
+  /// ([CopiesSheet.openLead]) — never for a song with no title (no lead
+  /// can be made of it: the button would do nothing).
   bool _opensLead(DiscoveryJob job) =>
       CopiesSheet.openLead != null &&
       isYoutubeAdd(job) &&
       isNetworkRecommendation(job.recommendation) &&
+      DiscoveryLead.fromServerMap(job.recommendation) != null &&
       jobs.youtubeGate().ready;
 
-  void _openLead(DiscoveryJob job, {required bool search}) {
+  /// [nav] is the navigator Copies is on: a toast's View outlives the sheet
+  /// (4 s, and until closed with a screen reader on), and opens the song
+  /// over what Copies was opened from once it has gone.
+  void _openLead(
+    DiscoveryJob job, {
+    required bool search,
+    NavigatorState? nav,
+  }) {
     final open = CopiesSheet.openLead;
-    if (open == null || !mounted) return;
-    open(context, jobs, job, search: search);
+    if (open == null) return;
+    final at = mounted
+        ? context
+        : nav != null && nav.mounted
+        ? nav.context
+        : rootNavigatorKey.currentContext;
+    if (at == null || !at.mounted) return;
+    open(at, jobs, job, search: search);
   }
 
   Future<void> _cancel(DiscoveryJob job) async {
@@ -204,27 +222,76 @@ class _CopiesSheetState extends State<CopiesSheet> {
 
   /// Retry and Add again start the copy again where it ran (the sheet shows
   /// no place); one moved since starts nothing and says to retry it from
-  /// Keep a copy, which shows where files land now — a YouTube add, to open
-  /// its song and add it again (with "View" when it can be opened here).
+  /// Keep a copy, which shows where files land now. A YouTube add: with
+  /// nowhere to land now, says so; for a song from the network, says to
+  /// open it and add it again ("View" opens it); for any other (the
+  /// webapp's: no sheet on the phone hosts it), offers "Add there" — the
+  /// same add, to where files land now.
   Future<void> _retry(DiscoveryJob job) async {
     final l = AppLocalizations.of(context);
+    final nav = Navigator.of(context);
     final out = await jobs.retryWhereItRan(job);
     if (!mounted) return;
+    _answered(l, nav, job, out);
+  }
+
+  /// What a Retry or an "Add there" answered: nothing when it started,
+  /// else a toast saying why not. Its actions work once Copies has closed
+  /// too ([nav] is the navigator it was on).
+  void _answered(
+    AppLocalizations l,
+    NavigatorState nav,
+    DiscoveryJob job,
+    StartOutcome out,
+  ) {
     final err = out.error;
     if (err == null) return;
+    void toast(String m, {String? action, VoidCallback? onAction}) =>
+        KeepToast.show(
+          mounted ? context : null,
+          m,
+          action: action,
+          onAction: onAction,
+        );
+    // Where files land now: the 409's answer is drawn at once.
+    final place = jobs.destination;
     if (!out.destinationChanged) {
-      _toast(_startWords(l, job, err, out.status));
+      toast(_startWords(l, job, err, out.status));
     } else if (!isYoutubeAdd(job)) {
-      _toast(l.discoverCopiesDestChanged);
+      toast(l.discoverCopiesDestChanged);
+    } else if (place != null && place.destination == null) {
+      // Nowhere takes files now: no add can start.
+      toast(l.discoverKeepNoLibrary);
     } else if (_opensLead(job)) {
-      _toast(
+      toast(
         l.discoverCopiesDestChangedYt,
         action: l.discoverToastView,
-        onAction: () => _openLead(job, search: false),
+        onAction: () => _openLead(job, search: false, nav: nav),
+      );
+    } else if (place != null) {
+      toast(
+        l.discoverCopiesDestChangedYtMoved,
+        action: l.discoverCopiesAddThere,
+        onAction: () => unawaited(_addThere(l, nav, job)),
       );
     } else {
-      _toast(l.discoverCopiesDestChangedYt);
+      // Not known yet where files land: nowhere to offer.
+      toast(l.discoverCopiesDestChangedYtMoved);
     }
+  }
+
+  /// "Add there": [job]'s add again, to where files land now — what the
+  /// song's own sheet's Retry sends.
+  Future<void> _addThere(
+    AppLocalizations l,
+    NavigatorState nav,
+    DiscoveryJob job,
+  ) async {
+    final out = await jobs.retry(
+      job,
+      shown: ShownPlace(jobs.destination?.destination),
+    );
+    if (!out.ignored) _answered(l, nav, job, out);
   }
 
   Future<void> _clear() async {

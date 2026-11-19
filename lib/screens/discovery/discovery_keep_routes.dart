@@ -67,16 +67,17 @@ class DiscoveryKeepRoutes {
 
   /// A "From the network" row's tap on More like this, and Copies' way back
   /// to a YouTube add's song (CopiesSheet.reopenLead: "Choose another" —
-  /// [autoSearch], the YouTube search starts as it opens — and the View on
-  /// its destination toast): the network-lead sheet for [lead]
-  /// (showNetworkLeadSheet — [seedTitle] for its match line, [onLeadAction]
-  /// on its first lead action).
+  /// [autoSearch], the YouTube search starts as it opens, [avoidUrl] the
+  /// failed upload not to pick — and the View on its destination toast):
+  /// the network-lead sheet for [lead] (showNetworkLeadSheet — [seedTitle]
+  /// for its match line, [onLeadAction] on its first lead action).
   static void Function(
     BuildContext context,
     DiscoveryJobsController jobs,
     DiscoveryLead lead, {
     String? seedTitle,
     bool autoSearch,
+    String? avoidUrl,
     VoidCallback? onLeadAction,
   })
   openNetworkLead = _openNetworkLead;
@@ -108,6 +109,7 @@ class DiscoveryKeepRoutes {
     DiscoveryLead lead, {
     String? seedTitle,
     bool autoSearch = false,
+    String? avoidUrl,
     VoidCallback? onLeadAction,
   }) => unawaited(
     showNetworkLeadSheet(
@@ -116,6 +118,7 @@ class DiscoveryKeepRoutes {
       lead: lead,
       seedTitle: seedTitle,
       autoSearch: autoSearch,
+      avoidUrl: avoidUrl,
       onLeadAction: onLeadAction,
     ),
   );

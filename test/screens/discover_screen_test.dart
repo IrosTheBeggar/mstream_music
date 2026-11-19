@@ -314,6 +314,7 @@ void main() {
             lead, {
             String? seedTitle,
             bool autoSearch = false,
+            String? avoidUrl,
             VoidCallback? onLeadAction,
           }) => opened.add((
             jobs: jobs,
@@ -578,13 +579,14 @@ void main() {
       ServerManager().serverList.add(away);
       fake.addJob(paperRow(), plugin: 'youtube', state: 'running');
       // Off the home (the hub's own beat stopped), as when More like this
-      // is pushed over the player.
-      final homeJobs = CopiesHub().jobsFor(home)..discoverVisible = false;
-      final awayJobs = CopiesHub().jobsFor(away)..discoverVisible = false;
+      // is pushed over the player: the hub's controllers start out of
+      // Discover's beat, whoever makes them.
+      CopiesHub().install();
       await pumpScreen(tester);
+      final homeJobs = CopiesHub().jobsFor(home);
+      expect(homeJobs.discoverVisible, isFalse);
       expect(homeJobs.anyLive, isTrue);
       expect(homeJobs.pollBeat, DiscoveryJobsController.kDiscoverBeat);
-      expect(awayJobs.pollBeat, isNull);
 
       fakeAudio.mediaItem.add(
         playing(_lighthouse, 'Lighthouse', server: 'away'),
@@ -593,6 +595,8 @@ void main() {
       await frames(tester);
       expect(fetched.last, ('away', _lighthouse, false));
       expect(homeJobs.pollBeat, isNull, reason: 'the old hold let go');
+      // The screen made away's controller.
+      final awayJobs = CopiesHub().jobsFor(away);
       expect(awayJobs.anyLive, isTrue);
       expect(awayJobs.pollBeat, DiscoveryJobsController.kDiscoverBeat);
 

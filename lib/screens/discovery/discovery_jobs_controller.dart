@@ -207,6 +207,10 @@ class DiscoveryJobsController extends ChangeNotifier
   /// Live copies a browse page's lookup found ([lookup]), by id: polled for
   /// like the list's, so their endings are news (the toasts) too.
   final Map<int, DiscoveryJob> _pageLive = {};
+
+  /// Live jobs a lookup found that the list does not carry are being asked
+  /// for one by one ([_askUnlisted]).
+  bool _askingUnlisted = false;
   Future<void>? _regating;
   bool _discoverVisible = true;
   bool _foreground = true;
@@ -549,8 +553,8 @@ class DiscoveryJobsController extends ChangeNotifier
 
   /// What a page lookup said of the jobs it names: a live one is followed
   /// (and kept in step with the list), one seen live before and finished
-  /// now is news.
-  void _learn(List<DiscoveryJob> found) {
+  /// now is news. True when what is followed changed.
+  bool _learn(List<DiscoveryJob> found) {
     final before = [..._pageLive.values];
     var changed = false;
     for (final job in found) {
@@ -563,6 +567,33 @@ class DiscoveryJobsController extends ChangeNotifier
     }
     _news(finishedSince(before, found));
     if (changed) _schedule();
+    return changed;
+  }
+
+  /// Live jobs a lookup found that the list does not carry (past its 100
+  /// newest): each asked for by id (GET /plugin-jobs/:id), so its ending
+  /// is news and the poll stops once nothing is live — no lookup asks for
+  /// them again by itself (a reopened lead's YouTube add). One gone (404)
+  /// is let go.
+  Future<void> _askUnlisted(List<int> ids) async {
+    _askingUnlisted = true;
+    final found = <DiscoveryJob>[];
+    var dropped = false;
+    try {
+      for (final id in ids) {
+        try {
+          found.add(await api.job(id));
+        } on DiscoveryPluginsException catch (e) {
+          if (e.status == 404) dropped |= _pageLive.remove(id) != null;
+        }
+        if (_disposed) return;
+      }
+    } finally {
+      _askingUnlisted = false;
+    }
+    final changed = _learn(found);
+    if (dropped) _schedule();
+    if (changed || dropped) _notify();
   }
 
   BadgeRow? rowOf(DiscoveryLead lead) {
@@ -940,6 +971,13 @@ class DiscoveryJobsController extends ChangeNotifier
     if (done.any(isDiscoverCopy) || (unlisted && !lookingUp)) {
       unawaited(refreshLookups());
     }
+    final unlistedFound = [
+      for (final id in _pageLive.keys)
+        if (!listed.contains(id)) id,
+    ];
+    if (unlistedFound.isNotEmpty && !_askingUnlisted) {
+      unawaited(_askUnlisted(unlistedFound));
+    }
   }
 
   /// Jobs seen live and now finished: "Just finished", and the toasts — once
@@ -958,9 +996,15 @@ class DiscoveryJobsController extends ChangeNotifier
   final Set<int> _told = {};
 
   /// [job] as last heard of: the list's copy (its start's answer, a poll's),
-  /// else [job] itself.
+  /// else a lookup's (one the list does not carry, followed while live, and
+  /// as it finished), else [job] itself.
   DiscoveryJob latest(DiscoveryJob job) {
     for (final j in jobs) {
+      if (j.id == job.id) return j;
+    }
+    final followed = _pageLive[job.id];
+    if (followed != null) return followed;
+    for (final j in _finished) {
       if (j.id == job.id) return j;
     }
     return job;

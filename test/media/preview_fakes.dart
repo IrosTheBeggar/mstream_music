@@ -42,8 +42,15 @@ class FakePreviewPort implements PreviewPort {
   @override
   bool casting;
 
-  /// Every read or call the preview player made.
+  /// The app is in front ([hideApp] clears it, [showApp] sets it again).
+  bool visible = true;
+
+  /// Every read or call of the song's side (the handler, the cast manager)
+  /// the preview player made.
   int touches = 0;
+
+  /// Every read of the world around it (the session, the app's lifecycle).
+  int outsideTouches = 0;
 
   /// The preview player's own pause and play of the song.
   int pauses = 0;
@@ -66,6 +73,11 @@ class FakePreviewPort implements PreviewPort {
 
   T _touch<T>(T value) {
     touches++;
+    return value;
+  }
+
+  T _outside<T>(T value) {
+    outsideTouches++;
     return value;
   }
 
@@ -95,13 +107,16 @@ class FakePreviewPort implements PreviewPort {
 
   @override
   Stream<AudioInterruptionEvent> get interruptions =>
-      _touch(_interruptions.stream);
+      _outside(_interruptions.stream);
 
   @override
-  Stream<void> get becomingNoisy => _touch(_noisy.stream);
+  Stream<void> get becomingNoisy => _outside(_noisy.stream);
 
   @override
-  Stream<void> get appHidden => _touch(_hidden.stream);
+  Stream<void> get appHidden => _outside(_hidden.stream);
+
+  @override
+  bool get appVisible => _outside(visible);
 
   @override
   Future<void> pauseSong() async {
@@ -148,6 +163,10 @@ class FakePreviewPort implements PreviewPort {
   /// after a call).
   void startsByItself() => _playing.add(true);
 
+  /// The song's flag dropping with no command (a cast renderer's poll
+  /// answering PAUSED after a stale PLAYING).
+  void pausedByItself() => _playing.add(false);
+
   void changeTrack(String? key) => _key.add(key);
 
   void changeCastTarget(String id, {bool casting = true}) {
@@ -163,7 +182,12 @@ class FakePreviewPort implements PreviewPort {
 
   void becomeNoisy() => _noisy.add(null);
 
-  void hideApp() => _hidden.add(null);
+  void hideApp() {
+    visible = false;
+    _hidden.add(null);
+  }
+
+  void showApp() => visible = true;
 }
 
 class FakePreviewClip implements PreviewClip {
@@ -178,12 +202,16 @@ class FakePreviewClip implements PreviewClip {
   /// The next load fails with this.
   Object? loadError;
 
+  /// The next play fails with this (iOS: the session would not activate).
+  Object? playError;
+
   final List<Completer<void>> _pending = [];
   int playCalls = 0;
   int stopCalls = 0;
   bool playing = false;
   bool disposed = false;
 
+  final BehaviorSubject<bool> _playing = BehaviorSubject<bool>.seeded(false);
   final StreamController<Duration> _position =
       StreamController<Duration>.broadcast();
   final BehaviorSubject<Duration?> _duration =
@@ -213,10 +241,24 @@ class FakePreviewClip implements PreviewClip {
   void failLoad(Object error) => _pending.removeAt(0).completeError(error);
 
   @override
-  void play() {
+  Future<void> play() {
     log.add('clip.play');
     playCalls++;
     playing = true;
+    _playing.add(true);
+    final error = playError;
+    if (error != null) {
+      playError = null;
+      return Future<void>.error(error);
+    }
+    return Future<void>.value();
+  }
+
+  /// The system refused the audio with no error, as just_audio does when
+  /// Android's focus request fails: the playing flag goes back off.
+  void refuse() {
+    playing = false;
+    _playing.add(false);
   }
 
   // As just_audio's: a stop interrupts a load still in flight.
@@ -232,6 +274,7 @@ class FakePreviewClip implements PreviewClip {
     log.add('clip.stop');
     stopCalls++;
     playing = false;
+    _playing.add(false);
     _interruptLoads();
   }
 
@@ -240,6 +283,7 @@ class FakePreviewClip implements PreviewClip {
     log.add('clip.dispose');
     disposed = true;
     playing = false;
+    _playing.add(false);
     _interruptLoads();
   }
 
@@ -253,6 +297,9 @@ class FakePreviewClip implements PreviewClip {
   /// The clip broke while playing (an expired CDN address, a dropped
   /// connection).
   void breakDown([Object error = 'Source error']) => _errors.add(error);
+
+  @override
+  Stream<bool> get playingStream => _playing.stream;
 
   @override
   Stream<Duration> get position => _position.stream;
@@ -291,6 +338,13 @@ class FakePreviewPlayer implements PreviewPlayer {
   final List<PreviewEnd> ends = [];
   PreviewPlayOutcome outcome = PreviewPlayOutcome.playing;
 
+  /// As the real player's: every end but a clip's own (completed, failed).
+  @override
+  int endCount = 0;
+
+  @override
+  bool appVisible = true;
+
   @override
   final Duration loadTimeout = const Duration(seconds: 15);
 
@@ -319,6 +373,9 @@ class FakePreviewPlayer implements PreviewPlayer {
   @override
   Future<void> end(PreviewEnd reason) async {
     ends.add(reason);
+    if (reason != PreviewEnd.completed && reason != PreviewEnd.failed) {
+      endCount++;
+    }
     emit(reason == PreviewEnd.failed
         ? PreviewClipState(
             provider: _state.value.provider, phase: PreviewPhase.failed)

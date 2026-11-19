@@ -7068,4 +7068,11 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get discoverLeadYtChangeHint =>
       'Изменить, куда сохраняются добавленные треки';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Не удалось начать: место для файлов изменилось';
+
+  @override
+  String get discoverCopiesAddThere => 'Добавить туда';
 }

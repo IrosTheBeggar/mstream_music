@@ -243,10 +243,173 @@ void main() {
         expect(r.clip.playing, isTrue);
 
         r.port.startsByItself(); // a park pick landing, the end of a call
-        async.flushMicrotasks();
+        async.elapse(PreviewPlayer.castStartWindow);
         expect(r.clip.playing, isFalse);
         expect(r.state, PreviewClipState.idle);
         expect(r.port.plays, 0);
+      });
+    });
+
+    test('the song starting by itself on the phone ends the clip at once', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.startsByItself();
+        async.flushMicrotasks();
+        expect(r.clip.playing, isFalse);
+        expect(r.port.plays, 0);
+      });
+    });
+
+    // DLNA's 1 s poll (and a late Chromecast status) can say PLAYING just
+    // after the flow's own pause took: a cast's flag back on is believed
+    // only when it still says so once the window has passed.
+    test('a cast flickering back to playing: the clip plays on, and the '
+        'cast resumes after it', () {
+      fakeAsync((async) {
+        final r = _Rig(castTarget: 'tv-1', casting: true);
+        r.play('deezer');
+        async.flushMicrotasks();
+        expect(r.port.playingNow, isFalse);
+
+        r.port.startsByItself(); // a poll answered before Pause applied
+        async.elapse(const Duration(milliseconds: 900));
+        r.port.pausedByItself(); // the next poll: PAUSED
+        async.elapse(PreviewPlayer.castStartWindow);
+        expect(r.clip.playing, isTrue);
+        expect(r.state.phase, PreviewPhase.playing);
+
+        r.clip.finish();
+        async.flushMicrotasks();
+        expect(r.port.plays, 1);
+      });
+    });
+
+    test('a cast that stays playing past the window: the song started', () {
+      fakeAsync((async) {
+        final r = _Rig(castTarget: 'tv-1', casting: true);
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.startsByItself(); // the TV's own remote
+        async.elapse(
+            PreviewPlayer.castStartWindow - const Duration(milliseconds: 100));
+        expect(r.clip.playing, isTrue, reason: 'still inside the window');
+        async.elapse(const Duration(milliseconds: 100));
+        expect(r.clip.playing, isFalse);
+        expect(r.state, PreviewClipState.idle);
+        expect(r.port.plays, 0);
+        expect(r.port.listeners, 0);
+      });
+    });
+
+    test('Play pressed while casting ends the clip at once', () {
+      fakeAsync((async) {
+        final r = _Rig(castTarget: 'tv-1', casting: true);
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.userPlay();
+        async.flushMicrotasks();
+        expect(r.clip.playing, isFalse);
+        expect(r.port.plays, 0);
+      });
+    });
+  });
+
+  // PreviewPlayer.end decides from what the song is when the flow ends, not
+  // when the hold was taken: each of these fails if one of resumesSong's
+  // arguments is read from the hold (or the song taken as never playing),
+  // or if a change the flow saw does not drop the hold.
+  group('the end reads the song as it is then', () {
+    test('a pause right after the clip ended: no resume', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        // In this order: the pause is numbered after the end was asked,
+        // before it read the song.
+        r.clip.finish();
+        r.port.userPause();
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test('the song already playing again as the clip ends: no second start',
+        () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.clip.finish();
+        r.port.startsByItself();
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test('a cast target changed and changed back: no resume', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.changeCastTarget('tv-1');
+        async.flushMicrotasks();
+        r.port.changeCastTarget(CastTarget.localId, casting: false);
+        async.flushMicrotasks();
+        r.clip.finish();
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test('a track changed and changed back: no resume', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.changeTrack('home\u0000/Music/Other.mp3');
+        async.flushMicrotasks();
+        r.port.changeTrack(kFakeSongKey);
+        async.flushMicrotasks();
+        r.clip.finish();
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test('a cast target change landing as the clip ends: no resume', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.clip.finish();
+        r.port.changeCastTarget('tv-1');
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test('a track change landing as the clip ends: no resume', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.clip.finish();
+        r.port.changeTrack('home\u0000/Music/Other.mp3');
+        async.flushMicrotasks();
+        expect(r.port.plays, 0);
+      });
+    });
+
+    test("a call's end alone ends nothing", () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.interruptionEnds();
+        async.flushMicrotasks();
+        expect(r.clip.playing, isTrue);
       });
     });
   });
@@ -330,6 +493,157 @@ void main() {
         expect(r.port.plays, 1);
       });
     });
+
+    test('a call while casting: the clip stops and the cast stays paused', () {
+      fakeAsync((async) {
+        final r = _Rig(castTarget: 'tv-1', casting: true);
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.interrupt();
+        async.flushMicrotasks();
+        expect(r.clip.playing, isFalse);
+        expect(r.port.plays, 0, reason: 'on purpose: see resumesSong');
+      });
+    });
+  });
+
+  // Watched from the start of a play, not once the clip has loaded: what
+  // happens while it loads ends the flow before anything sounds — the song
+  // never paused, no clip from the speaker.
+  group('the outside world while the clip loads', () {
+    final cases = <String, void Function(_Rig r)>{
+      'the app goes to the background': (r) => r.port.hideApp(),
+      // The handler pauses the song for it too.
+      'the headphones come out': (r) => r
+        ..port.becomeNoisy()
+        ..port.userPause(),
+      'a call': (r) => r.port.interrupt(),
+      'a store link opens': (r) => r.end(PreviewEnd.leftApp),
+    };
+    for (final MapEntry(key: what, value: happen) in cases.entries) {
+      test('$what: nothing plays, the song is never paused', () {
+        fakeAsync((async) {
+          final r = _Rig();
+          r.next.holdLoads = true;
+          r.play('deezer');
+          async.flushMicrotasks();
+          happen(r);
+          async.flushMicrotasks();
+          expect(r.state, PreviewClipState.idle, reason: what);
+          expect(r.clip.pendingLoads, 0, reason: 'the end abandoned it');
+          expect(r.outcomes, [PreviewPlayOutcome.superseded], reason: what);
+          expect(r.port.pauses, 0, reason: what);
+          expect(r.port.plays, 0, reason: what);
+          expect(r.clip.playCalls, 0, reason: what);
+          expect(r.port.listeners, 0, reason: what);
+        });
+      });
+    }
+
+    test('a duck while it loads changes nothing', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.next.holdLoads = true;
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.interrupt(AudioInterruptionType.duck);
+        async.flushMicrotasks();
+        r.clip.finishLoad();
+        async.flushMicrotasks();
+        expect(r.outcomes, [PreviewPlayOutcome.playing]);
+        expect(r.clip.playing, isTrue);
+      });
+    });
+
+    test('the user pausing the song while it loads: the clip still plays',
+        () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.next.holdLoads = true;
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.userPause();
+        async.flushMicrotasks();
+        r.clip.finishLoad();
+        async.flushMicrotasks();
+        expect(r.outcomes, [PreviewPlayOutcome.playing]);
+        expect(r.clip.playing, isTrue);
+        expect(r.port.pauses, 0, reason: 'nothing left to pause');
+      });
+    });
+
+    test('already in the background: no clip is made, nothing plays', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.port.visible = false;
+        r.play('deezer');
+        async.flushMicrotasks();
+        expect(r.outcomes, [PreviewPlayOutcome.superseded]);
+        expect(r.clips, isEmpty);
+        expect(r.port.pauses, 0);
+        expect(r.state, PreviewClipState.idle);
+        expect(r.port.listeners, 0);
+      });
+    });
+
+    test('in the background once it loaded (no hide was heard): nothing '
+        'plays', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.next.holdLoads = true;
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.visible = false;
+        r.clip.finishLoad();
+        async.flushMicrotasks();
+        expect(r.outcomes, [PreviewPlayOutcome.superseded]);
+        expect(r.port.pauses, 0);
+        expect(r.clip.playCalls, 0);
+      });
+    });
+
+    test('a switch in the background resumes the song the first clip '
+        'paused', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.visible = false;
+        r.play('itunes');
+        async.flushMicrotasks();
+        expect(r.outcomes.last, PreviewPlayOutcome.superseded);
+        expect(r.port.plays, 1);
+        expect(r.clip.playing, isFalse);
+      });
+    });
+
+    test('endCount: every end asked for, a flow or none, but a clip\'s own',
+        () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.end(PreviewEnd.leftApp); // nothing playing
+        async.flushMicrotasks();
+        expect(r.player.endCount, 1);
+
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.clip.finish();
+        async.flushMicrotasks();
+        expect(r.player.endCount, 1, reason: 'it completed');
+
+        r.clip.loadError = Exception('gone');
+        r.play('deezer');
+        async.flushMicrotasks();
+        expect(r.outcomes.last, PreviewPlayOutcome.failed);
+        expect(r.player.endCount, 1, reason: 'it failed');
+
+        r.play('deezer');
+        async.flushMicrotasks();
+        r.port.hideApp();
+        async.flushMicrotasks();
+        expect(r.player.endCount, 2);
+      });
+    });
   });
 
   group('switching and stopping', () {
@@ -351,6 +665,8 @@ void main() {
         r.clip.finish();
         async.flushMicrotasks();
         expect(r.port.plays, 1);
+        expect(r.port.listeners, 0,
+            reason: 'the switch did not leave a second watch');
       });
     });
 
@@ -456,6 +772,7 @@ void main() {
         async.flushMicrotasks();
         expect(r.outcomes, [PreviewPlayOutcome.failed]);
         expect(r.port.touches, 0);
+        expect(r.port.listeners, 0);
         expect(r.port.playingNow, isTrue);
         expect(
             r.state,
@@ -517,6 +834,36 @@ void main() {
       });
     });
 
+    test('a clip the system will not play (Android: no audio focus, no '
+        'error): it fails and the song resumes', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('deezer');
+        async.flushMicrotasks();
+        expect(r.state.phase, PreviewPhase.playing);
+        r.clip.refuse();
+        async.flushMicrotasks();
+        expect(r.state,
+            const PreviewClipState(provider: 'deezer', phase: PreviewPhase.failed));
+        expect(r.port.plays, 1);
+        expect(r.port.listeners, 0);
+      });
+    });
+
+    test('a clip whose play throws (iOS: the session would not activate) '
+        'fails', () {
+      fakeAsync((async) {
+        final r = _Rig(songPlaying: false);
+        r.next.playError = Exception('session activation failed');
+        r.play('itunes');
+        async.flushMicrotasks();
+        expect(r.outcomes, [PreviewPlayOutcome.playing]);
+        expect(r.state,
+            const PreviewClipState(provider: 'itunes', phase: PreviewPhase.failed));
+        expect(r.port.plays, 0, reason: 'nothing was held');
+      });
+    });
+
     test('only http(s) clips: anything else fails without a player', () {
       fakeAsync((async) {
         final r = _Rig();
@@ -567,6 +914,7 @@ void main() {
         }
         async.flushMicrotasks();
         expect(r.port.touches, 0);
+        expect(r.port.outsideTouches, 0);
         expect(r.clips, isEmpty);
         expect(r.log, isEmpty);
         expect(r.state, PreviewClipState.idle);
@@ -627,6 +975,17 @@ void main() {
         await PreviewPlayer().end(reason);
       }
       expect(PreviewPlayer().state.value, PreviewClipState.idle);
+    });
+
+    // just_audio makes a position pipeline (and its timer) per positionStream
+    // asked for once the last listener left, and stops none of them before
+    // the player's dispose: every clip played in one sheet would add one.
+    test('the just_audio clip keeps one position stream for its player',
+        () async {
+      final clip = JustAudioPreviewClip();
+      final first = clip.position;
+      await first.listen((_) {}).cancel();
+      expect(clip.position, first);
     });
 
     test('FakePreviewPlayer.install() swaps it for this test only', () {

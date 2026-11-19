@@ -6928,4 +6928,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get discoverLeadYtChangeHint =>
       'Modifier l\'emplacement des morceaux ajoutés';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Impossible de démarrer : l\'emplacement des fichiers a changé';
+
+  @override
+  String get discoverCopiesAddThere => 'Ajouter au nouvel emplacement';
 }

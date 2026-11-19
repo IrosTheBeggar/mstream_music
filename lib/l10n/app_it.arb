@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "Aggiunta di {title} da YouTube",
   "discoverToastAddFailedYt": "Aggiunta da YouTube non riuscita: {reason}",
   "discoverCopiesDestChangedYt": "Impossibile avviare: la destinazione dei file è cambiata — apri il brano e aggiungilo di nuovo",
-  "discoverLeadYtChangeHint": "Cambia dove vanno i brani aggiunti"
+  "discoverLeadYtChangeHint": "Cambia dove vanno i brani aggiunti",
+  "discoverCopiesDestChangedYtMoved": "Impossibile avviare: la destinazione dei file è cambiata",
+  "discoverCopiesAddThere": "Aggiungi lì"
 }

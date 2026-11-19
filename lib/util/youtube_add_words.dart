@@ -183,14 +183,14 @@ final RegExp _layout = _i(r'layout rendered an unusable path|no longer validates
 final RegExp _notClose = _i(r'^Nothing matched closely enough \(best score ([\d.]+)');
 final RegExp _noResults = _i(r'^YouTube returned no results for “(.*)”');
 final RegExp _pickLive = _i(r'chosen upload is a live stream');
-final RegExp _capMb = _i(r'(\d+)\s*MB size cap');
 
 /// A failed YouTube add's [error] (the job's `error`, the server's
 /// sentence) read into its kind.
 ///
 /// The two sentences that wrap yt-dlp's own words — "YouTube download
 /// failed: …" and "the chosen upload could not be read: …" — are read
-/// first, by what the wrapped words say (yt-dlp.js failureReason), so a
+/// first, by what the wrapped words say (yt-dlp.js failureReason; for a
+/// download, only an extractor's line, as errorLineReason reads it), so a
 /// video title or a yt-dlp message can never pass for one of the server's
 /// own reasons; the rest by the server's sentences, first match wins.
 YoutubeFailure youtubeFailureOf(String? error) {
@@ -231,15 +231,40 @@ YoutubeFailure youtubeFailureOf(String? error) {
   return const YoutubeFailure(YoutubeFailureKind.other);
 }
 
+// startDownload's own sentences (src/util/yt-dlp.js), read from their
+// start: some go on with a file name.
+final RegExp _capStopped = _i(r'^the download passed the (\d+) MB size cap');
+final RegExp _capRefused =
+    _i(r'^the file is larger than the(?: (\d+) MB)? size cap');
+final RegExp _clockStopped = _i(r'^the download took longer than');
+final RegExp _liveRefused = _i(r'^it is a live stream, which is not downloaded');
+final RegExp _errorPrefix = _i(r'^ERROR:\s*');
+final RegExp _extractorSaid = RegExp(r'^\[[^\]\s]+\]\s+[^\s:]+:\s+(.+)$');
+
 /// "YouTube download failed: …": the words after the colon are startDownload's
-/// own refusals (the size cap, the 30-minute clock, a live stream) or
-/// yt-dlp's error line.
+/// own sentences (the size caps, the 30-minute clock, a live stream) or
+/// yt-dlp's error line. That line's reason is read only when an extractor
+/// said it — `[youtube] <id>: <YouTube's words>`, as yt-dlp.js
+/// errorLineReason reads it: any other line can carry the staged file's
+/// name, and a title would pass for a reason (a "No Copyright Music" upload
+/// that hit a full disk is no video YouTube refused). Everything else —
+/// a file already in the way included — is a refusal.
 YoutubeFailure _downloadFailure(String inner) {
-  switch (_ytdlpReason(inner)) {
+  final t = inner.trim();
+  final cap = _capStopped.firstMatch(t) ?? _capRefused.firstMatch(t);
+  if (cap != null) {
+    final mb = cap[1];
+    return YoutubeFailure(YoutubeFailureKind.tooBig,
+        sizeMb: mb == null ? null : int.tryParse(mb));
+  }
+  if (_clockStopped.hasMatch(t)) {
+    return const YoutubeFailure(YoutubeFailureKind.tooLong);
+  }
+  if (_liveRefused.hasMatch(t)) return const YoutubeFailure(YoutubeFailureKind.live);
+  final said = _extractorSaid.firstMatch(t.replaceFirst(_errorPrefix, ''));
+  switch (said == null ? null : _ytdlpReason(said[1]!)) {
     case 'too-big':
-      final mb = _capMb.firstMatch(inner);
-      return YoutubeFailure(YoutubeFailureKind.tooBig,
-          sizeMb: mb == null ? null : int.tryParse(mb[1]!));
+      return const YoutubeFailure(YoutubeFailureKind.tooBig);
     case 'too-long':
       return const YoutubeFailure(YoutubeFailureKind.tooLong);
     case 'live':

@@ -178,6 +178,10 @@ class NetworkPreviews extends ChangeNotifier {
   }
 
   Future<void> _ask(String name) async {
+    // An end asked for while it is looked up (a store link opened, the app
+    // sent to the background, a call, the song started) means quiet: what
+    // it finds then waits for a press.
+    final ends = _player.endCount;
     _set(name, _Lookup.lookingUp);
     PluginPreview? found;
     try {
@@ -203,8 +207,11 @@ class NetworkPreviews extends ChangeNotifier {
     }
     _found[name] = found;
     _set(name, _Lookup.found);
-    // Pressed something else since (or stopped): this one waits.
-    if (_wanted == name) await _play(name, found);
+    // Pressed something else since (or stopped), the preview player ended
+    // since, or the app is in the background: this one waits.
+    if (_wanted == name && _player.endCount == ends && _player.appVisible) {
+      await _play(name, found);
+    }
   }
 
   Future<void> _play(String name, PluginPreview preview) async {

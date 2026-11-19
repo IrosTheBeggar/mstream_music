@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "YouTube から {title} を追加中",
   "discoverToastAddFailedYt": "YouTube から追加できませんでした: {reason}",
   "discoverCopiesDestChangedYt": "開始できませんでした：保存先が変わりました — 曲を開いてもう一度追加してください",
-  "discoverLeadYtChangeHint": "追加した曲の保存先を変更"
+  "discoverLeadYtChangeHint": "追加した曲の保存先を変更",
+  "discoverCopiesDestChangedYtMoved": "開始できませんでした：保存先が変わりました",
+  "discoverCopiesAddThere": "新しい保存先に追加"
 }

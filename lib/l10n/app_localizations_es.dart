@@ -6912,4 +6912,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get discoverLeadYtChangeHint =>
       'Cambiar dónde se guardan las canciones añadidas';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'No se pudo iniciar: cambió dónde se guardan los archivos';
+
+  @override
+  String get discoverCopiesAddThere => 'Añadir allí';
 }

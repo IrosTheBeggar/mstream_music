@@ -312,8 +312,8 @@ const Set<String> _recommendationSources = {'p2p', 'federation', 'local'};
 ///     (dashes and spaces dropped and upper-cased first — the spelling a
 ///     tag gives it, and the one a catalogue's ISRC lookup matches; not
 ///     twelve letters and digits then), `recordingMbid` and
-///     `releaseGroupMbid` (not text ≤ 64), `duration` (not a number ≥ 0 —
-///     a numeric string is made one).
+///     `releaseGroupMbid` (not text ≤ 64), `duration` (not a safe number
+///     ≥ 0 — ≤ 2^53−1, as JS reads it; a numeric string is made one).
 ///   * Unsendable: `artist` or `title` not text ≤ 512, `exportId` not text
 ///     ≤ 256, `filepath` not text ≤ 2048, a `source` the schema does not
 ///     know, a `peer` that is not an object or whose `endpointId` / `name`
@@ -403,10 +403,11 @@ int? _catalogueYear(dynamic v) {
   return year >= 1000 && year <= 9999 ? year : null;
 }
 
-/// A length in seconds the schema takes: a number ≥ 0.
+/// A length in seconds the schema takes: a number ≥ 0 that JS reads
+/// safely (Joi refuses anything past Number.MAX_SAFE_INTEGER).
 num? _catalogueLength(dynamic v) {
   final n = _number(v);
-  return n != null && n >= 0 ? n : null;
+  return n != null && n >= 0 && n <= 9007199254740991 ? n : null;
 }
 
 final RegExp _isrcShape = RegExp(r'^[A-Z0-9]{12}$');

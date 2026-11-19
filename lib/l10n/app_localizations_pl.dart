@@ -7056,4 +7056,11 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get discoverLeadYtChangeHint =>
       'Zmień miejsce zapisu dodanych utworów';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Nie udało się rozpocząć: miejsce zapisu plików się zmieniło';
+
+  @override
+  String get discoverCopiesAddThere => 'Dodaj tam';
 }

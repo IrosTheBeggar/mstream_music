@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "Dodawanie „{title}” z YouTube",
   "discoverToastAddFailedYt": "Nie udało się dodać z YouTube: {reason}",
   "discoverCopiesDestChangedYt": "Nie udało się rozpocząć: miejsce zapisu plików się zmieniło — otwórz utwór i dodaj go ponownie",
-  "discoverLeadYtChangeHint": "Zmień miejsce zapisu dodanych utworów"
+  "discoverLeadYtChangeHint": "Zmień miejsce zapisu dodanych utworów",
+  "discoverCopiesDestChangedYtMoved": "Nie udało się rozpocząć: miejsce zapisu plików się zmieniło",
+  "discoverCopiesAddThere": "Dodaj tam"
 }

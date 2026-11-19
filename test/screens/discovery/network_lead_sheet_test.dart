@@ -25,6 +25,8 @@ import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/discovery_jobs_controller.dart';
 import 'package:mstream_music/screens/discovery/discovery_keep_routes.dart';
 import 'package:mstream_music/screens/discovery/elsewhere_sheet.dart';
+import 'package:mstream_music/screens/discovery/keep_copy_ui.dart'
+    show KeepRing;
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/screens/discovery/network_lead_sheet.dart';
 import 'package:mstream_music/screens/discovery/network_preview_rows.dart';
@@ -616,6 +618,103 @@ void main() {
       expect(toasts, ["Couldn't open that link"]);
     });
 
+    testWidgets('while its clip loads: a ring, read as Stop, and a press '
+        'stops it', (tester) async {
+      final semantics = tester.ensureSemantics();
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      preview.emit(
+        const PreviewClipState(provider: 'deezer', phase: PreviewPhase.loading),
+      );
+      await frames(tester, 2);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('lead-preview-deezer')),
+          matching: find.byType(KeepRing),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^Stop the Deezer preview')),
+        findsOneWidget,
+      );
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.ends, [PreviewEnd.stopped]);
+      expect(preview.plays, hasLength(1));
+      semantics.dispose();
+    });
+
+    // A lookup can outlive what tells the sheet to keep quiet: what it
+    // found then waits for a press. The real player ends a playing clip for
+    // a call or the output dropping (preview_player_test); here the fake
+    // stands in for those ends.
+    final quiet = <String, (bool, Future<void> Function(WidgetTester))>{
+      'the app went to the background': (
+        false,
+        (_) async => preview.appVisible = false,
+      ),
+      'a call': (true, (_) => preview.end(PreviewEnd.interrupted)),
+      'the output dropped': (true, (_) => preview.end(PreviewEnd.outputLost)),
+      'a store link opened': (
+        false,
+        (t) async {
+          await t.tap(find.byTooltip('Open in Apple Music'));
+          await frames(t);
+        },
+      ),
+    };
+    for (final MapEntry(key: what, value: (playing, happen)) in quiet.entries) {
+      testWidgets('a lookup that outlives $what plays nothing it found: the '
+          'row waits for a press', (tester) async {
+        fake.previews['deezer'] = deezerClip();
+        fake.previews['itunes'] = itunesClip();
+        await pumpSheet(tester);
+        await tapKey(tester, 'lead-preview-itunes');
+        if (!playing) await tapKey(tester, 'lead-preview-itunes'); // stopped
+        fake.resolveGates['deezer'] = Completer<void>();
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(find.text('Looking up…'), findsOneWidget);
+
+        await happen(tester);
+        fake.resolveGates.remove('deezer')!.complete();
+        await frames(tester);
+        expect([for (final p in preview.plays) p.provider], ['itunes']);
+        expect(
+          tester
+              .widget<Text>(
+                find.byKey(const ValueKey('lead-preview-line-deezer')),
+              )
+              .data,
+          'Paper Satellites · The Quiet Assembly',
+          reason: 'found, not playing',
+        );
+
+        preview.appVisible = true;
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(
+          [for (final p in preview.plays) p.provider],
+          ['itunes', 'deezer'],
+        );
+        expect(fake.resolves('deezer'), hasLength(1));
+      });
+    }
+
+    testWidgets('a lookup that outlives the other clip ending on its own '
+        'still plays', (tester) async {
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-itunes');
+      fake.resolveGates['deezer'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-deezer');
+      await preview.end(PreviewEnd.completed);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect([for (final p in preview.plays) p.provider], ['itunes', 'deezer']);
+    });
+
     testWidgets('a preview plug-in other than Deezer or iTunes goes by its '
         'title', (tester) async {
       fake.listing = {
@@ -889,8 +988,15 @@ void main() {
     ) async {
       final opened = <String>[];
       DiscoveryKeepRoutes.openNetworkLead =
-          (_, _, lead, {seedTitle, autoSearch = false, onLeadAction}) =>
-              opened.add('${lead.title} $seedTitle $autoSearch');
+          (
+            _,
+            _,
+            lead, {
+            seedTitle,
+            autoSearch = false,
+            avoidUrl,
+            onLeadAction,
+          }) => opened.add('${lead.title} $seedTitle $autoSearch');
       await pumpSheet(tester, viaRoute: true);
       expect(opened, ['Paper Satellites Tidewater false']);
       expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);

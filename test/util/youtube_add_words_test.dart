@@ -109,6 +109,31 @@ void main() {
           const YoutubeFailure(YoutubeFailureKind.refused));
     });
 
+    // As yt-dlp.js errorLineReason: a failed run's line gives a reason only
+    // when an extractor said it ("[youtube] <id>: …") — any other line can
+    // carry the staged file's name (--restrict-filenames keeps a title's
+    // words), and a title would pass for one.
+    test('"YouTube download failed": a reason only from an extractor\'s line, never from a file name', () {
+      expect(f("YouTube download failed: unable to open for writing: [Errno 28] No space left on device: '/x/No_Copyright_Music.webm.part'"),
+          const YoutubeFailure(YoutubeFailureKind.refused));
+      expect(f("YouTube download failed: unable to write data: [Errno 28] No space left on device: '/srv/staging/42/No_Copyright_Music_-_Lofi_Beat.webm.part'"),
+          const YoutubeFailure(YoutubeFailureKind.refused));
+      expect(f("YouTube download failed: ERROR: unable to rename file: [Errno 2] No such file or directory: '/x/Members-only_Session.webm.part'"),
+          const YoutubeFailure(YoutubeFailureKind.refused));
+      expect(f("YouTube download failed: Postprocessing: Conversion failed! '/x/Account_Terminated_-_Remix.webm'"),
+          const YoutubeFailure(YoutubeFailureKind.refused));
+      expect(f('YouTube download failed: a file with that name already exists in this folder (Members-only_Session.mp3)'),
+          const YoutubeFailure(YoutubeFailureKind.refused));
+      expect(f('YouTube download failed: [youtube] abc123: Video unavailable. This video has been removed'),
+          const YoutubeFailure(YoutubeFailureKind.unreadable));
+      expect(f('YouTube download failed: [youtube] dQw4w9WgXcQ: Video unavailable'),
+          const YoutubeFailure(YoutubeFailureKind.unreadable));
+      expect(f('YouTube download failed: [youtube] abc: This live event will begin in 3 hours.'),
+          const YoutubeFailure(YoutubeFailureKind.live));
+      expect(f('YouTube download failed: [youtube] abc: File is larger than max-filesize (1.2GiB > 500.0MiB)'),
+          const YoutubeFailure(YoutubeFailureKind.tooBig));
+    });
+
     test("yt-dlp's words inside a wrapper never pass for one of the server's own reasons", () {
       expect(f('YouTube download failed: ERROR: unable to open “uploads are disabled (Official Video).webm”'),
           const YoutubeFailure(YoutubeFailureKind.refused));

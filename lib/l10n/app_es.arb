@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "Añadiendo {title} desde YouTube",
   "discoverToastAddFailedYt": "No se pudo añadir desde YouTube: {reason}",
   "discoverCopiesDestChangedYt": "No se pudo iniciar: cambió dónde se guardan los archivos — abre la canción y añádela de nuevo",
-  "discoverLeadYtChangeHint": "Cambiar dónde se guardan las canciones añadidas"
+  "discoverLeadYtChangeHint": "Cambiar dónde se guardan las canciones añadidas",
+  "discoverCopiesDestChangedYtMoved": "No se pudo iniciar: cambió dónde se guardan los archivos",
+  "discoverCopiesAddThere": "Añadir allí"
 }

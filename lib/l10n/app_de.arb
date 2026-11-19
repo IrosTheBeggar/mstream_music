@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "{title} wird von YouTube hinzugefügt",
   "discoverToastAddFailedYt": "Hinzufügen von YouTube fehlgeschlagen: {reason}",
   "discoverCopiesDestChangedYt": "Start nicht möglich: Wo Dateien landen, hat sich geändert – öffne den Titel und füge ihn erneut hinzu",
-  "discoverLeadYtChangeHint": "Ziel für hinzugefügte Titel ändern"
+  "discoverLeadYtChangeHint": "Ziel für hinzugefügte Titel ändern",
+  "discoverCopiesDestChangedYtMoved": "Start nicht möglich: Wo Dateien landen, hat sich geändert",
+  "discoverCopiesAddThere": "Dort hinzufügen"
 }

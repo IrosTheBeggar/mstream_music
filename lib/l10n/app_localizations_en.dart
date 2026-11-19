@@ -6837,4 +6837,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverLeadYtChangeHint => 'Change where added songs go';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Couldn\'t start: where files land changed';
+
+  @override
+  String get discoverCopiesAddThere => 'Add there';
 }

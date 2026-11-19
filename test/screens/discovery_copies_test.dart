@@ -955,16 +955,151 @@ void main() {
       view!();
       expect(leads, [(failed['id'] as int, false)]);
 
-      // With no way back the toast stands alone.
+      // With no way back it promises none: the same add can go to where
+      // files land now instead.
       CopiesSheet.openLead = null;
       h.toasts.clear();
       actions.clear();
       await tester.tap(inRow(failed, find.text('Retry')));
       await frames(tester);
-      expect(h.toasts, [
-        "Couldn't start: where files land changed — open the song and add again",
-      ]);
+      expect(h.toasts, ["Couldn't start: where files land changed"]);
+      expect(actions, ['Add there']);
+    });
+
+    Map<String, dynamic> pinnedToOld(Map<String, dynamic> job) => job
+      ..['params'] = {
+        ...job['params'] as Map,
+        'destination': {
+          'vpath': 'copies',
+          'base': 'Old',
+          'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+        },
+      };
+
+    testWidgets("a webapp's YouTube add of a song from a connected server: "
+        'no sheet on the phone hosts it, so a Retry that found where files '
+        'land moved offers Add there — the same add, to the place now in '
+        'force', (tester) async {
+      final fed = {
+        ...paper,
+        'source': 'federation',
+        'peer': {'id': 7, 'name': 'Stage Peer B'},
+      };
+      final failed = pinnedToOld(h.fake.addJob(
+        fed,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+      ));
+      final actions = <String>[];
+      VoidCallback? addThere;
+      KeepToast.debugActionSink = (message, action, onAction) {
+        actions.add(action);
+        addThere = onAction;
+      };
+      addTearDown(() => KeepToast.debugActionSink = null);
+      hookLead();
+      await h.pumpCopies(tester);
+      expect(inRow(failed, find.text('Choose another')), findsNothing);
+      await tester.tap(inRow(failed, find.text('Retry')));
+      await frames(tester);
+      expect(h.toasts, ["Couldn't start: where files land changed"]);
+      expect(actions, ['Add there']);
+      expect(h.fake.starts('youtube'), hasLength(1));
+
+      addThere!();
+      await frames(tester);
+      final sent = h.fake.starts('youtube');
+      expect(sent, hasLength(2));
+      expect(sent.last['destination'], {
+        'vpath': 'copies',
+        'base': '',
+        'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+      });
+      expect(sent.last['choice'], {'url': ytPick});
+      expect(sent.last['recommendation'], jsonDecode(jsonEncode(fed)));
+      expect(leads, isEmpty);
+      expect(h.toasts, hasLength(1), reason: 'it started');
+      expect(find.text('Waiting for a free slot'), findsOneWidget);
+    });
+
+    testWidgets('a Retry that found nowhere takes files now: says so, with '
+        'no way to add anywhere', (tester) async {
+      final failed = pinnedToOld(h.fake.addJob(
+        paper,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'YouTube download failed: HTTP Error 403: Forbidden',
+      ));
+      final actions = <String>[];
+      KeepToast.debugActionSink = (message, action, onAction) =>
+          actions.add(action);
+      addTearDown(() => KeepToast.debugActionSink = null);
+      hookLead();
+      await h.pumpCopies(tester);
+      h.fake.destination = {...h.fake.destination, 'destination': null};
+      await tester.tap(inRow(failed, find.text('Retry')));
+      await frames(tester);
+      expect(h.toasts, ['No library on your server takes new files']);
       expect(actions, isEmpty);
+      expect(h.fake.starts('youtube'), hasLength(1));
+    });
+
+    testWidgets('…and where files land not known (its read failed, the '
+        'refusal names no place): no place to offer, nowhere claimed', (
+      tester,
+    ) async {
+      final fed = {...paper, 'source': 'federation'};
+      final failed = pinnedToOld(h.fake.addJob(
+        fed,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'YouTube download failed: HTTP Error 403: Forbidden',
+      ));
+      final actions = <String>[];
+      KeepToast.debugActionSink = (message, action, onAction) =>
+          actions.add(action);
+      addTearDown(() => KeepToast.debugActionSink = null);
+      h.fake.refuse['/collection/destination'] = (500, 'boom');
+      h.fake.startAnswer = (
+        409,
+        {'error': 'destination_changed', 'message': 'it moved'},
+      );
+      await h.pumpCopies(tester);
+      expect(h.jobs.destination, isNull);
+      await tester.tap(inRow(failed, find.text('Retry')));
+      await frames(tester);
+      expect(h.toasts, ["Couldn't start: where files land changed"]);
+      expect(actions, isEmpty);
+    });
+
+    testWidgets('a network song with no title (an artist-only row the '
+        'webapp added): no Choose another — no sheet can be made of it', (
+      tester,
+    ) async {
+      final untitled = {...paper}..remove('title');
+      final failed = h.fake.addJob(
+        untitled,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+      );
+      final titled = h.fake.addJob(
+        paper,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+      );
+      hookLead();
+      await h.pumpCopies(tester, height: 1200);
+      expect(inRow(failed, find.text('Retry')), findsOneWidget);
+      expect(inRow(failed, find.text('Choose another')), findsNothing);
+      expect(inRow(titled, find.text('Choose another')), findsOneWidget);
     });
 
     testWidgets(
@@ -1026,6 +1161,7 @@ void main() {
             DiscoveryLead lead,
             String? seedTitle,
             bool autoSearch,
+            String? avoidUrl,
             VoidCallback? onLeadAction,
           })
         >[];
@@ -1038,6 +1174,7 @@ void main() {
             lead, {
             String? seedTitle,
             bool autoSearch = false,
+            String? avoidUrl,
             VoidCallback? onLeadAction,
           }) => opened.add((
             context: context,
@@ -1045,6 +1182,7 @@ void main() {
             lead: lead,
             seedTitle: seedTitle,
             autoSearch: autoSearch,
+            avoidUrl: avoidUrl,
             onLeadAction: onLeadAction,
           ));
     }
@@ -1076,6 +1214,7 @@ void main() {
         expect(find.byType(CopiesSheet), findsNothing);
         final o = opened.single;
         expect(o.autoSearch, isTrue);
+        expect(o.avoidUrl, ytPick, reason: 'the upload that failed');
         expect(identical(o.jobs, h.jobs), isTrue);
         expect(o.seedTitle, isNull);
         expect(o.onLeadAction, isNull);
@@ -1116,7 +1255,42 @@ void main() {
         await frames(tester, 10);
         expect(find.byType(CopiesSheet), findsNothing);
         expect(opened.single.autoSearch, isFalse);
+        expect(opened.single.avoidUrl, isNull);
         expect(opened.single.lead.title, 'Paper Satellites');
+      },
+    );
+
+    testWidgets(
+      "the destination toast's View once Copies has closed (the toast "
+      'stays up after it): the song still opens, over what Copies was '
+      'opened from',
+      (tester) async {
+        final failed = failedPick();
+        failed['params'] = {
+          ...failed['params'] as Map,
+          'destination': {
+            'vpath': 'copies',
+            'base': 'Old',
+            'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+          },
+        };
+        VoidCallback? view;
+        KeepToast.debugActionSink = (message, action, onAction) =>
+            view = onAction;
+        addTearDown(() => KeepToast.debugActionSink = null);
+        recordLeadSheet();
+        await h.pumpCopies(tester);
+        await tester.tap(inRow(failed, find.text('Retry')));
+        await frames(tester);
+        await tester.tapAt(const Offset(195, 20)); // above the sheet
+        await frames(tester, 10);
+        expect(find.byType(CopiesSheet), findsNothing);
+        view!();
+        await frames(tester, 10);
+        final o = opened.single;
+        expect(o.autoSearch, isFalse);
+        expect(o.lead.title, 'Paper Satellites');
+        expect(o.context.mounted, isTrue);
       },
     );
 
@@ -1166,6 +1340,48 @@ void main() {
         await tester.tapAt(const Offset(195, 60));
         await frames(tester, 10);
         expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      "the real sheet with its own lookup refused: it still picks another "
+      "upload than the failed row's",
+      (tester) async {
+        FakePreviewPlayer.install();
+        h.fake.youtubeCandidates = [
+          {
+            'id': 'abcdefghijk',
+            'url': ytPick,
+            'title': 'Paper Satellites',
+            'channel': 'The Quiet Assembly - Topic',
+            'durationSec': 238,
+            'score': 0.48,
+          },
+          {
+            'id': 'zyxwvutsrqp',
+            'url': 'https://www.youtube.com/watch?v=zyxwvutsrqp',
+            'title': 'The Quiet Assembly - Paper Satellites (Live)',
+            'channel': 'The Quiet Assembly',
+            'durationSec': 251,
+            'score': 0.44,
+          },
+        ];
+        failedPick();
+        await h.pumpCopies(tester);
+        h.fake.refuse['/plugin-jobs/lookup'] = (500, 'boom');
+        await tester.tap(find.byKey(const ValueKey('copies-choose-another')));
+        await frames(tester, 12);
+        expect(
+          find.byKey(const ValueKey('network-lead-sheet')),
+          findsOneWidget,
+        );
+        expect(h.fake.calls('POST', '/plugin-jobs/lookup'), isNotEmpty);
+        bool shown(String key) =>
+            find.byKey(ValueKey(key)).evaluate().isNotEmpty;
+        expect(shown('yt-candidate-1'), isTrue, reason: 'another upload');
+        expect(shown('yt-candidate-0'), isFalse, reason: 'the failed pick');
+        await tester.tapAt(const Offset(195, 60));
+        await frames(tester, 10);
       },
     );
   });
@@ -1238,6 +1454,26 @@ void main() {
       await settle();
       await settle();
       expect(serverCards(), ['torrents']);
+    });
+
+    test("a controller first made off the home (More like this, a peer's "
+        "sheet: no stack change) starts out of Discover's beat; Discover's "
+        'own visit starts in it', () async {
+      final peer = Server('http://peer.local:3000', null, null, 'JWT', 'peer')
+        ..discoveryPluginsAvailable = true
+        ..noUpload = false;
+      ServerManager().currentServer = h.server;
+      BrowserManager().addListToStack([]);
+      await settle();
+      h.fake.addJob(paper, plugin: 'youtube', state: 'running');
+      final jobs = CopiesHub().jobsFor(h.server);
+      expect(jobs.discoverVisible, isFalse);
+      await jobs.activate();
+      expect(jobs.anyLive, isTrue);
+      expect(jobs.pollBeat, isNull, reason: 'nothing holds a beat');
+      expect(CopiesHub().visit(peer).discoverVisible, isTrue);
+      BrowserManager().popBrowser();
+      await settle();
     });
 
     test('hidden when the copy plug-in is not listed', () async {

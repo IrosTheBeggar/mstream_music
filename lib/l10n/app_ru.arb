@@ -1694,5 +1694,7 @@
   "discoverToastAddingYt": "Добавление «{title}» с YouTube",
   "discoverToastAddFailedYt": "Не удалось добавить с YouTube: {reason}",
   "discoverCopiesDestChangedYt": "Не удалось начать: место для файлов изменилось — откройте трек и добавьте его снова",
-  "discoverLeadYtChangeHint": "Изменить, куда сохраняются добавленные треки"
+  "discoverLeadYtChangeHint": "Изменить, куда сохраняются добавленные треки",
+  "discoverCopiesDestChangedYtMoved": "Не удалось начать: место для файлов изменилось",
+  "discoverCopiesAddThere": "Добавить туда"
 }

@@ -871,6 +871,51 @@ void main() {
       expect(await c.youtubeJobFor(paper), isNull);
     });
 
+    test("a live add only youtubeJobFor found, past the list's newest: each poll asks for it by id, so its end is news, "
+        "the sheet's line moves on and the poll stops", () async {
+      final live = fake.addJob(paper, state: 'running', plugin: 'youtube', choice: {'url': pick}, id: 301);
+      fake.unlisted.add(301);
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      final found = (await c.youtubeJobFor(paper))!;
+      final news = <DiscoveryJob>[];
+      c.finished.listen(news.add);
+      var notified = 0;
+      c.addListener(() => notified++);
+
+      timers.active!.fire(); // still running
+      await settle();
+      expect(fake.count('GET', '/plugin-jobs/301'), 1);
+      expect([c.anyLive, timers.active?.delay], [true, DiscoveryJobsController.kDiscoverBeat]);
+
+      live
+        ..['state'] = 'done'
+        ..['result'] = landed('copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3');
+      timers.active!.fire();
+      await settle();
+      expect(fake.count('GET', '/plugin-jobs/301'), 2);
+      expect([for (final n in news) n.id], [301]);
+      expect(c.anyLive, isFalse);
+      expect(timers.active, isNull, reason: 'nothing live any more: stopped');
+      expect(c.latest(found).live, isFalse);
+      expect(c.latest(found).view.downloadedFilepath, 'copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3');
+      expect(notified, greaterThan(0), reason: 'the sheet redraws its line');
+    });
+
+    test('…one the server no longer has (404) is let go', () async {
+      fake.addJob(paper, state: 'running', plugin: 'youtube', choice: {'url': pick}, id: 301);
+      fake.unlisted.add(301);
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      await c.youtubeJobFor(paper);
+      expect(c.anyLive, isTrue);
+      fake.jobs.removeWhere((j) => j['id'] == 301);
+      timers.active!.fire();
+      await settle();
+      expect(c.anyLive, isFalse);
+      expect(timers.active, isNull);
+    });
+
     test('a page lookup keeps only copies unless asked (keep:)', () async {
       fake.addJob(late.raw, state: 'running', plugin: 'youtube');
       final c = make(youtubeShown: () => true);

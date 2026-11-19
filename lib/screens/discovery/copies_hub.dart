@@ -222,6 +222,15 @@ class CopiesHub {
     final have = _jobs[own];
     if (have != null) return have;
     final jobs = makeJobs(own);
+    // Discover's 4 s beat as the stack would set it ([_onStack]): on the
+    // home, for the server it is the home of — never merely because a
+    // screen that is no stack change (More like this, a peer's sheet) made
+    // the controller.
+    if (_installed) {
+      jobs.discoverVisible =
+          BrowserManager.isHomeList(BrowserManager().browserList) &&
+          identical(own, ownServerOf(ServerManager().currentServer));
+    }
     _jobs[own] = jobs;
     void listener() => _onJobs(own);
     _listeners[own] = listener;
@@ -400,9 +409,11 @@ class CopiesHub {
   }
 
   /// Discover opened on [server]: its visit reads the listing, the
-  /// destination and the job list afresh.
+  /// destination and the job list afresh. Discover is in front: the
+  /// listing drives the beat from here ([_onStack] leaves its controller
+  /// alone, and the listing hears only the stack changes after its own).
   DiscoveryJobsController visit(Server server) {
-    final jobs = jobsFor(server);
+    final jobs = jobsFor(server)..discoverVisible = true;
     unawaited(jobs.activate(force: true));
     return jobs;
   }

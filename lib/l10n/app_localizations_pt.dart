@@ -6901,4 +6901,11 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverLeadYtChangeHint =>
       'Alterar onde as músicas adicionadas ficam';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Não foi possível iniciar: o destino dos arquivos mudou';
+
+  @override
+  String get discoverCopiesAddThere => 'Adicionar lá';
 }

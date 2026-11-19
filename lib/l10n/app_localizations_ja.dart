@@ -6597,4 +6597,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverLeadYtChangeHint => '追加した曲の保存先を変更';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved => '開始できませんでした：保存先が変わりました';
+
+  @override
+  String get discoverCopiesAddThere => '新しい保存先に追加';
 }

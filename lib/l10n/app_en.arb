@@ -7880,5 +7880,13 @@
   "discoverLeadYtChangeHint": "Change where added songs go",
   "@discoverLeadYtChangeHint": {
     "description": "Screen reader: the Change link beside 'Files go to …' on the network-song sheet's YouTube card. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverCopiesDestChangedYtMoved": "Couldn't start: where files land changed",
+  "@discoverCopiesDestChangedYtMoved": {
+    "description": "Toast when Retry or Add again on a YouTube add in Copies was not started because where the account's added songs land changed since, for a song the phone has no sheet for (one added from the web app). Its action, 'Add there' (discoverCopiesAddThere), adds the song again to where files land now. Same opening as discoverCopiesDestChangedYt. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "discoverCopiesAddThere": "Add there",
+  "@discoverCopiesAddThere": {
+    "description": "The action on the toast 'Couldn't start: where files land changed' (discoverCopiesDestChangedYtMoved): adds the YouTube song again, to where added songs land now (the new place). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
   }
 }

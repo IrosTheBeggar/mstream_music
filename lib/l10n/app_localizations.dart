@@ -10593,6 +10593,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change where added songs go'**
   String get discoverLeadYtChangeHint;
+
+  /// Toast when Retry or Add again on a YouTube add in Copies was not started because where the account's added songs land changed since, for a song the phone has no sheet for (one added from the web app). Its action, 'Add there' (discoverCopiesAddThere), adds the song again to where files land now. Same opening as discoverCopiesDestChangedYt. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start: where files land changed'**
+  String get discoverCopiesDestChangedYtMoved;
+
+  /// The action on the toast 'Couldn't start: where files land changed' (discoverCopiesDestChangedYtMoved): adds the YouTube song again, to where added songs land now (the new place). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Add there'**
+  String get discoverCopiesAddThere;
 }
 
 class _AppLocalizationsDelegate
