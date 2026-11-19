@@ -61,6 +61,10 @@ class PlayerPanelState extends State<PlayerPanel>
   void collapse() => _ctrl.animateTo(0.0, curve: Curves.easeOutCubic);
   void toggle() => isExpanded ? collapse() : expand();
 
+  /// Expanded at once, with no animation: for while the panel is out of
+  /// sight, under the screens a pick from the library puts back.
+  void expandNow() => _ctrl.value = 1.0;
+
   StreamSubscription<List<MediaItem>>? _queueSub;
 
   @override

@@ -78,8 +78,16 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
   void initState() {
     super.initState();
     // A stale armed pick (drawer re-entry over a live banner) would capture
-    // the next browse tap after this screen closes again — drop it.
-    TrackCapture.cancel();
+    // the next browse tap after this screen closes again — drop it, once
+    // the frame is built: the home's banner listens to the pick and can't
+    // be marked for a rebuild while this route is being built. The way back
+    // from a pick has cleared it by now, so that return drops nothing.
+    final stale = TrackCapture.pending;
+    if (stale != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (identical(TrackCapture.pending, stale)) TrackCapture.cancel();
+      });
+    }
     if (widget.autoBuild && _s.ready) {
       _showResults = true;
       _load();
@@ -203,7 +211,7 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
       server: server,
       bannerLabel: (l) =>
           isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
-      returnScreen: (_) => const SonicPathScreen(),
+      returnStack: [(_) => const SonicPathScreen()],
       onPicked: (item) {
         // Runs after this State is disposed — write the singleton only.
         final art = item.altAlbumArt ?? item.metadata?.albumArt;

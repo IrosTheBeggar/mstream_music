@@ -5250,12 +5250,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Scegli';
 
   @override
-  String get autoDjMustMatch => 'Deve corrispondere';
-
-  @override
-  String get autoDjPrefer => 'Preferisci';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5375,6 +5369,88 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Recenti';
+
+  @override
+  String get autoDjFilters => 'Filtri';
+
+  @override
+  String get autoDjMatch => 'Affinità';
+
+  @override
+  String get autoDjLearnFromSkips => 'Impara dai brani saltati';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Saltare un brano eviterà che vengano scelti brani simili';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Richiede un server più recente';
+
+  @override
+  String get autoDjSeeds => 'Brani di partenza';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'I brani vengono sostituiti regolarmente. Fissa un brano per tenerlo.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Ora tutti i brani sono fissati. Non verranno aggiunti nuovi brani.';
+
+  @override
+  String get autoDjMoreLike => 'Più brani così';
+
+  @override
+  String get autoDjLessLike => 'Meno brani così';
+
+  @override
+  String get autoDjAddSong => 'Aggiungi brano';
+
+  @override
+  String get autoDjAddSongFromLibrary => 'Scegli un brano dalla libreria';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Scegli un brano per “Più brani così” — tocca un brano ovunque nella libreria';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Scegli un brano per “Meno brani così” — tocca un brano ovunque nella libreria';
+
+  @override
+  String get autoDjUpNext => 'Prossimi brani';
+
+  @override
+  String get autoDjMoreLikeThis => 'Più brani così';
+
+  @override
+  String get autoDjLessLikeThis => 'Meno brani così';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Fissa $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Opzioni per $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Grado di somiglianza sonora';
+
+  @override
+  String get autoDjSearchSongs => 'Cerca brani';
+
+  @override
+  String get autoDjSeedMode => 'Evolvere o restare vicino';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Rimuovi i brani fissati quando la coda viene svuotata';
+
+  @override
+  String get autoDjSkipped => 'Saltati';
 
   @override
   String get browseLoadFailed =>

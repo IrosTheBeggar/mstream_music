@@ -162,6 +162,16 @@ class Server {
   // read these instead (see [sonicUsable]).
   bool? discoveryEnabled;
   bool? discoveryReady;
+  // The random-songs picker generation the server advertises (mStream #1108:
+  // `features.autoDj` on /api, flat `autoDj` on ping). Generation 1 takes the
+  // DJ's "less like" negatives — `lessLike` paths, `lessLikeVectors` with a
+  // `lessLikeModelId` — and echoes how it used them. Null from a build too
+  // old to say. The number is kept, not a yes/no, so a later generation can
+  // be gated with `>=`. Never pinned on a federated peer, unlike
+  // [statsVersion]: random-songs is on the federation allowlist, so a peer
+  // that hosts or joins the DJ takes negatives on its own answer, as it does
+  // its sonic seed on [discoveryEnabled] and [discoveryReady].
+  int? autoDjGeneration;
 
   /// Whether discovery is switched on: the raw flag, else — for a record
   /// written before the app kept the raw flag — the UI flag, which a peer
@@ -176,6 +186,17 @@ class Server {
   /// until it can actually answer. Readiness a server cannot report (older
   /// builds) does not hold it back.
   bool get sonicUsable => discoveryOn == true && discoveryReady != false;
+
+  /// Whether this server takes the DJ's "less like" negatives: a picker
+  /// generation of 1 or more ([autoDjGeneration]), and discovery on with its
+  /// scan done. Stricter than [sonicUsable] on readiness, because that is the
+  /// server's own rule (its openapi: send negatives on `autoDj >= 1 &&
+  /// discoveryReady`). A server that cannot report readiness, which includes
+  /// every one folded from ping, gets none.
+  bool get lessLikeUsable =>
+      (autoDjGeneration ?? 0) >= 1 &&
+      discoveryOn == true &&
+      discoveryReady == true;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
@@ -521,6 +542,8 @@ class Server {
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
             json['discoveryReady'] is bool ? json['discoveryReady'] : null,
+        autoDjGeneration =
+            json['autoDjGeneration'] is int ? json['autoDjGeneration'] : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?,
         federationParent = json['federationParent'] as String?,
@@ -576,6 +599,7 @@ class Server {
         'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
+        'autoDjGeneration': autoDjGeneration,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode,
         'federationParent': federationParent,

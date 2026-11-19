@@ -16,7 +16,7 @@ TrackCaptureRequest _req(Server s, void Function(DisplayItem) onPicked) =>
     TrackCaptureRequest(
       server: s,
       bannerLabel: (l) => 'pick',
-      returnScreen: (_) => const SizedBox.shrink(),
+      returnStack: [(_) => const SizedBox.shrink()],
       onPicked: onPicked,
     );
 

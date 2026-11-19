@@ -57,6 +57,7 @@ void main() {
       ..sonicSimilarityEnabled = true
       ..sonicMinSimilarity = 0.55
       ..sonicAnchorMode = SonicAnchorMode.rolling
+      ..learnFromSkips = false
       ..playFromServer = null
       ..playFromAll = false
       ..playFromServers = const [];
@@ -279,29 +280,70 @@ void main() {
   });
 
   group('setSonic', () {
-    test('switch, match and anchor in one call, saved', () async {
+    test('switch and match in one call, saved', () async {
       expect(
-          await ticks(() => mgr.setSonic(
-              enabled: false,
-              minSimilarity: 0.7,
-              anchor: SonicAnchorMode.locked)),
+          await ticks(
+              () => mgr.setSonic(enabled: false, minSimilarity: 0.7)),
           1);
       expect(mgr.sonicSimilarityEnabled, isFalse);
       expect(mgr.sonicMinSimilarity, 0.7);
-      expect(mgr.sonicAnchorMode, SonicAnchorMode.locked);
       final f = saved();
       expect(f['sonicSimilarityEnabled'], isFalse);
       expect(f['sonicMinSimilarity'], 0.7);
-      expect(f['sonicAnchorMode'], 'locked');
+    });
+
+    test('the mode is left as it was: the Seeds page owns it', () async {
+      mgr.sonicAnchorMode = SonicAnchorMode.locked;
+      await mgr.setSonic(enabled: true, minSimilarity: 0.6);
+      expect(mgr.sonicAnchorMode, SonicAnchorMode.locked,
+          reason: 'a sheet open across a change on the Seeds page must not '
+              'put the old mode back on Done');
+      expect(saved()['sonicAnchorMode'], 'locked');
     });
 
     test('the match is clamped to 0–1', () async {
-      await mgr.setSonic(
-          enabled: true, minSimilarity: 1.5, anchor: SonicAnchorMode.rolling);
+      await mgr.setSonic(enabled: true, minSimilarity: 1.5);
       expect(mgr.sonicMinSimilarity, 1.0);
-      await mgr.setSonic(
-          enabled: true, minSimilarity: -0.2, anchor: SonicAnchorMode.rolling);
+      await mgr.setSonic(enabled: true, minSimilarity: -0.2);
       expect(mgr.sonicMinSimilarity, 0.0);
+    });
+  });
+
+  group('setSonicAnchorMode', () {
+    test('Stay close: one tick, saved under its stored name', () async {
+      expect(
+          await ticks(() => mgr.setSonicAnchorMode(SonicAnchorMode.locked)),
+          1);
+      expect(mgr.sonicAnchorMode, SonicAnchorMode.locked);
+      expect(saved()['sonicAnchorMode'], 'locked');
+    });
+  });
+
+  group('setLearnFromSkips', () {
+    test('on: one tick, saved', () async {
+      expect(await ticks(() => mgr.setLearnFromSkips(true)), 1);
+      expect(mgr.learnFromSkips, isTrue);
+      expect(saved()['learnFromSkips'], isTrue);
+    });
+
+    test('off again: one tick, saved as false', () async {
+      await mgr.setLearnFromSkips(true);
+      expect(await ticks(() => mgr.setLearnFromSkips(false)), 1);
+      expect(mgr.learnFromSkips, isFalse);
+      expect(saved()['learnFromSkips'], isFalse);
+    });
+
+    test('the value it already has changes nothing: no tick', () async {
+      expect(await ticks(() => mgr.setLearnFromSkips(false)), 0);
+    });
+
+    test('sonic similarity going off leaves it on', () async {
+      await mgr.setLearnFromSkips(true);
+      await mgr.setSonic(enabled: false, minSimilarity: 0.55);
+      expect(mgr.learnFromSkips, isTrue,
+          reason: 'the screen only dims the switch while sonic is off, so '
+              'it comes back the way the user left it');
+      expect(saved()['learnFromSkips'], isTrue);
     });
   });
 
@@ -437,6 +479,7 @@ void main() {
   test('load brings Play from back, with what the sheets saved', () async {
     await mgr.setKeywords(['live']);
     await mgr.setTempo(enabled: true, tolerance: 3);
+    await mgr.setLearnFromSkips(true);
     await mgr.setPlayFrom(all: false, servers: ['home', 'office'], home: 'office');
     expect(saved()['playFromServer'], 'office');
 
@@ -447,8 +490,10 @@ void main() {
       ..keywordFilterWords = []
       ..keywordFilterEnabled = false
       ..bpmContinuityEnabled = false
-      ..bpmTolerance = 8;
+      ..bpmTolerance = 8
+      ..learnFromSkips = false;
     expect(await ticks(() => mgr.load()), 1);
+    expect(mgr.learnFromSkips, isTrue);
     expect(mgr.playFromServer, 'office');
     expect(mgr.playFromServers, ['home', 'office']);
     expect(mgr.playFromAll, isFalse);

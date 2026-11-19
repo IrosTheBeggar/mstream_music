@@ -3,11 +3,13 @@
 // The mini player's and the queue header's Auto DJ button is two buttons in
 // one pill: the label starts or stops the DJ as it always has, and the
 // chevron opens quick config, a popover with what people reach for while
-// music plays — Play from, Sonic similarity (on or off, Drift | Stay close)
-// and Smart filters — and the way to the whole Auto DJ screen. It opens away
-// from its bar, up from the mini player and down from the queue header, and
-// dims everything but that bar. Every change applies at once, through the
-// same steps as the Auto DJ screen's sheets.
+// music plays — Play from, Sonic similarity (on or off and, while it runs,
+// how close a match and the way to its Seeds) and Smart filters — and the
+// way to the whole Auto DJ screen. It opens away from its bar, up from the
+// mini player and down from the queue header, and dims everything but that
+// bar. Every change applies at once, through the same steps as the Auto DJ
+// screen's sheets; the match slider applies once, when the drag lets go.
+// Seeds and All Auto DJ settings close it and open their page.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -19,8 +21,10 @@ import 'package:rxdart/rxdart.dart' show MergeStream;
 import '../l10n/app_localizations.dart';
 import '../media/audio_stuff.dart' show FanOutSitOut, SonicDrop;
 import '../objects/mood_filter.dart';
+import '../objects/play_event.dart' show TrackFacts;
 import '../objects/server.dart';
 import '../screens/auto_dj.dart' show AutoDJScreen;
+import '../screens/auto_dj_seeds.dart' show AutoDjSeedsScreen;
 import '../screens/auto_dj_sheets.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/log_manager.dart';
@@ -32,6 +36,7 @@ import '../util/fan_out_readout.dart';
 import '../util/server_tree.dart';
 import 'mood_filter_sheet.dart' show MoodChoices, moodLabels;
 import 'queue_list.dart' show toggleAutoDJ;
+import 'seed_art.dart' show SeedTiles;
 
 /// Past this many servers, Play from moves to a page of its own.
 const kQuickConfigInlineServers = 4;
@@ -190,7 +195,8 @@ class _AutoDjSplitButtonState extends State<AutoDjSplitButton> {
 
 /// Quick config against [button]'s right edge, [above] or below [bar], over
 /// everything but the bar. All Auto DJ settings opens the screen where the
-/// Auto DJ card does, on the navigator around [context].
+/// Auto DJ card does, on the navigator around [context], and Seeds opens the
+/// Seeds page there the same way.
 Future<void> showAutoDjQuickConfig(BuildContext context,
     {required Rect button, required Rect bar, required bool above}) {
   final navigator = Navigator.of(context);
@@ -203,6 +209,8 @@ Future<void> showAutoDjQuickConfig(BuildContext context,
     themes: InheritedTheme.capture(from: context, to: root.context),
     openSettings: () => navigator.push(
         MaterialPageRoute<void>(builder: (_) => const AutoDJScreen())),
+    openSeeds: () => navigator.push(
+        MaterialPageRoute<void>(builder: (_) => const AutoDjSeedsScreen())),
   ));
 }
 
@@ -214,6 +222,7 @@ class _QuickConfigRoute extends PopupRoute<void> {
     required this.barrierLabel,
     required this.themes,
     required this.openSettings,
+    required this.openSeeds,
   });
 
   final Rect button;
@@ -221,6 +230,7 @@ class _QuickConfigRoute extends PopupRoute<void> {
   final bool above;
   final CapturedThemes themes;
   final VoidCallback openSettings;
+  final VoidCallback openSeeds;
 
   @override
   final String? barrierLabel;
@@ -244,7 +254,8 @@ class _QuickConfigRoute extends PopupRoute<void> {
           bar: bar,
           above: above,
           animation: animation,
-          openSettings: openSettings));
+          openSettings: openSettings,
+          openSeeds: openSeeds));
 }
 
 class _QuickConfigLayout extends StatelessWidget {
@@ -254,6 +265,7 @@ class _QuickConfigLayout extends StatelessWidget {
     required this.above,
     required this.animation,
     required this.openSettings,
+    required this.openSeeds,
   });
 
   final Rect button;
@@ -261,6 +273,7 @@ class _QuickConfigLayout extends StatelessWidget {
   final bool above;
   final Animation<double> animation;
   final VoidCallback openSettings;
+  final VoidCallback openSeeds;
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +312,8 @@ class _QuickConfigLayout extends StatelessWidget {
             child: ConstrainedBox(
               constraints: BoxConstraints(
                   maxHeight: math.max(160.0, up ? roomAbove : roomBelow)),
-              child: _LiveQuickConfig(openSettings: openSettings),
+              child: _LiveQuickConfig(
+                  openSettings: openSettings, openSeeds: openSeeds),
             ),
           ),
         ),
@@ -328,12 +342,15 @@ class _ScrimPainter extends CustomPainter {
   bool shouldRepaint(_ScrimPainter old) => old.hole != hole;
 }
 
-/// [AutoDjQuickConfig] on the live state: the session, its settings, the
-/// servers, their tunnels and flags — rebuilt when any of them moves.
+/// [AutoDjQuickConfig] on the live state: the session, its settings and
+/// seeds, the servers, their tunnels and flags — rebuilt when any of them
+/// moves.
 class _LiveQuickConfig extends StatefulWidget {
-  const _LiveQuickConfig({required this.openSettings});
+  const _LiveQuickConfig(
+      {required this.openSettings, required this.openSeeds});
 
   final VoidCallback openSettings;
+  final VoidCallback openSeeds;
 
   @override
   State<_LiveQuickConfig> createState() => _LiveQuickConfigState();
@@ -348,6 +365,9 @@ class _LiveQuickConfigState extends State<_LiveQuickConfig> {
     super.initState();
     _sub = MergeStream<Object?>([
       _handler.customState,
+      // The Seeds row's art: the newest More like seeds, which change as
+      // the DJ's picks start playing.
+      _handler.seedsStream,
       AutoDJManager().changeStream,
       ServerManager().serverListStream,
       ServerManager().tunnelTransitions,
@@ -381,19 +401,26 @@ class _LiveQuickConfigState extends State<_LiveQuickConfig> {
           dj != null &&
           fanOutConnecting([s], ServerManager().tunnelServes).isNotEmpty,
       sonicDrop: dj != null ? _handler.sonicDrop : null,
+      seedTiles: [for (final s in _handler.seeds.tiles()) s.song],
       onOpenSettings: () {
         Navigator.of(context).pop();
         widget.openSettings();
+      },
+      // Like All Auto DJ settings: quick config closes, then the page opens.
+      onOpenSeeds: () {
+        Navigator.of(context).pop();
+        widget.openSeeds();
       },
     );
   }
 }
 
-/// Quick config itself: the main page — Play from, Sonic similarity, Smart
-/// filters, and the way to the whole screen — and the Play from and Smart
-/// filters pages it opens. What it shows comes in, or from [AutoDJManager];
-/// each change goes out through an on… callback, which applies it as the
-/// Auto DJ screen's sheets do unless given (a VM test has no audio handler).
+/// Quick config itself: the main page — Play from, Sonic similarity (with
+/// its match and the way to the Seeds page while it runs), Smart filters,
+/// and the way to the whole screen — and the Play from and Smart filters
+/// pages it opens. What it shows comes in, or from [AutoDJManager]; each
+/// change goes out through an on… callback, which applies it as the Auto DJ
+/// screen's sheets do unless given (a VM test has no audio handler).
 class AutoDjQuickConfig extends StatefulWidget {
   const AutoDjQuickConfig({
     super.key,
@@ -403,10 +430,13 @@ class AutoDjQuickConfig extends StatefulWidget {
     required this.sitOut,
     required this.connecting,
     this.sonicDrop,
+    this.seedTiles = const [],
     this.onPlayFrom,
     this.onSonic,
+    this.onMatch,
     this.onMood,
     this.onOpenSettings,
+    this.onOpenSeeds,
   });
 
   /// Every server Play from may offer, grouped (a peer under its parent).
@@ -427,11 +457,18 @@ class AutoDjQuickConfig extends StatefulWidget {
   /// Why the running session dropped sonic picks, if it did.
   final SonicDrop? sonicDrop;
 
+  /// The session's newest More like seeds, newest first, whose art the
+  /// Seeds row shows: three at most, and no art while there are none.
+  final List<TrackFacts> seedTiles;
+
   final Future<void> Function(List<Server> set)? onPlayFrom;
-  final Future<void> Function(
-      {required bool on, required SonicAnchorMode anchor})? onSonic;
+  final Future<void> Function({required bool on})? onSonic;
+
+  /// The match slider's value, once a drag lets go.
+  final Future<void> Function(double match)? onMatch;
   final Future<void> Function(MoodFilter mood)? onMood;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenSeeds;
 
   @override
   State<AutoDjQuickConfig> createState() => _AutoDjQuickConfigState();
@@ -445,6 +482,12 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
   final _serversScroll = ScrollController();
   StreamSubscription<int>? _mgrSub;
 
+  // The match slider's value while its thumb moves, and from when it lets
+  // go until AutoDJManager holds it. The value line follows the drag, while
+  // the match is applied once, at its end: each apply saves auto_dj.json and
+  // has the DJ try sonic again.
+  double? _matchDraft;
+
   static Set<String> _names(List<Server> servers) =>
       {for (final s in servers) s.localname};
 
@@ -452,7 +495,13 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
   void initState() {
     super.initState();
     _mgrSub = AutoDJManager().changeStream.listen((_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {
+        // The drag's value has landed, so the manager's is the one to show.
+        if (_matchDraft == AutoDJManager().sonicMinSimilarity) {
+          _matchDraft = null;
+        }
+      });
     });
   }
 
@@ -524,13 +573,28 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
     _applyPlayFrom();
   }
 
-  void _setSonic({required bool on, SonicAnchorMode? anchor}) {
+  void _setSonic({required bool on}) {
     final mgr = AutoDJManager();
     final apply = widget.onSonic ??
-        ({required bool on, required SonicAnchorMode anchor}) => applySonic(
-            on: on, match: mgr.sonicMinSimilarity, anchor: anchor);
-    _run(() => apply(on: on, anchor: anchor ?? mgr.sonicAnchorMode));
+        ({required bool on}) =>
+            applySonic(on: on, match: mgr.sonicMinSimilarity);
+    _run(() => apply(on: on));
   }
+
+  /// The match slider let go at [match]: applied once, the switch left as it
+  /// is.
+  void _setMatch(double match) {
+    final mgr = AutoDJManager();
+    final apply = widget.onMatch ??
+        (double m) => applySonic(on: mgr.sonicSimilarityEnabled, match: m);
+    _run(() => apply(match));
+  }
+
+  /// Whether sonic similarity runs: the server can do it and it is switched
+  /// on. Only then does quick config offer its match and its Seeds.
+  bool _sonicOn(AppLocalizations l) =>
+      autoDjSonicBlocked(l, widget.home) == null &&
+      AutoDJManager().sonicSimilarityEnabled;
 
   void _setMood(MoodFilter mood) {
     final apply = widget.onMood ?? AutoDJManager().setMood;
@@ -621,23 +685,23 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
   Widget _sonic(AppLocalizations l) {
     final mgr = AutoDJManager();
     final blocked = autoDjSonicBlocked(l, widget.home);
-    final on = blocked == null && mgr.sonicSimilarityEnabled;
+    final on = _sonicOn(l);
     final drop = on ? widget.sonicDrop : null;
+    final match = _matchDraft ?? mgr.sonicMinSimilarity;
     final value = switch ((blocked, drop)) {
       (final String why, _) => Text(why,
           style:
               TextStyle(fontSize: 12.5, color: VelvetColors.textSecondary)),
       (_, final SonicDrop d) => _warningLine(sonicDropLabel(l, d)),
-      _ => Text(
-          on
-              ? l.autoDjPercent((mgr.sonicMinSimilarity * 100).round())
-              : l.commonOff,
+      _ => Text(on ? l.autoDjPercent((match * 100).round()) : l.commonOff,
           style: TextStyle(
               fontSize: 12.5,
               color: on ? VelvetColors.primary : VelvetColors.textSecondary)),
     };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+      // Less room at the foot while the slider shows: its own height leaves
+      // enough under its track.
+      padding: EdgeInsets.fromLTRB(16, 8, 8, on ? 4 : 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -671,32 +735,78 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
               ),
             ),
           ]),
-          if (on) ...[
-            const SizedBox(height: 6),
+          // The sheet's range and steps. Drift | Stay close moved to the
+          // Seeds page, which the row under this one opens.
+          if (on)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: SegmentedButton<SonicAnchorMode>(
-                key: const ValueKey('quick-config-anchor'),
-                segments: [
-                  ButtonSegment(
-                      value: SonicAnchorMode.rolling,
-                      label: Text(l.autoDjDrift)),
-                  ButtonSegment(
-                      value: SonicAnchorMode.locked,
-                      label: Text(l.autoDjStayClose)),
-                ],
-                selected: {mgr.sonicAnchorMode},
-                showSelectedIcon: false,
-                onSelectionChanged: (set) =>
-                    _setSonic(on: true, anchor: set.first),
-                style: autoDjSegmentStyle(),
+              padding: const EdgeInsets.only(top: 2, right: 8),
+              child: SizedBox(
+                height: 44,
+                child: autoDjSlider(
+                  key: const ValueKey('quick-config-match'),
+                  value: match,
+                  min: 0.30,
+                  max: 0.80,
+                  divisions: 50,
+                  // Not autoDjSonicTitle, which already names the switch
+                  // beside the title: a screen reader would hear two
+                  // "Sonic similarity" controls in a row.
+                  label: l.autoDjSonicMatch,
+                  spoken: (v) => l.autoDjPercent((v * 100).round()),
+                  onChanged: (v) => setState(() => _matchDraft = v),
+                  onChangeEnd: _setMatch,
+                  // The sheet's border-coloured track all but vanishes on
+                  // the raised popover.
+                  inactiveTrack: VelvetColors.border2,
+                ),
               ),
             ),
-          ],
         ],
       ),
     );
   }
+
+  /// The way to the Seeds page, under Sonic similarity while it runs: the
+  /// newest More like seeds' art, then a chevron. Like All Auto DJ settings
+  /// it closes quick config before the page opens.
+  Widget _seedsRow(AppLocalizations l) => Semantics(
+        button: true,
+        child: InkWell(
+          key: const ValueKey('quick-config-seeds'),
+          onTap: widget.onOpenSeeds,
+          // 48 as drawn, and taller with the text: at the largest sizes the
+          // label's line is taller than that, and a fixed height clips it.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 10, 6),
+              child: Row(children: [
+                Expanded(
+                  child: Text(l.autoDjSeeds,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary)),
+                ),
+                if (widget.seedTiles.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  // Ringed in the popover's own colour, so each tile cuts a
+                  // clean edge into the one under it.
+                  SeedTiles(
+                      songs: widget.seedTiles.take(3).toList(),
+                      size: 24,
+                      ring: VelvetColors.raised),
+                ],
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right,
+                    size: 22, color: VelvetColors.textSecondary),
+              ]),
+            ),
+          ),
+        ),
+      );
 
   Widget _moodRow(AppLocalizations l) {
     final mgr = AutoDJManager();
@@ -776,6 +886,12 @@ class _AutoDjQuickConfigState extends State<AutoDjQuickConfig> {
             _divider(),
           ],
           _sonic(l),
+          // The seeds are what sonic similarity matches against, so the way
+          // to them shows only while it runs.
+          if (_sonicOn(l)) ...[
+            _divider(indent: 16),
+            _seedsRow(l),
+          ],
           _divider(),
           _moodRow(l),
           _divider(),

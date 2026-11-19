@@ -8326,18 +8326,6 @@ abstract class AppLocalizations {
   /// **'Choose'**
   String get autoDjFirstSongChoose;
 
-  /// No description provided for @autoDjMustMatch.
-  ///
-  /// In en, this message translates to:
-  /// **'Must match'**
-  String get autoDjMustMatch;
-
-  /// No description provided for @autoDjPrefer.
-  ///
-  /// In en, this message translates to:
-  /// **'Prefer'**
-  String get autoDjPrefer;
-
   /// No description provided for @autoDjPercent.
   ///
   /// In en, this message translates to:
@@ -8547,6 +8535,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recently played'**
   String get autoDjFirstSongRecent;
+
+  /// Auto DJ screen: header over the rows that limit which songs can play (Smart filters, Genres, Rating, Length, Skip words).
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get autoDjFilters;
+
+  /// Auto DJ screen: header over the rows that shape how each pick fits the music (Sonic similarity, Beat matching, Harmonic mixing).
+  ///
+  /// In en, this message translates to:
+  /// **'Match'**
+  String get autoDjMatch;
+
+  /// Auto DJ screen: switch row under Sonic similarity. While it is on, a song skipped soon after it starts joins the Seeds page's Less like list.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn from skips'**
+  String get autoDjLearnFromSkips;
+
+  /// Line under the Learn from skips switch: what turning it on does.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping a song will prevent similar songs from being selected'**
+  String get autoDjLearnFromSkipsHint;
+
+  /// Shown in place of the line under Learn from skips, and under the Seeds page's Less like header, while no server Auto DJ plays from can take Less like songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a newer server'**
+  String get autoDjNeedsNewerServer;
+
+  /// Auto DJ: the row under Sonic similarity (and in quick settings) that opens the Seeds page, and that page's title. Seeds are the songs Auto DJ's picks should sound like (More like) or not sound like (Less like).
+  ///
+  /// In en, this message translates to:
+  /// **'Seeds'**
+  String get autoDjSeeds;
+
+  /// Seeds page: the line under the Drift | Stay close choice while Drift is chosen. Songs Auto DJ plays join More like and older ones leave; a pinned song stays.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs are rotated out regularly. Pin a song to keep it from being removed.'**
+  String get autoDjSeedsDriftHint;
+
+  /// Seeds page: the line under the Drift | Stay close choice while Stay close is chosen. Both lists stay as they are until Drift is chosen again.
+  ///
+  /// In en, this message translates to:
+  /// **'All songs are now pinned. No new songs will be added.'**
+  String get autoDjSeedsStayCloseHint;
+
+  /// Seeds page: header over the songs Auto DJ's picks should sound like.
+  ///
+  /// In en, this message translates to:
+  /// **'More like'**
+  String get autoDjMoreLike;
+
+  /// Seeds page: header over the songs Auto DJ's picks should not sound like.
+  ///
+  /// In en, this message translates to:
+  /// **'Less like'**
+  String get autoDjLessLike;
+
+  /// Seeds page: the last row of each list, and the title of the sheet it opens to choose a song for that list.
+  ///
+  /// In en, this message translates to:
+  /// **'Add song'**
+  String get autoDjAddSong;
+
+  /// Add song sheet: the row under its title that closes the sheet and lets the user tap a song anywhere in the library instead, as Sonic path's Browse library does.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song from the library'**
+  String get autoDjAddSongFromLibrary;
+
+  /// Banner over the library while the user picks a song to add to the Seeds page's More like list (autoDjMoreLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song for More like — tap a track anywhere in the library'**
+  String get autoDjSeedPickBannerMore;
+
+  /// Banner over the library while the user picks a song to add to the Seeds page's Less like list (autoDjLessLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song for Less like — tap a track anywhere in the library'**
+  String get autoDjSeedPickBannerLess;
+
+  /// Add song sheet: header over the songs coming up in the queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get autoDjUpNext;
+
+  /// Seeds page: item in a Less like row's ⋮ menu that moves the song to More like.
+  ///
+  /// In en, this message translates to:
+  /// **'More like this'**
+  String get autoDjMoreLikeThis;
+
+  /// Seeds page: item in a More like row's ⋮ menu that moves the song to Less like.
+  ///
+  /// In en, this message translates to:
+  /// **'Less like this'**
+  String get autoDjLessLikeThis;
+
+  /// Accessible name of the pin button on a Seeds page row; {title} is the song. The button is a toggle and the screen reader says whether it is on, so there is no Unpin label.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin {title}'**
+  String autoDjSeedPin(String title);
+
+  /// Accessible name of a Seeds page row's ⋮ menu button; {title} is the song.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} options'**
+  String autoDjSeedMenu(String title);
+
+  /// Accessible name of the slider under the Sonic similarity switch in Auto DJ quick settings: how closely each pick must match. It must differ from the switch's own name (autoDjSonicTitle).
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic similarity match'**
+  String get autoDjSonicMatch;
+
+  /// Accessible name of the search field in the Add song sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Search songs'**
+  String get autoDjSearchSongs;
+
+  /// Accessible name of the Drift | Stay close choice at the top of the Seeds page; its two options are autoDjDrift and autoDjStayClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Drift or stay close'**
+  String get autoDjSeedMode;
+
+  /// Checkbox at the bottom of the Auto DJ Seeds page. When checked, clearing the queue (or replacing it, as playing an album does) removes the pinned songs from both seed lists.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear pins when the queue is cleared'**
+  String get autoDjClearPinsOnQueueClear;
+
+  /// Section header in the Less like Add song sheet: the song playing now and songs skipped recently.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get autoDjSkipped;
 
   /// Snackbar when a browse request (Albums, Artists, a folder, a playlist, a search…) fails for any reason other than the user backing out. Generic on purpose: the tunnel status strip explains a Quick Connect state; this is the one line for the request itself.
   ///

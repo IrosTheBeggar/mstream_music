@@ -5271,12 +5271,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Auswählen';
 
   @override
-  String get autoDjMustMatch => 'Muss passen';
-
-  @override
-  String get autoDjPrefer => 'Bevorzugen';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct %';
   }
@@ -5396,6 +5390,88 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Zuletzt gehört';
+
+  @override
+  String get autoDjFilters => 'Filter';
+
+  @override
+  String get autoDjMatch => 'Abstimmung';
+
+  @override
+  String get autoDjLearnFromSkips => 'Aus Überspringen lernen';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Überspringst du einen Song, werden ähnliche Songs nicht mehr ausgewählt';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Neuerer Server nötig';
+
+  @override
+  String get autoDjSeeds => 'Ausgangssongs';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Songs werden regelmäßig ausgetauscht. Pinne einen Song an, damit er bleibt.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Alle Songs sind jetzt angepinnt. Es kommen keine neuen Songs hinzu.';
+
+  @override
+  String get autoDjMoreLike => 'Mehr davon';
+
+  @override
+  String get autoDjLessLike => 'Weniger davon';
+
+  @override
+  String get autoDjAddSong => 'Song hinzufügen';
+
+  @override
+  String get autoDjAddSongFromLibrary => 'Song aus der Bibliothek wählen';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Song für „Mehr davon“ wählen – tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Song für „Weniger davon“ wählen – tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
+  String get autoDjUpNext => 'Als Nächstes';
+
+  @override
+  String get autoDjMoreLikeThis => 'Mehr davon';
+
+  @override
+  String get autoDjLessLikeThis => 'Weniger davon';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return '$title anpinnen';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Optionen für $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Klangliche Übereinstimmung';
+
+  @override
+  String get autoDjSearchSongs => 'Songs suchen';
+
+  @override
+  String get autoDjSeedMode => 'Treiben lassen oder nah bleiben';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Angepinnte Songs beim Leeren der Warteschlange entfernen';
+
+  @override
+  String get autoDjSkipped => 'Übersprungen';
 
   @override
   String get browseLoadFailed =>

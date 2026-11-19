@@ -408,12 +408,10 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     final songs = _songs;
     if (songs == null || index < 0 || index >= songs.length) return;
     // Read before tryCapture — a capture clears the pending request.
-    final route = TrackCapture.pending?.returnScreen;
+    final req = TrackCapture.pending;
     switch (TrackCapture.tryCapture(songs[index])) {
       case CaptureResult.captured:
-        if (route != null) {
-          Navigator.push(context, MaterialPageRoute(builder: route));
-        }
+        TrackCapture.goBack(Navigator.of(context), req!);
         return;
       case CaptureResult.rejected:
         showCaptureRejectedToast(context);

@@ -4950,12 +4950,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjFirstSongChoose => '选择';
 
   @override
-  String get autoDjMustMatch => '必须符合';
-
-  @override
-  String get autoDjPrefer => '偏好';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct%';
   }
@@ -5075,6 +5069,82 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => '最近播放';
+
+  @override
+  String get autoDjFilters => '筛选';
+
+  @override
+  String get autoDjMatch => '匹配';
+
+  @override
+  String get autoDjLearnFromSkips => '从跳过中学习';
+
+  @override
+  String get autoDjLearnFromSkipsHint => '跳过一首歌后，将不再选择与之相似的歌曲';
+
+  @override
+  String get autoDjNeedsNewerServer => '需要新版服务器';
+
+  @override
+  String get autoDjSeeds => '参考歌曲';
+
+  @override
+  String get autoDjSeedsDriftHint => '歌曲会定期轮换。固定一首歌可防止它被移除。';
+
+  @override
+  String get autoDjSeedsStayCloseHint => '所有歌曲现已固定。不会再添加新歌曲。';
+
+  @override
+  String get autoDjMoreLike => '多听类似的';
+
+  @override
+  String get autoDjLessLike => '少听类似的';
+
+  @override
+  String get autoDjAddSong => '添加歌曲';
+
+  @override
+  String get autoDjAddSongFromLibrary => '从曲库中选择歌曲';
+
+  @override
+  String get autoDjSeedPickBannerMore => '为“多听类似的”选择歌曲 — 在曲库中点击任意曲目';
+
+  @override
+  String get autoDjSeedPickBannerLess => '为“少听类似的”选择歌曲 — 在曲库中点击任意曲目';
+
+  @override
+  String get autoDjUpNext => '接下来播放';
+
+  @override
+  String get autoDjMoreLikeThis => '多听类似的';
+
+  @override
+  String get autoDjLessLikeThis => '少听类似的';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return '固定 $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return '$title 的选项';
+  }
+
+  @override
+  String get autoDjSonicMatch => '声音匹配度';
+
+  @override
+  String get autoDjSearchSongs => '搜索歌曲';
+
+  @override
+  String get autoDjSeedMode => '随流漂移或保持接近';
+
+  @override
+  String get autoDjClearPinsOnQueueClear => '清空队列时移除已固定的歌曲';
+
+  @override
+  String get autoDjSkipped => '已跳过';
 
   @override
   String get browseLoadFailed =>

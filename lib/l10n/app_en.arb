@@ -5815,8 +5815,6 @@
   "autoDjFirstSong": "First song",
   "autoDjFirstSongRandom": "Random",
   "autoDjFirstSongChoose": "Choose",
-  "autoDjMustMatch": "Must match",
-  "autoDjPrefer": "Prefer",
   "autoDjPercent": "{pct}%",
   "@autoDjPercent": {
     "placeholders": {"pct": {"type": "int"}}
@@ -5887,6 +5885,104 @@
   "autoDjFirstSongRecent": "Recently played",
   "@autoDjFirstSongRecent": {
     "description": "The Auto DJ screen's First song row value when First song is Recently played: a short form of autoDjRecentlyPlayed, since the row's value slot is narrow."
+  },
+  "autoDjFilters": "Filters",
+  "@autoDjFilters": {
+    "description": "Auto DJ screen: header over the rows that limit which songs can play (Smart filters, Genres, Rating, Length, Skip words)."
+  },
+  "autoDjMatch": "Match",
+  "@autoDjMatch": {
+    "description": "Auto DJ screen: header over the rows that shape how each pick fits the music (Sonic similarity, Beat matching, Harmonic mixing)."
+  },
+  "autoDjLearnFromSkips": "Learn from skips",
+  "@autoDjLearnFromSkips": {
+    "description": "Auto DJ screen: switch row under Sonic similarity. While it is on, a song skipped soon after it starts joins the Seeds page's Less like list."
+  },
+  "autoDjLearnFromSkipsHint": "Skipping a song will prevent similar songs from being selected",
+  "@autoDjLearnFromSkipsHint": {
+    "description": "Line under the Learn from skips switch: what turning it on does."
+  },
+  "autoDjNeedsNewerServer": "Needs a newer server",
+  "@autoDjNeedsNewerServer": {
+    "description": "Shown in place of the line under Learn from skips, and under the Seeds page's Less like header, while no server Auto DJ plays from can take Less like songs."
+  },
+  "autoDjSeeds": "Seeds",
+  "@autoDjSeeds": {
+    "description": "Auto DJ: the row under Sonic similarity (and in quick settings) that opens the Seeds page, and that page's title. Seeds are the songs Auto DJ's picks should sound like (More like) or not sound like (Less like)."
+  },
+  "autoDjSeedsDriftHint": "Songs are rotated out regularly. Pin a song to keep it from being removed.",
+  "@autoDjSeedsDriftHint": {
+    "description": "Seeds page: the line under the Drift | Stay close choice while Drift is chosen. Songs Auto DJ plays join More like and older ones leave; a pinned song stays."
+  },
+  "autoDjSeedsStayCloseHint": "All songs are now pinned. No new songs will be added.",
+  "@autoDjSeedsStayCloseHint": {
+    "description": "Seeds page: the line under the Drift | Stay close choice while Stay close is chosen. Both lists stay as they are until Drift is chosen again."
+  },
+  "autoDjMoreLike": "More like",
+  "@autoDjMoreLike": {
+    "description": "Seeds page: header over the songs Auto DJ's picks should sound like."
+  },
+  "autoDjLessLike": "Less like",
+  "@autoDjLessLike": {
+    "description": "Seeds page: header over the songs Auto DJ's picks should not sound like."
+  },
+  "autoDjAddSong": "Add song",
+  "@autoDjAddSong": {
+    "description": "Seeds page: the last row of each list, and the title of the sheet it opens to choose a song for that list."
+  },
+  "autoDjAddSongFromLibrary": "Pick a song from the library",
+  "@autoDjAddSongFromLibrary": {
+    "description": "Add song sheet: the row under its title that closes the sheet and lets the user tap a song anywhere in the library instead, as Sonic path's Browse library does."
+  },
+  "autoDjSeedPickBannerMore": "Pick a song for More like — tap a track anywhere in the library",
+  "@autoDjSeedPickBannerMore": {
+    "description": "Banner over the library while the user picks a song to add to the Seeds page's More like list (autoDjMoreLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart."
+  },
+  "autoDjSeedPickBannerLess": "Pick a song for Less like — tap a track anywhere in the library",
+  "@autoDjSeedPickBannerLess": {
+    "description": "Banner over the library while the user picks a song to add to the Seeds page's Less like list (autoDjLessLike), after choosing autoDjAddSongFromLibrary. Same wording as pathPickBannerStart."
+  },
+  "autoDjUpNext": "Up next",
+  "@autoDjUpNext": {
+    "description": "Add song sheet: header over the songs coming up in the queue."
+  },
+  "autoDjMoreLikeThis": "More like this",
+  "@autoDjMoreLikeThis": {
+    "description": "Seeds page: item in a Less like row's ⋮ menu that moves the song to More like."
+  },
+  "autoDjLessLikeThis": "Less like this",
+  "@autoDjLessLikeThis": {
+    "description": "Seeds page: item in a More like row's ⋮ menu that moves the song to Less like."
+  },
+  "autoDjSeedPin": "Pin {title}",
+  "@autoDjSeedPin": {
+    "description": "Accessible name of the pin button on a Seeds page row; {title} is the song. The button is a toggle and the screen reader says whether it is on, so there is no Unpin label.",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "autoDjSeedMenu": "{title} options",
+  "@autoDjSeedMenu": {
+    "description": "Accessible name of a Seeds page row's ⋮ menu button; {title} is the song.",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "autoDjSonicMatch": "Sonic similarity match",
+  "@autoDjSonicMatch": {
+    "description": "Accessible name of the slider under the Sonic similarity switch in Auto DJ quick settings: how closely each pick must match. It must differ from the switch's own name (autoDjSonicTitle)."
+  },
+  "autoDjSearchSongs": "Search songs",
+  "@autoDjSearchSongs": {
+    "description": "Accessible name of the search field in the Add song sheet."
+  },
+  "autoDjSeedMode": "Drift or stay close",
+  "@autoDjSeedMode": {
+    "description": "Accessible name of the Drift | Stay close choice at the top of the Seeds page; its two options are autoDjDrift and autoDjStayClose."
+  },
+  "autoDjClearPinsOnQueueClear": "Clear pins when the queue is cleared",
+  "@autoDjClearPinsOnQueueClear": {
+    "description": "Checkbox at the bottom of the Auto DJ Seeds page. When checked, clearing the queue (or replacing it, as playing an album does) removes the pinned songs from both seed lists."
+  },
+  "autoDjSkipped": "Skipped",
+  "@autoDjSkipped": {
+    "description": "Section header in the Less like Add song sheet: the song playing now and songs skipped recently."
   },
   "browseLoadFailed": "Couldn't load this from the server. Check the connection and try again.",
   "@browseLoadFailed": {

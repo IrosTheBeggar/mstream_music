@@ -451,6 +451,19 @@ class DownloadManager {
   int _inFlightFor(String server) =>
       inFlightFor(downloadMap.values, _inFlight, server);
 
+  /// Whether a download of [path] on [server] (a queue row's `server` and
+  /// `path` extras) is on its way: running, waiting to retry, or held for
+  /// Wi-Fi. By the in-flight key, which a held transfer keeps even while a
+  /// manual download takes its place, and by the trackers as well. The Auto
+  /// DJ reads it before a re-roll replaces the picks ahead: a row whose file
+  /// is coming stays, since there is no cancel for one transfer, and it
+  /// would finish for a song no longer queued, holding one of its server's
+  /// few transfer slots meanwhile. Read-only.
+  bool isInFlight(String server, String path) =>
+      _inFlight.contains(server + path) ||
+      downloadMap.values
+          .any((t) => t.serverName == server && t.dataPath == path);
+
   int _slotsFor(String server) =>
       autoDownloadSlots(
           federated:

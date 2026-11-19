@@ -5265,12 +5265,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get autoDjFirstSongChoose => 'Elegir';
 
   @override
-  String get autoDjMustMatch => 'Debe coincidir';
-
-  @override
-  String get autoDjPrefer => 'Preferir';
-
-  @override
   String autoDjPercent(int pct) {
     return '$pct %';
   }
@@ -5390,6 +5384,88 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get autoDjFirstSongRecent => 'Recientes';
+
+  @override
+  String get autoDjFilters => 'Filtros';
+
+  @override
+  String get autoDjMatch => 'Afinidad';
+
+  @override
+  String get autoDjLearnFromSkips => 'Aprender de los saltos';
+
+  @override
+  String get autoDjLearnFromSkipsHint =>
+      'Saltar una canción evitará que se elijan canciones similares';
+
+  @override
+  String get autoDjNeedsNewerServer => 'Requiere un servidor más reciente';
+
+  @override
+  String get autoDjSeeds => 'Canciones base';
+
+  @override
+  String get autoDjSeedsDriftHint =>
+      'Las canciones se renuevan con regularidad. Fija una canción para que se quede.';
+
+  @override
+  String get autoDjSeedsStayCloseHint =>
+      'Ahora todas las canciones están fijadas. No se añadirán canciones nuevas.';
+
+  @override
+  String get autoDjMoreLike => 'Más como estas';
+
+  @override
+  String get autoDjLessLike => 'Menos como estas';
+
+  @override
+  String get autoDjAddSong => 'Añadir canción';
+
+  @override
+  String get autoDjAddSongFromLibrary => 'Elegir una canción de la biblioteca';
+
+  @override
+  String get autoDjSeedPickBannerMore =>
+      'Elige una canción para «Más como estas» — toca una pista en cualquier parte de la biblioteca';
+
+  @override
+  String get autoDjSeedPickBannerLess =>
+      'Elige una canción para «Menos como estas» — toca una pista en cualquier parte de la biblioteca';
+
+  @override
+  String get autoDjUpNext => 'A continuación';
+
+  @override
+  String get autoDjMoreLikeThis => 'Más como esta';
+
+  @override
+  String get autoDjLessLikeThis => 'Menos como esta';
+
+  @override
+  String autoDjSeedPin(String title) {
+    return 'Fijar $title';
+  }
+
+  @override
+  String autoDjSeedMenu(String title) {
+    return 'Opciones de $title';
+  }
+
+  @override
+  String get autoDjSonicMatch => 'Grado de similitud sonora';
+
+  @override
+  String get autoDjSearchSongs => 'Buscar canciones';
+
+  @override
+  String get autoDjSeedMode => 'Evolucionar o quedarse cerca';
+
+  @override
+  String get autoDjClearPinsOnQueueClear =>
+      'Quitar las canciones fijadas al vaciar la cola';
+
+  @override
+  String get autoDjSkipped => 'Saltadas';
 
   @override
   String get browseLoadFailed =>

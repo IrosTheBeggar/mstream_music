@@ -269,6 +269,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // queue header's DJ button), and popping routes alone leaves the panel
     // over the browser.
     TrackCapture.active.addListener(_collapsePanelForCapture);
+    // A panel closed for a pick with a way back opens again under the
+    // screens it puts back, so Back from them leads to it, as before.
+    TrackCapture.onHomeCovered = _reopenPanelAfterCapture;
     // Keep the system navigation/status bars visible (drawn edge-to-edge behind
     // the app) whenever the main screen is up. The Visualizer flips to immersive
     // and restores this on exit, but a kill mid-immersive can leak that mode to
@@ -501,6 +504,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   /// through the setAutoDJ action.
   Future<void> _restoreAutoDj() async {
     await AutoDJManager().load();
+    // The seed rows auto_dj.json kept come back whether or not the DJ does:
+    // the pins in Drift, every row the Seeds page showed in Stay close.
+    await MediaManager().audioHandler.loadPinnedSeeds();
     final name = AutoDJManager().enabledServer;
     if (name == null) return;
     final matches =
@@ -695,13 +701,29 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     }
   }
 
+  // The pick that closed the open panel to show the library, until its way
+  // back has covered the home.
+  TrackCaptureRequest? _reopenPanelFor;
+
   void _collapsePanelForCapture() {
-    if (TrackCapture.active.value != null) _panelKey.currentState?.collapse();
+    final req = TrackCapture.active.value;
+    if (req == null) return;
+    final panel = _panelKey.currentState;
+    _reopenPanelFor = panel != null && panel.isExpanded ? req : null;
+    panel?.collapse();
+  }
+
+  // At once, the home being out of sight under the screens put back.
+  void _reopenPanelAfterCapture(TrackCaptureRequest req) {
+    if (!identical(req, _reopenPanelFor)) return;
+    _reopenPanelFor = null;
+    _panelKey.currentState?.expandNow();
   }
 
   @override
   void dispose() {
     TrackCapture.active.removeListener(_collapsePanelForCapture);
+    TrackCapture.onHomeCovered = null;
     _playEventsSub?.cancel();
     _tunnelSub?.cancel();
     _playingSub?.cancel();
@@ -837,9 +859,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
 
   // Browse-to-pick strip — visible while a TrackCapture request is armed:
   // the next library track tapped lands on whatever asked for it (a sonic
-  // path endpoint, the Auto DJ seed). Copy and destination both come from the
-  // request, so this strip stays feature-agnostic. Cancel returns to the
-  // asking screen, which rebuilds from its own persisted state.
+  // path endpoint, the Auto DJ's opening track, a Seeds list). Copy and
+  // destination both come from the request, so this strip stays
+  // feature-agnostic. Cancel returns to the asking screen, with what was
+  // under it, which rebuild from their own persisted state.
   Widget _captureBanner() {
     return ValueListenableBuilder<TrackCaptureRequest?>(
       valueListenable: TrackCapture.active,
@@ -851,15 +874,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           VelvetColors.primary,
           req.bannerLabel(l),
           action: TextButton(
-            onPressed: () {
-              final back = req.returnScreen;
-              TrackCapture.cancel();
-              // Same rule as a successful pick: go back only when there is
-              // somewhere to go back to.
-              if (back != null) {
-                Navigator.push(context, MaterialPageRoute(builder: back));
-              }
-            },
+            // Same way back as a successful pick, and only when there is
+            // somewhere to go back to.
+            onPressed: () =>
+                TrackCapture.cancelAndGoBack(Navigator.of(context)),
             child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.primary)),
           ),

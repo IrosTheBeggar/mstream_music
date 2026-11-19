@@ -239,4 +239,51 @@ void main() {
       expect(b.processingState, BackendProcessingState.idle);
     });
   });
+
+  // Whether an explicit Next moves to ANOTHER row, as the renderer backends'
+  // seekToNext does it. The handler reads this before a skip to tell a Next
+  // that leaves a song from one that goes nowhere.
+  group('hasNext', () {
+    test('a row with rows after it has a next one; the last does not',
+        () async {
+      final b = await _seeded(3);
+      expect(b.hasNext, isTrue);
+      await b.loadIndex(2, play: true);
+      expect(b.hasNext, isFalse);
+    });
+
+    test('repeat-all wraps from the last row, but not onto itself', () async {
+      final b = await _seeded(3);
+      await b.setRepeat(BackendRepeat.all);
+      await b.loadIndex(2, play: true);
+      expect(b.hasNext, isTrue);
+      final one = await _seeded(1);
+      await one.setRepeat(BackendRepeat.all);
+      expect(one.hasNext, isFalse);
+    });
+
+    test('repeat-one still advances on an explicit Next', () async {
+      final b = await _seeded(3);
+      await b.setRepeat(BackendRepeat.one);
+      expect(b.hasNext, isTrue);
+      await b.loadIndex(2, play: true);
+      expect(b.hasNext, isFalse);
+    });
+
+    test('shuffle moves to another row from anywhere, given one', () async {
+      final b = await _seeded(3);
+      await b.setShuffleEnabled(true);
+      await b.loadIndex(2, play: true);
+      expect(b.hasNext, isTrue);
+      final one = await _seeded(1);
+      await one.setShuffleEnabled(true);
+      expect(one.hasNext, isFalse);
+    });
+
+    test('an empty list has nowhere to go', () async {
+      final b = _FakeBackend();
+      await b.setSources(const []);
+      expect(b.hasNext, isFalse);
+    });
+  });
 }
