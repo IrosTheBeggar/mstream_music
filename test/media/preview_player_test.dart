@@ -482,6 +482,56 @@ void main() {
       });
     });
 
+    // openOutside (elsewhere_sheet.dart): a link that will not open gives
+    // the song back — the user never left.
+    test('a link that did not open: the hold it handed back resumes the '
+        'song once', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('itunes');
+        async.flushMicrotasks();
+        final held = r.player.endLeavingApp();
+        async.flushMicrotasks();
+        expect(held, isNotNull);
+        expect(r.clip.playing, isFalse);
+        expect(r.port.plays, 0, reason: 'leaving the app keeps it paused');
+        r.player.resumeHeld(held!);
+        expect(r.port.plays, 1);
+        expect(r.port.playingNow, isTrue);
+        r.player.resumeHeld(held);
+        expect(r.port.plays, 1, reason: 'playing already: once');
+      });
+    });
+
+    test('…not once the song was touched, nor while a new clip plays; no '
+        'hold without a paused song', () {
+      fakeAsync((async) {
+        final r = _Rig();
+        r.play('itunes');
+        async.flushMicrotasks();
+        var held = r.player.endLeavingApp()!;
+        r.port.userCommand('seek');
+        r.player.resumeHeld(held);
+        expect(r.port.plays, 0, reason: 'a transport command since');
+
+        final s = _Rig();
+        s.play('itunes');
+        async.flushMicrotasks();
+        held = s.player.endLeavingApp()!;
+        async.flushMicrotasks();
+        s.play('deezer');
+        async.flushMicrotasks();
+        s.player.resumeHeld(held);
+        expect(s.port.plays, 0, reason: 'the new clip holds the song now');
+
+        final idle = _Rig(songPlaying: false);
+        idle.play('itunes');
+        async.flushMicrotasks();
+        expect(idle.player.endLeavingApp(), isNull);
+        expect(_Rig().player.endLeavingApp(), isNull, reason: 'no flow');
+      });
+    });
+
     test('casting: the cast is paused and resumed like local playback', () {
       fakeAsync((async) {
         final r = _Rig(castTarget: 'tv-1', casting: true);

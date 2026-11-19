@@ -231,6 +231,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _networkLoading = false;
   bool _networkDisabled = false;
   DiscoveryLeads? _network;
+  // The song [_network]'s rows sound like: the seed asked when they came —
+  // not always the one on show (a track change shows the next song while
+  // its rows are still on their way).
+  DiscoverSeed? _networkSeed;
   bool _peersLoading = false;
   bool _peersDisabled = false;
   DiscoveryLeads? _peers;
@@ -289,12 +293,26 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   /// The first lead action on a network-lead sheet (a preview, Play, Add to
-  /// queue, Add this one): the screen stays on the song it shows, whatever
-  /// plays next — a refresh already armed by a track change included.
-  void _pinSeed() {
+  /// queue, Add this one): the screen stays on [seed] — the song the sheet's
+  /// row sounds like — whatever plays next, a refresh already armed by a
+  /// track change included. The screen may have followed playback to
+  /// another song while the sheet was open: it goes back to [seed] and asks
+  /// for its sections again.
+  void _pinSeed([DiscoverSeed? seed]) {
     if (widget.hasExplicitSeed || _pinned || !mounted) return;
     _debounce?.cancel();
-    setState(() => _pinned = true);
+    final moved = seed != null &&
+        (seed.path != _seedPath || !identical(seed.server, _seedServer));
+    setState(() {
+      _pinned = true;
+      if (moved) {
+        _seedServer = seed.server;
+        _seedPath = seed.path;
+        _seedTitle = seed.title;
+        _seedArtist = seed.artist;
+      }
+    });
+    if (moved) _refresh();
   }
 
   /// Hold [seed]'s own server's jobs controller (or none, its plug-ins
@@ -418,6 +436,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final rid = ++_leadsRid;
     if (server.discoveryP2pAvailable == true && !_networkDisabled) {
       _networkLoading = true;
+      final fetchSeed = plan.fetch;
       DiscoverScreen.fetchNetworkLeads(server, path,
               limit: 10, newArtistsOnly: newArtistsOnly)
           .then((r) {
@@ -428,6 +447,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _networkDisabled = true;
           } else if (r.data != null) {
             _network = r.data;
+            _networkSeed = fetchSeed;
           }
         });
       });
@@ -516,14 +536,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   /// A "From the network" row's tap, as its row was drawn ([tap]): the
-  /// network-lead sheet (its match line names the seed; its first lead
-  /// action pins it), or the copy.
+  /// network-lead sheet (its match line names the song the row sounds
+  /// like; its first lead action pins that song), or the copy.
   void _tapNetworkLead(DiscoveryLead lead, NetworkLeadTap tap) {
     appLog('[lead] tap → ${tap.name}');
     final jobs = _jobs;
     if (tap == NetworkLeadTap.sheet && jobs != null) {
+      final seed = _networkSeed;
       DiscoveryKeepRoutes.openNetworkLead(context, jobs, lead,
-          seedTitle: _seedTitle, onLeadAction: _pinSeed);
+          seedTitle: seed != null ? seed.title : _seedTitle,
+          onLeadAction: () => _pinSeed(seed));
     } else {
       unawaited(_copyLead(lead));
     }
@@ -563,7 +585,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ),
             ),
             if (seedLine.isNotEmpty)
+              // As wide as its line: iOS centres the title block.
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_pinned)
                     Padding(

@@ -12,6 +12,7 @@
 // scripted fake behind the hub's controllers; the player is the browse
 // tests' fake handler; the sheets the screen opens are the test's.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -523,6 +524,121 @@ void main() {
       expect(fetched, hasLength(1));
       expect(find.text('Tidewater · Mara Quell'), findsOneWidget);
     });
+
+    testWidgets('a lead action pins the song the sheet was opened from, '
+        'even after the screen followed playback on while it was open', (
+      tester,
+    ) async {
+      await pumpScreen(tester);
+      await tester.tap(find.text('Paper Satellites'));
+      await frames(tester);
+      expect(opened.single.seedTitle, 'Tidewater');
+      // The sheet stays open over the screen, which follows the next song.
+      fakeAudio.mediaItem.add(playing(_lighthouse, 'Lighthouse'));
+      await tester.pump(const Duration(milliseconds: 600));
+      await frames(tester);
+      expect(find.text('Lighthouse · Mara Quell'), findsOneWidget);
+      expect(find.text('Low Orbit'), findsOneWidget);
+
+      opened.single.onLeadAction!();
+      await frames(tester);
+      expect(find.text('Tidewater · Mara Quell'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('discover-seed-pinned')),
+        findsOneWidget,
+      );
+      expect(fetched.last, ('home', _tidewater, false));
+      expect(find.text('Paper Satellites'), findsOneWidget);
+      expect(find.text('Low Orbit'), findsNothing);
+    });
+
+    testWidgets("rows still on screen from the song before open the sheet "
+        "with that song's title, and pin it", (tester) async {
+      await pumpScreen(tester);
+      final held = Completer<void>();
+      final fetch = DiscoverScreen.fetchNetworkLeads;
+      DiscoverScreen.fetchNetworkLeads =
+          (server, path, {required limit, required newArtistsOnly}) async {
+            if (path == _lighthouse && !held.isCompleted) await held.future;
+            return fetch(
+              server,
+              path,
+              limit: limit,
+              newArtistsOnly: newArtistsOnly,
+            );
+          };
+      fakeAudio.mediaItem.add(playing(_lighthouse, 'Lighthouse'));
+      await tester.pump(const Duration(milliseconds: 600));
+      await frames(tester);
+      expect(find.text('Lighthouse · Mara Quell'), findsOneWidget);
+      expect(find.text('Paper Satellites'), findsOneWidget, reason: 'kept');
+
+      await tester.tap(find.text('Paper Satellites'));
+      await frames(tester);
+      expect(opened.single.seedTitle, 'Tidewater');
+      held.complete();
+      await frames(tester);
+      opened.single.onLeadAction!();
+      await frames(tester);
+      expect(find.text('Tidewater · Mara Quell'), findsOneWidget);
+      expect(find.text('Paper Satellites'), findsOneWidget);
+    });
+
+    // iOS centres an app bar's title (fewer than two actions): the title
+    // and the seed line, a block as wide as its widest line.
+    testWidgets(
+      'on iOS the title block is centred, pinned or not',
+      (tester) async {
+        // Wide enough that the block is never clamped to the back button.
+        tester.view.physicalSize = const Size(800 * 3, 844 * 3);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: appSupportedLocales,
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const DiscoverScreen(),
+                  ),
+                ),
+                child: const Text('go'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('go'));
+        await frames(tester, 16);
+        Rect block() => tester.getRect(
+          find
+              .ancestor(
+                of: find.text('More like this'),
+                matching: find.byType(Column),
+              )
+              .first,
+        );
+        expect(find.text('Tidewater · Mara Quell'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('More like this')).dx,
+          greaterThan(150),
+        );
+        expect(block().center.dx, closeTo(400, 1));
+
+        await tester.tap(find.text('Paper Satellites'));
+        await frames(tester);
+        opened.single.onLeadAction!();
+        await frames(tester);
+        expect(
+          find.byKey(const ValueKey('discover-seed-pinned')),
+          findsOneWidget,
+        );
+        expect(block().center.dx, closeTo(400, 1));
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
 
     testWidgets('unpinned, it follows the track as before', (tester) async {
       await pumpScreen(tester);

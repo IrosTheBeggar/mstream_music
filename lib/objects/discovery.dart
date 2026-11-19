@@ -206,14 +206,11 @@ class DiscoveryLead {
     final title = _str(m['title']);
     if (title == null) return null;
     final peer = m['peer'];
-    final duration = m['duration'];
     return DiscoveryLead(
       _str(m['artist']) ?? '',
       title,
       _asSimilarity(m['similarity']),
-      duration is num && duration.isFinite && duration > 0
-          ? duration.toDouble()
-          : null,
+      _seconds(m['duration']),
       _str(m['recordingMbid'], max: 64),
       parseGenreTags(m['genreTags']),
       (peer is Map ? _str(peer['name']) : null) ?? peerName,
@@ -247,18 +244,26 @@ class DiscoveryLead {
       sendableRecommendation(raw, network: isNetwork);
 
   /// The same lead over another [raw] (its repaired [recommendation], what
-  /// a sheet then forwards everywhere); every parsed field stays as it was.
+  /// a sheet then forwards everywhere). The facts a repair nulls or remakes
+  /// — album, album credit, year and length — are read from [raw] when it
+  /// carries them, so what a sheet shows (a header, a folder preview) is
+  /// what it sends (a peer's year of 0 is no year); every other parsed
+  /// field stays as it was.
   DiscoveryLead withRaw(Map<String, dynamic> raw) => DiscoveryLead(
         artist,
         title,
         similarity,
-        durationSeconds,
+        raw.containsKey('duration')
+            ? _seconds(raw['duration'])
+            : durationSeconds,
         recordingMbid,
         genreTags,
         peerName,
-        album: album,
-        albumArtist: albumArtist,
-        year: year,
+        album: raw.containsKey('album') ? _str(raw['album']) : album,
+        albumArtist: raw.containsKey('albumArtist')
+            ? _str(raw['albumArtist'])
+            : albumArtist,
+        year: raw.containsKey('year') ? _int(raw['year']) : year,
         filepath: filepath,
         peerId: peerId,
         source: source,
@@ -1025,6 +1030,10 @@ String? _hash(dynamic v) => _str(v, max: 128);
 final RegExp _artNameRule = RegExp(r'^[a-zA-Z0-9_-]{1,100}\.[a-zA-Z0-9]{1,7}$');
 String? _artName(dynamic v) =>
     v is String && _artNameRule.hasMatch(v) ? v : null;
+
+/// A lead's length in seconds: a finite number above zero, else null.
+double? _seconds(dynamic v) =>
+    v is num && v.isFinite && v > 0 ? v.toDouble() : null;
 
 /// An integer from a num (rounded) or a numeric string; null otherwise.
 int? _int(dynamic v) {

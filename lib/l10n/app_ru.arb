@@ -1696,5 +1696,6 @@
   "discoverCopiesDestChangedYt": "Не удалось начать: место для файлов изменилось — откройте трек и добавьте его снова",
   "discoverLeadYtChangeHint": "Изменить, куда сохраняются добавленные треки",
   "discoverCopiesDestChangedYtMoved": "Не удалось начать: место для файлов изменилось",
-  "discoverCopiesAddThere": "Добавить туда"
+  "discoverCopiesAddThere": "Добавить туда",
+  "discoverToastView": "Открыть"
 }

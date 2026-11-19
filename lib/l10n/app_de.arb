@@ -1696,5 +1696,6 @@
   "discoverCopiesDestChangedYt": "Start nicht möglich: Wo Dateien landen, hat sich geändert – öffne den Titel und füge ihn erneut hinzu",
   "discoverLeadYtChangeHint": "Ziel für hinzugefügte Titel ändern",
   "discoverCopiesDestChangedYtMoved": "Start nicht möglich: Wo Dateien landen, hat sich geändert",
-  "discoverCopiesAddThere": "Dort hinzufügen"
+  "discoverCopiesAddThere": "Dort hinzufügen",
+  "discoverToastView": "Ansehen"
 }

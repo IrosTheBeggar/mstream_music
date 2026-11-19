@@ -141,10 +141,19 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   /// picked.
   String? _avoid;
 
+  /// A "Choose another" moves off an add that named no upload (the server
+  /// searched) and failed on the upload it fetched: the server takes the
+  /// search's best when it passes the bar (youtube.js pickBest), the first
+  /// upload found here, so the second is picked.
+  bool _avoidTop = false;
+
   /// A start this card asked for answered with a live add of another
   /// upload of the song (the server's dedupe ignores the pick): said under
-  /// that add's line.
+  /// that add's line while it runs.
   int? _otherUploadOf;
+
+  /// The adds a Cancel is out for (its pill busy).
+  final Set<int> _cancelling = {};
 
   /// Why the server would not start the last add asked (the line under Add
   /// this one, or under a job's Retry), and in which tone.
@@ -175,8 +184,9 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   /// its line, unless one this card started since is newer. Opened to
   /// choose another upload ([NetworkKeepSlot.autoSearch]), a failed or
   /// cancelled one gives way to the search, and its upload is the one not
-  /// picked — unless the slot named one ([NetworkKeepSlot.avoidUrl]: the
-  /// row the user chose another for).
+  /// picked (one that named none: the upload the server fetched, the
+  /// search's best) — unless the slot named one ([NetworkKeepSlot.avoidUrl]:
+  /// the row the user chose another for).
   Future<void> _restore() async {
     final found = await jobs.youtubeJobFor(rec);
     if (!mounted || found == null) return;
@@ -184,22 +194,45 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
     if (mine != null && mine.id >= found.id) return;
     setState(() {
       _job = found;
-      final state = jobs.latest(found).state;
+      final now = jobs.latest(found);
+      final state = now.state;
       if (slot.autoSearch &&
           (state == JobState.failed || state == JobState.cancelled)) {
         _setAside = found.id;
         _avoid ??= found.choiceUrl;
+        _avoidTop = _avoid == null && _failedOnTopUpload(now);
         if (_card == _Card.ready && !_picked) _selected = _firstPick();
       }
     });
   }
 
-  /// The first upload that is not [_avoid]'s (the first when every one is).
+  /// [job] named no upload, so the server fetched the search's best, and
+  /// failed on that upload (too big, unreadable, a live stream) — not on
+  /// the search (nothing close, nothing found).
+  static bool _failedOnTopUpload(DiscoveryJob job) =>
+      job.state == JobState.failed &&
+      job.choiceUrl == null &&
+      switch (youtubeFailureOf(job.error).kind) {
+        YoutubeFailureKind.tooBig ||
+        YoutubeFailureKind.unreadable ||
+        YoutubeFailureKind.live => true,
+        _ => false,
+      };
+
+  /// The first upload that is not [_avoid]'s (the first when every one is);
+  /// past [_avoidTop], the second when the first passes the bar.
   int _firstPick() {
     final avoid = _avoid;
-    if (avoid == null) return 0;
-    final i = _candidates.indexWhere((c) => c.url != avoid);
-    return i < 0 ? 0 : i;
+    if (avoid != null) {
+      final i = _candidates.indexWhere((c) => c.url != avoid);
+      return i < 0 ? 0 : i;
+    }
+    if (_avoidTop &&
+        _candidates.length > 1 &&
+        !_candidates.first.loose(_minScore)) {
+      return 1;
+    }
+    return 0;
   }
 
   Future<void> _search() async {
@@ -273,6 +306,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
     setState(() {
       _setAside = job.id;
       _avoid = job.choiceUrl;
+      _avoidTop = _failedOnTopUpload(job);
       _details = false;
     });
     unawaited(_search());
@@ -283,6 +317,8 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   Future<void> _add() async {
     if (_candidates.isEmpty) return;
     final pick = _candidates[_selected.clamp(0, _candidates.length - 1)];
+    // Read now: the answer may come after the sheet has closed.
+    final l = AppLocalizations.of(context);
     slot.onLeadAction();
     setState(() => _refusal = null);
     final out = await jobs.start(
@@ -293,37 +329,44 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       // refused, never quietly used.
       shown: ShownPlace(jobs.destination?.destination),
     );
-    _answered(out, pick.url);
+    _answered(l, out, pick.url);
   }
 
   /// Retry (a failed add, or one a file was already in the way of): the
   /// same song and upload again, to where files land now.
   Future<void> _retry(DiscoveryJob job) async {
+    final l = AppLocalizations.of(context);
     setState(() => _refusal = null);
     final out = await jobs.retry(
       job,
       shown: ShownPlace(jobs.destination?.destination),
     );
-    _answered(out, job.choiceUrl);
+    _answered(l, out, job.choiceUrl);
   }
 
   /// What a start answered: its add's line (with a note when the add is
   /// another upload's: the server took none new), or why it was refused.
-  void _answered(StartOutcome out, String? pick) {
+  /// Answered once the sheet has closed (or while it animates away): an add
+  /// the server took is still the sheet's to toast, and why one was refused
+  /// is a toast instead of the card's line.
+  void _answered(AppLocalizations l, StartOutcome out, String? pick) {
     if (out.ignored) return;
     final job = out.job;
     appLog(
       '[lead] yt start job=${job?.id ?? '-'} created=${out.created} '
       'status=${job == null ? out.status ?? 0 : (out.created ? 202 : 200)}',
     );
-    if (!mounted) return;
-    final l = AppLocalizations.of(context);
+    final gone = !mounted || !(ModalRoute.of(context)?.isActive ?? true);
     if (job != null) {
-      setState(() {
-        _job = job;
-        _details = false;
-        _otherUploadOf = !out.created && job.choiceUrl != pick ? job.id : null;
-      });
+      if (mounted) {
+        setState(() {
+          _job = job;
+          _details = false;
+          _otherUploadOf = !out.created && job.choiceUrl != pick
+              ? job.id
+              : null;
+        });
+      }
       if (out.created) slot.onStarted(job);
       return;
     }
@@ -332,6 +375,10 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       // Nowhere takes files now: the gate closes and the section with it.
       if (jobs.destination?.destination == null) {
         slot.toast(l.discoverKeepNoLibrary);
+        return;
+      }
+      if (gone) {
+        slot.toast(l.discoverCopiesDestChangedYtMoved);
         return;
       }
       // The path above is redrawn from the answer: the user checks it and
@@ -352,12 +399,17 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       );
       return;
     }
+    final why = youtubeStartRefusalText(
+      l,
+      DiscoveryPluginsException(status, out.error ?? ''),
+    );
+    if (gone) {
+      slot.toast(why);
+      return;
+    }
     setState(
       () => _refusal = (
-        youtubeStartRefusalText(
-          l,
-          DiscoveryPluginsException(status, out.error ?? ''),
-        ),
+        why,
         keepTone(status == 409 ? VelvetColors.warning : VelvetColors.error),
       ),
     );
@@ -365,12 +417,19 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
 
   Future<void> _cancel(DiscoveryJob job) async {
     final l = AppLocalizations.of(context);
-    final r = await jobs.cancel(job);
-    if (!mounted) return;
-    if (r.outcome == CancelOutcome.alreadyFinished) {
-      slot.toast(l.discoverCopiesAlreadyFinished);
-    } else if (r.outcome == CancelOutcome.failed) {
-      slot.toast(l.discoverCopiesCancelFailed);
+    // Its pill busy until the server answers: a second press sends nothing.
+    setState(() => _cancelling.add(job.id));
+    try {
+      final r = await jobs.cancel(job);
+      if (!mounted) return;
+      if (r.outcome == CancelOutcome.alreadyFinished) {
+        slot.toast(l.discoverCopiesAlreadyFinished);
+      } else if (r.outcome == CancelOutcome.failed) {
+        slot.toast(l.discoverCopiesCancelFailed);
+      }
+    } finally {
+      _cancelling.remove(job.id);
+      if (mounted) setState(() {});
     }
   }
 
@@ -484,6 +543,17 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
         if (destUsesVar(d.layout, v)) destToken(v),
     ];
     final warn = keepTone(VelvetColors.warning);
+    void change() {
+      // The user is checking the path the warning points at.
+      if (_refusal != null) setState(() => _refusal = null);
+      DiscoveryKeepRoutes.changeDestination(
+        context,
+        jobs,
+        DestinationPreviewSong.ofLead(slot.lead, download: true),
+        '',
+      );
+    }
+
     final strong = TextStyle(
       color: VelvetColors.textPrimary,
       fontSize: 13,
@@ -491,7 +561,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       height: 1.4,
     );
     final soft = TextStyle(
-      color: VelvetColors.textSecondary,
+      color: keepQuiet(VelvetColors.textSecondary),
       fontSize: 13,
       height: 1.4,
     );
@@ -539,7 +609,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                       l.ytdlWhereAlwaysEmpty(never.join(', ')),
                       key: const ValueKey('yt-never-note'),
                       style: TextStyle(
-                        color: VelvetColors.textSecondary,
+                        color: keepQuiet(VelvetColors.textSecondary),
                         fontSize: 12,
                         height: 16 / 12,
                       ),
@@ -549,23 +619,16 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
             ),
           ),
         ),
+        // Its tap on the node too: the label replaces the InkWell's own.
         Semantics(
           button: true,
           label: l.discoverLeadYtChangeHint,
+          onTap: change,
           excludeSemantics: true,
           child: InkWell(
             key: const ValueKey('yt-change'),
             borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-            onTap: () {
-              // The user is checking the path the warning points at.
-              if (_refusal != null) setState(() => _refusal = null);
-              DiscoveryKeepRoutes.changeDestination(
-                context,
-                jobs,
-                DestinationPreviewSong.ofLead(slot.lead, download: true),
-                '',
-              );
-            },
+            onTap: change,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 13, 4, 13),
               child: Text(
@@ -655,7 +718,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       text,
       key: key,
       style: TextStyle(
-        color: color ?? VelvetColors.textSecondary,
+        color: color ?? keepQuiet(VelvetColors.textSecondary),
         fontSize: size,
         height: size <= 12 ? 16 / size : 1.35,
       ),
@@ -708,7 +771,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                   child: Text(
                     l.discoverLeadYtAsking(_query),
                     style: TextStyle(
-                      color: VelvetColors.textSecondary,
+                      color: keepQuiet(VelvetColors.textSecondary),
                       fontSize: 13,
                       height: 1.35,
                     ),
@@ -719,7 +782,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                   keepClock(Duration(seconds: _elapsed)),
                   key: const ValueKey('yt-counter'),
                   style: TextStyle(
-                    color: VelvetColors.textTertiary,
+                    color: keepQuiet(VelvetColors.textTertiary),
                     fontSize: 12,
                     height: 1.5,
                     fontFamily: 'monospace',
@@ -734,7 +797,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
             _text(
               l.discoverLeadYtSlowHint,
               key: const ValueKey('yt-slow-hint'),
-              color: VelvetColors.textTertiary,
+              color: keepQuiet(VelvetColors.textTertiary),
               size: 12,
               top: 6,
             ),
@@ -760,7 +823,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                 pathCrumbs(fp).join(' / '),
                 key: const ValueKey('yt-owned-path'),
                 style: TextStyle(
-                  color: VelvetColors.textTertiary,
+                  color: keepQuiet(VelvetColors.textTertiary),
                   fontSize: 11,
                   height: 16 / 11,
                   fontFamily: 'monospace',
@@ -881,7 +944,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
       _text(
         l.discoverLeadYtOnlyPick,
         key: const ValueKey('yt-only-pick'),
-        color: VelvetColors.textTertiary,
+        color: keepQuiet(VelvetColors.textTertiary),
         size: 12,
         top: 2,
       ),
@@ -981,7 +1044,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: VelvetColors.textSecondary,
+                            color: keepQuiet(VelvetColors.textSecondary),
                             fontSize: 12,
                             height: 16 / 12,
                           ),
@@ -1047,7 +1110,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
           child: Text(
             l.discoverJobYtCancelled,
             style: TextStyle(
-              color: VelvetColors.textTertiary,
+              color: keepQuiet(VelvetColors.textTertiary),
               fontSize: 12,
               height: 16 / 12,
             ),
@@ -1090,7 +1153,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
   /// step it is at and the bar while it runs, how it ended, its verbs.
   List<Widget> _jobLine(AppLocalizations l, DiscoveryJob job) {
     final row = jobRowState(job, plugin: kYoutubePlugin);
-    final text2 = VelvetColors.textSecondary;
+    final text2 = keepQuiet(VelvetColors.textSecondary);
     final ink = keepInk();
     Widget icon(IconData i, Color c) => Icon(i, size: 18, color: c);
 
@@ -1104,10 +1167,13 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
     var cancel = false;
     String? raw;
     final actions = <Widget>[];
+    // A Retry out: its pill busy, and no Choose another to cross it.
+    final retrying = jobs.isStarting(job.recommendation, null, kYoutubePlugin);
     Widget retry() => KeepPill(
       l.discoverJobRetry,
       key: const ValueKey('yt-retry'),
       icon: Icons.refresh,
+      busy: retrying,
       onTap: () => unawaited(_retry(job)),
     );
 
@@ -1179,7 +1245,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
               key: const ValueKey('yt-choose-another'),
               icon: Icons.search,
               primary: true,
-              onTap: () => _chooseAnother(job),
+              onTap: retrying ? null : () => _chooseAnother(job),
             ),
           );
         }
@@ -1232,6 +1298,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                     KeepPill(
                       l.cancel,
                       key: const ValueKey('yt-cancel'),
+                      busy: _cancelling.contains(job.id),
                       onTap: () => unawaited(_cancel(job)),
                     ),
                   ],
@@ -1257,7 +1324,7 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
               _text(
                 meta,
                 key: const ValueKey('yt-job-meta'),
-                color: VelvetColors.textTertiary,
+                color: keepQuiet(VelvetColors.textTertiary),
                 size: 12,
               ),
             if (details != null)
@@ -1283,14 +1350,16 @@ class _YoutubeKeepBlockState extends State<YoutubeKeepBlock> {
                 details,
                 key: const ValueKey('yt-error-raw'),
                 style: TextStyle(
-                  color: VelvetColors.textTertiary,
+                  color: keepQuiet(VelvetColors.textTertiary),
                   fontSize: 11,
                   height: 16 / 11,
                   fontFamily: 'monospace',
                   fontFamilyFallback: kMonoFallback,
                 ),
               ),
-            if (_otherUploadOf == job.id)
+            // The server answers with another upload's add only while it
+            // runs: once it has ended, the note is no longer true.
+            if (_otherUploadOf == job.id && job.live)
               _text(
                 l.discoverLeadYtAlreadyAdding,
                 key: const ValueKey('yt-other-upload'),

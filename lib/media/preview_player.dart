@@ -402,6 +402,34 @@ class PreviewPlayer {
     await stopping;
   }
 
+  /// Ends the flow as [PreviewEnd.leftApp] (a link is about to open) and
+  /// hands back the song it had paused, or null when it held none: a link
+  /// that then fails to open gives it to [resumeHeld] — the user never left.
+  SongHold? endLeavingApp() {
+    final hold = _active ? _hold : null;
+    unawaited(end(PreviewEnd.leftApp));
+    return hold;
+  }
+
+  /// The song [hold] paused comes back, as a Stop would bring it back: only
+  /// while no new flow runs and nobody has touched it since (no transport
+  /// command, the same track and cast target, not playing already).
+  void resumeHeld(SongHold hold) {
+    if (_active) return;
+    if (!resumesSong(
+        reason: PreviewEnd.stopped,
+        held: hold,
+        epochNow: _port.transportEpoch,
+        keyNow: _port.songKey,
+        targetNow: _port.castTarget,
+        songPlaying: _port.songPlaying,
+        casting: _port.casting)) {
+      return;
+    }
+    appLog('[preview] resuming the song (the link did not open)');
+    _port.playSong();
+  }
+
   /// Pure: whether the song a flow paused comes back when the flow ends.
   /// Never once someone else has started it, or after any transport
   /// command, a track change or a cast-target change since the hold.

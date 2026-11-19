@@ -6364,7 +6364,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => 'Ver';
 
   @override
   String get discoverKeepFolder => 'Folder';

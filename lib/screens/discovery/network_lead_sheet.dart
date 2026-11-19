@@ -26,7 +26,8 @@ import 'youtube_pick_card.dart';
 /// "From the network" row on More like this opens — a song in someone
 /// else's library on the P2P network, which the phone cannot play. Its
 /// header says what and where from ("From the network · Vinyl Vault",
-/// "88% match to “Tidewater”"), pinned while the rest scrolls; then a
+/// "88% match to “Tidewater”"), pinned while the rest scrolls (up to 130 %
+/// text; past it the header scrolls away too); then a
 /// 30-second preview from each catalogue the user's own server offers
 /// (network_preview_rows.dart), KEEP A COPY — the YouTube add, when it can
 /// run here — and "Open elsewhere ›" (or "Open on MusicBrainz" without the
@@ -77,7 +78,9 @@ NetworkLeadTap networkLeadTapFor(
 /// [onLeadAction] runs once, on the sheet's first lead action (a preview,
 /// Play, Add to queue, Add this one: More like this pins its seed). An add
 /// the sheet started is toasted once it closes, with "View" (Copies) while
-/// it runs, or — ended by then — with its ending.
+/// it runs, or — ended by then — with its ending; one the user already
+/// asked to stop says nothing. A start the server answers after the sheet
+/// closed is toasted as it answers.
 Future<void> showNetworkLeadSheet(
   BuildContext context, {
   required DiscoveryJobsController jobs,
@@ -89,6 +92,32 @@ Future<void> showNetworkLeadSheet(
 }) async {
   final l = AppLocalizations.of(context);
   final started = <DiscoveryJob>[];
+  var closed = false;
+  BuildContext? host() =>
+      context.mounted ? context : rootNavigatorKey.currentContext;
+  void tell(DiscoveryJob job) {
+    // One that already ended (the library had it) is no "Adding …": its
+    // ending instead — unless the poll told it while the sheet was open.
+    final last = jobs.latest(job);
+    if (!last.live) {
+      final ended = jobs.claimEnding(last) ? copyFinishedToast(l, last) : null;
+      if (ended != null) KeepToast.show(host(), ended);
+      return;
+    }
+    // Stopping (Cancel on a running add): "Adding …" would be the last
+    // word on an add the user called off; its ending says nothing either.
+    if (last.cancelRequested) return;
+    showCopyStarted(
+      host(),
+      l,
+      last,
+      onView: () {
+        final at = host();
+        if (at != null && at.mounted) DiscoveryKeepRoutes.openCopies(at, jobs);
+      },
+    );
+  }
+
   await showModalBottomSheet<void>(
     context: context,
     backgroundColor: VelvetColors.surface,
@@ -106,29 +135,13 @@ Future<void> showNetworkLeadSheet(
       autoSearch: autoSearch,
       avoidUrl: avoidUrl,
       onLeadAction: onLeadAction,
-      onStarted: started.add,
+      // Answered once the sheet has closed (or while it animates away):
+      // told at once.
+      onStarted: (job) => closed ? tell(job) : started.add(job),
     ),
   );
-  if (started.isEmpty) return;
-  BuildContext? host() =>
-      context.mounted ? context : rootNavigatorKey.currentContext;
-  // One that already ended (the library had it) is no "Adding …": its
-  // ending instead — unless the poll told it while the sheet was open.
-  final last = jobs.latest(started.last);
-  if (!last.live) {
-    final ended = jobs.claimEnding(last) ? copyFinishedToast(l, last) : null;
-    if (ended != null) KeepToast.show(host(), ended);
-    return;
-  }
-  showCopyStarted(
-    host(),
-    l,
-    last,
-    onView: () {
-      final at = host();
-      if (at != null && at.mounted) DiscoveryKeepRoutes.openCopies(at, jobs);
-    },
-  );
+  closed = true;
+  if (started.isNotEmpty) tell(started.last);
 }
 
 /// What the sheet hands KEEP A COPY's block (the YouTube add:
@@ -156,7 +169,8 @@ class NetworkKeepSlot {
   /// first on (More like this pins its seed).
   final VoidCallback onLeadAction;
 
-  /// An add the server took as new: toasted once the sheet closes.
+  /// An add the server took as new: toasted once the sheet closes (at once
+  /// when the answer comes after it closed — call it then too).
   final void Function(DiscoveryJob job) onStarted;
 
   /// A press the server refused with 403 or 404 (the plug-in, the jobs gate
@@ -164,7 +178,8 @@ class NetworkKeepSlot {
   /// gate is read again, and [message] is toasted.
   final void Function(String message) onRefused;
 
-  /// A floating toast above the mini player (KeepToast).
+  /// A floating toast above the mini player (KeepToast); still shows once
+  /// the sheet has gone.
   final void Function(String message) toast;
 
   const NetworkKeepSlot({
@@ -187,7 +202,8 @@ class NetworkLeadSheet extends StatefulWidget {
   final String? avoidUrl;
   final VoidCallback? onLeadAction;
 
-  /// An add the server took as new: toasted once the sheet closes.
+  /// An add the server took as new: toasted once the sheet closes (at once
+  /// when it answers after).
   final void Function(DiscoveryJob job)? onStarted;
 
   const NetworkLeadSheet({
@@ -277,7 +293,10 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
     widget.onLeadAction?.call();
   }
 
-  void _toast(String message) => KeepToast.show(context, message);
+  /// Safe once the sheet has gone (an Add to queue or a start answered
+  /// after it closed): the root navigator's overlay then.
+  void _toast(String message) =>
+      KeepToast.show(mounted ? context : null, message);
 
   /// A preview plug-in answered 403 or 404: its row is gone; the gate is
   /// read again and the user told why the row they pressed went away.
@@ -324,9 +343,16 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
 
   // ── drawing ──────────────────────────────────────────────────────────
 
+  /// Past this text scale the header scrolls away with the sections (only
+  /// the grab handle stays): pinned, it would fill most of a small phone's
+  /// sheet.
+  static const double kPinHeaderUpTo = 1.3;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final pin =
+        MediaQuery.textScalerOf(context).scale(16) <= 16 * kPinHeaderUpTo;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: NetworkLeadSheet.kOpenSize,
@@ -346,6 +372,11 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
               for (final p in s.previews)
                 if (!_previews.isGone(p.name)) p,
             ];
+            final head = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_header(l), discoverySheetDivider()],
+            );
             return CustomScrollView(
               key: const ValueKey('network-lead-sheet'),
               controller: scroll,
@@ -353,17 +384,16 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
                 PinnedHeaderSliver(
                   child: ColoredBox(
                     color: VelvetColors.surface,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const DiscoverySheetGrabHandle(),
-                        _header(l),
-                        discoverySheetDivider(),
-                      ],
-                    ),
+                    child: pin
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [const DiscoverySheetGrabHandle(), head],
+                          )
+                        : const DiscoverySheetGrabHandle(),
                   ),
                 ),
+                if (!pin) SliverToBoxAdapter(child: head),
                 // One box, not a lazy list: the sections keep their state
                 // (a search running, a clip's row) however far they scroll.
                 SliverToBoxAdapter(

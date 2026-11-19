@@ -6513,7 +6513,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => 'Pokaż';
 
   @override
   String get discoverKeepFolder => 'Folder';

@@ -6081,7 +6081,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => '表示';
 
   @override
   String get discoverKeepFolder => 'Folder';

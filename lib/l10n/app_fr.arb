@@ -1696,5 +1696,6 @@
   "discoverCopiesDestChangedYt": "Impossible de démarrer : l'emplacement des fichiers a changé — ouvrez le morceau et ajoutez-le à nouveau",
   "discoverLeadYtChangeHint": "Modifier l'emplacement des morceaux ajoutés",
   "discoverCopiesDestChangedYtMoved": "Impossible de démarrer : l'emplacement des fichiers a changé",
-  "discoverCopiesAddThere": "Ajouter au nouvel emplacement"
+  "discoverCopiesAddThere": "Ajouter au nouvel emplacement",
+  "discoverToastView": "Voir"
 }

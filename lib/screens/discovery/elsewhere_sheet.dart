@@ -37,12 +37,20 @@ ElsewhereLauncher elsewhereLaunch = _launchOutside;
 /// preview clip playing ends first as having left the app, so the song it
 /// paused stays paused (the user is heading into another app, often
 /// another music app), then [elsewhereLaunch] opens it. With no clip
-/// playing the end does nothing.
-Future<bool> openOutside(Uri uri) {
+/// playing the end does nothing. A link that does not open (false, or a
+/// throw, which still reaches the caller) gives the song back as Stop
+/// would: the user never left.
+Future<bool> openOutside(Uri uri) async {
   // Ended before the launch sends the app to the background, which would
   // end it as backgrounded and bring the song back over the other app.
-  unawaited(PreviewPlayer().end(PreviewEnd.leftApp));
-  return elsewhereLaunch(uri);
+  final held = PreviewPlayer().endLeavingApp();
+  var ok = false;
+  try {
+    ok = await elsewhereLaunch(uri);
+  } finally {
+    if (!ok && held != null) PreviewPlayer().resumeHeld(held);
+  }
+  return ok;
 }
 
 Future<void> showElsewhereSheet(
@@ -278,15 +286,18 @@ class _ElsewhereSheetState extends State<ElsewhereSheet> {
 
   Widget _row(AppLocalizations l, PluginLink link) {
     final label = elsewhereLabel(l, link);
+    void open() => unawaited(_open(link));
+    // Its tap on the node too: the label replaces the InkWell's own.
     return Semantics(
       link: true,
       button: true,
       label: label,
       hint: l.discoverElsewhereOpensOutside,
+      onTap: open,
       excludeSemantics: true,
       child: InkWell(
         key: ValueKey('elsewhere-link-${link.id}'),
-        onTap: () => unawaited(_open(link)),
+        onTap: open,
         splashColor: VelvetColors.primaryDim,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 52),

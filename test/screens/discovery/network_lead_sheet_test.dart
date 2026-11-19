@@ -14,6 +14,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -30,6 +31,7 @@ import 'package:mstream_music/screens/discovery/keep_copy_ui.dart'
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/screens/discovery/network_lead_sheet.dart';
 import 'package:mstream_music/screens/discovery/network_preview_rows.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
 
 import '../../media/preview_fakes.dart';
 import '../discovery_fixtures.dart';
@@ -331,6 +333,16 @@ void main() {
       expect(find.textContaining('match'), findsNothing);
     });
 
+    testWidgets('the header reads the row as it is sent: a peer\'s year of 0 '
+        'is no year', (tester) async {
+      await pumpSheet(tester, lead: leadOf({...netRow(), 'year': 0}));
+      expect(
+        find.text('The Quiet Assembly · Static Bloom · 3:58'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('· 0 ·'), findsNothing);
+    });
+
     testWidgets('opening asks no catalogue — only where files land, from the '
         "user's own server", (tester) async {
       fake.previews['deezer'] = deezerClip();
@@ -387,6 +399,26 @@ void main() {
       await closeSheet(tester);
       expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
       expect(preview.ends, [PreviewEnd.sheetClosed]);
+    });
+
+    testWidgets('while open it holds the fast poll, and lets go as it closes', (
+      tester,
+    ) async {
+      fake.addJob(
+        repaired(),
+        plugin: 'youtube',
+        state: 'running',
+        choice: {'url': 'https://www.youtube.com/watch?v=aaaaaaaaaa1'},
+        progress: 0.4,
+      );
+      stubKeepBlock();
+      await pumpSheet(tester);
+      expect(jobs.anyLive, isTrue);
+      expect(jobs.pollBeat, DiscoveryJobsController.kFastBeat);
+      await closeSheet(tester);
+      // No Discover page in this rig, and the controller counts as on it
+      // by default: back to Discover's beat.
+      expect(jobs.pollBeat, DiscoveryJobsController.kDiscoverBeat);
     });
   });
 
@@ -616,6 +648,17 @@ void main() {
       await tester.tap(find.byTooltip('Open in Apple Music'));
       await frames(tester);
       expect(toasts, ["Couldn't open that link"]);
+      expect(preview.resumed, isEmpty, reason: 'no clip held the song');
+
+      // …and while a clip plays: the song it paused comes back (the user
+      // never left).
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(preview.plays, hasLength(2));
+      await tester.tap(find.byTooltip('Open in Apple Music'));
+      await frames(tester);
+      expect(preview.ends.last, PreviewEnd.leftApp);
+      expect(preview.resumed, [FakePreviewPlayer.kFakeHold]);
+      expect(toasts, ["Couldn't open that link", "Couldn't open that link"]);
     });
 
     testWidgets('while its clip loads: a ring, read as Stop, and a press '
@@ -701,6 +744,69 @@ void main() {
       });
     }
 
+    testWidgets('a lookup that answers after the sheet closed plays nothing', (
+      tester,
+    ) async {
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(find.text('Looking up…'), findsOneWidget);
+      await closeSheet(tester);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(preview.plays, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a lookup that answers after another row was pressed plays '
+        'nothing: the row pressed last plays', (tester) async {
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      await tapKey(tester, 'lead-preview-itunes');
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect([for (final p in preview.plays) p.provider], ['itunes']);
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey('lead-preview-line-deezer')),
+            )
+            .data,
+        'Paper Satellites · The Quiet Assembly',
+        reason: 'found, waiting for a press',
+      );
+    });
+
+    testWidgets('a clip that would not play keeps its store link and the '
+        'attribution Apple asks for beside it', (tester) async {
+      fake.previews['itunes'] = itunesClip();
+      preview.outcome = PreviewPlayOutcome.failed;
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(find.text('Unavailable right now'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('lead-preview-link-itunes')),
+        findsOneWidget,
+      );
+      expect(find.text('Provided courtesy of iTunes'), findsOneWidget);
+
+      // …and while it is asked again.
+      fake.resolveGates['itunes'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(find.text('Looking up…'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('lead-preview-link-itunes')),
+        findsOneWidget,
+      );
+      expect(find.text('Provided courtesy of iTunes'), findsOneWidget);
+      fake.resolveGates.remove('itunes')!.complete();
+      await frames(tester);
+    });
+
     testWidgets('a lookup that outlives the other clip ending on its own '
         'still plays', (tester) async {
       fake.previews['deezer'] = deezerClip();
@@ -714,6 +820,22 @@ void main() {
       await frames(tester);
       expect([for (final p in preview.plays) p.provider], ['itunes', 'deezer']);
     });
+
+    for (final theme in AppTheme.values) {
+      testWidgets("${theme.name}: a row's second line reads at 4.5:1 on its "
+          'card', (tester) async {
+        VelvetColors.setActive(paletteFor(theme));
+        addTearDown(() => VelvetColors.setActive(paletteFor(AppTheme.dark)));
+        await pumpSheet(tester);
+        final line = tester.widget<Text>(
+          find.byKey(const ValueKey('lead-preview-line-deezer')),
+        );
+        final a = line.style!.color!.computeLuminance();
+        final b = VelvetColors.card.computeLuminance();
+        final ratio = ((a > b ? a : b) + 0.05) / ((a > b ? b : a) + 0.05);
+        expect(ratio, greaterThanOrEqualTo(4.5));
+      });
+    }
 
     testWidgets('a preview plug-in other than Deezer or iTunes goes by its '
         'title', (tester) async {
@@ -916,6 +1038,17 @@ void main() {
       expect(launched.single.toString(), fake.links.single['url']);
       expect(preview.ends, [PreviewEnd.leftApp]);
       expect(endsAtLaunch, [1]);
+
+      // A screen reader's (or Switch Access's) activation opens it too.
+      final handle = tester.ensureSemantics();
+      final node = tester.getSemantics(
+        find.byKey(const ValueKey('elsewhere-link-bandcamp-search')),
+      );
+      expect(node, isSemantics(label: 'Bandcamp', hasTapAction: true));
+      node.owner!.performAction(node.id, SemanticsAction.tap);
+      await frames(tester);
+      expect(launched, hasLength(2));
+      handle.dispose();
     });
 
     testWidgets('without the links plug-in: Open on MusicBrainz for a row '
@@ -1016,5 +1149,33 @@ void main() {
     };
     expect(await openOutside(Uri.parse('https://example.org/a')), isTrue);
     expect(order, ['launch [PreviewEnd.leftApp]']);
+  });
+
+  test('openOutside: a link that does not open — false, or a throw that '
+      'still reaches the caller — gives the song back', () async {
+    final port = FakePreviewPort();
+    final previous = PreviewPlayer.instance;
+    final player = PreviewPlayer.withPort(port, makeClip: FakePreviewClip.new);
+    PreviewPlayer.instance = player;
+    addTearDown(() => PreviewPlayer.instance = previous);
+    final clip = Uri.parse('https://cdn.example/30s.mp3');
+    final link = Uri.parse('https://example.org/a');
+
+    await player.play(provider: 'itunes', url: clip);
+    expect([port.pauses, port.plays], [1, 0]);
+    elsewhereLaunch = (_) async => false;
+    expect(await openOutside(link), isFalse);
+    expect(port.plays, 1);
+
+    await player.play(provider: 'itunes', url: clip);
+    expect(port.pauses, 2);
+    elsewhereLaunch = (_) async => throw StateError('no browser');
+    await expectLater(openOutside(link), throwsStateError);
+    expect(port.plays, 2);
+
+    await player.play(provider: 'itunes', url: clip);
+    elsewhereLaunch = (_) async => true;
+    expect(await openOutside(link), isTrue);
+    expect(port.plays, 2, reason: 'left the app: stays paused');
   });
 }

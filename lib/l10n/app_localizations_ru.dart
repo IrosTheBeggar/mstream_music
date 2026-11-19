@@ -6524,7 +6524,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => 'Открыть';
 
   @override
   String get discoverKeepFolder => 'Folder';

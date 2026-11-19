@@ -518,11 +518,30 @@ void main() {
       expect(broken.recommendation, isNull);
     });
 
-    test('withRaw keeps every parsed field and takes the new raw (read-only)', () {
+    test('withRaw keeps the parsed fields, takes the new raw (read-only), and the facts a repair remakes from it', () {
       final rec = perSong.recommendation!;
       final l = perSong.withRaw(rec);
+      expect(perSong.year, 0, reason: 'parsed as the peer tagged it');
       expect([l.artist, l.title, l.similarity, l.durationSeconds, l.recordingMbid, l.peerName, l.album, l.year],
-          ['Net Artist', 'Net Song', 0.87, 200.5, 'f4b0-mbid', 'peer-name', 'Net Album', 0]);
+          ['Net Artist', 'Net Song', 0.87, 200.5, 'f4b0-mbid', 'peer-name', 'Net Album', null],
+          reason: 'a year of 0 is no year once repaired');
+      // What the repair nulls or remakes is what the lead then says.
+      final odd = DiscoveryLead.fromServerMap({
+        'artist': 'A',
+        'title': 'T',
+        'album': 'x' * 600,
+        'albumArtist': 'Various Artists',
+        'year': '2011',
+        'duration': '238',
+        'peer': {'endpointId': 'ep1'},
+      })!;
+      expect([odd.album, odd.year, odd.durationSeconds], [null, 2011, null]);
+      final fixed = odd.withRaw(odd.recommendation!);
+      expect([fixed.album, fixed.albumArtist, fixed.year, fixed.durationSeconds], [null, 'Various Artists', 2011, 238.0]);
+      final tooLong = DiscoveryLead.fromServerMap({'title': 'T', 'duration': 1e20, 'peer': {'endpointId': 'ep1'}})!;
+      expect(tooLong.withRaw(tooLong.recommendation!).durationSeconds, isNull);
+      // A raw without them keeps what was parsed.
+      expect(perSong.withRaw(const {'title': 'Net Song'}).year, 0);
       expect([l.isrc, l.releaseGroupMbid, l.exportId, l.endpointId, l.isNetwork, l.source], ['USRC17607839', 'rg-1', 'x1', 'ep1', true, null]);
       expect(l.raw, rec);
       expect(() => l.raw['x'] = 1, throwsUnsupportedError);

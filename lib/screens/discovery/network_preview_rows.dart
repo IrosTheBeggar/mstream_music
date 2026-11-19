@@ -394,7 +394,11 @@ class _PreviewRow extends StatelessWidget {
       PreviewRowState.stopped => (what.isEmpty ? null : what, null),
     };
     final match = matched ? preview.match : null;
-    final attribution = matched ? preview.attribution : null;
+    // Wherever the store link shows (Apple asks for the attribution beside
+    // a preview and its link back): a clip that failed, or asked again.
+    final attribution = preview != null && state != PreviewRowState.none
+        ? preview.attribution
+        : null;
 
     final text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +440,7 @@ class _PreviewRow extends StatelessWidget {
             line2,
             key: ValueKey('lead-preview-line-$name'),
             style: TextStyle(
-              color: line2Color ?? VelvetColors.textSecondary,
+              color: line2Color ?? keepQuiet(VelvetColors.textSecondary),
               fontSize: 13,
               height: 17 / 13,
             ),

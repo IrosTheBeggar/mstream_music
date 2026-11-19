@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
@@ -33,6 +34,7 @@ import 'package:mstream_music/screens/discovery/elsewhere_sheet.dart';
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/screens/discovery/network_lead_sheet.dart';
 import 'package:mstream_music/screens/discovery/youtube_pick_card.dart';
+import 'package:mstream_music/theme/velvet_theme.dart';
 
 import '../../media/preview_fakes.dart';
 import '../discovery_fixtures.dart';
@@ -298,10 +300,20 @@ void main() {
       expect(find.textContaining('genre›'), findsNothing);
 
       final handle = tester.ensureSemantics();
+      final node = tester.getSemantics(find.byKey(const ValueKey('yt-change')));
       expect(
-        tester.getSemantics(find.byKey(const ValueKey('yt-change'))),
-        isSemantics(label: 'Change where added songs go', isButton: true),
+        node,
+        isSemantics(
+          label: 'Change where added songs go',
+          isButton: true,
+          hasTapAction: true,
+        ),
       );
+      // A screen reader's (or Switch Access's) activation opens it too.
+      node.owner!.performAction(node.id, SemanticsAction.tap);
+      await frames(tester);
+      expect(changes, hasLength(1));
+      changes.clear();
       handle.dispose();
       await tapKey(tester, 'yt-change');
       final (song, peer) = changes.single;
@@ -622,6 +634,31 @@ void main() {
         findsOneWidget,
       );
       expect(started, isEmpty);
+    });
+
+    testWidgets('…the note goes once that add has ended (the server names '
+        'another upload\'s add only while it runs)', (tester) async {
+      await pumpBlock(tester);
+      await tapKey(tester, 'yt-search');
+      final other = ytJob(state: 'running', choice: watch('zzzzzzzzzz9'));
+      fake.existing = other;
+      await tapKey(tester, 'yt-add');
+      expect(shown('yt-other-upload'), isTrue);
+      other
+        ..['state'] = 'done'
+        ..['result'] = {
+          'downloaded': {
+            'vpath': 'copies',
+            'filepath': 'copies/The Quiet Assembly/Paper_Satellites.mp3',
+            'bytes': 6710886,
+            'format': 'mp3',
+          },
+        }
+        ..['updatedAt'] = 2;
+      await jobs.refreshJobs();
+      await frames(tester);
+      expect(find.text('In your collection'), findsOneWidget);
+      expect(shown('yt-other-upload'), isFalse);
     });
 
     testWidgets('…of the same upload: its line, no note', (tester) async {
@@ -1007,6 +1044,91 @@ void main() {
       );
     });
 
+    testWidgets('a Retry out: its pill busy, and Choose another inert until '
+        'it answers', (tester) async {
+      ytJob(
+        state: 'failed',
+        choice: watch('aaaaaaaaaa1'),
+        error: 'Nothing matched closely enough (best score 0.41, needs 0.62)',
+      );
+      await pumpBlock(tester);
+      fake.startGate = Completer<void>();
+      await tapKey(tester, 'yt-retry');
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('yt-retry')),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      await tapKey(tester, 'yt-choose-another');
+      expect(fake.count('POST', _ytResolve), 0);
+      expect(shown('yt-uploads'), isFalse);
+      expect(shown('yt-searching-tag'), isFalse);
+
+      fake.startGate!.complete();
+      fake.startGate = null;
+      await frames(tester);
+      expect(fake.starts('youtube'), hasLength(1));
+      expect(find.text('Waiting for a free slot'), findsOneWidget);
+    });
+
+    testWidgets('a Cancel out: its pill busy; a second press sends nothing', (
+      tester,
+    ) async {
+      final j = ytJob(state: 'queued', choice: watch('aaaaaaaaaa1'));
+      await pumpBlock(tester);
+      fake.cancelGate = Completer<void>();
+      await tapKey(tester, 'yt-cancel');
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('yt-cancel')),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      await tapKey(tester, 'yt-cancel');
+      fake.cancelGate!.complete();
+      fake.cancelGate = null;
+      await frames(tester);
+      expect(fake.count('POST', '/plugin-jobs/${j['id']}/cancel'), 1);
+      expect(toasts, isEmpty, reason: 'no "Already finished" for a 2nd ask');
+      expect(find.text('Stopped · nothing was added'), findsOneWidget);
+    });
+
+    // An add that named no upload: the server fetched the search's best
+    // (youtube.js pickBest) — the first the search here finds again.
+    testWidgets('Choose another on an add that named no upload and failed on '
+        'the one fetched (too big): the second upload picked', (tester) async {
+      ytJob(
+        state: 'failed',
+        error:
+            'YouTube download failed: the file is larger than the 100 MB size '
+            'cap, so yt-dlp did not download it',
+      );
+      await pumpBlock(tester);
+      expect(shown('yt-retry'), isFalse);
+      await tapKey(tester, 'yt-choose-another');
+      expect(shown('yt-candidate-1'), isTrue);
+      expect(shown('yt-candidate-0'), isFalse);
+      await tapKey(tester, 'yt-add');
+      expect(fake.starts('youtube').single['choice'], {
+        'url': watch('bbbbbbbbbb2'),
+      });
+    });
+
+    testWidgets('…one that failed on the search itself (nothing close): the '
+        'best stays picked', (tester) async {
+      ytJob(
+        state: 'failed',
+        error: 'Nothing matched closely enough (best score 0.41, needs 0.62)',
+      );
+      await pumpBlock(tester);
+      await tapKey(tester, 'yt-choose-another');
+      expect(shown('yt-candidate-0'), isTrue);
+      expect(shown('yt-candidate-1'), isFalse);
+    });
+
     testWidgets('Choose another: the search again, landing on the uploads '
         "with the first one other than the failed add's picked", (
       tester,
@@ -1102,6 +1224,70 @@ void main() {
       expect(shown('yt-job-title'), isTrue);
       expect(shown('yt-uploads'), isFalse);
     });
+
+    testWidgets('an add started before the opening lookup answers keeps its '
+        'line over the older add that lookup finds', (tester) async {
+      ytJob(
+        state: 'failed',
+        choice: watch('zzzzzzzzzz9'),
+        error: 'the chosen upload could not be read: Video unavailable',
+      );
+      fake.lookupGate = Completer<void>();
+      await pumpBlock(tester);
+      await tapKey(tester, 'yt-search');
+      await tapKey(tester, 'yt-add');
+      expect(find.text('Waiting for a free slot'), findsOneWidget);
+      // A server that answered the lookup before the start landed: the
+      // older add alone.
+      final fresh = fake.jobs.removeAt(0);
+      fake.lookupGate!.complete();
+      fake.lookupGate = null;
+      await frames(tester);
+      fake.jobs.insert(0, fresh);
+      expect(find.text('Waiting for a free slot'), findsOneWidget);
+      expect(find.text("Couldn't add"), findsNothing);
+    });
+  });
+
+  group('themes', () {
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return ((la > lb ? la : lb) + 0.05) / ((la > lb ? lb : la) + 0.05);
+    }
+
+    Color colorOf(WidgetTester tester, Finder f) =>
+        tester.widget<Text>(f).style!.color!;
+
+    for (final theme in AppTheme.values) {
+      testWidgets("${theme.name}: the card's quiet lines read at 4.5:1 on it", (
+        tester,
+      ) async {
+        VelvetColors.setActive(paletteFor(theme));
+        addTearDown(() => VelvetColors.setActive(paletteFor(AppTheme.dark)));
+        ytJob(state: 'cancelled', choice: watch('aaaaaaaaaa1'));
+        await pumpBlock(tester);
+        final card = VelvetColors.card;
+        void expectReads(Map<String, Finder> lines) {
+          for (final MapEntry(key: what, value: f) in lines.entries) {
+            expect(
+              contrast(colorOf(tester, f), card),
+              greaterThanOrEqualTo(4.5),
+              reason: what,
+            );
+          }
+        }
+
+        expectReads({
+          'what it searches for': find.byKey(const ValueKey('yt-idle')),
+          'the cancelled line': find.text('Stopped · nothing was added'),
+        });
+        await tapKey(tester, 'yt-search');
+        expectReads({
+          'only the pick': find.byKey(const ValueKey('yt-only-pick')),
+          "an upload's channel": find.text('The Quiet Assembly - Topic · 3:58'),
+        });
+      });
+    }
   });
 
   group('large text', () {
@@ -1145,13 +1331,14 @@ void main() {
     Future<void> pumpSheet(
       WidgetTester tester, {
       bool autoSearch = false,
+      Map<String, dynamic>? row,
     }) async {
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       jobs = makeJobs();
-      final lead = DiscoveryLead.fromServerMap(netRow())!;
+      final lead = DiscoveryLead.fromServerMap(row ?? netRow())!;
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -1274,6 +1461,156 @@ void main() {
       expect(shown('yt-candidate-1'), isTrue);
       expect(shown('yt-candidate-0'), isFalse);
       await closeSheet(tester);
+    });
+
+    testWidgets("…for an add that named no upload: the second picked (the "
+        'server had fetched the first)', (tester) async {
+      ytJob(
+        state: 'failed',
+        error:
+            'YouTube download failed: the download passed the 100 MB size cap '
+            'and was stopped',
+      );
+      await pumpSheet(tester, autoSearch: true);
+      expect(shown('yt-candidate-1'), isTrue);
+      expect(shown('yt-candidate-0'), isFalse);
+      await closeSheet(tester);
+    });
+
+    testWidgets("a peer's year of 0: the path and Change's preview both "
+        'leave the year out, as the server files it', (tester) async {
+      fake.destination = {
+        ...fake.destination,
+        'destination': {
+          'vpath': 'copies',
+          'base': '',
+          'layout': '{{ALBUMARTIST}}/{{YEAR}}',
+          'source': 'user',
+        },
+      };
+      await pumpSheet(tester, row: {...netRow(), 'year': 0});
+      expect(
+        plain(tester, 'yt-destination-path'),
+        'Files go to copies › The Quiet Assembly',
+      );
+      await tapKey(tester, 'yt-change');
+      expect(changes.single.$1!.year, isNull);
+      await closeSheet(tester);
+    });
+
+    testWidgets('Add to queue answered after the sheet closed: its toast '
+        'still shows, nothing throws', (tester) async {
+      ytJob(
+        state: 'done',
+        choice: watch('aaaaaaaaaa1'),
+        result: {
+          'downloaded': {
+            'vpath': 'copies',
+            'filepath': 'copies/The Quiet Assembly/Paper_Satellites.mp3',
+            'bytes': 6710886,
+            'format': 'mp3',
+          },
+        },
+      );
+      final gate = Completer<void>();
+      YoutubeKeepBlock.queue = (row) async {
+        await gate.future;
+        queued.add(row.data!);
+      };
+      await pumpSheet(tester);
+      await tapKey(tester, 'yt-queue');
+      await closeSheet(tester);
+      gate.complete();
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+      expect(queued, ['/copies/The Quiet Assembly/Paper_Satellites.mp3']);
+      expect(toasts, ['1 song added to queue']);
+    });
+
+    testWidgets('an add cancelled while it ran ("Stopping…"): no "Adding …" '
+        'as the sheet closes', (tester) async {
+      await pumpSheet(tester);
+      await tapKey(tester, 'yt-search');
+      await tapKey(tester, 'yt-add');
+      fake.jobs.first
+        ..['state'] = 'running'
+        ..['updatedAt'] = 2;
+      await jobs.refreshJobs();
+      await frames(tester);
+      await tapKey(tester, 'yt-cancel');
+      expect(find.text('Stopping…'), findsOneWidget);
+      await closeSheet(tester);
+      expect(toasts, isEmpty);
+    });
+
+    testWidgets('Add this one answered after the sheet closed: "Adding … '
+        'from YouTube" with View then', (tester) async {
+      final actions = <String>[];
+      KeepToast.debugActionSink = (m, a, on) => actions.add(a);
+      await pumpSheet(tester);
+      await tapKey(tester, 'yt-search');
+      fake.startGate = Completer<void>();
+      await tapKey(tester, 'yt-add');
+      await closeSheet(tester);
+      expect(toasts, isEmpty);
+      fake.startGate!.complete();
+      fake.startGate = null;
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+      expect(fake.starts('youtube'), hasLength(1));
+      expect(toasts, ['Adding Paper Satellites from YouTube']);
+      expect(actions, ['View']);
+    });
+
+    testWidgets('…and while it animates away', (tester) async {
+      await pumpSheet(tester);
+      await tapKey(tester, 'yt-search');
+      fake.startGate = Completer<void>();
+      await tapKey(tester, 'yt-add');
+      await tester.tapAt(const Offset(195, 60));
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(shown('yt-block'), isTrue, reason: 'still on its way out');
+      fake.startGate!.complete();
+      fake.startGate = null;
+      await tester.pump(const Duration(milliseconds: 20));
+      await frames(tester, 10);
+      expect(toasts, ['Adding Paper Satellites from YouTube']);
+    });
+
+    testWidgets('a refusal answered after the sheet closed, or while it '
+        'animates away, is a toast', (tester) async {
+      await pumpSheet(tester);
+      await tapKey(tester, 'yt-search');
+      fake.startGate = Completer<void>();
+      fake.startAnswer = (429, {'error': 'slow down'});
+      await tapKey(tester, 'yt-add');
+      await closeSheet(tester);
+      fake.startGate!.complete();
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+      expect(toasts, ['Too many waiting — let some finish first.']);
+
+      toasts.clear();
+      fake.startGate = Completer<void>();
+      fake.startAnswer = (
+        409,
+        {'error': 'someone else on this server is already getting this'},
+      );
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      await tapKey(tester, 'yt-search');
+      await tapKey(tester, 'yt-add');
+      await tester.tapAt(const Offset(195, 60));
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(shown('yt-block'), isTrue, reason: 'still on its way out');
+      fake.startGate!.complete();
+      fake.startGate = null;
+      await tester.pump(const Duration(milliseconds: 20));
+      await frames(tester, 10);
+      expect(toasts, [
+        'Someone else on this server is adding this right now — try again '
+            'in a moment.',
+      ]);
     });
   });
 }

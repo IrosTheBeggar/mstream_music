@@ -171,6 +171,9 @@ class FakePluginServer {
   /// Holds every start until the test completes it.
   Completer<void>? startGate;
 
+  /// Holds every cancel until the test completes it.
+  Completer<void>? cancelGate;
+
   /// Jobs the list leaves out (past its newest 100) — the lookups still
   /// answer them.
   final Set<int> unlisted = {};
@@ -385,6 +388,7 @@ class FakePluginServer {
     }
     final cancel = RegExp(r'/plugin-jobs/(\d+)/cancel$').firstMatch(path);
     if (cancel != null) {
+      if (cancelGate != null) await cancelGate!.future;
       final j = job(int.parse(cancel.group(1)!));
       if (j['state'] == 'queued') {
         j['state'] = 'cancelled';

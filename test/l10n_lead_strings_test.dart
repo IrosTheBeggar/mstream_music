@@ -171,4 +171,14 @@ void main() {
       expect(en.discoverLeadYtChangeHint, 'Change where added songs go');
     });
   });
+
+  // The sheet's close toast ("Adding … from YouTube") and Copies' YouTube
+  // toast carry View: never English in another language.
+  test('View on the start toasts is in every language', () {
+    for (final locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == 'en') continue;
+      final t = lookupAppLocalizations(locale);
+      expect(t.discoverToastView, isNot(en.discoverToastView), reason: '$locale');
+    }
+  });
 }

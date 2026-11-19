@@ -338,6 +338,16 @@ class FakePreviewPlayer implements PreviewPlayer {
   final List<PreviewEnd> ends = [];
   PreviewPlayOutcome outcome = PreviewPlayOutcome.playing;
 
+  /// The song a playing clip paused, as the real player would hold it (a
+  /// play that plays holds [kFakeHold]; every end lets go of it).
+  SongHold? held;
+
+  /// The holds handed back to [resumeHeld] (a link that did not open).
+  final List<SongHold> resumed = [];
+
+  static const SongHold kFakeHold =
+      (key: kFakeSongKey, epoch: 1, target: CastTarget.localId);
+
   /// As the real player's: every end but a clip's own (completed, failed).
   @override
   int endCount = 0;
@@ -361,6 +371,7 @@ class FakePreviewPlayer implements PreviewPlayer {
     plays.add((provider: provider, url: url));
     switch (outcome) {
       case PreviewPlayOutcome.playing:
+        held ??= kFakeHold;
         emit(PreviewClipState(provider: provider, phase: PreviewPhase.playing));
       case PreviewPlayOutcome.failed:
         emit(PreviewClipState(provider: provider, phase: PreviewPhase.failed));
@@ -373,6 +384,7 @@ class FakePreviewPlayer implements PreviewPlayer {
   @override
   Future<void> end(PreviewEnd reason) async {
     ends.add(reason);
+    held = null;
     if (reason != PreviewEnd.completed && reason != PreviewEnd.failed) {
       endCount++;
     }
@@ -381,4 +393,14 @@ class FakePreviewPlayer implements PreviewPlayer {
             provider: _state.value.provider, phase: PreviewPhase.failed)
         : PreviewClipState.idle);
   }
+
+  @override
+  SongHold? endLeavingApp() {
+    final hold = held;
+    unawaited(end(PreviewEnd.leftApp));
+    return hold;
+  }
+
+  @override
+  void resumeHeld(SongHold hold) => resumed.add(hold);
 }

@@ -6003,7 +6003,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => '查看';
 
   @override
   String get discoverKeepFolder => 'Folder';

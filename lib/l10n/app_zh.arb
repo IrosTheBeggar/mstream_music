@@ -1696,5 +1696,6 @@
   "discoverCopiesDestChangedYt": "无法开始：文件存放位置已变 — 请打开这首歌重新添加",
   "discoverLeadYtChangeHint": "更改所添加歌曲的保存位置",
   "discoverCopiesDestChangedYtMoved": "无法开始：文件存放位置已变",
-  "discoverCopiesAddThere": "添加到新位置"
+  "discoverCopiesAddThere": "添加到新位置",
+  "discoverToastView": "查看"
 }

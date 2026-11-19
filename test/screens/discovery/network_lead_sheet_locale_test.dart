@@ -31,6 +31,8 @@ import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/discovery_jobs_controller.dart';
 import 'package:mstream_music/screens/discovery/discovery_keep_routes.dart';
+import 'package:mstream_music/screens/discovery/discovery_sheet_parts.dart'
+    show DiscoverySheetGrabHandle;
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/screens/discovery/network_lead_sheet.dart';
@@ -190,15 +192,17 @@ void main() {
     }
   }
 
-  /// The sheet for the canvas lead over a page, in [locale] at 360 × 780
-  /// with text at [textScale], drawn in the app's theme; dragged up to its
-  /// full height so the most of it shows.
+  /// The sheet for the canvas lead over a page, in [locale] at 360 ×
+  /// [height] with text at [textScale], drawn in the app's theme; dragged
+  /// up to its full height so the most of it shows (unless not [grow]).
   Future<void> pumpSheet(
     WidgetTester tester, {
     Locale locale = const Locale('de'),
     double textScale = 2,
+    double height = 780,
+    bool grow = true,
   }) async {
-    tester.view.physicalSize = const Size(360 * 3, 780 * 3);
+    tester.view.physicalSize = Size(360 * 3, height * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -246,6 +250,7 @@ void main() {
     await frames(tester);
     await tester.tap(find.byKey(const ValueKey('open')));
     await frames(tester, 8);
+    if (!grow) return;
     await tester.drag(
       find.byKey(const ValueKey('network-lead-sheet')),
       const Offset(0, -400),
@@ -296,7 +301,7 @@ void main() {
         findsOneWidget,
       );
       expect(cutUnder(find.byKey(const ValueKey('network-lead-header'))), [
-        // One line by design: the byline gives way first.
+        // Two lines at most: at 200 % the byline gives way first.
         'The Quiet Assembly · Static Bloom · 2011 · 3:58',
       ]);
       expect(find.text('30-SEKUNDEN-HÖRPROBE'), findsOneWidget);
@@ -441,6 +446,59 @@ void main() {
       final card = tester.getRect(find.byKey(const ValueKey('yt-block')));
       final cancel = tester.getRect(find.byKey(const ValueKey('yt-cancel')));
       expect(cancel.right, lessThanOrEqualTo(card.right + 0.5));
+    });
+  });
+
+  group('the header', () {
+    testWidgets('360 × 640 at 200 %: it scrolls away with the sections (the '
+        'grab handle stays), never leaving them a sliver of the sheet', (
+      tester,
+    ) async {
+      await pumpSheet(tester, height: 640);
+      expect(tester.takeException(), isNull);
+      final sheet = find.byKey(const ValueKey('network-lead-sheet'));
+      final header = find.byKey(const ValueKey('network-lead-header'));
+      final top = tester.getTopLeft(sheet).dy;
+      expect(tester.getTopLeft(header).dy, closeTo(top + 22, 1));
+      await tester.dragFrom(const Offset(180, 560), const Offset(0, -400));
+      await frames(tester, 8);
+      expect(tester.getTopLeft(sheet).dy, top, reason: 'it scrolled');
+      expect(header, findsNothing, reason: 'scrolled off');
+      expect(
+        tester
+            .getBottomLeft(
+              find.byKey(
+                const ValueKey('network-lead-header'),
+                skipOffstage: false,
+              ),
+            )
+            .dy,
+        lessThan(top),
+      );
+      // The handle to drag it by stays on top.
+      final grab = find.byType(DiscoverySheetGrabHandle);
+      expect(tester.getTopLeft(grab).dy, closeTo(top, 1));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('360 × 640 at 100 % in English: the byline keeps the '
+        "lead's length", (tester) async {
+      await pumpSheet(
+        tester,
+        locale: const Locale('en'),
+        textScale: 1,
+        height: 640,
+        grow: false,
+      );
+      expect(
+        find.text('The Quiet Assembly · Static Bloom · 2011 · 3:58'),
+        findsOneWidget,
+      );
+      expect(
+        cutUnder(find.byKey(const ValueKey('network-lead-header'))),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

@@ -6362,7 +6362,7 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => 'Vedi';
 
   @override
   String get discoverKeepFolder => 'Folder';
