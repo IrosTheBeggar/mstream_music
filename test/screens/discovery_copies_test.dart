@@ -7,6 +7,11 @@
 //
 // The plug-in API is the scripted fake behind the real DiscoveryPluginsApi;
 // the poll's timers are the test's; nothing touches the network.
+//
+// YouTube adds (the network-lead sheet's, and the webapp's) are Copies rows
+// too on a build that shows them: their words, their verbs (Choose another
+// through CopiesSheet.openLead), their refusals, their toasts, and the home
+// row on a server whose only plug-in for Copies is that add.
 
 import 'dart:async';
 import 'dart:convert';
@@ -24,6 +29,7 @@ import 'package:mstream_music/screens/discovery/discovery_jobs_controller.dart';
 import 'package:mstream_music/screens/discovery/discovery_keep_routes.dart';
 import 'package:mstream_music/screens/discovery/discovery_listing.dart';
 import 'package:mstream_music/screens/discovery/keep_copy_ui.dart';
+import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
@@ -36,6 +42,32 @@ Finder inRow(Map<String, dynamic> job, Finder matching) => find.descendant(
   of: find.byKey(ValueKey('copies-row-${job['id']}')),
   matching: matching,
 );
+
+const ytPick = 'https://www.youtube.com/watch?v=abcdefghijk';
+
+/// The canvas's network lead, repaired as the network-lead sheet sends it
+/// (stamped p2p, the network peer's handle).
+final paper = <String, dynamic>{
+  'artist': 'The Quiet Assembly',
+  'title': 'Paper Satellites',
+  'album': 'Static Bloom',
+  'year': 2011,
+  'duration': 238,
+  'source': 'p2p',
+  'exportId': 'row-17',
+  'peer': {'endpointId': 'ab' * 32, 'name': 'Vinyl Vault'},
+};
+
+/// A YouTube add's landed file.
+Map<String, dynamic> ytLanded(String path) => {
+  'downloaded': {
+    'vpath': 'copies',
+    'filepath': path,
+    'bytes': 6700000,
+    'format': 'mp3',
+  },
+  'match': {'score': 0.91, 'url': ytPick, 'channel': 'The Quiet Assembly'},
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -611,6 +643,372 @@ void main() {
     );
   });
 
+  group('YouTube adds in Copies', () {
+    /// What [CopiesSheet.openLead] was asked: the job, and whether the
+    /// search was to run.
+    final leads = <(int, bool)>[];
+    void hookLead() {
+      CopiesSheet.openLead = (context, jobs, job, {required bool search}) =>
+          leads.add((job.id, search));
+    }
+
+    setUp(() {
+      leads.clear();
+      h.fake.listLeadPlugins();
+    });
+    tearDown(() => CopiesSheet.openLead = null);
+
+    testWidgets(
+      'their rows: "Song · Artist · YouTube", a note tile, the step while '
+      'it runs (a step the app does not know in the server\'s words), Cancel',
+      (tester) async {
+        final fetching = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'running',
+          progress: 0.42,
+          statusText: '42% of “Paper Satellites”',
+          choice: {'url': ytPick},
+        );
+        final unknown = h.fake.addJob(
+          keepRow('Glass Hours', artist: 'Color Out', album: 'Peer Sessions'),
+          plugin: 'youtube',
+          state: 'running',
+          progress: 0.1,
+          statusText: 'warming up the cache',
+        );
+        final waiting = h.fake.addJob({
+          ...paper,
+          'title': 'Low Orbit',
+        }, plugin: 'youtube');
+        await h.pumpCopies(tester, height: 1200);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Copying 3'), findsOneWidget);
+        expect(inRow(fetching, find.text('Paper Satellites')), findsOneWidget);
+        expect(
+          inRow(fetching, find.text('Song · The Quiet Assembly · YouTube')),
+          findsOneWidget,
+        );
+        expect(
+          inRow(fetching, find.text('Fetching from YouTube · 42%')),
+          findsOneWidget,
+        );
+        expect(inRow(fetching, find.byIcon(Icons.music_note)), findsOneWidget);
+        final bar = tester.widget<LinearProgressIndicator>(
+          inRow(fetching, find.byKey(const ValueKey('copies-bar'))),
+        );
+        expect(bar.value, 0.42);
+        expect(inRow(fetching, find.text('Cancel')), findsOneWidget);
+        expect(
+          inRow(unknown, find.text('Song · Color Out · YouTube')),
+          findsOneWidget,
+          reason: 'never "from" the peer that recommended it',
+        );
+        expect(
+          inRow(unknown, find.text('warming up the cache · 10%')),
+          findsOneWidget,
+        );
+        expect(
+          inRow(waiting, find.text('Waiting for a free slot')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'one that lands: In your collection, its folder, Play and Add to '
+      'queue — the fetched file',
+      (tester) async {
+        final run = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'running',
+          choice: {'url': ytPick},
+        );
+        await h.pumpCopies(tester);
+        run
+          ..['state'] = 'done'
+          ..['result'] = ytLanded(
+            'copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3',
+          );
+        h.timers.active!.fire();
+        await frames(tester);
+        expect(find.text('JUST FINISHED'), findsOneWidget);
+        expect(inRow(run, find.text('In your collection')), findsOneWidget);
+        expect(
+          inRow(run, find.text('copies › The Quiet Assembly › Static Bloom')),
+          findsOneWidget,
+        );
+        expect(inRow(run, find.text('Play')), findsOneWidget);
+        expect(
+          inRow(run, find.byKey(const ValueKey('copies-queue'))),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'one that failed: "Couldn\'t add" and why in the app\'s words; Retry '
+      'when trying again can help; Choose another only for a song from the '
+      'network, while the add can start, with a way back to it',
+      (tester) async {
+        final network = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'failed',
+          choice: {'url': ytPick},
+          error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+        );
+        final federated = h.fake.addJob(
+          tapes,
+          plugin: 'youtube',
+          state: 'failed',
+          error: 'Nothing matched closely enough (best score 0.31, needs 0.62)',
+        );
+        final live = h.fake.addJob(
+          {...paper, 'title': 'Live at the Pier'},
+          plugin: 'youtube',
+          state: 'failed',
+          choice: {'url': ytPick},
+          error:
+              'the chosen upload is a live stream, not a song — pick another',
+        );
+        hookLead();
+        await h.pumpCopies(tester, height: 1400);
+        expect(tester.takeException(), isNull);
+        expect(find.text('3 failed'), findsOneWidget);
+        expect(inRow(network, find.text("Couldn't add")), findsOneWidget);
+        expect(
+          inRow(
+            network,
+            find.text('Nothing on YouTube was close enough (best match 48%).'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('best score'),
+          findsNothing,
+          reason: "the server's English stays out of the row",
+        );
+        expect(inRow(network, find.text('Choose another')), findsOneWidget);
+        expect(inRow(network, find.text('Retry')), findsOneWidget);
+        expect(
+          inRow(federated, find.text('Choose another')),
+          findsNothing,
+          reason: 'a federation row is not a network lead',
+        );
+        expect(inRow(federated, find.text('Retry')), findsOneWidget);
+        expect(
+          inRow(
+            live,
+            find.text('That upload is a live stream — pick another.'),
+          ),
+          findsOneWidget,
+        );
+        expect(inRow(live, find.text('Choose another')), findsOneWidget);
+        expect(
+          inRow(live, find.text('Retry')),
+          findsNothing,
+          reason: 'the same pick would be a live stream again',
+        );
+
+        await tester.tap(inRow(network, find.text('Choose another')));
+        await frames(tester);
+        expect(leads, [(network['id'] as int, true)]);
+        expect(h.fake.starts('youtube'), isEmpty);
+      },
+    );
+
+    for (final (why, noUpload, hooked) in [
+      ('with no way back to the song', false, false),
+      ('while the add cannot start (no upload right)', true, true),
+    ]) {
+      testWidgets('no Choose another $why', (tester) async {
+        final failed = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'failed',
+          choice: {'url': ytPick},
+          error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+        );
+        h.server.noUpload = noUpload;
+        if (hooked) hookLead();
+        await h.pumpCopies(tester);
+        expect(inRow(failed, find.text('Retry')), findsOneWidget);
+        expect(inRow(failed, find.text('Choose another')), findsNothing);
+      });
+    }
+
+    testWidgets(
+      'one stopped: "Stopped · nothing was added"; Add again sends its pick '
+      'again, to YouTube',
+      (tester) async {
+        final run = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'running',
+          choice: {'url': ytPick},
+        );
+        await h.pumpCopies(tester);
+        run['state'] = 'cancelled';
+        h.timers.active!.fire();
+        await frames(tester);
+        expect(
+          inRow(run, find.text('Stopped · nothing was added')),
+          findsOneWidget,
+        );
+        await tester.tap(inRow(run, find.text('Add again')));
+        await frames(tester);
+        final body = h.fake.starts('youtube').single;
+        expect(body['choice'], {'url': ytPick});
+        expect(body['recommendation'], jsonDecode(jsonEncode(paper)));
+        expect(body['destination'], {
+          'vpath': 'copies',
+          'base': '',
+          'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+        });
+        expect(h.fake.starts('federation-copy'), isEmpty);
+        expect(find.text('Waiting for a free slot'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a refused Retry in the words the song\'s sheet uses: someone else '
+      'adding it, the queue full (its count when it says one), no reason',
+      (tester) async {
+        h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'failed',
+          choice: {'url': ytPick},
+          error:
+              'YouTube download failed: ERROR: unable to download video data: HTTP Error 403: Forbidden',
+        );
+        await h.pumpCopies(tester);
+        expect(
+          find.text("YouTube wouldn't hand it over — try again later."),
+          findsOneWidget,
+        );
+        for (final (status, words, toast) in [
+          (
+            409,
+            'someone else on this server is already getting this — try again in a moment',
+            'Someone else on this server is adding this right now — try again in a moment.',
+          ),
+          (
+            429,
+            'you have 20 jobs queued or running — wait for some to finish (the limit is 20)',
+            'You have 20 waiting or running — let some finish first.',
+          ),
+          (429, 'slow down', 'Too many waiting — let some finish first.'),
+          (502, '', "Couldn't start this. Try again."),
+        ]) {
+          h.toasts.clear();
+          h.fake.refuse['/plugins/youtube/jobs'] = (status, words);
+          await tester.tap(find.text('Retry'));
+          await frames(tester);
+          expect(h.toasts, [toast], reason: '$status $words');
+        }
+        expect(h.fake.jobs, hasLength(1), reason: 'nothing started');
+      },
+    );
+
+    testWidgets('a Retry that found where files land moved: open the song and add '
+        'again — with View, the way back, for a network song', (tester) async {
+      final failed = h.fake.addJob(
+        paper,
+        plugin: 'youtube',
+        state: 'failed',
+        choice: {'url': ytPick},
+        error: 'YouTube download failed: HTTP Error 403: Forbidden',
+      );
+      failed['params'] = {
+        ...failed['params'] as Map,
+        'destination': {
+          'vpath': 'copies',
+          'base': 'Old',
+          'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+        },
+      };
+      final actions = <String>[];
+      VoidCallback? view;
+      KeepToast.debugActionSink = (message, action, onAction) {
+        actions.add(action);
+        view = onAction;
+      };
+      addTearDown(() => KeepToast.debugActionSink = null);
+      hookLead();
+      await h.pumpCopies(tester);
+      await tester.tap(inRow(failed, find.text('Retry')));
+      await frames(tester);
+      expect(h.toasts, [
+        "Couldn't start: where files land changed — open the song and add again",
+      ]);
+      expect(actions, ['View']);
+      view!();
+      expect(leads, [(failed['id'] as int, false)]);
+
+      // With no way back the toast stands alone.
+      CopiesSheet.openLead = null;
+      h.toasts.clear();
+      actions.clear();
+      await tester.tap(inRow(failed, find.text('Retry')));
+      await frames(tester);
+      expect(h.toasts, [
+        "Couldn't start: where files land changed — open the song and add again",
+      ]);
+      expect(actions, isEmpty);
+    });
+
+    testWidgets(
+      'a store build: no YouTube rows, counts or verbs — only the copies',
+      (tester) async {
+        h.jobs.dispose();
+        h.jobs = DiscoveryJobsController(
+          server: h.server,
+          api: h.fake.api(h.server),
+          timer: h.timers.call,
+          watchLifecycle: false,
+          youtubeShown: () => false,
+        );
+        final yt = h.fake.addJob(
+          paper,
+          plugin: 'youtube',
+          state: 'running',
+          choice: {'url': ytPick},
+        );
+        final copy = h.fake.addJob(brass);
+        await h.pumpCopies(tester);
+        expect(find.text('Copying 1'), findsOneWidget);
+        expect(find.byKey(ValueKey('copies-row-${yt['id']}')), findsNothing);
+        expect(
+          find.byKey(ValueKey('copies-row-${copy['id']}')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('YouTube'), findsNothing);
+      },
+    );
+
+    test('a finished job\'s file as a row Play takes: its library path from '
+        'the root, on the user\'s own server', () {
+      final row = keepOwnFileRow(
+        h.server,
+        'copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3',
+      );
+      expect(identical(row.server, h.server), isTrue);
+      expect(
+        [row.type, row.data, row.name, row.partialMetadata],
+        [
+          'file',
+          '/copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3',
+          'Paper Satellites.mp3',
+          true,
+        ],
+      );
+      expect(keepOwnFileRow(h.server, '/music/x.mp3').data, '/music/x.mp3');
+    });
+  });
+
   group("the home's SERVER Copies row", () {
     setUp(() {
       CopiesHub().makeJobs = h.make;
@@ -694,6 +1092,50 @@ void main() {
       };
       await showHome();
       expect(serverCards(), ['torrents']);
+    });
+
+    test('a server whose only plug-in for Copies is the YouTube add shows the '
+        'row; a YouTube add the home saw live keeps the beat and toasts its '
+        'end', () async {
+      h.fake.listing = {
+        'plugins': [FakePluginServer.youtubePlugin],
+        'jobs': {'allowed': true},
+      };
+      final j = h.fake.addJob(
+        paper,
+        plugin: 'youtube',
+        state: 'running',
+        choice: {'url': ytPick},
+      );
+      await showHome();
+      expect(serverCards(), ['torrents', 'copies']);
+      final jobs = CopiesHub().jobsFor(h.server);
+      expect(jobs.summary.running, 1);
+      expect(h.timers.active?.delay, DiscoveryJobsController.kDiscoverBeat);
+      j
+        ..['state'] = 'failed'
+        ..['error'] =
+            'Nothing matched closely enough (best score 0.48, needs 0.62)';
+      h.timers.active!.fire();
+      await settle();
+      expect(h.toasts, [
+        "Couldn't add from YouTube: Nothing on YouTube was close enough (best match 48%).",
+      ]);
+    });
+
+    test('a store build: no row on a YouTube-only server, and its adds are '
+        'no news', () async {
+      final build = DiscoveryJobsController.defaultYoutubeShown;
+      DiscoveryJobsController.defaultYoutubeShown = () => false;
+      addTearDown(() => DiscoveryJobsController.defaultYoutubeShown = build);
+      h.fake.listing = {
+        'plugins': [FakePluginServer.youtubePlugin],
+        'jobs': {'allowed': true},
+      };
+      h.fake.addJob(paper, plugin: 'youtube', state: 'running');
+      await showHome();
+      expect(serverCards(), ['torrents']);
+      expect(CopiesHub().jobsFor(h.server).summary.shown, isFalse);
     });
 
     test('hidden when jobs are not allowed', () async {
@@ -962,6 +1404,120 @@ void main() {
         copyFinishedToast(l, job(tapes, scope: 'album', result: many())),
         isNull,
       );
+    });
+
+    DiscoveryJob ytJob({
+      String state = 'done',
+      Map<String, dynamic>? result,
+      String? error,
+      Map<String, dynamic>? rec,
+    }) => DiscoveryJob.fromServerMap({
+      'id': 2,
+      'plugin': kYoutubePlugin,
+      'recommendation': rec ?? paper,
+      'params': {
+        'choice': {'url': ytPick},
+      },
+      'state': state,
+      'result': result,
+      'error': error,
+    })!;
+
+    test("a YouTube add's: \"Adding … from YouTube\" as it starts; added, "
+        "already yours or why it failed (in the app's words) as it ends; "
+        'nothing for a file already there or a stop', () {
+      expect(
+        copyStartedToast(l, ytJob(state: 'queued')),
+        'Adding Paper Satellites from YouTube',
+      );
+      expect(
+        copyStartedToast(
+          l,
+          ytJob(
+            state: 'queued',
+            rec: {
+              ...paper,
+              'title': null,
+              'filepath': 'peerlib/Q/Paper Satellites.flac',
+            },
+          ),
+        ),
+        'Adding Paper Satellites.flac from YouTube',
+      );
+      expect(
+        copyFinishedToast(
+          l,
+          ytJob(result: ytLanded('copies/Q/S/Paper Satellites.mp3')),
+        ),
+        'Added to your collection',
+      );
+      expect(
+        copyFinishedToast(
+          l,
+          ytJob(
+            result: {
+              'skipped': 'owned',
+              'existing': {'filepath': 'music/Q/Paper Satellites.flac'},
+            },
+          ),
+        ),
+        'Already in your library',
+      );
+      expect(
+        copyFinishedToast(
+          l,
+          ytJob(
+            state: 'failed',
+            error:
+                'YouTube returned no results for “The Quiet Assembly Paper Satellites”',
+          ),
+        ),
+        "Couldn't add from YouTube: YouTube found nothing for “The Quiet Assembly Paper Satellites”.",
+      );
+      expect(
+        copyFinishedToast(
+          l,
+          ytJob(state: 'failed', error: 'something nobody expected'),
+        ),
+        "Couldn't add from YouTube: Something went wrong.",
+      );
+      expect(
+        copyFinishedToast(
+          l,
+          ytJob(result: {'skipped': 'exists', 'filepath': 'copies/Q/S/x.mp3'}),
+        ),
+        isNull,
+      );
+      expect(copyFinishedToast(l, ytJob(state: 'cancelled')), isNull);
+    });
+
+    test('attachCopyToasts: a YouTube add seen live toasts its end — never '
+        'on a store build', () async {
+      final j = h.fake.addJob(paper, plugin: 'youtube', state: 'running');
+      final shown = <String>[];
+      final sub = attachCopyToasts(h.jobs, l10n: () => l, show: shown.add);
+      final store = DiscoveryJobsController(
+        server: h.server,
+        api: h.fake.api(h.server),
+        timer: h.timers.call,
+        watchLifecycle: false,
+        youtubeShown: () => false,
+      );
+      addTearDown(store.dispose);
+      final quiet = <String>[];
+      final storeSub = attachCopyToasts(store, l10n: () => l, show: quiet.add);
+      await h.jobs.activate();
+      await store.activate();
+      j
+        ..['state'] = 'done'
+        ..['result'] = ytLanded('copies/Q/S/Paper Satellites.mp3');
+      await h.jobs.refreshJobs();
+      await store.refreshJobs();
+      await settle();
+      expect(shown, ['Added to your collection']);
+      expect(quiet, isEmpty);
+      await sub.cancel();
+      await storeSub.cancel();
     });
 
     test('attachCopyToasts: once per copy seen live', () async {

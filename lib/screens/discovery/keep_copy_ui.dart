@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery_plugins.dart';
+import '../../objects/display_item.dart';
+import '../../objects/server.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_badges.dart';
 import '../../util/discover_jobs.dart';
@@ -582,3 +584,18 @@ String? keepFormatOf(String? path) {
 /// recommendation's, else [fallback].
 String keepJobPeer(DiscoveryJob job, String fallback) =>
     job.view.peerName ?? job.peerName ?? fallback;
+
+/// A file a finished job left in the user's own library ([filepath] as a
+/// job's result names it: `vpath/…`, with or without its leading slash), as
+/// a row Play and Add to queue take — its tags read when it plays.
+DisplayItem keepOwnFileRow(Server server, String filepath) {
+  final fp = filepath.startsWith('/') ? filepath : '/$filepath';
+  return DisplayItem(
+    server,
+    fp.split('/').last,
+    'file',
+    fp,
+    Icon(Icons.music_note, color: VelvetColors.accent),
+    null,
+  )..partialMetadata = true;
+}

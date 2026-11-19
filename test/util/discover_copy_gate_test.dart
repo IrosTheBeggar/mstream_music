@@ -1,19 +1,37 @@
 // lib/util/discover_copy_gate.dart — when Keep a copy shows, and which
 // scopes it offers. All five conditions or hidden, never greyed; inside a
-// sheet a missing upload right or no library reads as one plain line.
+// sheet a missing upload right or no library reads as one plain line. The
+// same gate for the network-lead sheet's YouTube add (plugin: youtube), and
+// the Copies list on a server whose only plug-in for it is that add.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/discovery_plugins.dart';
 import 'package:mstream_music/util/discover_copy_gate.dart';
 
-PluginListing listing({bool jobsAllowed = true, List<String> scopes = const ['song', 'album', 'artist', 'artist-missing', 'folder'], bool copy = true}) =>
+PluginListing listing({
+  bool jobsAllowed = true,
+  List<String> scopes = const ['song', 'album', 'artist', 'artist-missing', 'folder'],
+  bool copy = true,
+  Map<String, dynamic>? youtube,
+}) =>
     PluginListing.fromServerMap({
       'plugins': [
         {'name': 'links', 'title': 'Open elsewhere', 'capabilities': ['links'], 'scopes': ['song']},
         if (copy) {'name': 'federation-copy', 'title': 'Add to your collection', 'capabilities': ['acquire'], 'scopes': scopes},
+        ?youtube,
       ],
       'jobs': {'allowed': jobsAllowed},
     });
+
+/// The youtube plug-in as the server lists it (youtube.js: acquire + lookup,
+/// the song scope), with [over] on top.
+Map<String, dynamic> yt([Map<String, dynamic> over = const {}]) => {
+      'name': 'youtube',
+      'title': 'YouTube',
+      'capabilities': ['acquire', 'lookup'],
+      'scopes': ['song'],
+      ...over,
+    };
 
 DestinationView dest({bool none = false}) => DestinationView.fromServerMap({
       'destination': none ? null : {'vpath': 'demo', 'base': '', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}', 'source': 'default'},
@@ -75,6 +93,46 @@ void main() {
       expect(copiesListVisible(pluginsAvailable: true, listing: listing(copy: false)), isFalse);
       expect(copiesListVisible(pluginsAvailable: false, listing: listing()), isFalse);
       expect(copiesListVisible(pluginsAvailable: true), isFalse);
+    });
+
+    test('the YouTube add (plugin: youtube): listed with acquire, lookup and the song, jobs, uploads, a library — or hidden, or one line', () {
+      CopyGate g(PluginListing l, {DestinationView? d, bool? noUpload = false, String scope = 'song'}) =>
+          copyGate(pluginsAvailable: true, listing: l, destination: d ?? dest(), noUpload: noUpload, scope: scope, plugin: kYoutubePlugin);
+      final ready = g(listing(copy: false, youtube: yt()));
+      expect([ready.status, ready.block], [CopyGateStatus.ready, null]);
+      expect(g(listing(youtube: yt())).ready, isTrue, reason: 'beside the copy plug-in');
+      for (final (gate, block, why) in [
+        (g(listing()), CopyGateBlock.notListed, 'not listed'),
+        (g(listing(youtube: yt({'capabilities': ['acquire']}))), CopyGateBlock.notListed, 'no lookup: no pick to send'),
+        (g(listing(youtube: yt({'capabilities': ['lookup']}))), CopyGateBlock.notListed, 'no acquire'),
+        (g(listing(youtube: yt({'scopes': ['album']}))), CopyGateBlock.notListed, 'no song scope'),
+        (g(listing(youtube: yt({'available': false}))), CopyGateBlock.notListed, 'its probe failed (no yt-dlp)'),
+        (g(listing(youtube: yt()), scope: 'album'), CopyGateBlock.noScope, 'a scope it lacks'),
+        (g(listing(youtube: yt(), jobsAllowed: false)), CopyGateBlock.jobsNotAllowed, 'the jobs gate'),
+        (copyGate(pluginsAvailable: false, listing: listing(youtube: yt()), destination: dest(), plugin: kYoutubePlugin), CopyGateBlock.pluginsOff, 'plug-ins off'),
+      ]) {
+        expect([gate.status, gate.block], [CopyGateStatus.hidden, block], reason: why);
+      }
+      final off = g(listing(youtube: yt()), noUpload: true);
+      expect([off.status, off.block, off.wordingKey], [CopyGateStatus.line, CopyGateBlock.noUpload, kKeepUploadsOffKey]);
+      final noLib = g(listing(youtube: yt()), d: dest(none: true));
+      expect([noLib.status, noLib.block], [CopyGateStatus.line, CopyGateBlock.noLibrary]);
+      expect(copyGate(pluginsAvailable: true, listing: listing(youtube: yt()), plugin: kYoutubePlugin).status, CopyGateStatus.unknown,
+          reason: 'the destination still being asked');
+      // The copy plug-in's own gate is untouched by YouTube's.
+      expect(copyGate(pluginsAvailable: true, listing: listing(copy: false, youtube: yt()), destination: dest()).block, CopyGateBlock.notListed);
+    });
+
+    test('a server whose only plug-in for Copies is the YouTube add has Copies — on a build that shows YouTube', () {
+      final only = listing(copy: false, youtube: yt());
+      expect(copiesListVisible(pluginsAvailable: true, listing: only, youtube: true), isTrue);
+      expect(copiesListVisible(pluginsAvailable: true, listing: only), isFalse, reason: 'a store build');
+      expect(copiesListVisible(pluginsAvailable: true, listing: listing(copy: false, youtube: yt({'capabilities': ['acquire']})), youtube: true), isFalse,
+          reason: 'not the add the phone makes');
+      expect(copiesListVisible(pluginsAvailable: true, listing: listing(copy: false, youtube: yt(), jobsAllowed: false), youtube: true), isFalse);
+      expect(copiesListVisible(pluginsAvailable: true, listing: only, noUpload: true, youtube: true), isFalse);
+      expect(copiesListVisible(pluginsAvailable: false, listing: only, youtube: true), isFalse);
+      expect(copiesListVisible(pluginsAvailable: true, listing: listing(), youtube: true), isTrue, reason: 'the copy plug-in alone, as before');
     });
   });
 

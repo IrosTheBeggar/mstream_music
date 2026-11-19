@@ -54,12 +54,13 @@ void main() {
   late Server server;
   final controllers = <DiscoveryJobsController>[];
 
-  DiscoveryJobsController make({Server? on}) {
+  DiscoveryJobsController make({Server? on, bool Function()? youtubeShown}) {
     final c = DiscoveryJobsController(
       server: on ?? server,
       api: fake.api(on ?? server),
       timer: timers.call,
       watchLifecycle: false,
+      youtubeShown: youtubeShown,
     );
     controllers.add(c);
     return c;
@@ -689,15 +690,15 @@ void main() {
     expect([s.running, s.failed, s.shown], [2, 2, true], reason: 'a copy stopped because the peer went away counts as failed');
     expect([for (final j in c.copies) j.state], [JobState.running, JobState.queued, JobState.done, JobState.failed]);
   });
-  test("only the phone's copies: another plug-in's jobs are neither counted, listed, marked, retried, polled for nor news; a folder copy is counted and retried with its landing, never marked on Discover", () async {
-    final yt = fake.addJob(late.raw, state: 'failed')..['plugin'] = 'youtube';
-    final ytLive = fake.addJob(corner.raw, state: 'running')..['plugin'] = 'youtube';
+  test("a store build: only the phone's copies — a YouTube add is neither counted, listed, marked, retried, polled for nor news; a folder copy is counted and retried with its landing, never marked on Discover", () async {
+    final yt = fake.addJob(late.raw, state: 'failed', plugin: 'youtube');
+    final ytLive = fake.addJob(corner.raw, state: 'running', plugin: 'youtube');
     final folder = fake.addJob(late.raw, scope: 'folder', state: 'failed');
     folder['params'] = {
       'scope': 'folder',
       'landing': {'vpath': 'music', 'path': 'mine'},
     };
-    final c = make();
+    final c = make(youtubeShown: () => false);
     await c.activate();
     await c.setRows(rows);
     expect(c.jobs, hasLength(3), reason: 'the list as the server sent it');
@@ -733,6 +734,202 @@ void main() {
     ytLive['state'] = 'done';
     await c.refreshJobs();
     expect(c.justFinished, isEmpty);
+  });
+
+  group('YouTube adds (the network-lead sheet\'s, and the webapp\'s)', () {
+    const pick = 'https://www.youtube.com/watch?v=abcdefghijk';
+    const other = 'https://youtu.be/zyxwvutsrqp';
+    const place = {'vpath': 'copies', 'base': '', 'layout': '{{ALBUMARTIST}}/{{ALBUM}}'};
+
+    /// A per-song network row as the sheet sends it (repaired: stamped p2p).
+    final paper = <String, dynamic>{
+      'artist': 'The Quiet Assembly',
+      'title': 'Paper Satellites',
+      'album': 'Static Bloom',
+      'year': 2011,
+      'duration': 238,
+      'source': 'p2p',
+      'exportId': 'row-17',
+      'peer': {'endpointId': 'ab' * 32, 'name': 'Vinyl Vault'},
+    };
+    Map<String, dynamic> landed(String path) => {
+          'downloaded': {'vpath': 'copies', 'filepath': path, 'bytes': 6700000, 'format': 'mp3'},
+          'match': {'score': 0.91, 'url': pick, 'title': 'Paper Satellites', 'channel': 'The Quiet Assembly - Topic'},
+        };
+
+    test('counted, listed, polled for at Discover\'s beat and news as they end — whoever started them, with a pick or not; never a Discover row\'s marker', () async {
+      final failed = fake.addJob(late.raw,
+          state: 'failed', plugin: 'youtube', choice: {'url': pick},
+          error: 'Nothing matched closely enough (best score 0.48, needs 0.62)');
+      final running = fake.addJob(corner.raw, state: 'running', plugin: 'youtube', progress: 0.42, statusText: '42% of “Corner Store Loop”');
+      // Another plug-in's job stays the webapp's.
+      fake.addJob(glass.raw, state: 'failed', plugin: 'ytdl');
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      await c.setRows(rows);
+      expect([c.summary.running, c.summary.failed, c.summary.shown], [1, 1, true]);
+      expect([for (final j in c.copies) j.id], [running['id'], failed['id']]);
+      expect([c.inCopies(c.jobs.firstWhere((j) => j.id == failed['id'])), c.inCopies(c.jobs.firstWhere((j) => j.plugin == 'ytdl'))], [true, false]);
+      expect([c.markerFor(late), c.markerFor(corner), c.sheetJob(corner, 'song')], [null, null, null],
+          reason: 'a YouTube add never marks a Discover row');
+      expect(c.anyLive, isTrue);
+      expect(timers.active?.delay, DiscoveryJobsController.kDiscoverBeat);
+
+      final news = <DiscoveryJob>[];
+      c.finished.listen(news.add);
+      running
+        ..['state'] = 'done'
+        ..['result'] = landed('copies/Boukmanflow/Borrowed Tapes/Corner Store Loop.mp3');
+      timers.active!.fire();
+      await settle();
+      expect([for (final n in news) n.id], [running['id']]);
+      expect(c.justFinished.single.view.downloadedFilepath, 'copies/Boukmanflow/Borrowed Tapes/Corner Store Loop.mp3');
+      expect(c.claimEnding(c.justFinished.single), isFalse, reason: 'told once');
+      expect(c.markerFor(corner), isNull);
+      expect(timers.active, isNull, reason: 'nothing live: stopped');
+    });
+
+    test('Retry sends a YouTube add to youtube again with its own pick (none when it searched for itself); Copies\' Retry sends the place it ran with', () async {
+      final picked = fake.addJob(late.raw, state: 'failed', plugin: 'youtube', choice: {'url': pick}, error: 'YouTube download failed: HTTP Error 403: Forbidden');
+      picked['params'] = {...picked['params'] as Map, 'destination': place};
+      final searched = fake.addJob(corner.raw, state: 'failed', plugin: 'youtube', error: 'YouTube returned no results for “Boukmanflow Corner Store Loop”');
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      DiscoveryJob of(Map<String, dynamic> wire) => c.jobs.firstWhere((j) => j.id == wire['id']);
+
+      final out = await c.retry(of(picked));
+      expect([out.ok, out.job!.plugin, out.job!.choiceUrl], [true, 'youtube', pick]);
+      final body = fake.starts('youtube').single;
+      expect(body['recommendation'], jsonDecode(jsonEncode(late.raw)));
+      expect(body['choice'], {'url': pick});
+      expect([body.containsKey('scope'), body.containsKey('landing'), body.containsKey('destination')], [false, false, false]);
+      expect(fake.starts('federation-copy'), isEmpty);
+
+      final again = await c.retryWhereItRan(of(picked));
+      expect(again.ok, isTrue);
+      expect(fake.starts('youtube').last['destination'], place, reason: 'its pin: the sheet shows no place');
+      expect(fake.starts('youtube').last['choice'], {'url': pick});
+
+      expect((await c.retry(of(searched))).ok, isTrue);
+      expect(fake.starts('youtube').last.containsKey('choice'), isFalse, reason: 'it searches again for itself');
+    });
+
+    test('a copy and a YouTube add of one song go out side by side: each has its own busy key', () async {
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      await c.setRows(rows);
+      fake.startGate = Completer<void>();
+      final copy = c.start(late.raw);
+      final add = c.start(late.raw, plugin: kYoutubePlugin, choice: {'url': pick});
+      await settle();
+      expect([c.isStarting(late.raw), c.isStarting(late.raw, null, kYoutubePlugin), c.isStarting(late.raw, 'album')], [true, true, false]);
+      expect((await c.start(late.raw, plugin: kYoutubePlugin, choice: {'url': other})).ignored, isTrue,
+          reason: 'one YouTube add of the song at a time, whatever its pick');
+      fake.startGate!.complete();
+      final done = await Future.wait([copy, add]);
+      expect([for (final o in done) o.ok], [true, true]);
+      expect([fake.starts('federation-copy').length, fake.starts('youtube').length], [1, 1]);
+      expect([c.isStarting(late.raw), c.isStarting(late.raw, null, kYoutubePlugin)], [false, false]);
+      expect(c.rowOf(late)!.jobs.values.map((j) => j.plugin), everyElement(kCopyPlugin),
+          reason: 'only the copy marks the row');
+      expect(c.summary.running, 2);
+    });
+
+    test('youtubeJobFor: the newest YouTube add under the song\'s key, followed while live (the list need not carry it); none for another song, a copy, a store build or a failed lookup', () async {
+      fake.addJob(paper, state: 'failed', plugin: 'youtube', id: 300);
+      final live = fake.addJob(paper, state: 'running', plugin: 'youtube', choice: {'url': pick}, id: 301);
+      fake.addJob(late.raw, state: 'done', result: {'copied': {'filepath': 'copies/x.mp3'}});
+      fake.unlisted.add(301);
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      expect(c.anyLive, isFalse, reason: 'the list does not carry it');
+
+      final found = await c.youtubeJobFor(paper);
+      expect([found!.id, found.choiceUrl, found.live], [301, pick, true]);
+      expect(fake.count('POST', '/plugin-jobs/lookup'), 1, reason: 'the single lookup, not the batch');
+      expect(jsonDecode(fake.calls('POST', '/plugin-jobs/lookup').single.body), {'recommendation': paper});
+      expect(c.anyLive, isTrue);
+      expect(timers.active?.delay, DiscoveryJobsController.kDiscoverBeat);
+
+      final news = <DiscoveryJob>[];
+      c.finished.listen(news.add);
+      live
+        ..['state'] = 'done'
+        ..['result'] = landed('copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3');
+      final ended = await c.youtubeJobFor(paper);
+      await settle();
+      expect(ended!.view.downloadedFilepath, 'copies/The Quiet Assembly/Static Bloom/Paper Satellites.mp3');
+      expect([for (final n in news) n.id], [301]);
+      expect(c.anyLive, isFalse);
+
+      expect(await c.youtubeJobFor(late.raw), isNull, reason: 'its only job is a copy');
+      final store = make(youtubeShown: () => false);
+      final asked = fake.count('POST', '/plugin-jobs/lookup');
+      expect(await store.youtubeJobFor(paper), isNull);
+      expect(fake.count('POST', '/plugin-jobs/lookup'), asked, reason: 'a store build asks nothing');
+      fake.refuse['/plugin-jobs/lookup'] = (500, 'boom');
+      expect(await c.youtubeJobFor(paper), isNull);
+    });
+
+    test('a page lookup keeps only copies unless asked (keep:)', () async {
+      fake.addJob(late.raw, state: 'running', plugin: 'youtube');
+      final c = make(youtubeShown: () => true);
+      await c.activate();
+      final copies = await c.lookup([late.raw]);
+      expect(copies!.single!.jobs, isEmpty);
+      final all = await c.lookup([late.raw], keep: c.inCopies);
+      expect(all!.single!.jobs.single.plugin, 'youtube');
+    });
+
+    test('youtubeGate: the YouTube add\'s own gate; hidden on a store build; a youtube-only server has Copies', () async {
+      fake.listing = {
+        'plugins': [FakePluginServer.youtubePlugin],
+        'jobs': {'allowed': true},
+      };
+      final c = make(youtubeShown: () => true);
+      expect(c.youtubeGate().status, CopyGateStatus.unknown, reason: 'nothing read yet');
+      await c.activate();
+      expect(c.youtubeGate().ready, isTrue);
+      expect(c.gate().block, CopyGateBlock.notListed, reason: 'Keep a copy has no plug-in here');
+      expect(c.copiesVisible, isTrue);
+      server.noUpload = true;
+      expect([c.youtubeGate().status, c.youtubeGate().block], [CopyGateStatus.line, CopyGateBlock.noUpload]);
+      expect(c.copiesVisible, isFalse);
+      server.noUpload = false;
+
+      var shown = true;
+      final flips = make(youtubeShown: () => shown);
+      await flips.activate();
+      expect(flips.youtubeGate().ready, isTrue);
+      shown = false;
+      expect([flips.youtubeGate().status, flips.youtubeGate().block], [CopyGateStatus.hidden, CopyGateBlock.notListed],
+          reason: 'read each time');
+      expect(flips.copiesVisible, isFalse);
+    });
+
+    test('a controller made without its own switch reads the build\'s (defaultYoutubeShown)', () {
+      final build = DiscoveryJobsController.defaultYoutubeShown;
+      addTearDown(() => DiscoveryJobsController.defaultYoutubeShown = build);
+      expect(make().youtubeShown, isTrue, reason: 'a debug build on the test host shows Add from YouTube');
+      DiscoveryJobsController.defaultYoutubeShown = () => false;
+      expect(make().youtubeShown, isFalse);
+      expect(make(youtubeShown: () => true).youtubeShown, isTrue, reason: 'its own wins');
+      final store = make();
+      expect(store.inCopies(DiscoveryJob.fromServerMap({'id': 9, 'plugin': 'youtube', 'state': 'failed'})), isFalse);
+    });
+
+    test('claimEnding: a YouTube add that ended before any poll saw it is told once; never on a store build', () {
+      final ended = DiscoveryJob.fromServerMap({
+        'id': 41,
+        'plugin': 'youtube',
+        'state': 'done',
+        'recommendation': paper,
+        'result': {'skipped': 'owned', 'existing': {'filepath': 'music/x.mp3'}},
+      })!;
+      final c = make(youtubeShown: () => true);
+      expect([c.claimEnding(ended), c.claimEnding(ended)], [true, false]);
+      expect(make(youtubeShown: () => false).claimEnding(ended), isFalse);
+    });
   });
 
   group('what the review asked for', () {

@@ -470,6 +470,31 @@ void main() {
     expect(isDiscoverCopy(null), isFalse);
   });
 
+  test('a YouTube add: the youtube plug-in\'s song job, with a pick or without, never with a landing; never a copy', () {
+    expect(isYoutubeAdd(job()), isTrue, reason: 'one the webapp started, searching for itself');
+    expect(isYoutubeAdd(job({'params': {'choice': {'url': 'https://www.youtube.com/watch?v=abcdefghijk'}}})), isTrue);
+    expect(isYoutubeAdd(job({'params': {'destination': null}})), isTrue, reason: 'pinned to nowhere is still an add');
+    expect(isYoutubeAdd(job({'params': {'scope': 'album'}})), isFalse);
+    expect(isYoutubeAdd(job({'params': {'landing': {'tags': true}}})), isFalse);
+    expect(isYoutubeAdd(copyJob()), isFalse);
+    expect(isYoutubeAdd(job({'plugin': 'ytdl'})), isFalse);
+    expect(isYoutubeAdd(null), isFalse);
+    expect([isDiscoverCopy(job()), isKeepCopy(job())], [false, false], reason: 'it never marks a Discover row');
+  });
+
+  test('a recommendation from the P2P network: stamped p2p, or no source and a network peer', () {
+    final peer = {'endpointId': 'ab' * 32, 'name': 'Vinyl Vault'};
+    expect(isNetworkRecommendation({'source': 'p2p', 'peer': peer}), isTrue);
+    expect(isNetworkRecommendation({'peer': peer}), isTrue, reason: 'the per-song route sends no source');
+    expect(isNetworkRecommendation({'source': 'p2p'}), isTrue);
+    expect(isNetworkRecommendation({'source': 'federation', 'peer': {'id': 1, 'name': 'Stage Peer B'}}), isFalse);
+    expect(isNetworkRecommendation({'source': 'local'}), isFalse);
+    expect(isNetworkRecommendation({'source': 'federation', 'peer': peer}), isFalse, reason: 'its source says');
+    expect(isNetworkRecommendation({'peer': {'id': 1, 'name': 'Stage Peer B'}}), isFalse);
+    expect(isNetworkRecommendation({'peer': {'endpointId': '  '}}), isFalse);
+    expect(isNetworkRecommendation(const {}), isFalse);
+  });
+
   group('where a copy lands', () {
     const place = CollectionDestination(vpath: 'copies', base: 'From peers/Stage', layout: '{{ALBUMARTIST}}/{{ALBUM}}', source: 'user');
 

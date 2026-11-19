@@ -2,12 +2,13 @@
 /// "When it shows" and the study's client rules).
 ///
 /// Every entry point needs all five: the server's plug-ins on (the ping's
-/// `discoveryPlugins`), the copy plug-in listed with that scope, jobs
-/// allowed (`jobs.allowed`), the account may upload (ping / boot
-/// `noUpload`), and a library that takes new files (the destination is not
-/// null). Otherwise it is HIDDEN, never greyed — except that inside an open
-/// sheet a missing upload right, or no library to put files in, reads as one
-/// plain line ([CopyGateStatus.line], [CopyGate.wordingKey]).
+/// `discoveryPlugins`), the plug-in listed with that scope (the copy
+/// plug-in, or — for the network-lead sheet's YouTube add — youtube with
+/// its lookup), jobs allowed (`jobs.allowed`), the account may upload (ping
+/// / boot `noUpload`), and a library that takes new files (the destination
+/// is not null). Otherwise it is HIDDEN, never greyed — except that inside
+/// an open sheet a missing upload right, or no library to put files in,
+/// reads as one plain line ([CopyGateStatus.line], [CopyGate.wordingKey]).
 library;
 
 import '../objects/discovery_plugins.dart';
@@ -38,10 +39,13 @@ enum CopyGateBlock {
   /// The server's plug-ins are off (ping / boot `discoveryPlugins`).
   pluginsOff,
 
-  /// federation-copy is not listed (off, or its probe failed).
+  /// The plug-in is not listed (off, or its probe failed), or — youtube —
+  /// listed without what the phone's add needs (acquire, lookup, the song
+  /// scope), or on a build that does not show YouTube
+  /// (DiscoveryJobsController.youtubeGate).
   notListed,
 
-  /// federation-copy is listed without this scope.
+  /// The plug-in is listed without this scope.
   noScope,
 
   /// The acquisition gate refuses this account (`jobs.allowed` false).
@@ -94,6 +98,10 @@ const String kKeepNoLibraryKey = 'discoverKeepNoLibrary';
 /// (Server.noUpload: null from a server too old to say — then the
 /// destination alone decides, worded as "no library"). [entry] is where the
 /// way in is: Folder only from a connected server's file explorer.
+///
+/// [plugin] is whose job would start: Keep a copy's ([kCopyPlugin]), or
+/// the YouTube add's ([kYoutubePlugin], read as [PluginListing.youtube]:
+/// listed and available with acquire, lookup and the song scope).
 CopyGate copyGate({
   required bool? pluginsAvailable,
   PluginListing? listing,
@@ -103,6 +111,7 @@ CopyGate copyGate({
   bool? noUpload,
   String scope = kScopeSong,
   KeepEntry entry = KeepEntry.discover,
+  String plugin = kCopyPlugin,
 }) {
   if (pluginsAvailable != true) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.pluginsOff);
@@ -112,14 +121,14 @@ CopyGate copyGate({
         ? const CopyGate(CopyGateStatus.hidden, CopyGateBlock.unavailable)
         : const CopyGate(CopyGateStatus.unknown);
   }
-  final copy = listing.copy;
-  if (copy == null) {
+  final listed = plugin == kYoutubePlugin ? listing.youtube : listing.copy;
+  if (listed == null) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.notListed);
   }
   // Folder only from the file explorer (never from Discover); a scope the
   // server does not list is hidden.
   if ((scope == kScopeFolder && entry != KeepEntry.explorer) ||
-      !copy.hasScope(scope)) {
+      !listed.hasScope(scope)) {
     return const CopyGate(CopyGateStatus.hidden, CopyGateBlock.noScope);
   }
   if (!listing.jobsAllowed) {
@@ -140,17 +149,20 @@ CopyGate copyGate({
 }
 
 /// Whether the home's "Copies" row (and the Copies list) can show at all:
-/// plug-ins on, the copy plug-in listed, jobs allowed, uploads allowed. No
-/// destination needed — a list of copies already made reads fine without
-/// one.
+/// plug-ins on, the copy plug-in listed — or, with [youtube] (a build that
+/// shows YouTube), the YouTube add ([PluginListing.youtube]): a server with
+/// only that has Copies too — jobs allowed, uploads allowed. No destination
+/// needed — a list of copies already made reads fine without one.
 bool copiesListVisible({
   required bool? pluginsAvailable,
   PluginListing? listing,
   bool? noUpload,
+  bool youtube = false,
 }) =>
     pluginsAvailable == true &&
-    listing?.copy != null &&
-    listing!.jobsAllowed &&
+    listing != null &&
+    (listing.copy != null || (youtube && listing.youtube != null)) &&
+    listing.jobsAllowed &&
     noUpload != true;
 
 bool _hasText(Object? v) => v is String && v.trim().isNotEmpty;

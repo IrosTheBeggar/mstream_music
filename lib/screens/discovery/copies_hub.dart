@@ -100,7 +100,8 @@ class KeepGateSnapshot {
 /// poll, one set of "just finished", one toast per ending.
 ///
 /// The home row shows only when copies are possible (the server's plug-ins
-/// on, the account may upload, federation-copy listed, jobs allowed —
+/// on, the account may upload, federation-copy listed — or, on a build that
+/// shows YouTube, the YouTube add — jobs allowed —
 /// [DiscoveryJobsController.copiesVisible]): the hub asks the listing when
 /// the home is shown and rebuilds the home once the answer changes what it
 /// holds. While the home is in front with a copy live, the poll keeps
