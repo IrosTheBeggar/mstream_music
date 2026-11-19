@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../media/preview_player.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
 import '../../theme/velvet_theme.dart';
@@ -30,6 +31,19 @@ Future<bool> _launchOutside(Uri uri) =>
 
 /// The launcher the sub-sheet uses; tests swap it.
 ElsewhereLauncher elsewhereLaunch = _launchOutside;
+
+/// Every link that leaves the app goes through here — Open elsewhere's
+/// rows, a preview's store page, an upload's YouTube page, MusicBrainz: a
+/// preview clip playing ends first as having left the app, so the song it
+/// paused stays paused (the user is heading into another app, often
+/// another music app), then [elsewhereLaunch] opens it. With no clip
+/// playing the end does nothing.
+Future<bool> openOutside(Uri uri) {
+  // Ended before the launch sends the app to the background, which would
+  // end it as backgrounded and bring the song back over the other app.
+  unawaited(PreviewPlayer().end(PreviewEnd.leftApp));
+  return elsewhereLaunch(uri);
+}
 
 Future<void> showElsewhereSheet(
   BuildContext context,
@@ -115,7 +129,7 @@ class _ElsewhereSheetState extends State<ElsewhereSheet> {
     var ok = false;
     try {
       final uri = Uri.parse(link.url);
-      ok = await elsewhereLaunch(uri);
+      ok = await openOutside(uri);
     } catch (_) {
       ok = false;
     }

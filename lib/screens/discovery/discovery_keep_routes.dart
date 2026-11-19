@@ -10,18 +10,22 @@ import 'copies_sheet.dart';
 import 'destination_sheet.dart';
 import 'discovery_jobs_controller.dart';
 import 'elsewhere_sheet.dart';
+import 'network_lead_sheet.dart';
 
 /// Where the Keep a copy surfaces hand off to the sheets they open but do
 /// not draw: "Open elsewhere" (the links plug-in's sub-sheet), the Copies
 /// sheet (the strip under Discover's bar), the destination picker ("Change"
-/// on the Keep card — a folder's "By your layout" previews the folder), and
-/// "Show in your library" (a folder copy's files on the user's own server).
+/// on the Keep card — a folder's "By your layout" previews the folder),
+/// "Show in your library" (a folder copy's files on the user's own server),
+/// and the network-lead sheet (a "From the network" row on More like this).
 /// The entry points call these; tests set their own to see the call.
 class DiscoveryKeepRoutes {
   DiscoveryKeepRoutes._();
 
-  /// "Open elsewhere" on a connected server's song sheet: [lead]'s
-  /// recommendation (sent unchanged to the links plug-in, asked only now).
+  /// "Open elsewhere" on a connected server's song sheet and on the
+  /// network-lead sheet: [lead]'s recommendation (its raw, sent to the links
+  /// plug-in as the sheet holds it — a connected server's row as received,
+  /// a network row repaired — asked only now).
   static void Function(
     BuildContext context,
     DiscoveryJobsController jobs,
@@ -61,6 +65,20 @@ class DiscoveryKeepRoutes {
   static Future<bool> Function(Server own, String directory) showInLibrary =
       _showInLibrary;
 
+  /// A "From the network" row's tap on More like this, and Copies' "Choose
+  /// another" ([autoSearch]: the YouTube search starts as it opens): the
+  /// network-lead sheet for [lead] (showNetworkLeadSheet — [seedTitle] for
+  /// its match line, [onLeadAction] on its first lead action).
+  static void Function(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryLead lead, {
+    String? seedTitle,
+    bool autoSearch,
+    VoidCallback? onLeadAction,
+  })
+  openNetworkLead = _openNetworkLead;
+
   /// Put the real sheets back (tests).
   static void reset() {
     openElsewhere = _openElsewhere;
@@ -68,6 +86,7 @@ class DiscoveryKeepRoutes {
     changeDestination = _changeDestination;
     changeFolderDestination = _changeFolderDestination;
     showInLibrary = _showInLibrary;
+    openNetworkLead = _openNetworkLead;
   }
 
   static void _openElsewhere(
@@ -78,6 +97,24 @@ class DiscoveryKeepRoutes {
 
   static void _openCopies(BuildContext context, DiscoveryJobsController jobs) =>
       unawaited(showCopiesSheet(context, jobs));
+
+  static void _openNetworkLead(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryLead lead, {
+    String? seedTitle,
+    bool autoSearch = false,
+    VoidCallback? onLeadAction,
+  }) => unawaited(
+    showNetworkLeadSheet(
+      context,
+      jobs: jobs,
+      lead: lead,
+      seedTitle: seedTitle,
+      autoSearch: autoSearch,
+      onLeadAction: onLeadAction,
+    ),
+  );
 
   static void _changeDestination(
     BuildContext context,

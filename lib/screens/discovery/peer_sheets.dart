@@ -26,6 +26,7 @@ import 'copy_news.dart';
 import 'discovery_jobs_controller.dart';
 import 'discovery_keep_routes.dart';
 import 'discovery_page_controller.dart';
+import 'discovery_sheet_parts.dart';
 import 'discovery_widgets.dart' show discoveryToast;
 import 'keep_copy_card.dart';
 import 'keep_copy_facts.dart';
@@ -162,239 +163,6 @@ Future<void> _browsePeer(Server? peer) async {
 
 // ── shared pieces ─────────────────────────────────────────────────────────
 
-class _GrabHandle extends StatelessWidget {
-  const _GrabHandle();
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 22,
-    child: Center(
-      child: Container(
-        width: 36,
-        height: 4,
-        decoration: BoxDecoration(
-          color: VelvetColors.border2,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The sheet header: cover, title, byline, the spec line, and whether the
-/// connected server answers.
-///
-/// A browse-entered sheet ([browse]) gives the title two lines and the
-/// byline [bylineLines] (a folder's path wraps between its crumbs), puts
-/// [status] after the server's line ("● Stage Peer B online · 3 songs · no
-/// subfolders"), draws the dot of a server not answering in the error
-/// colour, and reads as one header node — the full title in it.
-class _SheetHeader extends StatelessWidget {
-  final Widget cover;
-  final String title;
-  final String byline;
-  final String? spec;
-  final String peerName;
-  final bool answering;
-  final bool browse;
-  const _SheetHeader({
-    required this.cover,
-    required this.title,
-    required this.byline,
-    this.spec,
-    required this.peerName,
-    required this.answering,
-    this.browse = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final head = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-      child: Row(
-        children: [
-          cover,
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: browse ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (byline.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      byline,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: VelvetColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                if (spec != null && spec!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      spec!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
-                        letterSpacing: 0.2,
-                        color: VelvetColors.textTertiary,
-                      ),
-                    ),
-                  ),
-                if (peerName.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      key: const ValueKey('peer-sheet-server'),
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: answering
-                                ? keepTone(VelvetColors.success)
-                                : (browse
-                                      ? keepTone(VelvetColors.error)
-                                      : VelvetColors.textTertiary),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            answering
-                                ? l.discoverSheetPeerOnline(peerName)
-                                : l.discoverSheetPeerNotAnswering(peerName),
-                            maxLines: browse ? 2 : 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: VelvetColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (!browse) return head;
-    // One header node: what the sheet is about, then where it comes from.
-    return MergeSemantics(
-      key: const ValueKey('browse-keep-header'),
-      child: Semantics(header: true, child: head),
-    );
-  }
-}
-
-/// A 52 px action row: a 24 px icon, the label (and an optional second
-/// line), an optional chevron. Not [enabled] (a folder's Listen before it
-/// is counted): drawn at 45 %, inert, still in reach of a screen reader.
-class _ActionRow extends StatelessWidget {
-  final IconData icon;
-  final Color? iconColor;
-  final String label;
-  final String? sub;
-  final bool chevron;
-  final bool enabled;
-  final VoidCallback onTap;
-  const _ActionRow({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.iconColor,
-    this.sub,
-    this.chevron = false,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final row = _row();
-    if (enabled) return row;
-    return Semantics(
-      button: true,
-      enabled: false,
-      label: [label, ?sub].join(', '),
-      excludeSemantics: true,
-      child: Opacity(opacity: 0.45, child: IgnorePointer(child: row)),
-    );
-  }
-
-  Widget _row() => InkWell(
-    onTap: onTap,
-    splashColor: VelvetColors.primaryDim,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 52),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: iconColor ?? VelvetColors.textSecondary,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 15,
-                    ),
-                  ),
-                  if (sub != null)
-                    Text(
-                      sub!,
-                      style: TextStyle(
-                        color: VelvetColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (chevron)
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: VelvetColors.textTertiary,
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 /// A line about the album or the artist, with its pills under it.
 class _FactLine extends StatelessWidget {
   final IconData icon;
@@ -451,9 +219,6 @@ class _FactLine extends StatelessWidget {
   );
 }
 
-Widget _divider() =>
-    Divider(height: 1, thickness: 1, color: VelvetColors.border);
-
 /// The sheet's frame: the pinned grab handle, then everything scrolling as
 /// one.
 Widget _sheetFrame(List<Widget> children) => SafeArea(
@@ -462,7 +227,7 @@ Widget _sheetFrame(List<Widget> children) => SafeArea(
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _GrabHandle(),
+      const DiscoverySheetGrabHandle(),
       Flexible(
         child: SingleChildScrollView(
           child: Column(
@@ -643,7 +408,7 @@ class _PeerSongSheetState extends State<PeerSongSheet>
           artistSub = l.discoverSheetYouHaveAlbums(f.libraryAlbums!.length);
         }
         return _sheetFrame([
-          _SheetHeader(
+          DiscoverySheetHeader(
             cover: row.getAlbumThumb(size: 60),
             title: lead.title,
             byline: byline,
@@ -651,8 +416,8 @@ class _PeerSongSheetState extends State<PeerSongSheet>
             peerName: peerName,
             answering: !f.peerFailed,
           ),
-          _divider(),
-          _ActionRow(
+          discoverySheetDivider(),
+          DiscoverySheetActionRow(
             key: const ValueKey('peer-song-add-next'),
             icon: Icons.playlist_play,
             label: l.queueAddNext,
@@ -660,14 +425,14 @@ class _PeerSongSheetState extends State<PeerSongSheet>
               if (await addNext(row) != null) toast(l.browserSongsAdded(1));
             }),
           ),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('peer-song-play-now'),
             icon: Icons.play_arrow,
             label: l.queuePlayNow,
             onTap: () => closeThen(() => playNow(row)),
           ),
           if (SettingsManager().tapBehavior == TapBehavior.playFromHere)
-            _ActionRow(
+            DiscoverySheetActionRow(
               key: const ValueKey('peer-song-add-to-end'),
               icon: Icons.playlist_add,
               label: l.queueAddToEnd,
@@ -676,7 +441,7 @@ class _PeerSongSheetState extends State<PeerSongSheet>
                 toast(l.browserSongsAdded(1));
               }),
             ),
-          _divider(),
+          discoverySheetDivider(),
           if (album.isNotEmpty)
             _FactLine(
               key: const ValueKey('peer-song-album'),
@@ -731,7 +496,7 @@ class _PeerSongSheetState extends State<PeerSongSheet>
             onStarted: widget.onStarted,
           ),
           if (linksListed)
-            _ActionRow(
+            DiscoverySheetActionRow(
               key: const ValueKey('peer-song-elsewhere'),
               icon: Icons.open_in_new,
               label: l.discoverSheetOpenElsewhere,
@@ -740,16 +505,16 @@ class _PeerSongSheetState extends State<PeerSongSheet>
                   DiscoveryKeepRoutes.openElsewhere(context, jobs, lead),
             ),
           if (peer != null && peerName.isNotEmpty)
-            _ActionRow(
+            DiscoverySheetActionRow(
               key: const ValueKey('peer-song-browse'),
               icon: Icons.dns_outlined,
               label: l.discoverSheetBrowsePeer(peerName),
               chevron: true,
               onTap: () => closeThen(() => _browsePeer(peer)),
             ),
-          _divider(),
+          discoverySheetDivider(),
           if (peer != null && row.data != null)
-            _ActionRow(
+            DiscoverySheetActionRow(
               key: const ValueKey('peer-song-download'),
               icon: Icons.install_mobile,
               iconColor: keepTone(VelvetColors.success),
@@ -842,28 +607,28 @@ class _PeerAlbumSheetState extends State<PeerAlbumSheet>
           if (f.albumLength != null) keepClock(f.albumLength!),
         ].join(' · ');
         return _sheetFrame([
-          _SheetHeader(
+          DiscoverySheetHeader(
             cover: card.getAlbumThumb(size: 60),
             title: card.name,
             byline: byline,
             peerName: peerName,
             answering: !f.peerFailed,
           ),
-          _divider(),
+          discoverySheetDivider(),
           KeepSheetLabel(l.discoverSheetListen),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('peer-album-play'),
             icon: Icons.play_arrow,
             label: l.discoverSheetPlayAlbum,
             onTap: () => closeThen(() => albumVerb(peerName, play: true)),
           ),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('peer-album-queue'),
             icon: Icons.queue_music,
             label: l.discoverSheetQueueAlbum,
             onTap: () => closeThen(() => albumVerb(peerName, play: false)),
           ),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('peer-album-open'),
             icon: Icons.album,
             label: l.discoverSheetOpenAlbum,
@@ -1328,7 +1093,7 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _GrabHandle(),
+            const DiscoverySheetGrabHandle(),
             Flexible(
               child: ListenableBuilder(
                 listenable: Listenable.merge([_facts, ?_folderFacts]),
@@ -1348,7 +1113,7 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
                   folderFacts: _folderFacts,
                   ownFolders: _ownFolders,
                   onShowInLibrary: _showInLibrary,
-                  above: [_header(l), _divider(), ..._listen(l)],
+                  above: [_header(l), discoverySheetDivider(), ..._listen(l)],
                 ),
               ),
             ),
@@ -1372,7 +1137,7 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
     final f = _facts.facts;
     switch (r.subject) {
       case KeepSubject.song:
-        return _SheetHeader(
+        return DiscoverySheetHeader(
           browse: true,
           cover: _songCover(),
           title: lead.title,
@@ -1385,11 +1150,11 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
         );
       case KeepSubject.album:
         final year = lead.year ?? f.albumYear;
-        return _SheetHeader(
+        return DiscoverySheetHeader(
           browse: true,
           cover:
               r.item?.getAlbumThumb(size: 60) ??
-              _tile(Icons.album, shape: BoxShape.rectangle),
+              discoverySheetTile(Icons.album, shape: BoxShape.rectangle),
           title: lead.album ?? '',
           byline: [
             ?_text(lead.albumArtist),
@@ -1399,9 +1164,12 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           answering: !_down,
         );
       case KeepSubject.artist:
-        return _SheetHeader(
+        return DiscoverySheetHeader(
           browse: true,
-          cover: _tile(Icons.person_outline, shape: BoxShape.circle),
+          cover: discoverySheetTile(
+            Icons.person_outline,
+            shape: BoxShape.circle,
+          ),
           title: lead.artist,
           byline: l.discoverKeepArtist,
           peerName: r.peerName,
@@ -1409,9 +1177,9 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
         );
       case KeepSubject.folder:
         final folder = r.folder;
-        return _SheetHeader(
+        return DiscoverySheetHeader(
           browse: true,
-          cover: _tile(
+          cover: discoverySheetTile(
             Icons.folder,
             shape: BoxShape.rectangle,
             size: 32,
@@ -1443,7 +1211,7 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           fit: BoxFit.cover,
           cacheWidth: artCacheSize(60),
           errorBuilder: (_, _, _) =>
-              _tile(Icons.music_note, shape: BoxShape.rectangle),
+              discoverySheetTile(Icons.music_note, shape: BoxShape.rectangle),
         ),
       );
     }
@@ -1459,27 +1227,6 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
     return row.getAlbumThumb(size: 60);
   }
 
-  /// The 60 px tile of an artist (a circle, the person glyph) or a folder
-  /// (radius 7, the folder glyph in the warning colour).
-  Widget _tile(
-    IconData icon, {
-    required BoxShape shape,
-    double size = 28,
-    Color? color,
-  }) => Container(
-    width: 60,
-    height: 60,
-    decoration: BoxDecoration(
-      shape: shape,
-      color: VelvetColors.raised,
-      borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(7),
-      border: shape == BoxShape.circle
-          ? Border.all(color: VelvetColors.border)
-          : null,
-    ),
-    child: Icon(icon, size: size, color: color ?? VelvetColors.textSecondary),
-  );
-
   /// Listen: an album's Play album and Queue album (and Open album › from a
   /// card or a row); a folder page's Play folder and Add to queue, waiting
   /// on the count. Nothing from a menu row, nor for an artist (the page is
@@ -1491,13 +1238,13 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
         final item = r.item;
         return [
           KeepSheetLabel(l.discoverSheetListen),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('browse-keep-play-album'),
             icon: Icons.play_arrow,
             label: l.discoverSheetPlayAlbum,
             onTap: () => _albumVerb(l, play: true),
           ),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('browse-keep-queue-album'),
             icon: Icons.queue_music,
             label: l.discoverSheetQueueAlbum,
@@ -1506,7 +1253,7 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
           if (item != null &&
               r.variant == KeepVariant.item &&
               !r.hidden.contains(KeepHiddenLink.openAlbum))
-            _ActionRow(
+            DiscoverySheetActionRow(
               key: const ValueKey('browse-keep-open-album'),
               icon: Icons.album,
               label: l.discoverSheetOpenAlbum,
@@ -1521,14 +1268,14 @@ class _BrowseKeepSheetState extends State<BrowseKeepSheet> {
         final ready = n != null && n > 0;
         return [
           KeepSheetLabel(l.discoverSheetListen),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('browse-keep-play-folder'),
             icon: Icons.play_arrow,
             label: l.discoverSheetPlayFolder,
             enabled: ready,
             onTap: () => _folderVerb(l, play: true),
           ),
-          _ActionRow(
+          DiscoverySheetActionRow(
             key: const ValueKey('browse-keep-queue-folder'),
             icon: Icons.queue_music,
             label: l.discoverJobAddToQueue,
