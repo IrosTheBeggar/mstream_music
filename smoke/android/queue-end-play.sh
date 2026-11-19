@@ -16,6 +16,9 @@
 #      at the track's start, and the first PLAY plays it. The app saves 0:00
 #      for a track whose length it knows, so the snapshot is planted with no
 #      lengths in it: the one the snapshot's own clamp cannot judge.
+#   5. the same relaunch with the server down. The restore's load fails and
+#      the spot is parked, the retries run out, the server comes back, and
+#      the first PLAY is what loads the spot: it plays from the start too.
 #
 #   SMOKE_SRC           mStream checkout to boot (default ~/code/mstream)
 #   SMOKE_HOST          how the phone reaches this Mac: 10.0.2.2 on the
@@ -277,6 +280,37 @@ else
     pass "the first PLAY after that relaunch plays the last track (${P7} ms in, five seconds on)"
   else
     fail "the first PLAY after the relaunch: $(session_state), row ${I7:-?}, ${P7} ms, $E7 queue end(s) — it completed on the spot?"
+  fi
+fi
+
+# ── 5. the same relaunch, with the server out of reach at launch ──
+# The snapshot again (the app has saved its own over it since). This time
+# the restore cannot load it: the spot is parked as saved, and whatever
+# loads it later has to make the same check. Here that is the first PLAY,
+# pressed once the app's retries have run out and the server is back.
+app_stop
+cfg_write queue.json "$OUT/queue.json"
+kill -9 "$SRV_PID" 2>/dev/null; wait "$SRV_PID" 2>/dev/null
+T8=$(now_ts); wake; app_start
+if ! wait_for_log_after "$T8" '\[queue\] restore load failed' 40; then
+  fail "the restore's load did not fail with the server down"
+else
+  wait_for_log_after "$T8" '\[play\] retry 3 did not load' 60 || log "the retries were not spent in 60 s — going on"
+  sleep 2 # the walk's own stop, after the last retry
+  (cd "$SRC" && exec env NODE_ENV=test node cli-boot-wrapper.js -j "$RIG/config.json" >> "$RIG/server.log" 2>&1) &
+  SRV_PID=$!
+  UP=0; for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/api/" && { UP=1; break; }; sleep 1; done
+  if [ "$UP" != 1 ]; then
+    fail "the server did not come back (see $RIG/server.log)"
+  else
+    T9=$(now_ts); media_key play
+    wait_playing 15; sleep 5
+    P9=$(pos_ms); P9=${P9:--1}; I9=$(queue_index); E9=$(count_after "$T9" "$ENDED")
+    if is_playing && [ "$I9" = 2 ] && [ "$E9" = 0 ] && [ "$P9" -ge 2500 ] && [ "$P9" -le 12000 ]; then
+      pass "server down at launch: the first PLAY once it is back plays the last track (${P9} ms in, five seconds on)"
+    else
+      fail "server down at launch: after the first PLAY $(session_state), row ${I9:-?}, ${P9} ms, $E9 queue end(s) — the parked spot was loaded at its end?"
+    fi
   fi
 fi
 
