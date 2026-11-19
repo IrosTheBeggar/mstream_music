@@ -6584,7 +6584,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get discoverLeadPinned => 'Staying on this song';
+  String get discoverLeadPinned => 'Fijado en esta canción';
 
   @override
   String discoverLeadMatchTo(int percent, String seed) {
@@ -6592,7 +6592,7 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return '$percentString% match to “$seed”';
+    return '$percentString % de coincidencia con «$seed»';
   }
 
   @override
@@ -6601,48 +6601,49 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return '$percentString% match';
+    return '$percentString % de coincidencia';
   }
 
   @override
-  String get discoverLeadCopyTitle => 'Copy title';
+  String get discoverLeadCopyTitle => 'Copiar título';
 
   @override
-  String get discoverLeadPreviewLabel => '30-second preview';
+  String get discoverLeadPreviewLabel => 'Vista previa de 30 segundos';
 
   @override
-  String get discoverLeadPreviewTap => 'Tap to hear 30 seconds';
+  String get discoverLeadPreviewTap => 'Toca para escuchar 30 segundos';
 
   @override
-  String get discoverLeadPreviewLookingUp => 'Looking up…';
+  String get discoverLeadPreviewLookingUp => 'Buscando…';
 
   @override
-  String get discoverLeadPreviewNone => 'No preview found';
+  String get discoverLeadPreviewNone => 'No se encontró vista previa';
 
   @override
-  String get discoverLeadPreviewBusy => 'Busy — try again in a minute';
+  String get discoverLeadPreviewBusy =>
+      'Ocupado — inténtalo de nuevo en un minuto';
 
   @override
-  String get discoverLeadPreviewUnavailable => 'Unavailable right now';
+  String get discoverLeadPreviewUnavailable => 'No disponible ahora mismo';
 
   @override
   String discoverLeadPreviewProgress(String position, String length) {
-    return '$position of $length';
+    return '$position de $length';
   }
 
   @override
   String discoverLeadPreviewPlayA11y(String provider) {
-    return 'Play the $provider preview';
+    return 'Reproducir la vista previa de $provider';
   }
 
   @override
   String discoverLeadPreviewStopA11y(String provider) {
-    return 'Stop the $provider preview';
+    return 'Detener la vista previa de $provider';
   }
 
   @override
   String discoverLeadPreviewOpenIn(String service) {
-    return 'Open in $service';
+    return 'Abrir en $service';
   }
 
   @override
@@ -6651,7 +6652,7 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return 'match $percentString%';
+    return 'coincide $percentString %';
   }
 
   @override
@@ -6660,31 +6661,31 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return 'loose match $percentString%';
+    return 'dudosa $percentString %';
   }
 
   @override
   String discoverLeadYtIdle(String query) {
-    return 'Finds the closest upload for “$query” · nothing is added yet';
+    return 'Busca el vídeo más parecido a «$query» · aún no se añade nada';
   }
 
   @override
-  String get discoverLeadYtSearch => 'Search YouTube';
+  String get discoverLeadYtSearch => 'Buscar en YouTube';
 
   @override
-  String get discoverLeadYtSearchingTag => 'Searching';
+  String get discoverLeadYtSearchingTag => 'Buscando';
 
   @override
   String discoverLeadYtAsking(String query) {
-    return 'Asking YouTube for “$query”…';
+    return 'Preguntando a YouTube por «$query»…';
   }
 
   @override
-  String get discoverLeadYtStopWaiting => 'Stop waiting';
+  String get discoverLeadYtStopWaiting => 'Dejar de esperar';
 
   @override
   String get discoverLeadYtSlowHint =>
-      'YouTube can take a minute. You can close this — the server keeps searching and remembers the answer for a few hours.';
+      'YouTube puede tardar un minuto. Puedes cerrar esto — el servidor sigue buscando y recuerda la respuesta durante unas horas.';
 
   @override
   String discoverLeadYtFound(int count) {
@@ -6695,8 +6696,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString uploads found · pick one',
-      one: '$countString upload found',
+      other: '$countString vídeos encontrados · elige uno',
+      one: '$countString vídeo encontrado',
     );
     return '$_temp0';
   }
@@ -6710,48 +6711,49 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString more',
+      other: '$countString más',
     );
     return '$_temp0';
   }
 
   @override
-  String get discoverLeadYtFewer => 'Fewer';
+  String get discoverLeadYtFewer => 'Menos';
 
   @override
-  String get discoverLeadYtUploadsA11y => 'YouTube uploads';
+  String get discoverLeadYtUploadsA11y => 'Vídeos de YouTube';
 
   @override
-  String get discoverLeadYtOpenOnYoutube => 'Open on YouTube';
+  String get discoverLeadYtOpenOnYoutube => 'Abrir en YouTube';
 
   @override
-  String get discoverLeadYtAddThis => 'Add this one';
+  String get discoverLeadYtAddThis => 'Añadir este';
 
   @override
-  String get discoverLeadYtOnlyPick => 'Only the upload you pick is added.';
+  String get discoverLeadYtOnlyPick => 'Solo se añade el vídeo que elijas.';
 
   @override
   String discoverLeadYtNothing(String query) {
-    return 'YouTube has nothing close to “$query”';
+    return 'YouTube no tiene nada parecido a «$query»';
   }
 
   @override
-  String get discoverLeadYtSearchAgain => 'Search again';
+  String get discoverLeadYtSearchAgain => 'Buscar de nuevo';
 
   @override
   String get discoverLeadYtBusy =>
-      'YouTube is busy on this server — try again in a minute.';
+      'YouTube está ocupado en este servidor — inténtalo de nuevo en un minuto.';
 
   @override
-  String get discoverLeadYtCouldnt => 'Couldn\'t search YouTube right now.';
+  String get discoverLeadYtCouldnt =>
+      'No se pudo buscar en YouTube ahora mismo.';
 
   @override
   String get discoverLeadYtTimedOut =>
-      'YouTube didn\'t answer in time. The server may still finish — search again in a minute.';
+      'YouTube no respondió a tiempo. Puede que el servidor aún termine — vuelve a buscar en un minuto.';
 
   @override
   String get discoverLeadYtSomeoneElse =>
-      'Someone else on this server is adding this right now — try again in a moment.';
+      'Otra persona de este servidor está añadiendo esto ahora mismo — inténtalo de nuevo en un momento.';
 
   @override
   String discoverLeadYtQueueFull(int count) {
@@ -6763,38 +6765,41 @@ class AppLocalizationsEs extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'You have $countString waiting or running — let some finish first.',
+          'Tienes $countString en espera o en curso — deja que terminen algunos primero.',
+      one:
+          'Tienes $countString en espera o en curso — deja que termine primero.',
     );
     return '$_temp0';
   }
 
   @override
   String get discoverLeadYtQueueFullNoCount =>
-      'Too many waiting — let some finish first.';
+      'Demasiados en espera — deja que terminen algunos primero.';
 
   @override
-  String get discoverLeadYtStartFailed => 'Couldn\'t start this. Try again.';
+  String get discoverLeadYtStartFailed =>
+      'No se pudo iniciar. Inténtalo de nuevo.';
 
   @override
   String get discoverLeadYtAlreadyAdding =>
-      'Already adding another upload of this song.';
+      'Ya se está añadiendo otro vídeo de esta canción.';
 
   @override
   String get discoverLeadAddOff =>
-      'Adding songs was just turned off for your account.';
+      'Se acaba de desactivar la opción de añadir canciones para tu cuenta.';
 
   @override
   String get discoverLeadOptionOff =>
-      'That option was just switched off on this server.';
+      'Esa opción se acaba de desactivar en este servidor.';
 
   @override
-  String get discoverJobYtChecking => 'Checking the upload';
+  String get discoverJobYtChecking => 'Comprobando el vídeo';
 
   @override
-  String get discoverJobYtSearching => 'Searching YouTube';
+  String get discoverJobYtSearching => 'Buscando en YouTube';
 
   @override
-  String get discoverJobYtFetching => 'Fetching from YouTube';
+  String get discoverJobYtFetching => 'Obteniendo de YouTube';
 
   @override
   String discoverJobYtFetchingPercent(int percent) {
@@ -6802,32 +6807,32 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return 'Fetching from YouTube · $percentString%';
+    return 'Obteniendo de YouTube · $percentString %';
   }
 
   @override
-  String get discoverJobYtTagging => 'Tagging';
+  String get discoverJobYtTagging => 'Etiquetando';
 
   @override
-  String get discoverJobYtFiling => 'Putting it in your library';
+  String get discoverJobYtFiling => 'Colocándola en tu biblioteca';
 
   @override
   String discoverJobYtFromChannel(String channel) {
-    return 'from $channel';
+    return 'de $channel';
   }
 
   @override
-  String get discoverJobAddFailed => 'Couldn\'t add';
+  String get discoverJobAddFailed => 'No se pudo añadir';
 
   @override
-  String get discoverJobYtCancelled => 'Stopped · nothing was added';
+  String get discoverJobYtCancelled => 'Detenido · no se añadió nada';
 
   @override
-  String get discoverJobYtChooseAnother => 'Choose another';
+  String get discoverJobYtChooseAnother => 'Elegir otro';
 
   @override
   String get discoverJobYtErrBroken =>
-      'YouTube isn\'t working on this server right now.';
+      'YouTube no funciona en este servidor ahora mismo.';
 
   @override
   String discoverJobYtErrNotClose(int percent) {
@@ -6835,17 +6840,16 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String percentString = percentNumberFormat.format(percent);
 
-    return 'Nothing on YouTube was close enough (best match $percentString%).';
+    return 'Nada en YouTube se parecía lo suficiente (mejor coincidencia: $percentString %).';
   }
 
   @override
   String discoverJobYtErrNoResults(String query) {
-    return 'YouTube found nothing for “$query”.';
+    return 'YouTube no encontró nada para «$query».';
   }
 
   @override
-  String get discoverJobYtErrLive =>
-      'That upload is a live stream — pick another.';
+  String get discoverJobYtErrLive => 'Ese vídeo es un directo — elige otro.';
 
   @override
   String discoverJobYtErrTooBig(int size) {
@@ -6854,58 +6858,58 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     final String sizeString = sizeNumberFormat.format(size);
 
-    return 'That upload is bigger than this server allows ($sizeString MB).';
+    return 'Ese vídeo supera el tamaño que permite este servidor ($sizeString MB).';
   }
 
   @override
   String get discoverJobYtErrTooBigNoSize =>
-      'That upload is bigger than this server allows.';
+      'Ese vídeo supera el tamaño que permite este servidor.';
 
   @override
   String get discoverJobYtErrUnreadable =>
-      'That upload couldn\'t be read — pick another.';
+      'No se pudo leer ese vídeo — elige otro.';
 
   @override
-  String get discoverJobYtErrTooLong =>
-      'It took longer than 30 minutes and was stopped.';
+  String get discoverJobYtErrTooLong => 'Tardó más de 30 minutos y se detuvo.';
 
   @override
   String get discoverJobYtErrRefused =>
-      'YouTube wouldn\'t hand it over — try again later.';
+      'YouTube no lo entregó — inténtalo más tarde.';
 
   @override
   String get discoverJobYtErrNoTitle =>
-      'This song has no artist or title to search for.';
+      'Esta canción no tiene artista ni título que buscar.';
 
   @override
   String get discoverJobYtErrNoLibrary =>
-      'There\'s no library you can add files to.';
+      'No hay ninguna biblioteca a la que puedas añadir archivos.';
 
   @override
   String get discoverJobYtErrLayout =>
-      'Your folder layout can\'t place this song.';
+      'Tu diseño de carpetas no puede ubicar esta canción.';
 
   @override
   String get discoverJobYtErrAccountGone =>
-      'The account that asked for this no longer exists.';
+      'La cuenta que lo pidió ya no existe.';
 
   @override
-  String get discoverJobYtErrOther => 'Something went wrong.';
+  String get discoverJobYtErrOther => 'Algo salió mal.';
 
   @override
   String discoverToastAddingYt(String title) {
-    return 'Adding $title from YouTube';
+    return 'Añadiendo $title desde YouTube';
   }
 
   @override
   String discoverToastAddFailedYt(String reason) {
-    return 'Couldn\'t add from YouTube: $reason';
+    return 'No se pudo añadir desde YouTube: $reason';
   }
 
   @override
   String get discoverCopiesDestChangedYt =>
-      'Couldn\'t start: where files land changed — open the song and add again';
+      'No se pudo iniciar: cambió dónde se guardan los archivos — abre la canción y añádela de nuevo';
 
   @override
-  String get discoverLeadYtChangeHint => 'Change where added songs go';
+  String get discoverLeadYtChangeHint =>
+      'Cambiar dónde se guardan las canciones añadidas';
 }
