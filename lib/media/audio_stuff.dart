@@ -1047,6 +1047,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
         _restoreSpot = null;
+        // ...and the launch snapshot's spot has been loaded or left behind.
+        _snapshotSpot = null;
+        // Its position is a real one too, not a finished queue's last sample.
+        _finishedTrack = null;
         // Saved EQ gains can only be pushed once a source has loaded (the
         // equalizer's parameters resolve on activation), so apply them here
         // on the first ready after init/restore or an EQ-toggle rebuild.
@@ -2331,6 +2335,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         final pos = spot.position;
         final idx = spot.index;
         appLog('[play] network error — retry $attempt/$_kMaxHttpRetries');
+        final snapshot = _snapshotSpot; // before the load: ready clears it
         // Fresh URLs, not queue.value: a tunnel that rebuilt during the
         // backoff has a new port and token, and retrying the stale ones just
         // burns the bounded budget against addresses that cannot work.
@@ -2348,6 +2353,8 @@ class AudioPlayerHandler extends BaseAudioHandler
           followUp = e;
           return;
         }
+        // A launch restore that failed is retried here too.
+        await _settleSnapshotSpot(_localBackend, idx, spot, snapshot);
         if (_playIntent) unawaited(_localBackend.play());
       } else {
         await _skipFailedTrack(error);
@@ -2409,6 +2416,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> _loadAtSpot(PlaybackBackend backend, List<MediaItem> items,
       ({int index, Duration position}) spot) async {
     final idx = spot.index.clamp(0, items.length - 1);
+    final snapshot = _snapshotSpot; // before the load: reaching ready clears it
     try {
       await backend.setSources(items,
           initialIndex: idx, initialPosition: spot.position);
@@ -2418,6 +2426,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           '${spot.position.inSeconds}s): $e');
       rethrow;
     }
+    await _settleSnapshotSpot(backend, idx, spot, snapshot);
   }
 
   /// The queue position the app considers current: the parked spot when a load
@@ -2470,10 +2479,33 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (fresh.isEmpty) return;
     final spot = _reviveSpot();
     final idx = spot.index.clamp(0, fresh.length - 1);
+    // A queue that played out left the player on its last track's END, and
+    // loading there completes at once: the track starts over instead, unless
+    // another one follows it (shouldReviveFromTop). Decided here rather than
+    // in play() so it is read with the spot itself, after whatever the chain
+    // ran first, and so every revive of a finished queue gets the same answer.
+    final finished = _finishedTrack;
+    final fromTop = shouldReviveFromTop(
+        queueFinished: finished != null,
+        onFinishedTrack: finished == _trackKey(fresh[idx]),
+        spotParked: _restoreSpot != null,
+        index: idx,
+        queueLength: fresh.length,
+        shuffle: _localBackend.shuffleEnabled,
+        repeat: _localBackend.repeat);
+    if (fromTop) {
+      appLog('[play] the queue had ended — '
+          'track ${idx + 1} starts from the top');
+    }
+    final snapshot = _snapshotSpot; // before the load: reaching ready clears it
     // Load DIRECTLY at the spot (initialIndex/Position) so the now-playing UI
     // doesn't flash track 0 on the reload.
     await _localBackend.setSources(fresh,
-        initialIndex: idx, initialPosition: spot.position);
+        initialIndex: idx,
+        initialPosition: fromTop ? Duration.zero : spot.position);
+    // The spot can be the launch snapshot's, loaded here because the restore
+    // could not reach the server.
+    if (!fromTop) await _settleSnapshotSpot(_localBackend, idx, spot, snapshot);
     if (_playIntent && !_recentlyInterrupted) {
       unawaited(_localBackend.play());
     }
@@ -2816,6 +2848,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
       try {
+        // Whichever load is handed this spot checks it against the track's
+        // real length once it has one (restoredAtTrackEnd): the one below,
+        // or a later revive's when this one fails and parks it.
+        _snapshotSpot = (index: i, position: position);
         try {
         // No play call after it: the restore deliberately opens PAUSED at the
         // saved spot rather than blasting audio on launch.
@@ -2860,6 +2896,79 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  /// Whether a load that has just succeeded put the LAUNCH SNAPSHOT's spot at
+  /// the END of its track, going by the length the player measured. Pure;
+  /// unit-tested.
+  ///
+  /// The snapshot already drops a saved position at or past the end
+  /// ([QueueStore.clampResumePositionMs]), but it can only judge one against
+  /// a length it has. A position saved with none — the queue item carried no
+  /// duration, and the player had not measured that track either — reaches
+  /// the load as it was written. It happens: play a queue out, remove its
+  /// last row, and the row left current is saved under the removed track's
+  /// end, which a shorter file the server has no tags for is already past.
+  ///
+  /// The load then parks on the last sample: ready, paused, and one Play
+  /// away from completing on the spot. On a queue's last track that Play
+  /// ends the queue instead of starting anything, and only the one after it
+  /// is heard.
+  ///
+  /// [snapshot] is the spot the snapshot named ([_snapshotSpot]) and [loaded]
+  /// the one this load was given: only the snapshot's own spot is judged.
+  /// The restore is not always what loads it. With the server out of reach
+  /// at launch — a tunnel still dialling is enough — the restore's load
+  /// fails, the spot is parked, and a retry, the tunnel coming up or the
+  /// first Play loads it later. A spot the player really stood on (a stop,
+  /// or a reload that failed, a moment before a track's end) is somewhere to
+  /// resume and is left alone.
+  ///
+  /// The guard is the snapshot's own, so a track opens the same way whether
+  /// or not its length was stored. False when the player has no length
+  /// either (a transcode's stream has none): nothing to judge against.
+  static bool restoredAtTrackEnd({
+    required ({int index, Duration position}) loaded,
+    required ({int index, Duration position})? snapshot,
+    required Duration? duration,
+  }) =>
+      snapshot != null &&
+      loaded == snapshot &&
+      loaded.position.inMilliseconds > 0 &&
+      QueueStore.clampResumePositionMs(
+              loaded.position.inMilliseconds, duration?.inMilliseconds) ==
+          0;
+
+  // The spot the launch snapshot named, from the restore until a load
+  // reaches ready. It is the one spot the session holds that no player has
+  // stood on, so the one whose position can lie past the end of its track.
+  // A load that can be handed it reads this BEFORE loading — reaching ready
+  // clears it — and settles the spot afterwards ([_settleSnapshotSpot]).
+  ({int index, Duration position})? _snapshotSpot;
+
+  /// A load at [spot] has succeeded. When that was the snapshot's spot and
+  /// the track turns out to end there, move to the track's start
+  /// ([restoredAtTrackEnd]).
+  ///
+  /// Called by the load itself, before it lets anything play, and not from
+  /// the ready listener: a play issued right behind the load would race the
+  /// seek there, and at the end of a track the play wins by completing.
+  Future<void> _settleSnapshotSpot(
+      PlaybackBackend backend,
+      int idx,
+      ({int index, Duration position}) spot,
+      ({int index, Duration position})? snapshot) async {
+    if (!restoredAtTrackEnd(
+        loaded: spot, snapshot: snapshot, duration: backend.duration)) {
+      return;
+    }
+    appLog('[queue] restored at the end of track ${idx + 1} — '
+        'it opens at its start');
+    try {
+      await backend.seek(Duration.zero, index: idx);
+    } catch (e) {
+      appLog('[queue] restore rewind failed: $e');
+    }
+  }
+
   // Where a FAILED launch-restore load intended to park. Read by the revive
   // paths (they load here instead of the never-loaded backend's index 0) and
   // by QueueStore's snapshot writes (so a background save can't persist
@@ -2884,6 +2993,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     final n = queue.value.length;
     return n == 0 ? s : (index: s.index.clamp(0, n - 1), position: s.position);
   }
+
+  // The track the queue ENDED on ([_trackKey]), from the stop that followed
+  // until the player is given a position again: a load reaching ready, or a
+  // scrub. Null the rest of the time.
+  //
+  // While it is set, the position the idle player reports is not somewhere
+  // to resume. just_audio hands its idle stand-in the spot the platform
+  // player was released at, and for a queue that played out that is the last
+  // track's final sample — see [shouldReviveFromTop] for what a re-seed does
+  // with it. The track rather than a flag, because the row can be removed, or
+  // the queue cleared and refilled, before the next Play, and the same stale
+  // position then sits under a track it never belonged to.
+  String? _finishedTrack;
 
   @override
   Future<void> addQueueItem(MediaItem mediaItem) async {
@@ -3153,6 +3275,63 @@ class AudioPlayerHandler extends BaseAudioHandler
       processingState == BackendProcessingState.idle &&
       !queueEmpty &&
       !recovering;
+
+  /// Whether a re-seed of the idle local player starts its track from the
+  /// top instead of at the position the player kept.
+  ///
+  /// When the queue plays out the handler stops, and the idle player is left
+  /// on the track that finished, holding that track's END as its position.
+  /// A re-seed loads at the spot the player reports, so pressing Play after
+  /// the last song loaded the last instant of it: ready, completed in the
+  /// same breath, stopped again, and nothing to hear (emulator, 2026-11-16).
+  /// The Auto DJ park in play() already says what was meant — "replay the
+  /// last track from the top" — and this is that rule for the queue end that
+  /// stops.
+  ///
+  /// It is deliberately no wider than the dead end. Wherever another track
+  /// comes after the finished one, loading at its end is what moves playback
+  /// on, and each of these was seen doing so before this existed:
+  ///
+  ///  * tracks queued after the end: Play goes straight to the first of them
+  ///    rather than through the finished song again;
+  ///  * shuffle: every load deals a fresh order with the loaded row first, so
+  ///    the rest of the queue follows in a new shuffle;
+  ///  * repeat all wraps to the first row, and repeat one starts the same
+  ///    track over, which is the replay by another road.
+  ///
+  /// So neither mode is special-cased here; they decide whether anything
+  /// follows, and only a queue with nothing after its finished track is
+  /// started from the top.
+  ///
+  /// [onFinishedTrack] is false when the row the player points at is no
+  /// longer the track that finished — that row was removed, or the queue was
+  /// cleared and refilled. The position kept is then another track's end and
+  /// means nothing here: tapping a song after clearing a finished queue loaded
+  /// the new song AT the old one's end and stopped just the same. From the
+  /// top, whatever follows. (Both edits now zero the kept position
+  /// themselves — [removalDropsKeptPosition], the clear — so that every
+  /// reader sees it; this is the net under them.)
+  ///
+  /// [spotParked] always wins. A parked spot ([_restoreSpot]) is a place
+  /// someone chose — a tapped row, a failed restore's saved position — and
+  /// [_reviveSpot] already returns it over the player's own. (A saved
+  /// position that proves to be the END of its track once loaded is the
+  /// load's to settle: [restoredAtTrackEnd].) Pure; unit-tested.
+  static bool shouldReviveFromTop({
+    required bool queueFinished,
+    required bool onFinishedTrack,
+    required bool spotParked,
+    required int index,
+    required int queueLength,
+    required bool shuffle,
+    required BackendRepeat repeat,
+  }) {
+    if (!queueFinished || spotParked) return false;
+    if (!onFinishedTrack) return true;
+    final anotherFollows = repeat != BackendRepeat.off ||
+        (queueLength > 1 && (shuffle || index < queueLength - 1));
+    return !anotherFollows;
+  }
 
   /// A cold boot's play must keep the process alive while the restore runs.
   ///
@@ -3668,6 +3847,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     // A manual scrub supersedes the parked position (keep nothing: the next
     // re-seed should read the live player, which this seek just updated).
     _restoreSpot = null;
+    // ...and a finished queue's end: the position is one the user picked now.
+    _finishedTrack = null;
     _releasePark();
     _seekEvents.add(position);
     return _backend.seek(position);
@@ -3686,6 +3867,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[play] stop');
     _playIntent = false;
     _intentionalStop = true;
+    // A stop that finds the local player COMPLETED is the queue having played
+    // out, whoever sent it: the queue-end listener, the queue-end park giving
+    // up its wait, or the user while it is parked there. Noted before the
+    // backend goes idle — after that an ended queue and a stop in the middle
+    // of a track look the same, and only one of them should start its track
+    // over on the next play (shouldReviveFromTop).
+    if (identical(_backend, _localBackend) &&
+        _localBackend.processingState == BackendProcessingState.completed) {
+      _finishedTrack = _trackKey(_itemAt(_localBackend.currentIndex));
+    }
     _clearDeferredPick();
     // Don't touch the tunnel here: it follows the QUEUE, not the play/stop state,
     // so a stopped-but-still-queued iroh song keeps its tunnel (the queue listener
@@ -3774,6 +3965,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int index) async {
     _restoreSpot = null; // row indices shift -- a parked index would lie
+    // Read before anything moves: is this the row the stopped player is on?
+    final dropsPosition = removalDropsKeptPosition(
+        onLocalBackend: identical(_backend, _localBackend),
+        processingState: _backend.processingState,
+        currentIndex: _backend.currentIndex,
+        removed: index);
     await super.removeQueueItemAt(index);
     // Update the queue BEFORE the backend. removeSourceAt makes the backend emit
     // its new currentIndex, and the currentIndexStream listener re-derives the
@@ -3783,6 +3980,43 @@ class AudioPlayerHandler extends BaseAudioHandler
     // reorder flash. Reordering keeps the queue and the emitted index in sync.
     queue.add(queue.value..removeAt(index));
     await _backend.removeSourceAt(index);
+    if (dropsPosition) await _forgetKeptPosition();
+  }
+
+  /// Whether removing the row at [removed] takes the stopped player's kept
+  /// position with it. Pure; unit-tested.
+  ///
+  /// A stopped local player still reports the position it was released at,
+  /// and just_audio's idle stand-in keeps that through playlist edits: take
+  /// away the row it is on and another row slides under the same position.
+  /// After a queue has played out it is the finished track's END. The row
+  /// left behind showed it on screen and was saved under it, so the app
+  /// reopened that track partway in — or, for a shorter track with no length
+  /// stored, past its own end ([restoredAtTrackEnd]).
+  ///
+  /// A player that is not idle has a real source loaded and moves itself,
+  /// and another backend is not ours to seek.
+  static bool removalDropsKeptPosition({
+    required bool onLocalBackend,
+    required BackendProcessingState processingState,
+    required int? currentIndex,
+    required int removed,
+  }) =>
+      onLocalBackend &&
+      processingState == BackendProcessingState.idle &&
+      currentIndex == removed;
+
+  /// Zero the position the stopped local player kept: the row it belonged to
+  /// is gone (removed, or cleared with the rest), and nothing else resets it
+  /// — the idle stand-in only ever moves its index.
+  Future<void> _forgetKeptPosition() async {
+    _finishedTrack = null; // the end it marked was that row's
+    if (!identical(_backend, _localBackend)) return;
+    try {
+      await _localBackend.seek(Duration.zero);
+    } catch (e) {
+      appLog('[queue] could not reset the stopped position: $e');
+    }
   }
 
   /// The queue without [localname]'s items, plus the backend index playback
@@ -3950,8 +4184,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     _intentionalStop = true;
     await _backend.stop();
     await super.stop();
-    await _backend.clearSources();
+    // The queue BEFORE the sources, as removeQueueItemAt does. Clearing the
+    // sources makes the player emit a null index, and the now-playing
+    // re-derived from that against a queue that still had its rows was row
+    // 1 — handed to the media session a millisecond ahead of the blank item.
+    // audio_service applies each update on a thread of its own, so the two
+    // could land in either order, and the session then kept row 1 (on the
+    // emulator, 3 clears of 15 with the sources cleared first and the
+    // position reset below in place).
     queue.add(queue.value..clear());
+    await _backend.clearSources();
+    // ...and the position the stop left behind goes with them: with nothing
+    // loaded the panel went on showing it.
+    await _forgetKeptPosition();
     // Explicit, not left to the currentIndex listener: clearSources may or
     // may not emit an index change, and "did the notification keep the old
     // song's art" should not depend on which.
