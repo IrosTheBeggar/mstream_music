@@ -1024,10 +1024,11 @@ class DiscoveryJobsController extends ChangeNotifier
   }
 
   /// A connected server's browse page is in front with a mark of its own
-  /// moving (BrowseCopyMarks): the job list keeps Discover's 4 s beat, so
-  /// an ending is news (its toast) while the user browses. Call the
-  /// returned function when the page goes or its marks settle (more than
-  /// once is harmless).
+  /// moving (BrowseCopyMarks), or More like this is open (its Copies door
+  /// and network rows): the job list keeps Discover's 4 s beat, so an
+  /// ending is news (its toast) while the user browses. Call the returned
+  /// function when the page goes or its marks settle (more than once is
+  /// harmless).
   VoidCallback holdPage() {
     _pageHolds += 1;
     _schedule();

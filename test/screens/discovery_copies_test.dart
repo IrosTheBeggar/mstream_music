@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/l10n/localizations_delegates.dart';
+import 'package:mstream_music/objects/discovery.dart';
 import 'package:mstream_music/objects/discovery_plugins.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/discovery/copies_hub.dart';
@@ -34,6 +35,7 @@ import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
 
+import '../media/preview_fakes.dart';
 import 'discovery_keep_fixtures.dart';
 import 'discovery_copies_fixtures.dart';
 import 'discovery_plugin_fakes.dart';
@@ -656,7 +658,8 @@ void main() {
       leads.clear();
       h.fake.listLeadPlugins();
     });
-    tearDown(() => CopiesSheet.openLead = null);
+    // The real way back (CopiesSheet.reopenLead) is put back.
+    tearDown(DiscoveryKeepRoutes.reset);
 
     testWidgets(
       'their rows: "Song · Artist · YouTube", a note tile, the step while '
@@ -832,7 +835,11 @@ void main() {
           error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
         );
         h.server.noUpload = noUpload;
-        if (hooked) hookLead();
+        if (hooked) {
+          hookLead();
+        } else {
+          CopiesSheet.openLead = null;
+        }
         await h.pumpCopies(tester);
         expect(inRow(failed, find.text('Retry')), findsOneWidget);
         expect(inRow(failed, find.text('Choose another')), findsNothing);
@@ -1007,6 +1014,160 @@ void main() {
       );
       expect(keepOwnFileRow(h.server, '/music/x.mp3').data, '/music/x.mp3');
     });
+  });
+
+  group("the way back to a YouTube add's song", () {
+    /// What the network-lead sheet's route was asked, in order.
+    final opened =
+        <
+          ({
+            BuildContext context,
+            DiscoveryJobsController jobs,
+            DiscoveryLead lead,
+            String? seedTitle,
+            bool autoSearch,
+            VoidCallback? onLeadAction,
+          })
+        >[];
+
+    void recordLeadSheet() {
+      DiscoveryKeepRoutes.openNetworkLead =
+          (
+            context,
+            jobs,
+            lead, {
+            String? seedTitle,
+            bool autoSearch = false,
+            VoidCallback? onLeadAction,
+          }) => opened.add((
+            context: context,
+            jobs: jobs,
+            lead: lead,
+            seedTitle: seedTitle,
+            autoSearch: autoSearch,
+            onLeadAction: onLeadAction,
+          ));
+    }
+
+    setUp(() {
+      opened.clear();
+      h.fake.listLeadPlugins();
+    });
+    tearDown(DiscoveryKeepRoutes.reset);
+
+    Map<String, dynamic> failedPick() => h.fake.addJob(
+      paper,
+      plugin: 'youtube',
+      state: 'failed',
+      choice: {'url': ytPick},
+      error: 'Nothing matched closely enough (best score 0.48, needs 0.62)',
+    );
+
+    testWidgets(
+      'Choose another closes Copies and opens the song as its network '
+      'lead, the YouTube search starting — no match line, the peer that '
+      'recommended it named',
+      (tester) async {
+        failedPick();
+        recordLeadSheet();
+        await h.pumpCopies(tester);
+        await tester.tap(find.byKey(const ValueKey('copies-choose-another')));
+        await frames(tester, 10);
+        expect(find.byType(CopiesSheet), findsNothing);
+        final o = opened.single;
+        expect(o.autoSearch, isTrue);
+        expect(identical(o.jobs, h.jobs), isTrue);
+        expect(o.seedTitle, isNull);
+        expect(o.onLeadAction, isNull);
+        expect(o.context.mounted, isTrue, reason: 'outlives the Copies sheet');
+        expect(
+          [o.lead.title, o.lead.artist, o.lead.peerName, o.lead.endpointId],
+          ['Paper Satellites', 'The Quiet Assembly', 'Vinyl Vault', 'ab' * 32],
+        );
+        expect(o.lead.isNetwork, isTrue);
+        expect(o.lead.similarity, 0);
+        expect(o.lead.recommendation, jsonDecode(jsonEncode(paper)));
+        expect(h.fake.starts('youtube'), isEmpty);
+      },
+    );
+
+    testWidgets(
+      "the destination toast's View: the same way back, without the search",
+      (tester) async {
+        final failed = failedPick();
+        failed['params'] = {
+          ...failed['params'] as Map,
+          'destination': {
+            'vpath': 'copies',
+            'base': 'Old',
+            'layout': '{{ALBUMARTIST}}/{{ALBUM}}',
+          },
+        };
+        VoidCallback? view;
+        KeepToast.debugActionSink = (message, action, onAction) =>
+            view = onAction;
+        addTearDown(() => KeepToast.debugActionSink = null);
+        recordLeadSheet();
+        await h.pumpCopies(tester);
+        await tester.tap(inRow(failed, find.text('Retry')));
+        await frames(tester);
+        expect(find.byType(CopiesSheet), findsOneWidget);
+        view!();
+        await frames(tester, 10);
+        expect(find.byType(CopiesSheet), findsNothing);
+        expect(opened.single.autoSearch, isFalse);
+        expect(opened.single.lead.title, 'Paper Satellites');
+      },
+    );
+
+    testWidgets(
+      'the real sheet: it opens where Copies was, searching at once, and '
+      'picks another upload than the one that failed',
+      (tester) async {
+        FakePreviewPlayer.install();
+        h.fake.youtubeCandidates = [
+          {
+            'id': 'abcdefghijk',
+            'url': ytPick,
+            'title': 'Paper Satellites',
+            'channel': 'The Quiet Assembly - Topic',
+            'durationSec': 238,
+            'score': 0.48,
+          },
+          {
+            'id': 'zyxwvutsrqp',
+            'url': 'https://www.youtube.com/watch?v=zyxwvutsrqp',
+            'title': 'The Quiet Assembly - Paper Satellites (Live)',
+            'channel': 'The Quiet Assembly',
+            'durationSec': 251,
+            'score': 0.44,
+          },
+        ];
+        failedPick();
+        await h.pumpCopies(tester);
+        await tester.tap(find.byKey(const ValueKey('copies-choose-another')));
+        await frames(tester, 12);
+        expect(find.byType(CopiesSheet), findsNothing);
+        expect(
+          find.byKey(const ValueKey('network-lead-sheet')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        expect(find.text('From the network · Vinyl Vault'), findsOneWidget);
+        expect(find.textContaining('% match'), findsNothing);
+        final asked = h.fake.resolves('youtube').single['recommendation'];
+        expect(asked['title'], 'Paper Satellites');
+        expect(asked['source'], 'p2p');
+        bool shown(String key) =>
+            find.byKey(ValueKey(key)).evaluate().isNotEmpty;
+        expect(shown('yt-candidate-1'), isTrue, reason: 'another upload');
+        expect(shown('yt-candidate-0'), isFalse, reason: 'the failed pick');
+        // Closed: nothing is left running.
+        await tester.tapAt(const Offset(195, 60));
+        await frames(tester, 10);
+        expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
+      },
+    );
   });
 
   group("the home's SERVER Copies row", () {

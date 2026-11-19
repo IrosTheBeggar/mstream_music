@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
+import '../../singletons/log_manager.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_badges.dart' show nameKey;
 import '../../util/discover_jobs.dart';
@@ -13,6 +14,7 @@ import '../../util/queue_actions.dart';
 import '../../util/youtube_add_words.dart';
 import 'copy_news.dart';
 import 'discovery_jobs_controller.dart';
+import 'discovery_keep_routes.dart';
 import 'discovery_listing.dart';
 import 'discovery_page_controller.dart';
 import 'keep_copy_ui.dart';
@@ -79,15 +81,46 @@ class CopiesSheet extends StatefulWidget {
   /// toast after a Retry that found where files land had moved). [context]
   /// is the Copies sheet's, still open. Offered only for a song from the
   /// P2P network ([isNetworkRecommendation]) while the YouTube add can
-  /// start (DiscoveryJobsController.youtubeGate ready); none set, neither
-  /// is offered.
+  /// start (DiscoveryJobsController.youtubeGate ready). [reopenLead] by
+  /// default (DiscoveryKeepRoutes.reset puts it back); tests set their own,
+  /// or none — then neither is offered.
   static void Function(
     BuildContext context,
     DiscoveryJobsController jobs,
     DiscoveryJob job, {
     required bool search,
   })?
-  openLead;
+  openLead = reopenLead;
+
+  /// [openLead]'s own: the Copies sheet goes, and [job]'s song opens as its
+  /// network lead (DiscoveryKeepRoutes.openNetworkLead) over what Copies
+  /// was opened from — no match line (a job keeps no similarity), the peer
+  /// that recommended it in its source line, [search] starting the YouTube
+  /// search as it opens. The sheet sets aside the failed pick by itself
+  /// (its own lookup of the song's newest YouTube add): another upload is
+  /// the one picked first.
+  static void reopenLead(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryJob job, {
+    required bool search,
+  }) {
+    // Parsed as a network row is (peer.name and peer.endpointId kept); the
+    // sheet repairs it into what it sends.
+    final lead = DiscoveryLead.fromServerMap(job.recommendation);
+    if (lead == null) return;
+    appLog('[lead] copies → sheet job=${job.id} search=$search');
+    final nav = Navigator.of(context);
+    // The navigator's own context outlives the Copies sheet's: the lead
+    // sheet opens on it, and toasts what it started there once it closes.
+    if (ModalRoute.of(context)?.isCurrent ?? false) nav.pop();
+    DiscoveryKeepRoutes.openNetworkLead(
+      nav.context,
+      jobs,
+      lead,
+      autoSearch: search,
+    );
+  }
 
   @override
   State<CopiesSheet> createState() => _CopiesSheetState();

@@ -133,9 +133,9 @@ class DiscoverySimilarArtists {
 /// One metadata-only lead from P2P ("From the network") or federation
 /// ("From your peers"). On the per-song Discover screen it is not playable:
 /// the track lives in someone else's library. Tap copies "Artist – Title"
-/// (or, for a network row where the server's plug-ins can offer something,
-/// opens the network-lead sheet); [recordingMbid] enables a MusicBrainz
-/// link-out.
+/// (or, for a network row where the user's own server's plug-ins can offer
+/// something, opens the network-lead sheet); [recordingMbid] enables a
+/// MusicBrainz link-out (on the sheet, for such a row).
 ///
 /// The Discover page's rows (`POST /api/v1/discovery/taste`) are the same
 /// shape plus provenance the server stamps on them (Discover page plan

@@ -65,10 +65,12 @@ class DiscoveryKeepRoutes {
   static Future<bool> Function(Server own, String directory) showInLibrary =
       _showInLibrary;
 
-  /// A "From the network" row's tap on More like this, and Copies' "Choose
-  /// another" ([autoSearch]: the YouTube search starts as it opens): the
-  /// network-lead sheet for [lead] (showNetworkLeadSheet — [seedTitle] for
-  /// its match line, [onLeadAction] on its first lead action).
+  /// A "From the network" row's tap on More like this, and Copies' way back
+  /// to a YouTube add's song (CopiesSheet.reopenLead: "Choose another" —
+  /// [autoSearch], the YouTube search starts as it opens — and the View on
+  /// its destination toast): the network-lead sheet for [lead]
+  /// (showNetworkLeadSheet — [seedTitle] for its match line, [onLeadAction]
+  /// on its first lead action).
   static void Function(
     BuildContext context,
     DiscoveryJobsController jobs,
@@ -79,7 +81,8 @@ class DiscoveryKeepRoutes {
   })
   openNetworkLead = _openNetworkLead;
 
-  /// Put the real sheets back (tests).
+  /// Put the real sheets back (tests) — Copies' way back to a YouTube add's
+  /// song (CopiesSheet.openLead) too.
   static void reset() {
     openElsewhere = _openElsewhere;
     openCopies = _openCopies;
@@ -87,6 +90,7 @@ class DiscoveryKeepRoutes {
     changeFolderDestination = _changeFolderDestination;
     showInLibrary = _showInLibrary;
     openNetworkLead = _openNetworkLead;
+    CopiesSheet.openLead = CopiesSheet.reopenLead;
   }
 
   static void _openElsewhere(
