@@ -20,6 +20,7 @@ import 'elsewhere_sheet.dart' show openOutside;
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
 import 'network_preview_rows.dart';
+import 'youtube_pick_card.dart';
 
 /// The network-lead sheet (the design canvas's NetworkSheet board): what a
 /// "From the network" row on More like this opens — a song in someone
@@ -127,8 +128,8 @@ Future<void> showNetworkLeadSheet(
   );
 }
 
-/// What the sheet hands KEEP A COPY's block (the YouTube add: slice D2's
-/// YoutubeKeepBlock) — everything the block cannot know by itself. The
+/// What the sheet hands KEEP A COPY's block (the YouTube add:
+/// [YoutubeKeepBlock]) — everything the block cannot know by itself. The
 /// sheet already holds the fast poll, reads the destination again as it
 /// opens, ends a clip as it closes, and draws the section's label above the
 /// block.
@@ -196,9 +197,9 @@ class NetworkLeadSheet extends StatefulWidget {
   static const double kMaxSize = 0.94;
   static const double kMinSize = 0.40;
 
-  /// Draws KEEP A COPY's block once its gate is ready, under the section's
-  /// label — slice D2's YoutubeKeepBlock. Null (or null from it) draws no
-  /// section. Tests set their own.
+  /// Stands in for KEEP A COPY's block (tests): drawn once its gate is
+  /// ready, under the section's label; null from it draws no section. Null
+  /// (the app) draws the YouTube add's [YoutubeKeepBlock].
   static Widget? Function(BuildContext context, NetworkKeepSlot slot)?
   keepBlock;
 
@@ -443,27 +444,32 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
 
   /// KEEP A COPY: the YouTube add. Left out (never greyed) when its gate
   /// refuses or a press found it gone; a 44 px skeleton while the listing
-  /// or the destination is still being asked; once ready, the block
-  /// [NetworkLeadSheet.keepBlock] draws, handed a [NetworkKeepSlot].
+  /// or the destination is still being asked; once ready, the
+  /// [YoutubeKeepBlock] (or what [NetworkLeadSheet.keepBlock] draws),
+  /// handed a [NetworkKeepSlot].
   Widget? _keepCopy(AppLocalizations l, NetworkSheetSections s) {
     if (_keepGone || s.youtube == YoutubeBlock.hidden) return null;
-    final Widget? block = s.youtube == YoutubeBlock.unknown
-        ? Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: KeepSkeleton(width: double.infinity, height: 44),
-          )
-        : NetworkLeadSheet.keepBlock?.call(
-            context,
-            NetworkKeepSlot(
-              jobs: jobs,
-              lead: _lead,
-              autoSearch: widget.autoSearch,
-              onLeadAction: _leadAction,
-              onStarted: _started,
-              onRefused: _keepRefused,
-              toast: _toast,
-            ),
-          );
+    final Widget? block;
+    if (s.youtube == YoutubeBlock.unknown) {
+      block = Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: KeepSkeleton(width: double.infinity, height: 44),
+      );
+    } else {
+      final slot = NetworkKeepSlot(
+        jobs: jobs,
+        lead: _lead,
+        autoSearch: widget.autoSearch,
+        onLeadAction: _leadAction,
+        onStarted: _started,
+        onRefused: _keepRefused,
+        toast: _toast,
+      );
+      final stand = NetworkLeadSheet.keepBlock;
+      block = stand != null
+          ? stand(context, slot)
+          : YoutubeKeepBlock(slot: slot);
+    }
     if (block == null) return null;
     return Column(
       key: const ValueKey('lead-keep-copy'),
