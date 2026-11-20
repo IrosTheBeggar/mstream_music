@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Télécharger la file",
   "settingsOfflineQueueSubtitle": "La lecture continue si la connexion est coupée.",
   "settingsOfflineQueueWifiOnly": "Wi-Fi uniquement",
+  "settingsNewAudioEngine": "Nouveau moteur audio",
+  "settingsNewAudioEngineSubtitle": "Expérimental",
   "downloadWaitingWifi": "En attente du Wi-Fi",
   "settingsRatingHalf": "Notes en demi-étoiles",
   "settingsRatingHalfSubtitle": "Appui long sur une étoile",

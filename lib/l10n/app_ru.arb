@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Скачивать очередь",
   "settingsOfflineQueueSubtitle": "Воспроизведение не прервётся при обрыве связи.",
   "settingsOfflineQueueWifiOnly": "Только по Wi-Fi",
+  "settingsNewAudioEngine": "Новый аудиодвижок",
+  "settingsNewAudioEngineSubtitle": "Экспериментально",
   "downloadWaitingWifi": "Ожидание Wi-Fi",
   "settingsRatingHalf": "Оценки с шагом в ползвезды",
   "settingsRatingHalfSubtitle": "Удерживайте звезду",

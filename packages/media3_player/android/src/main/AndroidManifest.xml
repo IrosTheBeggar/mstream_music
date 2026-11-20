@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Playback needs nothing of its own: INTERNET and the foreground
+         service are the app's, and an AudioEffect on the player's own audio
+         session needs no permission. -->
+</manifest>

@@ -71,6 +71,7 @@ import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
 import 'package:dynamics_eq/dynamics_eq.dart';
 import 'media/dynamics_equalizer.dart';
+import 'media/playback_engine.dart';
 
 void main() {
   // Run the app inside a Zone whose print() handler tees every log line into
@@ -135,6 +136,11 @@ Future<void> _startApp() async {
   // a modern device.
   DynamicsEqualizer.supported = !const bool.fromEnvironment('EQ_FIVE_BAND') &&
       await DynamicsEq.isSupported();
+  // Which native engine plays on-device audio on Android: just_audio's own,
+  // or the in-repo Media3 one behind Settings › New audio engine. Installed
+  // here, before the handler builds its player, because just_audio asks its
+  // platform for a native player the first time it loads.
+  PlaybackEngine.install(useMedia3: SettingsManager().useMedia3Engine);
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();

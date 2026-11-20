@@ -1464,6 +1464,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsOfflineQueueWifiOnly => 'Wi-Fi のみ';
 
   @override
+  String get settingsNewAudioEngine => '新しいオーディオエンジン';
+
+  @override
+  String get settingsNewAudioEngineSubtitle => '試験的';
+
+  @override
   String get settingsAutoDownloadCap => 'ダウンロードの上限';
 
   @override

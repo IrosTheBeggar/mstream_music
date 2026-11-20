@@ -223,6 +223,15 @@ class SettingsManager {
   // The remembered outputs, as EqOutputProfile.toJson writes them (raw here,
   // like the user presets). Their own work, so a settings reset keeps them.
   List<Map<String, dynamic>> eqOutputProfiles = const [];
+  // Android: which native code plays on-device audio — the in-repo Media3
+  // engine (packages/media3_player) or just_audio's own. `null` means "the
+  // app's default" ([kMedia3EngineDefault]); a bool is the user's own choice
+  // on the Settings switch. Kept apart so the default can change in a later
+  // release and move everyone who never chose, without overriding anyone
+  // who did. Persisted as the JSON 'media3Engine' key.
+  bool? media3Engine;
+  static const bool kMedia3EngineDefault = false;
+  bool get useMedia3Engine => media3Engine ?? kMedia3EngineDefault;
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
@@ -388,6 +397,8 @@ class SettingsManager {
       eqLimiter = m['eqLimiter'] ?? true;
       eqShowValues = m['eqShowValues'] ?? false;
       eqPerOutput = m['eqPerOutput'] ?? false;
+      final engine = m['media3Engine'];
+      media3Engine = engine is bool ? engine : null;
       final rawOutputs = m['eqOutputProfiles'];
       eqOutputProfiles = rawOutputs is List
           ? [
@@ -628,6 +639,7 @@ class SettingsManager {
       'eqShowValues': eqShowValues,
       'eqPerOutput': eqPerOutput,
       'eqOutputProfiles': eqOutputProfiles,
+      'media3Engine': media3Engine,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
@@ -836,6 +848,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setMedia3Engine(bool v) async {
+    media3Engine = v;
+    await _save();
+  }
+
   Future<void> setEqOutputProfiles(List<Map<String, dynamic>> v) async {
     eqOutputProfiles = v;
     await _save();
@@ -958,6 +975,8 @@ class SettingsManager {
     eqLimiter = true;
     eqShowValues = false;
     eqPerOutput = false;
+    // Back to "the app's default", not to off: see the field.
+    media3Engine = null;
     resumeQueue = true;
     offlineQueue = false;
     offlineQueueWifiOnly = true;

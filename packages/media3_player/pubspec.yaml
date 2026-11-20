@@ -1,0 +1,31 @@
+name: media3_player
+description: >-
+  In-repo Android playback engine: one Media3 ExoPlayer that answers
+  just_audio's platform protocol, so just_audio's Dart player (and everything
+  the app has tuned against it) runs on an engine this repo owns. That is
+  where bit-depth-preserving output, ReplayGain, crossfade and bit-perfect
+  USB go; just_audio's own Android code exposes no hook for any of them. A
+  path plugin (not a MainActivity channel) so it auto-registers on every
+  FlutterEngine, including the headless one Android Auto / media-resumption
+  cold-binds boot. It never installs itself: the app decides which engine a
+  player gets (lib/media/playback_engine.dart).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The protocol this engine serves: the request/response messages and the
+  # two interfaces (JustAudioPlatform, AudioPlayerPlatform) it implements.
+  just_audio_platform_interface: ^4.6.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: music.mstream.media3_player
+        pluginClass: Media3PlayerPlugin

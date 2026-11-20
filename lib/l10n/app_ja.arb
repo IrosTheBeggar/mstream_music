@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "キューをダウンロード",
   "settingsOfflineQueueSubtitle": "接続が切れても再生が続きます。",
   "settingsOfflineQueueWifiOnly": "Wi-Fi のみ",
+  "settingsNewAudioEngine": "新しいオーディオエンジン",
+  "settingsNewAudioEngineSubtitle": "試験的",
   "downloadWaitingWifi": "Wi-Fi 接続を待機中",
   "settingsRatingHalf": "半星評価",
   "settingsRatingHalfSubtitle": "星を長押し",

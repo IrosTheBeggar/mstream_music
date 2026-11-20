@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Descargar la cola",
   "settingsOfflineQueueSubtitle": "La reproducción sigue aunque se pierda la conexión.",
   "settingsOfflineQueueWifiOnly": "Solo con Wi-Fi",
+  "settingsNewAudioEngine": "Nuevo motor de audio",
+  "settingsNewAudioEngineSubtitle": "Experimental",
   "downloadWaitingWifi": "Esperando Wi-Fi",
   "settingsRatingHalf": "Valoraciones de media estrella",
   "settingsRatingHalfSubtitle": "Mantén pulsada una estrella",

@@ -1547,6 +1547,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsOfflineQueueWifiOnly => 'Только по Wi-Fi';
 
   @override
+  String get settingsNewAudioEngine => 'Новый аудиодвижок';
+
+  @override
+  String get settingsNewAudioEngineSubtitle => 'Экспериментально';
+
+  @override
   String get settingsAutoDownloadCap => 'Лимит загрузок';
 
   @override

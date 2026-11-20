@@ -401,6 +401,8 @@
   "settingsOfflineQueue": "Baixar a fila",
   "settingsOfflineQueueSubtitle": "A reprodução continua quando a conexão cai.",
   "settingsOfflineQueueWifiOnly": "Só por Wi-Fi",
+  "settingsNewAudioEngine": "Novo motor de áudio",
+  "settingsNewAudioEngineSubtitle": "Experimental",
   "downloadWaitingWifi": "Aguardando Wi-Fi",
   "settingsRatingHalf": "Avaliações de meia estrela",
   "settingsRatingHalfSubtitle": "Toque e segure uma estrela",
