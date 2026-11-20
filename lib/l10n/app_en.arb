@@ -540,7 +540,7 @@
   "playlistsTitle": "Playlists",
   "playlistsNew": "New playlist",
   "playlistsEmptyTitle": "No playlists yet",
-  "playlistsEmptyBody": "Create one with the New playlist button, then use the queue's Add-to-playlist swipe action to fill it.",
+  "playlistsEmptyBody": "Create one with the New playlist button, then hold a song in the queue and choose Add to playlist.",
   "playlistNameHint": "Name",
   "playlistsRename": "Rename playlist",
   "playlistFallbackTitle": "Playlist",
@@ -7259,6 +7259,40 @@
         "type": "String"
       }
     }
+  },
+  "queuePlayNext": "Play next",
+  "@queuePlayNext": {
+    "description": "Queue song menu: move the song so it plays right after the one playing."
+  },
+  "queuePlaysNext": "{title} plays next",
+  "@queuePlaysNext": {
+    "description": "Snackbar after Play next moved a queued song up.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "queueRemoveFromQueue": "Remove from queue",
+  "@queueRemoveFromQueue": {
+    "description": "Queue song menu: take the song out of the queue (the song itself is untouched)."
+  },
+  "queueRemovedSong": "Removed {title}",
+  "@queueRemovedSong": {
+    "description": "Snackbar after a song was swiped out of the queue or removed from its menu; it has an Undo action.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "queueUndo": "Undo",
+  "@queueUndo": {
+    "description": "Action on the queue removal snackbar: puts the song back where it was."
+  },
+  "queueHoldHint": "Hold a song for its options. Swipe it away to remove it.",
+  "@queueHoldHint": {
+    "description": "One-time hint the first time the queue is on screen: a hold opens a song's options, a swipe removes it."
   },
   "discoverToastView": "View",
   "@discoverToastView": {

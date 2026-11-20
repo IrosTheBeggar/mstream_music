@@ -109,6 +109,7 @@ class BrowseHarness {
     MediaManager().audioHandler = fakeAudio;
     fakeAudio.queue.add(const []);
     SettingsManager().keepBrowseHintShown = true;
+    SettingsManager().queueHoldHintShown = true;
     SettingsManager().albumGrid = true;
   }
 

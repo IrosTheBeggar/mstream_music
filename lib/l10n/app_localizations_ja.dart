@@ -576,7 +576,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      '「新しいプレイリスト」ボタンで作成し、キューのスワイプ操作「プレイリストに追加」で曲を追加してください。';
+      '「新しいプレイリスト」ボタンで作成し、キューの曲を長押しして「プレイリストに追加」を選んでください。';
 
   @override
   String get playlistNameHint => '名前';
@@ -6079,6 +6079,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => '次に再生';
+
+  @override
+  String queuePlaysNext(String title) {
+    return '次に再生：$title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'キューから削除';
+
+  @override
+  String queueRemovedSong(String title) {
+    return '$titleを削除しました';
+  }
+
+  @override
+  String get queueUndo => '元に戻す';
+
+  @override
+  String get queueHoldHint => '曲を長押しするとオプションが表示されます。スワイプすると削除できます。';
 
   @override
   String get discoverToastView => '表示';

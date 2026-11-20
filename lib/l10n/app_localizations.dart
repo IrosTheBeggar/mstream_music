@@ -1155,7 +1155,7 @@ abstract class AppLocalizations {
   /// No description provided for @playlistsEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Create one with the New playlist button, then use the queue\'s Add-to-playlist swipe action to fill it.'**
+  /// **'Create one with the New playlist button, then hold a song in the queue and choose Add to playlist.'**
   String get playlistsEmptyBody;
 
   /// No description provided for @playlistNameHint.
@@ -9999,6 +9999,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions for {title}, or hold to reorder'**
   String queueRowGripLabel(String title);
+
+  /// Queue song menu: move the song so it plays right after the one playing.
+  ///
+  /// In en, this message translates to:
+  /// **'Play next'**
+  String get queuePlayNext;
+
+  /// Snackbar after Play next moved a queued song up.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} plays next'**
+  String queuePlaysNext(String title);
+
+  /// Queue song menu: take the song out of the queue (the song itself is untouched).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from queue'**
+  String get queueRemoveFromQueue;
+
+  /// Snackbar after a song was swiped out of the queue or removed from its menu; it has an Undo action.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {title}'**
+  String queueRemovedSong(String title);
+
+  /// Action on the queue removal snackbar: puts the song back where it was.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get queueUndo;
+
+  /// One-time hint the first time the queue is on screen: a hold opens a song's options, a swipe removes it.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a song for its options. Swipe it away to remove it.'**
+  String get queueHoldHint;
 
   /// The action on a copy's start toast: opens the Copies sheet of the user's server.
   ///

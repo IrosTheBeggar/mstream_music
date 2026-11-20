@@ -598,7 +598,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Создайте плейлист кнопкой «Новый плейлист», затем заполните его свайпом «Добавить в плейлист» в очереди.';
+      'Создайте плейлист кнопкой «Новый плейлист», затем удерживайте трек в очереди и выберите «Добавить в плейлист».';
 
   @override
   String get playlistNameHint => 'Название';
@@ -6522,6 +6522,29 @@ class AppLocalizationsRu extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Воспроизвести следующим';
+
+  @override
+  String queuePlaysNext(String title) {
+    return 'Следующий трек: $title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Убрать из очереди';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Убрано из очереди: $title';
+  }
+
+  @override
+  String get queueUndo => 'Отменить';
+
+  @override
+  String get queueHoldHint =>
+      'Удерживайте трек, чтобы открыть его действия. Смахните его, чтобы убрать.';
 
   @override
   String get discoverToastView => 'Открыть';

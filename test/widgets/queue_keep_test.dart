@@ -1,23 +1,23 @@
 // The queue's "Keep a copy…" (the phone spec's §4.8, user decisions 5 and
 // Q4): a connected server's track — a downloaded one too, it is still that
-// server's song — gets the action in its start pane beside Info (the pane
-// widening to 0.5), never the user's own server's track, a file on this
+// server's song — gets the row in its options sheet (a hold on the row, a
+// tap on the grip), never the user's own server's track, a file on this
 // phone, or a server no longer listed, and never with the gate closed; the
-// action opens the song sheet on the track's own server; the grip says
-// what it does and the row carries the panes' actions for a screen reader;
-// above 1.6× text the label drops its glyph. Opening the panel reads the
-// gate of each queued track's own server while it was never read.
+// row opens the song sheet on the track's own server; the grip says what it
+// does and carries the menu's shortcuts for a screen reader; the sheet
+// never overflows at a large text size. Opening the panel reads the gate
+// of each queued track's own server while it was never read.
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction, SemanticsAction;
 import 'package:flutter/rendering.dart' show SemanticsNode;
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/screens/discovery/copies_hub.dart';
 import 'package:mstream_music/util/browse_keep_leads.dart';
 import 'package:mstream_music/widgets/keep_folder_glyph.dart';
 import 'package:mstream_music/widgets/player_panel.dart' show readQueueKeepGates;
+import 'package:mstream_music/widgets/queue_item_sheet.dart';
 import 'package:mstream_music/widgets/queue_list.dart';
 
 import '../screens/browse_keep_fixtures.dart';
@@ -54,8 +54,29 @@ void main() {
         track('Lost Song', server: 'peer-9'),
       ];
 
-  Slidable slidableOf(WidgetTester tester, String title) =>
-      tester.widget<Slidable>(find.ancestor(of: find.text(title), matching: find.byType(Slidable)).first);
+  final keepRow = find.byKey(const ValueKey('browse-keep-menu-row'));
+
+  Finder gripOf(String title) => find.descendant(
+      of: find.ancestor(of: find.text(title), matching: find.byType(Dismissible)).first,
+      matching: find.byKey(const ValueKey('queue-row-grip')));
+
+  // A hold on the row opens its options; let the sheet rise.
+  Future<void> holdRow(WidgetTester tester, String title) async {
+    await tester.longPress(find.text(title));
+    await BrowseHarness.frames(tester, 8);
+  }
+
+  Future<void> closeSheet(WidgetTester tester) async {
+    Navigator.of(tester.element(find.byType(QueueItemSheet))).pop();
+    await BrowseHarness.frames(tester, 8);
+  }
+
+  Future<bool> offersKeep(WidgetTester tester, String title) async {
+    await holdRow(tester, title);
+    final offered = keepRow.evaluate().isNotEmpty;
+    await closeSheet(tester);
+    return offered;
+  }
 
   Future<void> openQueue(WidgetTester tester, {bool gate = true, double textScale = 1}) async {
     if (gate) await h.openGate();
@@ -70,35 +91,35 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  testWidgets("a connected server's track gets Keep a copy… beside Info — a downloaded one too; your own server's, a phone file and a server no longer listed never", (tester) async {
+  testWidgets("a connected server's track offers Keep a copy… in its menu — a downloaded one too; your own server's, a phone file and a server no longer listed never", (tester) async {
     h.setUp();
     await openQueue(tester);
-    double ratio(String t) => slidableOf(tester, t).startActionPane!.extentRatio;
-    expect([ratio('Late Train Verse'), ratio('Rooftop Cypher')], [0.5, 0.5]);
-    expect([ratio('Glass Hours'), ratio('Host'), ratio('Morning Tape.mp3'), ratio('Lost Song')], everyElement(0.25));
+    expect([await offersKeep(tester, 'Late Train Verse'), await offersKeep(tester, 'Rooftop Cypher')], [true, true]);
+    expect([
+      for (final t in ['Glass Hours', 'Host', 'Morning Tape.mp3', 'Lost Song']) await offersKeep(tester, t),
+    ], everyElement(false));
     await close(tester);
   });
 
-  testWidgets('gate closed on its own server: Info only', (tester) async {
+  testWidgets('gate closed on its own server: no Keep a copy…', (tester) async {
     h.setUp(noUpload: true);
     await openQueue(tester);
-    expect(slidableOf(tester, 'Late Train Verse').startActionPane!.extentRatio, 0.25);
+    expect(await offersKeep(tester, 'Late Train Verse'), isFalse);
     await close(tester);
   });
 
-  testWidgets("the grip opens the pane; its action opens the song sheet on the track's own server", (tester) async {
+  testWidgets("the grip opens the menu; its Keep a copy… opens the song sheet on the track's own server", (tester) async {
     h.setUp();
     await openQueue(tester);
-    final grip = find.descendant(
-        of: find.ancestor(of: find.text('Rooftop Cypher'), matching: find.byType(Slidable)).first,
-        matching: find.byKey(const ValueKey('queue-row-grip')));
-    await tester.tap(grip);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('queue-keep-action')), findsOneWidget);
+    await tester.tap(gripOf('Rooftop Cypher'));
+    await BrowseHarness.frames(tester, 8);
+    expect(find.byType(QueueItemSheet), findsOneWidget);
+    expect(keepRow, findsOneWidget);
     expect(find.text('Keep a copy…'), findsOneWidget);
     expect(find.byType(KeepFolderGlyph), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('queue-keep-action')));
-    await tester.pumpAndSettle();
+    await tester.tap(keepRow);
+    await BrowseHarness.frames(tester, 8);
+    expect(find.byType(QueueItemSheet), findsNothing, reason: 'the menu closes before the Keep sheet opens');
     final r = h.opened.single;
     expect([r.subject, r.variant, identical(r.peer, h.peerC), identical(r.own, h.home), r.lead['filepath'], r.lead['artist'], r.lead['peer']], [
       KeepSubject.song,
@@ -114,8 +135,8 @@ void main() {
 
   // A node holds one set of custom actions, and the reorderable list puts
   // its Move actions on each row's own node: the row keeps its name, its
-  // play, its swipe and the list's moves; the panes' actions are the grip's
-  // ("Actions for {title}…").
+  // play, its hold and the list's moves; the menu's shortcuts are the
+  // grip's ("Actions for {title}…").
   testWidgets("a screen reader: the row is one node with its name and the list's moves; the grip says what it does and carries Info, Keep a copy… and Remove", (tester) async {
     h.setUp();
     final handle = tester.ensureSemantics();
@@ -128,6 +149,7 @@ void main() {
     expect(actionsOf('Late Train Verse, Boukmanflow, 0:08'), unorderedEquals(['Move up', 'Move down', 'Move to the start', 'Move to the end']));
     final row = tester.getSemantics(find.bySemanticsLabel('Late Train Verse, Boukmanflow, 0:08')).getSemanticsData();
     expect(row.hasAction(SemanticsAction.tap), isTrue, reason: 'its play, on the same node');
+    expect(row.hasAction(SemanticsAction.longPress), isTrue, reason: 'its options, on the same node');
     const grip = 'Actions for Late Train Verse, or hold to reorder';
     expect(actionsOf(grip), unorderedEquals(['Info', 'Keep a copy of Late Train Verse…', 'Remove']));
     expect(actionsOf('Actions for Host, or hold to reorder'), unorderedEquals(['Info', 'Remove']));
@@ -158,46 +180,32 @@ void main() {
   });
 
   for (final scale in [1.15, 1.3, 1.45, 1.6, 2.0]) {
-    testWidgets('the pane label at $scale× never overflows its row (the glyph only where it fits)', (tester) async {
+    testWidgets('the menu at $scale× never overflows (Keep a copy… in it)', (tester) async {
       h.setUp();
       for (final width in [360.0, 390.0]) {
         await h.openGate();
         fakeAudio.queue.add(queue());
         await h.pump(tester, const QueueList(), textScale: scale, width: width);
         await BrowseHarness.frames(tester);
-        await tester.tap(find.descendant(
-            of: find.ancestor(of: find.text('Late Train Verse'), matching: find.byType(Slidable)).first,
-            matching: find.byKey(const ValueKey('queue-row-grip'))));
-        await tester.pumpAndSettle();
-        expect(find.byKey(const ValueKey('queue-keep-action')), findsOneWidget);
+        await tester.tap(gripOf('Late Train Verse'));
+        await BrowseHarness.frames(tester, 8);
+        expect(keepRow, findsOneWidget);
         expect(tester.takeException(), isNull, reason: '$scale× on $width');
+        await closeSheet(tester);
         await close(tester);
       }
     });
   }
 
-  testWidgets("the gate unread as the panel opens: once it answers, the queue offers Keep a copy… without the queue changing", (tester) async {
+  testWidgets("the gate unread as the panel opens: once it answers, the menu offers Keep a copy… without the queue changing", (tester) async {
     h.setUp();
     fakeAudio.queue.add(queue());
     await h.pump(tester, const QueueList());
     await BrowseHarness.frames(tester);
-    expect(slidableOf(tester, 'Late Train Verse').startActionPane!.extentRatio, 0.25, reason: 'unread: no way in');
+    expect(await offersKeep(tester, 'Late Train Verse'), isFalse, reason: 'unread: no way in');
     readQueueKeepGates(queue());
     await BrowseHarness.frames(tester, 4);
-    expect(slidableOf(tester, 'Late Train Verse').startActionPane!.extentRatio, 0.5);
-    await close(tester);
-  });
-
-  testWidgets('above 1.6× text the pane label drops its glyph and keeps two lines', (tester) async {
-    h.setUp();
-    await openQueue(tester, textScale: 2);
-    await tester.tap(find.descendant(
-        of: find.ancestor(of: find.text('Late Train Verse'), matching: find.byType(Slidable)).first,
-        matching: find.byKey(const ValueKey('queue-row-grip'))));
-    await tester.pumpAndSettle();
-    expect(find.byType(KeepFolderGlyph), findsNothing);
-    expect(tester.widget<Text>(find.text('Keep a copy…')).maxLines, 2);
-    expect(tester.takeException(), isNull);
+    expect(await offersKeep(tester, 'Late Train Verse'), isTrue);
     await close(tester);
   });
 

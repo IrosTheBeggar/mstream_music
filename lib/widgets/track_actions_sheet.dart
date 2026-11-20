@@ -5,7 +5,6 @@ import '../objects/display_item.dart';
 import '../screens/discover_screen.dart';
 import '../screens/discovery/browse_copy_marks.dart';
 import '../screens/discovery/copies_hub.dart';
-import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
@@ -111,36 +110,14 @@ class TrackActionsSheet extends StatelessWidget {
   void _queuedToast() =>
       _toast(AppLocalizations.of(parentContext).browserSongsAdded(1));
 
-  /// Playlist picker (existing playlists from the track's server + "New
-  /// playlist", which the add-song endpoint creates on the fly), then the
-  /// add call. Runs on [parentContext] — this sheet is already popped.
+  /// Playlist picker, then the add call ([addSongToPlaylistFlow]). Runs on
+  /// [parentContext] — this sheet is already popped.
   Future<void> _addToPlaylist() async {
     final server = item.server;
     final path = item.data;
     if (server == null || path == null) return;
-    final l = AppLocalizations.of(parentContext);
-    final name = await showModalBottomSheet<String>(
-      context: parentContext,
-      backgroundColor: VelvetColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => PlaylistPickerSheet(server: server),
-    );
-    final playlist = name?.trim();
-    if (playlist == null || playlist.isEmpty) return;
-    try {
-      await ApiManager().addSongToPlaylist(server, playlist, path);
-      // Keep pickers fresh before the next ping refreshes the server's
-      // playlist list.
-      if (!server.playlists.contains(playlist)) {
-        server.playlists.add(playlist);
-      }
-      _toast(l.addedToPlaylist(playlist));
-    } catch (_) {
-      _toast(l.trackAddToPlaylistFailed);
-    }
+    await addSongToPlaylistFlow(parentContext,
+        server: server, path: path, toast: _toast);
   }
 
   @override

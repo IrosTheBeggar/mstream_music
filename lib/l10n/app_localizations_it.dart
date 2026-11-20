@@ -593,7 +593,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Creane una con il pulsante Nuova playlist, poi usa l’azione di scorrimento Aggiungi a playlist della coda per riempirla.';
+      'Creane una con il pulsante Nuova playlist, poi tieni premuto un brano della coda e scegli Aggiungi alla playlist.';
 
   @override
   String get playlistNameHint => 'Nome';
@@ -6360,6 +6360,29 @@ class AppLocalizationsIt extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Riproduci dopo';
+
+  @override
+  String queuePlaysNext(String title) {
+    return 'Prossimo brano: $title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Rimuovi dalla coda';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Rimosso dalla coda: $title';
+  }
+
+  @override
+  String get queueUndo => 'Annulla';
+
+  @override
+  String get queueHoldHint =>
+      'Tieni premuto un brano per le sue opzioni. Scorrilo via per rimuoverlo.';
 
   @override
   String get discoverToastView => 'Vedi';

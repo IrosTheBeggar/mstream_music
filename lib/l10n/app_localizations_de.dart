@@ -596,7 +596,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Erstelle eine über die Schaltfläche „Neue Playlist“ und fülle sie dann mit der Wischaktion „Zur Playlist hinzufügen“ in der Warteschlange.';
+      'Erstelle eine über die Schaltfläche „Neue Playlist“, halte dann einen Song in der Warteschlange gedrückt und wähle „Zur Playlist hinzufügen“.';
 
   @override
   String get playlistNameHint => 'Name';
@@ -6381,6 +6381,29 @@ class AppLocalizationsDe extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Als Nächstes abspielen';
+
+  @override
+  String queuePlaysNext(String title) {
+    return 'Als Nächstes: $title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Aus der Warteschlange entfernen';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Entfernt: $title';
+  }
+
+  @override
+  String get queueUndo => 'Rückgängig';
+
+  @override
+  String get queueHoldHint =>
+      'Halte einen Song gedrückt, um seine Optionen zu sehen. Wische ihn weg, um ihn zu entfernen.';
 
   @override
   String get discoverToastView => 'Ansehen';

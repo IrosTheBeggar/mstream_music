@@ -569,8 +569,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playlistsEmptyTitle => '还没有播放列表';
 
   @override
-  String get playlistsEmptyBody =>
-      '使用“新建播放列表”按钮创建一个，然后在队列中使用“添加到播放列表”滑动操作来填充它。';
+  String get playlistsEmptyBody => '使用“新建播放列表”按钮创建一个，然后在队列中长按歌曲并选择“添加到播放列表”。';
 
   @override
   String get playlistNameHint => '名称';
@@ -6001,6 +6000,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => '下一首播放';
+
+  @override
+  String queuePlaysNext(String title) {
+    return '下一首：$title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => '从队列中移除';
+
+  @override
+  String queueRemovedSong(String title) {
+    return '已移除：$title';
+  }
+
+  @override
+  String get queueUndo => '撤销';
+
+  @override
+  String get queueHoldHint => '长按歌曲可查看选项，滑动可将其移除。';
 
   @override
   String get discoverToastView => '查看';

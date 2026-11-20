@@ -590,7 +590,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Create one with the New playlist button, then use the queue\'s Add-to-playlist swipe action to fill it.';
+      'Create one with the New playlist button, then hold a song in the queue and choose Add to playlist.';
 
   @override
   String get playlistNameHint => 'Name';
@@ -6305,6 +6305,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Play next';
+
+  @override
+  String queuePlaysNext(String title) {
+    return '$title plays next';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Remove from queue';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Removed $title';
+  }
+
+  @override
+  String get queueUndo => 'Undo';
+
+  @override
+  String get queueHoldHint =>
+      'Hold a song for its options. Swipe it away to remove it.';
 
   @override
   String get discoverToastView => 'View';
