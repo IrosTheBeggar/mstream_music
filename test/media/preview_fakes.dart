@@ -61,6 +61,11 @@ class FakePreviewPort implements PreviewPort {
   /// cast renderer answering slowly). The pause is numbered at once.
   Completer<void>? pauseGate;
 
+  /// Runs once a pause of the preview player's has dropped the song's
+  /// flag, before that pause returns: a cast renderer's poll still
+  /// answering PLAYING just after it (startsByItself).
+  void Function()? onPauseLanded;
+
   bool get playingNow => _playing.value;
 
   /// How many are listening to the song side (0 once a flow has ended).
@@ -128,6 +133,7 @@ class FakePreviewPort implements PreviewPort {
     final gate = pauseGate;
     if (gate != null) await gate.future;
     _playing.add(false);
+    onPauseLanded?.call();
   }
 
   @override
@@ -264,12 +270,17 @@ class FakePreviewClip implements PreviewClip {
   final StreamController<void> _completed = StreamController<void>.broadcast();
   final StreamController<Object> _errors = StreamController<Object>.broadcast();
 
+  /// At its end since [finish], until the next load or stop: a completed
+  /// listener that comes then is told at once (PreviewClip.completed).
+  bool atEnd = false;
+
   int get pendingLoads => _pending.length;
 
   @override
   Future<void> load(Uri url) {
     log.add('clip.load');
     loads.add(url);
+    atEnd = false;
     final error = loadError;
     if (error != null) {
       loadError = null;
@@ -328,6 +339,7 @@ class FakePreviewClip implements PreviewClip {
     log.add('clip.stop');
     stopCalls++;
     playing = false;
+    atEnd = false;
     _playing.add(false);
     _interruptLoads();
   }
@@ -337,6 +349,7 @@ class FakePreviewClip implements PreviewClip {
     log.add('clip.dispose');
     disposed = true;
     playing = false;
+    atEnd = false;
     _playing.add(false);
     _interruptLoads();
   }
@@ -346,7 +359,10 @@ class FakePreviewClip implements PreviewClip {
   void emitDuration(Duration? d) => _duration.add(d);
 
   /// The clip played to its end.
-  void finish() => _completed.add(null);
+  void finish() {
+    atEnd = true;
+    _completed.add(null);
+  }
 
   /// The clip broke while playing (an expired CDN address, a dropped
   /// connection).
@@ -361,8 +377,10 @@ class FakePreviewClip implements PreviewClip {
   @override
   Stream<Duration?> get duration => _duration.stream;
 
+  // As just_audio's processing state, which replays to a new listener.
   @override
-  Stream<void> get completed => _completed.stream;
+  Stream<void> get completed =>
+      atEnd ? _completed.stream.startWith(null) : _completed.stream;
 
   @override
   Stream<Object> get errors => _errors.stream;
@@ -466,7 +484,24 @@ class FakePreviewPlayer implements PreviewPlayer {
   @override
   ValueStream<PreviewClipState> get state => _state.stream;
 
-  void emit(PreviewClipState s) => _state.add(s);
+  /// As the real player's: the song is watched once a clip of the flow has
+  /// loaded (a state playing or paused since the flow began), until the
+  /// flow ends. A flow held or loading before any clip played is not.
+  @override
+  bool get flowWatchesSong => _clipLoaded;
+  bool _clipLoaded = false;
+
+  void emit(PreviewClipState s) {
+    switch (s.phase) {
+      case PreviewPhase.playing || PreviewPhase.paused:
+        _clipLoaded = true;
+      case PreviewPhase.idle || PreviewPhase.failed:
+        _clipLoaded = false;
+      case PreviewPhase.loading || PreviewPhase.held:
+        break;
+    }
+    _state.add(s);
+  }
 
   /// A flow runs: the state is loading, playing, paused or held.
   bool get active => switch (_state.value.phase) {
