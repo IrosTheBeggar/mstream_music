@@ -31,11 +31,15 @@ import 'package:mstream_music/screens/discovery/keep_copy_ui.dart'
 import 'package:mstream_music/screens/discovery/keep_toast.dart';
 import 'package:mstream_music/screens/discovery/network_lead_sheet.dart';
 import 'package:mstream_music/screens/discovery/network_preview_rows.dart';
+import 'package:mstream_music/screens/discovery/peer_recs_previews.dart';
+import 'package:mstream_music/screens/discovery/preview_answers.dart';
 import 'package:mstream_music/theme/velvet_theme.dart';
+import 'package:mstream_music/util/peer_recs_rules.dart' show PeerClipStatus;
 
 import '../../media/preview_fakes.dart';
 import '../discovery_fixtures.dart';
 import '../discovery_plugin_fakes.dart';
+import 'peer_recs_fixtures.dart' show parseLeads, tasteJson;
 
 const _dest = '/api/v1/discovery/collection/destination';
 const _listing = '/api/v1/discovery/plugins';
@@ -80,6 +84,12 @@ Map<String, dynamic> deezerClip() => {
   'match': 0.97,
 };
 
+/// [clip] as a resolve's 200 answers it, read the way the API reads it.
+PluginPreview answerOf(Map<String, dynamic> clip) => PluginPreview.ofAnswer({
+  'plugin': clip['provider'],
+  'result': {'preview': clip},
+})!;
+
 Map<String, dynamic> itunesClip() => {
   'provider': 'itunes',
   'url': 'https://audio-ssl.itunes.apple.com/paper-satellites.m4a',
@@ -115,6 +125,9 @@ void main() {
   late List<NetworkKeepSlot> slots;
   String? clipboard;
 
+  /// How many sheets DiscoveryKeepRoutes.openPeerLead opened have closed.
+  late int peerClosed;
+
   setUp(() {
     server = discoveryServer()
       ..discoveryPluginsAvailable = true
@@ -133,6 +146,7 @@ void main() {
     copies = [];
     slots = [];
     clipboard = null;
+    peerClosed = 0;
     KeepToast.debugSink = (m, {success = false}) => toasts.add(m);
     KeepToast.debugActionSink = (m, a, on) => actions.add((m, a, on));
     elsewhereLaunch = (uri) async {
@@ -172,14 +186,18 @@ void main() {
   }
 
   /// More like this behind the sheet: a button that opens it (through
-  /// [open], else showNetworkLeadSheet) for [lead], at 390 × 844.
+  /// DiscoveryKeepRoutes.openNetworkLead when [viaRoute], openPeerLead —
+  /// Peer Recommendations' card — when [viaPeerRoute], else
+  /// showNetworkLeadSheet) for [lead], at 390 × 844, sharing [answers].
   Future<void> pumpSheet(
     WidgetTester tester, {
     DiscoveryLead? lead,
     String? seedTitle = 'Tidewater',
     bool activate = true,
     bool viaRoute = false,
+    bool viaPeerRoute = false,
     bool autoSearch = false,
+    LeadPreviewAnswers? answers,
   }) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
@@ -218,7 +236,17 @@ void main() {
               child: TextButton(
                 key: const ValueKey('open'),
                 onPressed: () {
-                  if (viaRoute) {
+                  if (viaPeerRoute) {
+                    unawaited(
+                      DiscoveryKeepRoutes.openPeerLead(
+                        context,
+                        jobs,
+                        theLead,
+                        seedTitle: seedTitle,
+                        answers: answers,
+                      ).then((_) => peerClosed++),
+                    );
+                  } else if (viaRoute) {
                     DiscoveryKeepRoutes.openNetworkLead(
                       context,
                       jobs,
@@ -236,6 +264,7 @@ void main() {
                         seedTitle: seedTitle,
                         autoSearch: autoSearch,
                         onLeadAction: () => leadActions++,
+                        answers: answers,
                       ),
                     );
                   }
@@ -1103,6 +1132,740 @@ void main() {
       await pumpSheet(tester);
       expect(find.text('30-SECOND PREVIEW'), findsNothing);
       expect(find.text('Open elsewhere'), findsOneWidget);
+    });
+  });
+
+  // A sheet opened from Peer Recommendations, over the one preview player
+  // the page plays on too (mStream plan §2 item 15: one window for every
+  // network lead, its previews shared with the page).
+  group('beside Peer Recommendations', () {
+    String? lineOf(WidgetTester tester, String plugin) => tester
+        .widget<Text>(find.byKey(ValueKey('lead-preview-line-$plugin')))
+        .data;
+
+    testWidgets('a page-owned clip never reads as playing on the sheet', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final page = Object();
+      await pumpSheet(tester);
+      preview.emit(
+        PreviewClipState(
+          provider: 'deezer',
+          phase: PreviewPhase.playing,
+          position: const Duration(seconds: 12),
+          duration: const Duration(seconds: 30),
+          owner: page,
+        ),
+      );
+      await frames(tester, 2);
+      expect(find.text('Tap to hear 30 seconds'), findsNWidgets(2));
+      expect(
+        find.bySemanticsLabel(RegExp('^Play the Deezer preview')),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^Stop the Deezer preview')),
+        findsNothing,
+      );
+
+      // …nor its loading, nor its failing: a row that found its clip
+      // keeps what it matched.
+      fake.previews['deezer'] = deezerClip();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.plays.single.owner, isA<NetworkPreviews>());
+      for (final phase in [PreviewPhase.loading, PreviewPhase.failed]) {
+        preview.emit(
+          PreviewClipState(provider: 'deezer', phase: phase, owner: page),
+        );
+        await frames(tester, 2);
+        expect(
+          lineOf(tester, 'deezer'),
+          'Paper Satellites · The Quiet Assembly',
+          reason: phase.name,
+        );
+      }
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.plays, hasLength(2), reason: 'a press plays it again');
+      expect(fake.resolves('deezer'), hasLength(1));
+      semantics.dispose();
+    });
+
+    testWidgets('closing the sheet leaves a page clip playing', (
+      tester,
+    ) async {
+      final page = Object();
+      final playing = PreviewClipState(
+        provider: 'deezer',
+        phase: PreviewPhase.playing,
+        owner: page,
+      );
+      await pumpSheet(tester);
+      preview.emit(playing);
+      await frames(tester, 2);
+      final before = preview.endCount;
+      await closeSheet(tester);
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
+      expect(preview.ends, isEmpty);
+      expect(preview.endCount, before);
+      expect(preview.endCalls.single.reason, PreviewEnd.sheetClosed);
+      expect(preview.endCalls.single.owner, isA<NetworkPreviews>());
+      expect(preview.state.value, playing);
+    });
+
+    testWidgets('closing the sheet with nothing playing does not move '
+        'endCount; with its own clip playing, it ends it', (tester) async {
+      await pumpSheet(tester);
+      final before = preview.endCount;
+      await closeSheet(tester);
+      expect(
+        preview.ends,
+        [PreviewEnd.sheetClosed],
+        reason: 'it still frees the clip player',
+      );
+      expect(preview.endCount, before, reason: "nobody's lookup silenced");
+
+      fake.previews['deezer'] = deezerClip();
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      await tapKey(tester, 'lead-preview-deezer');
+      await closeSheet(tester);
+      expect(preview.ends, [PreviewEnd.sheetClosed, PreviewEnd.sheetClosed]);
+      expect(preview.endCount, before + 1);
+      expect(preview.state.value, PreviewClipState.idle);
+    });
+
+    testWidgets('a stored found answer seeds the row: stopped, a press plays '
+        'it with no resolve', (tester) async {
+      final store = PreviewAnswers()
+        ..put('lead-1', 'deezer', answerOf(deezerClip()))
+        ..put('lead-2', 'itunes', null);
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      expect(lineOf(tester, 'deezer'), 'Paper Satellites · The Quiet Assembly');
+      expect(find.text('match 97%'), findsOneWidget);
+      expect(find.text('Preview from Deezer'), findsOneWidget);
+      expect(find.byTooltip('Open in Deezer'), findsOneWidget);
+      expect(
+        coverUrl(tester),
+        'https://e-cdns-images.dzcdn.net/images/cover/250x250.jpg',
+      );
+      expect(
+        lineOf(tester, 'itunes'),
+        'Tap to hear 30 seconds',
+        reason: "another lead's answer is not this one's",
+      );
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(resolveCount(), 0);
+      expect(preview.plays.single.provider, 'deezer');
+      expect(preview.plays.single.url.toString(), deezerClip()['url']);
+      expect(preview.plays.single.owner, isA<NetworkPreviews>());
+      expect(leadActions, 1);
+      expect(
+        lineOf(tester, 'deezer'),
+        '0:00 of 0:30 · Paper Satellites · The Quiet Assembly',
+      );
+    });
+
+    testWidgets('a stored none reads No preview found', (tester) async {
+      final store = PreviewAnswers()..put('lead-1', 'itunes', null);
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      expect(find.text('No preview found'), findsOneWidget);
+      expect(
+        tester
+            .widget<Opacity>(find.byKey(const ValueKey('lead-preview-itunes')))
+            .opacity,
+        0.45,
+      );
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(resolveCount(), 0);
+      expect(preview.plays, isEmpty);
+      expect(lineOf(tester, 'deezer'), 'Tap to hear 30 seconds');
+    });
+
+    testWidgets('a 200 answer (found and none) is written to the store; a 429 '
+        'or 502 is not', (tester) async {
+      final store = PreviewAnswers();
+      var told = 0;
+      store.addListener(() => told++);
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+
+      fake.refuse['/plugins/deezer/resolve'] = (429, 'too many lookups');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(find.text('Busy — try again in a minute'), findsOneWidget);
+      fake.refuse['/plugins/deezer/resolve'] = (
+        502,
+        'plug-in deezer could not resolve this recommendation',
+      );
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(find.text('Unavailable right now'), findsOneWidget);
+      expect(store.length, 0);
+      expect(told, 0);
+
+      fake.refuse.clear();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(
+        store.of('lead-1', 'deezer')!.found!.url.toString(),
+        deezerClip()['url'],
+      );
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(find.text('No preview found'), findsOneWidget);
+      expect(store.of('lead-1', 'itunes')!.none, isTrue);
+      expect(told, 2);
+      expect(fake.resolves('deezer'), hasLength(3));
+      expect(fake.resolves('itunes'), hasLength(1));
+    });
+
+    testWidgets('a lookup that answers after the sheet closed still tells '
+        'the store, and plays nothing', (tester) async {
+      final store = PreviewAnswers();
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      await tapKey(tester, 'lead-preview-deezer');
+      await closeSheet(tester);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(store.of('lead-1', 'deezer')?.found, isNotNull);
+      expect(preview.plays, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a press re-checks the store', (tester) async {
+      final store = PreviewAnswers();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      expect(lineOf(tester, 'deezer'), 'Tap to hear 30 seconds');
+      // The page answers while the sheet is open.
+      store
+        ..put('lead-1', 'deezer', answerOf(deezerClip()))
+        ..put('lead-1', 'itunes', null);
+      await frames(tester, 2);
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(resolveCount(), 0);
+      expect(preview.plays.single.provider, 'deezer');
+      expect(
+        lineOf(tester, 'deezer'),
+        '0:00 of 0:30 · Paper Satellites · The Quiet Assembly',
+      );
+      expect(leadActions, 1);
+
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(resolveCount(), 0);
+      expect(find.text('No preview found'), findsOneWidget);
+      expect(preview.plays, hasLength(1));
+      expect(preview.ends, isEmpty, reason: "Deezer's clip plays on");
+    });
+
+    testWidgets('a shared answer whose clip fails reads unavailable; the next '
+        'press asks the plug-in again, and its 200 replaces the answer', (
+      tester,
+    ) async {
+      // The page's answer, its signed CDN address expired since.
+      final stale = {
+        ...deezerClip(),
+        'url': 'https://cdns-preview.dzcdn.net/stream/expired.mp3',
+      };
+      final store = PreviewAnswers()..put('lead-1', 'deezer', answerOf(stale));
+      var told = 0;
+      store.addListener(() => told++);
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      preview.outcome = PreviewPlayOutcome.failed;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(resolveCount(), 0);
+      expect(preview.plays.single.url.toString(), stale['url']);
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      expect(
+        store.of('lead-1', 'deezer'),
+        isNull,
+        reason: 'the visit forgets the dead address (the page asks again)',
+      );
+      expect(told, 1);
+
+      preview.outcome = PreviewPlayOutcome.playing;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(
+        store.of('lead-1', 'deezer')!.found!.url.toString(),
+        deezerClip()['url'],
+        reason: 'the page plays the new address too',
+      );
+      expect(preview.plays.last.url.toString(), deezerClip()['url']);
+      expect(
+        lineOf(tester, 'deezer'),
+        '0:00 of 0:30 · Paper Satellites · The Quiet Assembly',
+      );
+
+      // The clip breaking while it plays: the same.
+      preview.emit(
+        const PreviewClipState(provider: 'deezer', phase: PreviewPhase.failed),
+      );
+      await frames(tester);
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      expect(store.of('lead-1', 'deezer'), isNull);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(2));
+      expect(preview.plays, hasLength(3));
+    });
+
+    testWidgets('a clip the row found itself that fails: the visit forgets '
+        'it too, and the next press asks again, as it does with no shared '
+        'answers', (tester) async {
+      final store = PreviewAnswers();
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      preview.outcome = PreviewPlayOutcome.failed;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(store.of('lead-1', 'deezer'), isNull, reason: 'kept, then forgotten');
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(2));
+      expect(preview.plays, hasLength(2));
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+
+      // A clip that plays is kept, and replayed with no lookup.
+      preview.outcome = PreviewPlayOutcome.playing;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(3));
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(3), reason: 'found: replayed');
+      expect(preview.plays, hasLength(4));
+    });
+
+    // The page's answer for Deezer, its signed CDN address expired since.
+    Map<String, dynamic> expiredClip() => {
+      ...deezerClip(),
+      'url': 'https://cdns-preview.dzcdn.net/stream/expired.mp3',
+    };
+
+    /// A sheet over a stored expired clip, pressed once: the clip fails and
+    /// the row reads unavailable. The plug-in would answer the live clip.
+    Future<PreviewAnswers> failStoredClip(WidgetTester tester) async {
+      final store = PreviewAnswers()
+        ..put('lead-1', 'deezer', answerOf(expiredClip()));
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      preview.outcome = PreviewPlayOutcome.failed;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(resolveCount(), 0);
+      expect(preview.plays.single.url.toString(), expiredClip()['url']);
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      expect(store.of('lead-1', 'deezer'), isNull, reason: 'forgotten');
+      preview.outcome = PreviewPlayOutcome.playing;
+      return store;
+    }
+
+    for (final (status, words, line) in [
+      (429, 'too many lookups', 'Busy — try again in a minute'),
+      (
+        502,
+        'plug-in deezer could not resolve this recommendation',
+        'Unavailable right now',
+      ),
+    ]) {
+      testWidgets('a re-ask after a failed shared clip that answers $status '
+          'stores nothing: the press after it asks again rather than replay '
+          'the dead address', (tester) async {
+        final store = await failStoredClip(tester);
+        fake.refuse['/plugins/deezer/resolve'] = (status, words);
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(fake.resolves('deezer'), hasLength(1));
+        expect(lineOf(tester, 'deezer'), line);
+        expect(
+          store.of('lead-1', 'deezer'),
+          isNull,
+          reason: 'the dead address is gone, and a failure is never stored',
+        );
+
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(fake.resolves('deezer'), hasLength(2), reason: 'asked again');
+        expect(preview.plays, hasLength(1), reason: 'nothing replayed');
+        expect(lineOf(tester, 'deezer'), line);
+      });
+    }
+
+    // Round 3's W4: the URL-keyed mark lived in one sheet, so a new sheet
+    // over the lead (and the page) replayed the dead address once more.
+    testWidgets('a sheet opened over the lead after its clip failed is not '
+        'seeded with the dead address: it reads Tap to hear, and its press '
+        "asks the plug-in and plays the new clip; another surface's failure "
+        'leaves the new answer alone', (tester) async {
+      final store = await failStoredClip(tester);
+      await closeSheet(tester);
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      expect(lineOf(tester, 'deezer'), 'Tap to hear 30 seconds');
+      expect(find.text('Preview from Deezer'), findsNothing);
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(preview.plays, hasLength(2));
+      expect(preview.plays.last.url.toString(), deezerClip()['url']);
+      expect(
+        store.of('lead-1', 'deezer')!.found!.url.toString(),
+        deezerClip()['url'],
+      );
+
+      preview.emit(
+        PreviewClipState(
+          provider: 'deezer',
+          phase: PreviewPhase.failed,
+          owner: Object(),
+        ),
+      );
+      await frames(tester, 2);
+      expect(store.of('lead-1', 'deezer'), isNotNull);
+    });
+
+    testWidgets('a 200 after a failed shared clip and a busy re-ask replaces '
+        'the answer: its clip plays, and the next press replays the new '
+        'address with no lookup', (tester) async {
+      final store = await failStoredClip(tester);
+      fake.refuse['/plugins/deezer/resolve'] = (429, 'too many lookups');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(find.text('Busy — try again in a minute'), findsOneWidget);
+
+      fake.refuse.clear();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(2));
+      expect(
+        store.of('lead-1', 'deezer')!.found!.url.toString(),
+        deezerClip()['url'],
+        reason: 'the page plays the new address too',
+      );
+      expect(preview.plays, hasLength(2));
+      expect(preview.plays.last.url.toString(), deezerClip()['url']);
+      expect(
+        lineOf(tester, 'deezer'),
+        '0:00 of 0:30 · Paper Satellites · The Quiet Assembly',
+      );
+
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(2), reason: 'no lookup');
+      expect(preview.plays, hasLength(3));
+      expect(preview.plays.last.url.toString(), deezerClip()['url']);
+    });
+
+    testWidgets('a new address stored since the clip failed (the page '
+        'answered afresh) plays on the next press with no lookup', (
+      tester,
+    ) async {
+      final store = await failStoredClip(tester);
+      fake.refuse['/plugins/deezer/resolve'] = (429, 'too many lookups');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+
+      // The plug-ins were read afresh and the page asked again.
+      store
+        ..clear()
+        ..put('lead-1', 'deezer', answerOf(deezerClip()));
+      await frames(tester, 2);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(preview.plays, hasLength(2));
+      expect(preview.plays.last.url.toString(), deezerClip()['url']);
+    });
+
+    testWidgets('a re-ask after a failed shared clip that finds none: the '
+        'visit reads none, the row No preview found', (tester) async {
+      final store = await failStoredClip(tester);
+      var told = 0;
+      store.addListener(() => told++);
+      fake.previews.remove('deezer');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(store.of('lead-1', 'deezer')!.none, isTrue, reason: 'the page');
+      expect(told, 1);
+      expect(find.text('No preview found'), findsOneWidget);
+      expect(find.text('Preview from Deezer'), findsNothing);
+      expect(find.byTooltip('Open in Deezer'), findsNothing);
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(preview.plays, hasLength(1));
+    });
+
+    /// The app's preview player over a song side and a clip of the test's
+    /// in place of the fake one (whose install puts the fake back).
+    ({PreviewPlayer player, FakePreviewPort port, FakePreviewClip clip})
+    realEngine({FakePreviewPort? on}) {
+      final port = on ?? FakePreviewPort();
+      final clip = FakePreviewClip();
+      final player = PreviewPlayer.withPort(port, makeClip: () => clip);
+      PreviewPlayer.instance = player;
+      return (player: player, port: port, clip: clip);
+    }
+
+    // Round 3's W4 again: the real engine tells the rows of a clip that
+    // would not load only after its play returns (FakePreviewPlayer tells
+    // them before), when the row reads unavailable already. Forgotten only
+    // there, the dead address stayed in the visit's answers: the same
+    // sheet replayed it on every press, asking nobody, and a sheet opened
+    // later and the page replayed it too.
+    testWidgets('on the real engine, a shared clip that would not load is '
+        'forgotten: the next press asks again, a re-ask that gives the dead '
+        'address back is never replayed without a lookup, and a sheet '
+        'opened after is not seeded', (tester) async {
+      final engine = realEngine();
+      final clip = engine.clip;
+      final dead = Uri.parse(expiredClip()['url'] as String);
+      final live = Uri.parse(deezerClip()['url'] as String);
+      final store = PreviewAnswers()
+        ..put('lead-1', 'deezer', answerOf(expiredClip()));
+      // The server's resolve cache still gives the dead address back.
+      fake.previews['deezer'] = expiredClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      expect(lineOf(tester, 'deezer'), 'Paper Satellites · The Quiet Assembly');
+
+      clip.loadError = StateError('403 from the CDN');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(resolveCount(), 0);
+      expect(clip.loads, [dead]);
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      expect(store.of('lead-1', 'deezer'), isNull, reason: 'forgotten');
+
+      for (var i = 1; i <= 2; i++) {
+        clip.loadError = StateError('403 from the CDN');
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(fake.resolves('deezer'), hasLength(i), reason: 'asked again');
+        expect(clip.loads, hasLength(i + 1));
+        expect(clip.loads.last, dead);
+        expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+        expect(store.of('lead-1', 'deezer'), isNull);
+      }
+      expect(engine.player.state.value.phase, PreviewPhase.failed);
+
+      // A sheet opened now reads Tap to hear, and its press asks and plays
+      // the live address.
+      await closeSheet(tester);
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      expect(lineOf(tester, 'deezer'), 'Tap to hear 30 seconds');
+      fake.previews['deezer'] = deezerClip();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(3));
+      expect(clip.loads.last, live);
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(
+        lineOf(tester, 'deezer'),
+        '0:00 of 0:30 · Paper Satellites · The Quiet Assembly',
+      );
+      expect(store.of('lead-1', 'deezer')!.found!.url, live);
+
+      // A clip that breaks while it plays is forgotten the same way.
+      clip.breakDown();
+      await frames(tester);
+      expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      expect(store.of('lead-1', 'deezer'), isNull);
+      expect(tester.takeException(), isNull);
+      await closeSheet(tester);
+    });
+
+    testWidgets('on the real engine, a clip the row found itself that would '
+        'not load is not kept for the visit: each press asks again', (
+      tester,
+    ) async {
+      final engine = realEngine();
+      final store = PreviewAnswers();
+      fake.previews['deezer'] = expiredClip();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      for (var i = 1; i <= 2; i++) {
+        engine.clip.loadError = StateError('403 from the CDN');
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(fake.resolves('deezer'), hasLength(i));
+        expect(engine.clip.loads, hasLength(i));
+        expect(store.of('lead-1', 'deezer'), isNull, reason: 'kept, then forgotten');
+        expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      }
+      await closeSheet(tester);
+    });
+
+    testWidgets('on the real engine with no shared answers (More like '
+        "this, #237's sheet): a clip that would not load reads unavailable "
+        'and every press asks again', (tester) async {
+      final engine = realEngine();
+      fake.previews['deezer'] = expiredClip();
+      await pumpSheet(tester);
+      for (var i = 1; i <= 2; i++) {
+        engine.clip.loadError = StateError('403 from the CDN');
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(fake.resolves('deezer'), hasLength(i));
+        expect(engine.clip.loads, hasLength(i));
+        expect(lineOf(tester, 'deezer'), 'Unavailable right now');
+      }
+      fake.previews['deezer'] = deezerClip();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(3));
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(3), reason: 'found: replayed');
+      expect(engine.clip.loads, hasLength(4));
+      await closeSheet(tester);
+    });
+
+    // Round 3's W1 on #237's path: the sheet registers no lifecycle
+    // observer of its own, so the engine's own watch ends its clip as the
+    // app is hidden, a microtask after the binding told it.
+    testWidgets("the app sent to the background ends the sheet's clip "
+        'through the app port\'s own watch: no "used after being disposed", '
+        'the song back, and a clip after the return is watched afresh', (
+      tester,
+    ) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      final engine = realEngine(on: BindingPreviewPort());
+      final port = engine.port;
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester);
+      for (var round = 1; round <= 2; round++) {
+        await tapKey(tester, 'lead-preview-deezer');
+        expect(engine.player.state.value.phase, PreviewPhase.playing);
+        expect(port.pauses, round);
+        backgroundApp(tester);
+        await frames(tester, 2);
+        expect(tester.takeException(), isNull);
+        expect(engine.player.state.value, PreviewClipState.idle);
+        expect(port.plays, round, reason: 'backgrounded brings the song back');
+        // No frame is drawn in the background: the row is read once back.
+        foregroundApp(tester);
+        await frames(tester, 2);
+        expect(tester.takeException(), isNull);
+        expect(lineOf(tester, 'deezer'), 'Paper Satellites · The Quiet Assembly');
+      }
+      expect(fake.resolves('deezer'), hasLength(1));
+      await closeSheet(tester);
+    });
+
+    testWidgets("a page press while the sheet animates closed over its own "
+        "clip: the page's clip plays once it resolves, and the sheet's close "
+        'neither ends it nor brings the song back between', (tester) async {
+      final port = FakePreviewPort();
+      final clip = FakePreviewClip();
+      final player = PreviewPlayer.withPort(port, makeClip: () => clip);
+      PreviewPlayer.instance = player; // the fake's install puts it back
+      final leads = parseLeads(tasteJson());
+      final pageLead = leads.first;
+      final pageClip = PluginPreview(
+        provider: 'deezer',
+        url: Uri.parse('https://cdn.example/page-lead.mp3'),
+        title: pageLead.title,
+        artist: pageLead.artist,
+      );
+      final asked = <Completer<PluginPreview?>>[];
+      final page = PeerRecsPreviews(
+        resolve: (_, _) {
+          final c = Completer<PluginPreview?>();
+          asked.add(c);
+          return c.future;
+        },
+        provider: () => const DiscoveryPlugin(
+          name: 'deezer',
+          title: 'Preview on Deezer',
+          capabilities: [kCapPreview],
+        ),
+        timer: timers.call,
+        watchLifecycle: false,
+      );
+      addTearDown(page.dispose);
+
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(player.state.value.phase, PreviewPhase.playing);
+      expect(player.state.value.owner, isA<NetworkPreviews>());
+      expect(port.pauses, 1);
+
+      // The barrier tapped: the sheet animates away, still built.
+      await tester.tapAt(const Offset(195, 60));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsOneWidget);
+
+      // A card's circle on the page under it.
+      unawaited(page.press(pageLead, leads));
+      await tester.pump();
+      expect(page.status, PeerClipStatus.resolving);
+      expect(asked, hasLength(1));
+      clip.emitPosition(const Duration(seconds: 3)); // the sheet's clip ticks
+      await frames(tester, 10);
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
+      expect(page.status, PeerClipStatus.resolving);
+      expect(port.plays, 0, reason: 'the song stays paused');
+
+      asked.single.complete(pageClip);
+      await frames(tester);
+      expect(page.status, PeerClipStatus.playing);
+      expect(clip.loads.last, pageClip.url);
+      expect(player.state.value.owner, same(page));
+      expect(port.pauses, 1);
+      expect(port.plays, 0);
+
+      await page.stop();
+      await frames(tester);
+      expect(port.plays, 1, reason: 'the page brings it back once');
+      await player.end(PreviewEnd.sheetClosed);
+    });
+
+    testWidgets('openPeerLead opens the sheet and completes after it closes; '
+        'reset() puts it back', (tester) async {
+      final store = PreviewAnswers()..put('lead-1', 'itunes', null);
+      await pumpSheet(
+        tester,
+        viaPeerRoute: true,
+        answers: (store: store, leadKey: 'lead-1'),
+      );
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsOneWidget);
+      expect(find.text('88% match to “Tidewater”'), findsOneWidget);
+      expect(
+        find.text('No preview found'),
+        findsOneWidget,
+        reason: 'the answers reached it',
+      );
+      expect(peerClosed, 0, reason: 'open still');
+      await closeSheet(tester);
+      expect(peerClosed, 1);
+
+      final opened = <String>[];
+      DiscoveryKeepRoutes.openPeerLead =
+          (_, _, lead, {seedTitle, answers}) async =>
+              opened.add('${lead.title} $seedTitle ${answers?.leadKey}');
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      expect(opened, ['Paper Satellites Tidewater lead-1']);
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsNothing);
+      expect(peerClosed, 2);
+
+      DiscoveryKeepRoutes.reset();
+      await tester.tap(find.byKey(const ValueKey('open')));
+      await frames(tester, 8);
+      expect(find.byKey(const ValueKey('network-lead-sheet')), findsOneWidget);
+    });
+
+    testWidgets('the header names the peer by its label', (tester) async {
+      // A default-named peer: the strip's label ("mStream · 3f9a", taste
+      // generation 3's peer.label) before its announced name.
+      final row = {
+        ...netRow(),
+        'peer': {'endpointId': 'ab' * 32, 'name': 'mStream', 'label': 'mStream · 3f9a'},
+      };
+      await pumpSheet(tester, lead: leadOf(row), viaPeerRoute: true);
+      expect(find.text('From the network · mStream · 3f9a'), findsOneWidget);
+      expect(find.text('From the network · mStream'), findsNothing);
+      await closeSheet(tester);
+
+      // A blank label (or none: More like this's rows) falls back to the name.
+      final blank = {
+        ...netRow(),
+        'peer': {'endpointId': 'ab' * 32, 'name': 'mStream', 'label': '  '},
+      };
+      await pumpSheet(tester, lead: leadOf(blank), viaPeerRoute: true);
+      expect(find.text('From the network · mStream'), findsOneWidget);
     });
   });
 
