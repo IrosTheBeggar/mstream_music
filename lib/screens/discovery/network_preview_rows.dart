@@ -88,7 +88,15 @@ enum _Lookup { idle, lookingUp, found, none, busy, unavailable }
 /// clip's owner, and reads only its own clip (or one that named nobody)
 /// as its rows': a clip the Peer Recommendations page plays is not one of
 /// these rows' (mStream plan §2 item 15).
-class NetworkPreviews extends ChangeNotifier {
+///
+/// The preview player watches the app only from a play on, and the song
+/// only once a clip has loaded, so these rows watch both themselves while
+/// a press of theirs is on its way (mStream plan §2 items 13–14). The app
+/// going to the background leaves what a lookup still out finds for a
+/// press. With the song paused at the press and no clip running, the user
+/// starting it does the same, and a clip of theirs still loading stops
+/// before it can pause the song.
+class NetworkPreviews extends ChangeNotifier with WidgetsBindingObserver {
   /// [recommendation] is sent to each preview plug-in as it is (the sheet's
   /// repaired one). [onPress] runs on every press that asks or plays (the
   /// sheet pins Discover's seed); [onGone] when a plug-in answered 403 or
@@ -119,6 +127,12 @@ class NetworkPreviews extends ChangeNotifier {
     }
     _clip = _player.state.value;
     _sub = _player.state.listen(_onClip);
+    try {
+      WidgetsBinding.instance.addObserver(this);
+      _observing = true;
+    } catch (_) {
+      // No binding (a plain unit test): nothing tells these rows of the app.
+    }
   }
 
   final DiscoveryPluginsApi api;
@@ -135,8 +149,15 @@ class NetworkPreviews extends ChangeNotifier {
   StreamSubscription<PreviewClipState>? _sub;
 
   /// The row pressed last: a clip found for any other once it answers is
-  /// not played.
+  /// not played. Cleared when the song starts or the app goes to the
+  /// background before it answers (_songStarted and
+  /// didChangeAppLifecycleState).
   String? _wanted;
+
+  // The song starting, heard from a press made while it was paused and no
+  // clip ran, until nothing of these rows is on its way (_watchSong).
+  StreamSubscription<void>? _songWatch;
+  bool _observing = false;
   bool _disposed = false;
 
   /// The preview player's state as last told.
@@ -197,7 +218,7 @@ class NetworkPreviews extends ChangeNotifier {
         return;
       case PreviewRowState.stopped:
         onPress?.call();
-        _wanted = name;
+        _want(name);
         await _play(name, _found[name]!);
         return;
       case PreviewRowState.idle:
@@ -217,21 +238,32 @@ class NetworkPreviews extends ChangeNotifier {
           }
           _found[name] = found;
           _set(name, _Lookup.found);
-          _wanted = name;
+          _want(name);
           onPress?.call();
           await _play(name, found);
           return;
         }
         onPress?.call();
-        _wanted = name;
+        _want(name);
         await _ask(name);
     }
   }
 
+  /// [name]'s row is the one pressed last; the song is listened for when
+  /// this press needs it (_watchSong).
+  void _want(String name) {
+    _wanted = name;
+    _watchSong();
+  }
+
   Future<void> _ask(String name) async {
-    // An end asked for while it is looked up (a store link opened, the app
-    // sent to the background, a call, the song started) means quiet: what
-    // it finds then waits for a press.
+    // An end asked for while it is looked up means quiet: what it finds
+    // then waits for a press. The preview player counts a store link
+    // opening at any time, but the app going to the background, a call,
+    // the output dropping or the song starting only while a clip runs.
+    // With none running, these rows clear _wanted themselves for the app
+    // going to the background (didChangeAppLifecycleState) and for the
+    // user starting a song paused at the press (_songStarted).
     final ends = _player.endCount;
     _set(name, _Lookup.lookingUp);
     PluginPreview? found;
@@ -243,11 +275,13 @@ class NetworkPreviews extends ChangeNotifier {
         _gone.add(name);
         _lookups.remove(name);
         if (_wanted == name) _wanted = null;
+        _releaseSongWatch();
         notifyListeners();
         onGone?.call(name);
         return;
       }
       _set(name, e.status == 429 ? _Lookup.busy : _Lookup.unavailable);
+      _releaseSongWatch();
       return;
     }
     // A 200 is the visit's answer, found or none, even once the sheet has
@@ -259,14 +293,18 @@ class NetworkPreviews extends ChangeNotifier {
     if (found == null) {
       _found.remove(name);
       _set(name, _Lookup.none);
+      _releaseSongWatch();
       return;
     }
     _found[name] = found;
     _set(name, _Lookup.found);
     // Pressed something else since (or stopped), the preview player ended
-    // since, or the app is in the background: this one waits.
+    // since, the song started or the app went to the background since, or
+    // the app is in the background now: this one waits.
     if (_wanted == name && _player.endCount == ends && _player.appVisible) {
       await _play(name, found);
+    } else {
+      _releaseSongWatch();
     }
   }
 
@@ -286,6 +324,7 @@ class NetworkPreviews extends ChangeNotifier {
 
   void _onClip(PreviewClipState s) {
     if (_disposed) return;
+    final was = _clip;
     _clip = s;
     // The clip would not load or broke while playing: the row reads
     // unavailable, and its next press asks the plug-in again. Another
@@ -307,6 +346,12 @@ class NetworkPreviews extends ChangeNotifier {
         shared.store.forget(shared.leadKey, provider, dead.url);
       }
     }
+    _releaseSongWatch();
+    // A flow of these rows ended, and may have brought the song back as it
+    // did: a watch still kept for a lookup listens afresh (_rewatchSong).
+    if (identical(was.owner, this) && _running(was) && !_running(s)) {
+      _rewatchSong();
+    }
     notifyListeners();
   }
 
@@ -316,9 +361,111 @@ class NetworkPreviews extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A press made while the song is paused and no clip runs (any
+  /// surface's) listens for the song starting, since the preview player
+  /// watches it only once a clip has loaded. A clip running watches the
+  /// song itself, and one that paused it brings it back as it ends, which
+  /// is no start of the user's. Once listening, a later press keeps the
+  /// watch, and so does a clip of these rows that plays, so a lookup still
+  /// out when it ends stays covered. That clip mostly played over the
+  /// paused song. On a cast it may have paused it, since the watch does not
+  /// hear a cast started with no command to the app (the TV's own remote);
+  /// its end then brings the song back, which _rewatchSong keeps from
+  /// reading as the user's start.
+  void _watchSong() {
+    if (_songWatch != null ||
+        _running(_player.state.value) ||
+        _player.songPlaying) {
+      return;
+    }
+    _listenForSong();
+  }
+
+  /// A flow of these rows ended. A song it paused came back as it ended:
+  /// the preview player sends that Play before the end reaches these rows.
+  /// It is no start of the user's, so a watch still kept listens afresh and
+  /// hears only what comes after. (A cast's Play that waits for the flow's
+  /// own pause to land goes out later, and songStarts leaves it out.)
+  void _rewatchSong() {
+    if (_songWatch == null) return;
+    _unwatchSong();
+    _listenForSong();
+  }
+
+  void _listenForSong() {
+    _songWatch = _player.songStarts.listen((_) => _songStarted());
+  }
+
+  /// The user started the song while a press of these rows was on its way:
+  /// what a lookup finds waits for a press, and a clip of theirs still
+  /// loading stops before it pauses the song. Nothing brings the song back
+  /// for it. A clip of theirs already playing is the preview player's to
+  /// end (it watches the song from the load on).
+  void _songStarted() {
+    _unwatchSong();
+    if (_disposed) return;
+    _wanted = null;
+    final s = _player.state.value;
+    if (identical(s.owner, this) && s.phase == PreviewPhase.loading) {
+      unawaited(_player.end(PreviewEnd.songStarted, owner: this));
+    }
+  }
+
+  /// The song watch goes once nothing of these rows is on its way: no
+  /// lookup out for the row pressed last, and no clip of theirs loading or
+  /// playing.
+  void _releaseSongWatch() {
+    if (_songWatch == null) return;
+    final wanted = _wanted;
+    if (wanted != null && _lookups[wanted] == _Lookup.lookingUp) return;
+    final s = _player.state.value;
+    if (identical(s.owner, this) && _running(s)) return;
+    _unwatchSong();
+  }
+
+  void _unwatchSong() {
+    final watch = _songWatch;
+    _songWatch = null;
+    if (watch != null) unawaited(watch.cancel());
+  }
+
+  /// A flow runs on the preview player: its clip loads, plays, is paused
+  /// or holds.
+  static bool _running(PreviewClipState s) => switch (s.phase) {
+    PreviewPhase.loading ||
+    PreviewPhase.playing ||
+    PreviewPhase.paused ||
+    PreviewPhase.held => true,
+    PreviewPhase.idle || PreviewPhase.failed => false,
+  };
+
+  /// mStream plan §2 item 14: the app going to the background ends a
+  /// preview even before its clip loads. The preview player ends a clip
+  /// loading or playing; a lookup still out plays nothing it finds, and
+  /// its row waits for a press once the user is back.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        if (_disposed) return;
+        _wanted = null;
+        _releaseSongWatch();
+      case AppLifecycleState.resumed:
+      case AppLifecycleState.inactive:
+        return;
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true;
+    if (_observing) {
+      WidgetsBinding.instance.removeObserver(this);
+      _observing = false;
+    }
+    _unwatchSong();
     unawaited(_sub?.cancel());
     super.dispose();
   }
