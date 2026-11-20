@@ -24,6 +24,7 @@ import 'cast_origin.dart' show rebindLoopbackArt;
 import 'output_devices.dart' show isExternalOutput;
 import 'cast_log.dart';
 import 'cast_target.dart';
+import 'transport_log.dart';
 import '../native/iroh_tunnel.dart';
 import '../objects/server.dart';
 import '../objects/metadata.dart';
@@ -225,6 +226,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   final StreamController<Duration> _seekEvents =
       StreamController<Duration>.broadcast();
   Stream<Duration> get seekEvents => _seekEvents.stream;
+
+  // Every transport command, numbered (media/transport_log.dart): the
+  // preview player reads it to tell whether anyone touched the song a clip
+  // paused. Each verb notes itself as its first statement.
+  final TransportLog transport = TransportLog();
 
   // Android audio session id of the active backend. The visualizer's
   // real-audio capture attaches a Visualizer to THIS session — the
@@ -2780,6 +2786,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToQueueItem(int index) async {
+    transport.note('skipToQueueItem');
     // Then default implementations of skipToNext and skipToPrevious provided by
     // the [QueueHandler] mixin will delegate to this method.
     // >= : an index equal to the length is off the end, not the last row.
@@ -3448,6 +3455,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> play() async {
+    transport.note('play');
     appLog('[play] play');
     _playIntent = true;
     _intentionalStop = false;
@@ -3496,6 +3504,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> pause() {
+    transport.note('pause');
     appLog('[play] pause');
     _playIntent = false;
     _releasePark(); // their intent wins; a landing pick appends only
@@ -3583,6 +3592,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
+    transport.note('skipToNext');
     _restoreSpot = null; // user navigation supersedes a failed-restore park
     _releasePark();
     // A quick skip is judged now, before the seek: once the player has
@@ -3837,6 +3847,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToPrevious() async {
+    transport.note('skipToPrevious');
     _restoreSpot = null; // user navigation supersedes a failed-restore park
     _releasePark();
     _backend.seekToPrevious();
@@ -3844,6 +3855,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> seek(Duration position) {
+    transport.note('seek');
     // A manual scrub supersedes the parked position (keep nothing: the next
     // re-seed should read the live player, which this seek just updated).
     _restoreSpot = null;
@@ -3864,6 +3876,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> stop() async {
+    transport.note('stop');
     appLog('[play] stop');
     _playIntent = false;
     _intentionalStop = true;

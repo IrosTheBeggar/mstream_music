@@ -11,16 +11,25 @@ import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../singletons/sonic_path_state.dart';
 import '../theme/velvet_theme.dart';
+import '../util/discover_jobs.dart' show TraySummary;
+import '../util/discovery_plugins_api.dart' show ownServerOf;
 import '../util/media_item_credits.dart';
+import '../util/network_sheet_gate.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
-import 'discovery/discovery_page_controller.dart';
+import 'discovery/copies_hub.dart';
+import 'discovery/discovery_jobs_controller.dart';
+import 'discovery/discovery_keep_routes.dart';
+import 'discovery/discovery_lead_row.dart';
+import 'discovery/network_lead_sheet.dart'
+    show networkLeadTapFor, networkSheetSectionsFor;
 import 'sonic_path_screen.dart';
 
 /// More like this — sonic-similarity recommendations seeded by ONE song (the
@@ -32,9 +41,21 @@ import 'sonic_path_screen.dart';
 /// /api/v1/ping flag (never probed blind):
 ///   • Similar tracks   — local library, playable rows + "Queue all"
 ///   • Similar artists  — local library, playable entry points
-///   • From the network — P2P leads (tap copies "Artist - Title")
-///   • From your peers  — federation leads (same; not playable at this
-///                        server version)
+///   • From the network — P2P leads: a tap opens the network-lead sheet
+///                        (previews, the YouTube add, links) when the
+///                        user's OWN server's plug-ins can offer something
+///                        for the row, else copies "Artist - Title"
+///                        (DiscoveryLeadRow)
+///   • From your peers  — federation leads (tap copies; not playable at
+///                        this server version)
+///
+/// With the user's own server's plug-ins on, the screen holds that server's
+/// shared jobs controller (CopiesHub) for its life: the network rows read
+/// its listing and gate, a "Copies" door in the app bar counts its copies
+/// and YouTube adds, and its poll keeps Discover's 4 s beat while one runs.
+/// A lead action on a network-lead sheet (a preview, Play, Add to queue,
+/// Add this one) pins the seed: the screen stops following playback, and a
+/// push pin says so beside the seed line.
 ///
 /// Webapp-parity behaviors: refetch on track change debounced 500 ms, stale
 /// responses dropped via request ids, 403 hides a section for the screen's
@@ -44,7 +65,8 @@ class DiscoverScreen extends StatefulWidget {
   /// Explicit seed — the "Find similar" entry points (track menus, Song
   /// Info) pass the track they were invoked on and the screen stays pinned
   /// to it. When null (the player's ⋮ entry) the screen follows the
-  /// now-playing track and refreshes on track change.
+  /// now-playing track and refreshes on track change — until a lead action
+  /// pins the song it shows.
   final Server? seedServer;
   final String? seedPath;
   final String? seedTitle;
@@ -59,8 +81,122 @@ class DiscoverScreen extends StatefulWidget {
 
   bool get hasExplicitSeed => seedServer != null && seedPath != null;
 
+  /// Where "From the network" asks for its leads (the per-song P2P route,
+  /// ApiManager.fetchDiscoveryP2pSimilar); tests answer it themselves.
+  @visibleForTesting
+  static Future<DiscoveryFetchResult<DiscoveryLeads>> Function(
+          Server server, String path,
+          {required int limit, required bool newArtistsOnly})
+      fetchNetworkLeads = _fetchNetworkLeads;
+
+  static Future<DiscoveryFetchResult<DiscoveryLeads>> _fetchNetworkLeads(
+          Server server, String path,
+          {required int limit, required bool newArtistsOnly}) =>
+      ApiManager().fetchDiscoveryP2pSimilar(server, path,
+          limit: limit, newArtistsOnly: newArtistsOnly);
+
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
+}
+
+/// A song More like this is seeded by: where it lives and what it is called.
+@immutable
+class DiscoverSeed {
+  final Server? server;
+  final String? path;
+  final String? title;
+  final String? artist;
+
+  const DiscoverSeed({this.server, this.path, this.title, this.artist});
+}
+
+/// Which song a refresh of More like this asks for ([fetch]), and whether it
+/// becomes the song the screen shows ([show]; its seed line, and what Check
+/// again and the new-artists-only switch ask for next):
+///  • [explicit] — the screen was opened on a song (a "Find similar"
+///    entry): always that one;
+///  • [pinned] — a lead action pinned the song on screen ([shown]): that
+///    one, for every refresh, Check again and the switch included —
+///    whatever plays now;
+///  • otherwise the song playing now ([playing], read only on this path): a
+///    full refresh shows it, a [leadsOnly] one (the switch) asks only its
+///    leads again.
+({DiscoverSeed fetch, bool show}) discoverRefreshSeed({
+  DiscoverSeed? explicit,
+  required bool pinned,
+  required DiscoverSeed shown,
+  required DiscoverSeed Function() playing,
+  required bool leadsOnly,
+}) {
+  if (explicit != null) return (fetch: explicit, show: !leadsOnly);
+  if (pinned) return (fetch: shown, show: false);
+  return (fetch: playing(), show: !leadsOnly);
+}
+
+/// Whether More like this's app bar shows the Copies door: Copies can exist
+/// on the user's own server ([copiesVisible]: DiscoveryJobsController
+/// .copiesVisible), and either the network-lead sheet can add from YouTube
+/// there ([youtube] ready) or something is copying, adding or has failed
+/// ([summary]). Hidden, never greyed.
+bool copiesDoorShown({
+  required bool copiesVisible,
+  required YoutubeBlock youtube,
+  required TraySummary summary,
+}) =>
+    copiesVisible && (youtube == YoutubeBlock.ready || summary.shown);
+
+/// The Copies door's tooltip and spoken label: "Copies" with nothing
+/// running or failed, else "Copies: Copying 2, 1 failed" — the counts the
+/// Discover page's Copies strip reads.
+String copiesDoorLabel(AppLocalizations l, TraySummary summary) {
+  final parts = [
+    if (summary.running > 0) l.discoverCopiesCopying(summary.running),
+    if (summary.failed > 0) l.discoverCopiesFailed(summary.failed),
+  ];
+  return parts.isEmpty
+      ? l.discoverCopiesTitle
+      : l.discoverCopiesLabel(parts.join(', '));
+}
+
+/// More like this's door to the Copies sheet: the Copies glyph with how many
+/// copies and YouTube adds run or wait ([TraySummary.running]), or — none
+/// running, some failed — a red dot.
+class DiscoverCopiesDoor extends StatelessWidget {
+  final TraySummary summary;
+  final VoidCallback onPressed;
+
+  const DiscoverCopiesDoor(
+      {super.key, required this.summary, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final running = summary.running;
+    final dot = running == 0 && summary.failed > 0;
+    return IconButton(
+      key: const ValueKey('discover-copies-door'),
+      tooltip: copiesDoorLabel(l, summary),
+      onPressed: onPressed,
+      color: VelvetColors.textPrimary,
+      // The label says the counts; the badge is only drawn.
+      icon: ExcludeSemantics(
+        child: Badge(
+          key: ValueKey(running > 0
+              ? 'discover-copies-count'
+              : (dot ? 'discover-copies-dot' : 'discover-copies-plain')),
+          isLabelVisible: running > 0 || dot,
+          label: running > 0 ? Text('$running') : null,
+          smallSize: 8,
+          backgroundColor:
+              running > 0 ? VelvetColors.primary : VelvetColors.error,
+          textColor: VelvetColors.onPrimary,
+          textStyle:
+              const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+          child: const Icon(Icons.library_add_outlined),
+        ),
+      ),
+    );
+  }
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
@@ -95,6 +231,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _networkLoading = false;
   bool _networkDisabled = false;
   DiscoveryLeads? _network;
+  // The song [_network]'s rows sound like: the seed asked when they came —
+  // not always the one on show (a track change shows the next song while
+  // its rows are still on their way).
+  DiscoverSeed? _networkSeed;
   bool _peersLoading = false;
   bool _peersDisabled = false;
   DiscoveryLeads? _peers;
@@ -109,6 +249,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   // One automatic probe per screen after a 403 — see _probeAfterRefusal.
   bool _probed = false;
 
+  // The user's OWN server's plug-in jobs (CopiesHub: shared, never disposed
+  // here) while its plug-ins are on — the seed's server itself, or a
+  // connected server's parent. Null: every network row copies, no door.
+  DiscoveryJobsController? _jobs;
+  // Its 4 s poll beat while this screen is open (holdPage).
+  VoidCallback? _pageHold;
+
+  // A lead action on a network-lead sheet pinned the seed: playback is no
+  // longer followed (only ever set without an explicit seed).
+  bool _pinned = false;
+
   @override
   void initState() {
     super.initState();
@@ -118,6 +269,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     // current item and the seed comparison below swallows that first echo.
     if (!widget.hasExplicitSeed) {
       _sub = MediaManager().audioHandler.mediaItem.listen((item) {
+        // Pinned by a lead action: the screen stays on its song.
+        if (_pinned) return;
         final extras = item?.extras;
         if (extras?['path'] == _seedPath &&
             extras?['server'] == _seedServer?.localname) {
@@ -135,37 +288,94 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void dispose() {
     _debounce?.cancel();
     _sub?.cancel();
+    _pageHold?.call();
     super.dispose();
   }
 
-  /// Re-reads the seed from the playing item and refetches every visible
-  /// section ([leadsOnly] skips the local ones — used by the new-artists-only
-  /// toggle so the library sections don't flicker).
-  void _refresh({bool leadsOnly = false}) {
-    final Server? server;
-    final String? path;
-    final String? title;
-    final String? artist;
-    if (widget.hasExplicitSeed) {
-      server = widget.seedServer;
-      path = widget.seedPath;
-      title = widget.seedTitle;
-      artist = widget.seedArtist;
-    } else {
-      final item = MediaManager().audioHandler.mediaItem.value;
-      final extras = item?.extras;
-      path = extras?['path'] as String?;
-      server = ServerManager().byLocalname(extras?['server'] as String?);
-      title = item?.title;
-      artist = item == null ? null : primaryArtistOf(item);
-    }
+  /// The first lead action on a network-lead sheet (a preview, Play, Add to
+  /// queue, Add this one): the screen stays on [seed] — the song the sheet's
+  /// row sounds like — whatever plays next, a refresh already armed by a
+  /// track change included. The screen may have followed playback to
+  /// another song while the sheet was open: it goes back to [seed] and asks
+  /// for its sections again.
+  void _pinSeed([DiscoverSeed? seed]) {
+    if (widget.hasExplicitSeed || _pinned || !mounted) return;
+    _debounce?.cancel();
+    final moved = seed != null &&
+        (seed.path != _seedPath || !identical(seed.server, _seedServer));
+    setState(() {
+      _pinned = true;
+      if (moved) {
+        _seedServer = seed.server;
+        _seedPath = seed.path;
+        _seedTitle = seed.title;
+        _seedArtist = seed.artist;
+      }
+    });
+    if (moved) _refresh();
+  }
 
-    if (!leadsOnly) {
+  /// Hold [seed]'s own server's jobs controller (or none, its plug-ins
+  /// off): a move to another own server lets go of the old one's poll beat
+  /// before taking the new one's.
+  void _bindJobs(Server? seed) {
+    final own = ownServerOf(seed);
+    final next = own != null && own.discoveryPluginsAvailable == true
+        ? CopiesHub().jobsFor(own)
+        : null;
+    if (!identical(next, _jobs)) {
+      _pageHold?.call();
+      _pageHold = null;
+      _jobs = next;
+      _pageHold = next?.holdPage();
+    }
+    // The listing, the destination and the job list — only what has not
+    // answered yet (the hub's controller lives for the app's session).
+    if (next != null) unawaited(next.activate());
+  }
+
+  /// Re-reads the seed (discoverRefreshSeed: the explicit or pinned one, else
+  /// the playing item) and refetches every visible section ([leadsOnly]
+  /// skips the local ones — used by the new-artists-only toggle so the
+  /// library sections don't flicker).
+  void _refresh({bool leadsOnly = false}) {
+    final plan = discoverRefreshSeed(
+      explicit: widget.hasExplicitSeed
+          ? DiscoverSeed(
+              server: widget.seedServer,
+              path: widget.seedPath,
+              title: widget.seedTitle,
+              artist: widget.seedArtist)
+          : null,
+      pinned: _pinned,
+      shown: DiscoverSeed(
+          server: _seedServer,
+          path: _seedPath,
+          title: _seedTitle,
+          artist: _seedArtist),
+      playing: () {
+        final item = MediaManager().audioHandler.mediaItem.value;
+        final extras = item?.extras;
+        return DiscoverSeed(
+          server: ServerManager().byLocalname(extras?['server'] as String?),
+          path: extras?['path'] as String?,
+          title: item?.title,
+          artist: item == null ? null : primaryArtistOf(item),
+        );
+      },
+      leadsOnly: leadsOnly,
+    );
+    final server = plan.fetch.server;
+    final path = plan.fetch.path;
+    final artist = plan.fetch.artist;
+
+    if (plan.show) {
       _seedServer = server;
       _seedPath = path;
-      _seedTitle = title;
+      _seedTitle = plan.fetch.title;
       _seedArtist = artist;
     }
+    _bindJobs(server);
     if (server == null || path == null) {
       setState(() {});
       return;
@@ -226,8 +436,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final rid = ++_leadsRid;
     if (server.discoveryP2pAvailable == true && !_networkDisabled) {
       _networkLoading = true;
-      ApiManager()
-          .fetchDiscoveryP2pSimilar(server, path,
+      final fetchSeed = plan.fetch;
+      DiscoverScreen.fetchNetworkLeads(server, path,
               limit: 10, newArtistsOnly: newArtistsOnly)
           .then((r) {
         if (!mounted || rid != _leadsRid) return;
@@ -237,6 +447,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _networkDisabled = true;
           } else if (r.data != null) {
             _network = r.data;
+            _networkSeed = fetchSeed;
           }
         });
       });
@@ -324,6 +535,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
   }
 
+  /// A "From the network" row's tap, as its row was drawn ([tap]): the
+  /// network-lead sheet (its match line names the song the row sounds
+  /// like; its first lead action pins that song), or the copy.
+  void _tapNetworkLead(DiscoveryLead lead, NetworkLeadTap tap) {
+    appLog('[lead] tap → ${tap.name}');
+    final jobs = _jobs;
+    if (tap == NetworkLeadTap.sheet && jobs != null) {
+      final seed = _networkSeed;
+      DiscoveryKeepRoutes.openNetworkLead(context, jobs, lead,
+          seedTitle: seed != null ? seed.title : _seedTitle,
+          onLeadAction: () => _pinSeed(seed));
+    } else {
+      unawaited(_copyLead(lead));
+    }
+  }
+
   // ── build ──────────────────────────────────────────────────────────────
 
   @override
@@ -334,6 +561,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       if ((_seedTitle ?? '').trim().isNotEmpty) _seedTitle!.trim(),
       if ((_seedArtist ?? '').trim().isNotEmpty) _seedArtist!.trim(),
     ].join(' · ');
+    final jobs = _jobs;
 
     return Scaffold(
       backgroundColor: VelvetColors.bg,
@@ -357,17 +585,56 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ),
             ),
             if (seedLine.isNotEmpty)
-              Text(
-                seedLine,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: VelvetColors.textSecondary,
-                  fontSize: 12,
-                ),
+              // As wide as its line: iOS centres the title block.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_pinned)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.push_pin,
+                        key: const ValueKey('discover-seed-pinned'),
+                        size: 12,
+                        color: VelvetColors.primary,
+                        semanticLabel: l.discoverLeadPinned,
+                      ),
+                    ),
+                  Flexible(
+                    child: Text(
+                      seedLine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
+        actions: [
+          if (jobs != null)
+            ListenableBuilder(
+              listenable: jobs,
+              builder: (context, _) {
+                final summary = jobs.summary;
+                if (!copiesDoorShown(
+                    copiesVisible: jobs.copiesVisible,
+                    youtube: networkSheetSectionsFor(jobs).youtube,
+                    summary: summary)) {
+                  return const SizedBox.shrink();
+                }
+                return DiscoverCopiesDoor(
+                  summary: summary,
+                  onPressed: () =>
+                      DiscoveryKeepRoutes.openCopies(context, jobs),
+                );
+              },
+            ),
+        ],
       ),
       body: hasSeed ? _sections(l) : _noSeed(l),
     );
@@ -782,20 +1049,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       children.add(_newArtistsToggle(l));
       if (showNetwork) {
         children.addAll(_leadsSection(
-          l,
           header: l.discoverFromNetwork,
           loading: _networkLoading,
           leads: _network,
           emptyText: _networkEmptyText(l),
+          row: _networkRow,
         ));
       }
       if (showPeers) {
         children.addAll(_leadsSection(
-          l,
           header: l.discoverFromPeers,
           loading: _peersLoading,
           leads: _peers,
           emptyText: _peersEmptyText(l),
+          row: _copyRow,
         ));
       }
     }
@@ -989,12 +1256,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return l.discoverNothingFound;
   }
 
-  List<Widget> _leadsSection(
-    AppLocalizations l, {
+  List<Widget> _leadsSection({
     required String header,
     required bool loading,
     required DiscoveryLeads? leads,
     required String emptyText,
+    required Widget Function(DiscoveryLead lead) row,
   }) {
     final rows = <Widget>[_sectionHeader(header)];
     if (loading && leads == null) {
@@ -1003,58 +1270,45 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       rows.add(_hintRow(emptyText));
     } else {
       for (final lead in leads.results) {
-        rows.add(_leadRow(l, lead));
+        rows.add(row(lead));
       }
     }
     return rows;
   }
 
-  Widget _leadRow(AppLocalizations l, DiscoveryLead lead) {
-    final genre = genreTagLabel(lead.genreTags, max: 1);
-    final subtitle = [
-      if (lead.artist.isNotEmpty) lead.artist,
-      ?genre,
-      ?lead.peerName,
-    ].join(' · ');
-    return ListTile(
-      dense: true,
-      // A federation lead with albumArt shows its cover, fetched through
-      // the seed server's federation art proxy; otherwise the lead icon.
-      leading:
-          discoveryLeadArtItem(_seedServer, lead)?.getAlbumThumb(size: 44) ??
-              Icon(Icons.travel_explore,
-                  color: VelvetColors.textSecondary, size: 22),
-      title: Text(
-        lead.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
-      ),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (lead.recordingMbid != null)
-            IconButton(
-              icon: Icon(Icons.open_in_new,
-                  color: VelvetColors.textSecondary, size: 18),
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              tooltip: l.discoverOpenMusicBrainz,
-              onPressed: () => _openMusicBrainz(lead),
-            ),
-          MatchMeter(similarity: lead.similarity),
-        ],
-      ),
-      onTap: () => _copyLead(lead),
+  /// Today's lead row: the tap copies "Artist - Title" ([onTap] says
+  /// otherwise only for a network row, which logs its tap).
+  Widget _copyRow(DiscoveryLead lead, {VoidCallback? onTap}) =>
+      DiscoveryLeadRow(
+        lead: lead,
+        opensSheet: false,
+        artServer: _seedServer,
+        onTap: onTap ?? () => unawaited(_copyLead(lead)),
+        onOpenMusicBrainz: () => unawaited(_openMusicBrainz(lead)),
+      );
+
+  /// A "From the network" row: the network-lead sheet's way in while the
+  /// user's own server's plug-ins can offer something for it (redrawn as
+  /// its listing and gate answer), else today's copy row.
+  Widget _networkRow(DiscoveryLead lead) {
+    final jobs = _jobs;
+    if (jobs == null) {
+      return _copyRow(lead,
+          onTap: () => _tapNetworkLead(lead, NetworkLeadTap.copy));
+    }
+    return ListenableBuilder(
+      listenable: jobs,
+      builder: (context, _) {
+        final tap = networkLeadTapFor(jobs, lead);
+        if (tap == NetworkLeadTap.copy) {
+          return _copyRow(lead, onTap: () => _tapNetworkLead(lead, tap));
+        }
+        return DiscoveryLeadRow(
+          lead: lead,
+          opensSheet: true,
+          onTap: () => _tapNetworkLead(lead, tap),
+        );
+      },
     );
   }
 

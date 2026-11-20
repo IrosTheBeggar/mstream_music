@@ -8,6 +8,7 @@ import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_jobs.dart';
+import '../../util/ytdl_layout.dart' show kYtdlNeverVars;
 import 'destination_pieces.dart';
 import 'discovery_jobs_controller.dart';
 import 'keep_copy_ui.dart';
@@ -56,6 +57,13 @@ class DestinationPreviewSong {
   /// The file's path on the connected server (its name is kept; its folders
   /// there are {{SERVERFOLDER}}).
   final String? filepath;
+
+  /// A song the YouTube add fetches (the network-lead sheet's), not a copy:
+  /// it files by its artist, album, year and album credit alone — GENRE,
+  /// PEER and SERVERFOLDER are always empty for it (youtube.js run, no slot
+  /// for any of them), and its file is named after the upload, which no
+  /// one has picked yet: the preview names the folders only.
+  final bool download;
   const DestinationPreviewSong({
     required this.title,
     required this.artist,
@@ -64,6 +72,7 @@ class DestinationPreviewSong {
     this.year,
     this.genre,
     this.filepath,
+    this.download = false,
   });
 
   /// [artist] and [genre]: the file's own, when this phone can tell them.
@@ -71,6 +80,7 @@ class DestinationPreviewSong {
     DiscoveryLead lead, {
     String? artist,
     String? genre,
+    bool download = false,
   }) => DestinationPreviewSong(
     title: lead.title,
     artist: artist ?? lead.artist,
@@ -79,6 +89,7 @@ class DestinationPreviewSong {
     year: lead.year,
     genre: genre,
     filepath: lead.filepath,
+    download: download,
   );
 }
 
@@ -590,35 +601,69 @@ class _DestinationSheetState extends State<DestinationSheet> {
     // server holds it, so that folder reads as the Keep card reads it,
     // whatever a layout would make of its name. A folder copy by the layout
     // ([folder]) files each of its songs by its own tags: the folder rule.
+    // A YouTube add ([DestinationPreviewSong.download]) has no genre, server
+    // or server folder to file under: those render empty, never a slot.
     final opened = _asOpened ? _from : null;
-    final st = folder != null
-        ? scopeTarget(
-            vpath: _vpath,
-            base: opened?.base,
-            layout: opened?.layout ?? _chosenLayout,
-            scope: kScopeFolder,
-            landing: const {'tags': true},
-            folder: folder.folder,
-            folderSongs: folder.songs,
-            folderTags: folder.tags,
-            peerName: widget.peerName,
-          )
-        : scopeTarget(
-            vpath: _vpath,
-            base: opened?.base,
-            layout: opened?.layout ?? _chosenLayout,
-            tags: {
-              'artist': song!.artist,
-              'album': song.album,
-              'year': song.year,
-              'genre': song.genre,
-              'albumartist': song.albumArtist,
-            },
-            serverFolder: serverFolderOf(song.filepath),
-            peerName: widget.peerName,
-            fileName: song.filepath ?? song.title,
-          );
+    final download = folder == null && song!.download;
+    final ScopeTarget st;
+    if (download) {
+      final p = previewTarget(
+        vpath: _vpath,
+        base: opened?.base,
+        layout: opened?.layout ?? _chosenLayout,
+        tags: {
+          'artist': song.artist,
+          'album': song.album,
+          'year': song.year,
+          'genre': null,
+          'albumartist': song.albumArtist,
+        },
+        fileName: song.title,
+      );
+      st = ScopeTarget(p, p.rendered);
+    } else {
+      st = folder != null
+          ? scopeTarget(
+              vpath: _vpath,
+              base: opened?.base,
+              layout: opened?.layout ?? _chosenLayout,
+              scope: kScopeFolder,
+              landing: const {'tags': true},
+              folder: folder.folder,
+              folderSongs: folder.songs,
+              folderTags: folder.tags,
+              peerName: widget.peerName,
+            )
+          : scopeTarget(
+              vpath: _vpath,
+              base: opened?.base,
+              layout: opened?.layout ?? _chosenLayout,
+              tags: {
+                'artist': song!.artist,
+                'album': song.album,
+                'year': song.year,
+                'genre': song.genre,
+                'albumartist': song.albumArtist,
+              },
+              serverFolder: serverFolderOf(song.filepath),
+              peerName: widget.peerName,
+              fileName: song.filepath ?? song.title,
+            );
+    }
     final t = st.target;
+    // A YouTube add says which variables are always empty for it, rather
+    // than that this song has no value for them.
+    final missing = [
+      for (final v in t.missingVars)
+        if (!download || !kYtdlNeverVars.contains(v)) v,
+    ];
+    final layoutNow = opened?.layout ?? _chosenLayout;
+    final never = download && layoutNow != null
+        ? [
+            for (final v in kYtdlNeverVars)
+              if (destUsesVar(layoutNow, v)) v,
+          ]
+        : const <String>[];
     final quiet = TextStyle(
       color: VelvetColors.textSecondary,
       fontSize: 13,
@@ -669,8 +714,11 @@ class _DestinationSheetState extends State<DestinationSheet> {
         color: VelvetColors.textSecondary,
       );
       // A folder's songs land in its folders, no one file named; past the
-      // first folder that names an album, one folder per album.
-      final crumbs = folder != null ? st.crumbs : [...st.crumbs, t.file];
+      // first folder that names an album, one folder per album. A YouTube
+      // add's file is named after the upload, not picked yet: its folders.
+      final crumbs = folder != null || download
+          ? st.crumbs
+          : [...st.crumbs, t.file];
       // One song lands in one folder: the note in a song's words.
       final slots = keepSlotNote(
         l,
@@ -734,12 +782,21 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 style: note,
               ),
             ),
-          if (!compact && t.missingVars.isNotEmpty)
+          if (!compact && missing.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                l.discoverDestMissing(t.missingVars.map(destToken).join(', ')),
+                l.discoverDestMissing(missing.map(destToken).join(', ')),
                 key: const ValueKey('destination-preview-missing'),
+                style: note,
+              ),
+            ),
+          if (!compact && never.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.ytdlWhereAlwaysEmpty(never.map(destToken).join(', ')),
+                key: const ValueKey('destination-preview-never'),
                 style: note,
               ),
             ),

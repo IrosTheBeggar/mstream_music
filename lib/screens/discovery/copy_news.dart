@@ -8,6 +8,7 @@ import '../../util/discover_jobs.dart';
 import 'discovery_jobs_controller.dart';
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
+import 'youtube_add_ui.dart';
 
 /// What the copy toasts say (the design canvas's PhoneCopies / PhoneElsewhere
 /// "Copy toasts"): once per start, after the sheet that started it closes —
@@ -20,6 +21,12 @@ import 'keep_toast.dart';
 /// under the folder's name. A copy started while browsing a connected
 /// server offers "View" on its start toast ([showCopyStarted]): there, the
 /// Copies sheet is otherwise out of reach.
+///
+/// A YouTube add ([isYoutubeAdd]) says it in its own words: "Adding Paper
+/// Satellites from YouTube" as it starts; "Added to your collection",
+/// "Already in your library" or "Couldn't add from YouTube: (why, in the
+/// app's words)" as it ends. A file already at the path, or a stop, say
+/// nothing.
 
 /// The start toast for [job] ([peer] when the job names no server).
 String copyStartedToast(
@@ -29,6 +36,12 @@ String copyStartedToast(
 }) {
   final rec = job.recommendation;
   String s(String k) => rec[k] is String ? (rec[k] as String).trim() : '';
+  if (isYoutubeAdd(job)) {
+    final title = s('title');
+    return l.discoverToastAddingYt(
+      title.isNotEmpty ? title : safeFileName(rec['filepath']),
+    );
+  }
   final from = (job.peerName ?? '').trim().isNotEmpty ? job.peerName! : peer;
   switch (job.scope) {
     case kScopeArtist:
@@ -85,10 +98,19 @@ String? copyFailedReason(AppLocalizations l, DiscoveryJob job) {
   ].join(' · ');
 }
 
-/// The end toast for a copy this phone saw live, or null for an ending
-/// that says nothing.
+/// The end toast for a copy (or a YouTube add) this phone saw live, or null
+/// for an ending that says nothing.
 String? copyFinishedToast(AppLocalizations l, DiscoveryJob job) {
   final row = jobRowState(job, plugin: kCopyPlugin);
+  if (isYoutubeAdd(job)) {
+    return switch (row.kind) {
+      JobRowKind.downloaded || JobRowKind.copied => l.discoverToastAdded,
+      JobRowKind.owned => l.discoverToastAlreadyYours,
+      JobRowKind.failed =>
+        l.discoverToastAddFailedYt(youtubeJobFailureText(l, job)),
+      _ => null,
+    };
+  }
   switch (row.kind) {
     case JobRowKind.copied:
     case JobRowKind.copiedMany:
@@ -109,15 +131,16 @@ String? copyFinishedToast(AppLocalizations l, DiscoveryJob job) {
   }
 }
 
-/// Toasts every copy [jobs] saw live as it ends. [l10n] reads the words at
-/// the moment (null drops the toast); [show] puts it up (KeepToast by
-/// default). Cancel the subscription to stop.
+/// Toasts every job of Copies' ([DiscoveryJobsController.inCopies]: a copy,
+/// a YouTube add on a build that shows them) [jobs] saw live as it ends.
+/// [l10n] reads the words at the moment (null drops the toast); [show] puts
+/// it up (KeepToast by default). Cancel the subscription to stop.
 StreamSubscription<DiscoveryJob> attachCopyToasts(
   DiscoveryJobsController jobs, {
   required AppLocalizations? Function() l10n,
   void Function(String message)? show,
 }) => jobs.finished.listen((job) {
-  if (job.plugin != kCopyPlugin) return;
+  if (!jobs.inCopies(job)) return;
   final l = l10n();
   if (l == null) return;
   final message = copyFinishedToast(l, job);

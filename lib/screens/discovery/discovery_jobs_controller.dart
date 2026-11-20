@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
+import '../../build_variant.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
 import '../../objects/server.dart';
@@ -78,15 +79,19 @@ class SheetJob {
   const SheetJob(this.job, {this.fromOtherPeer = false, this.wider = false});
 }
 
-/// The Discover visit's plug-in jobs (Keep a copy): the plug-in listing,
-/// the collection destination, the caller's jobs, and every connected-server
-/// row's lookup — the markers on the page, the Copies strip's counts, the
-/// sheets' job lines. A connected server's browse pages ask their own
-/// lookups through [lookup] (screens/discovery/browse_copy_marks.dart) and
-/// hold the poll's 4 s beat while a mark of theirs moves ([holdPage]).
+/// The Discover visit's plug-in jobs (Keep a copy, and the network-lead
+/// sheet's YouTube add): the plug-in listing, the collection destination,
+/// the caller's jobs, and every connected-server row's lookup — the markers
+/// on the page, the Copies strip's counts, the sheets' job lines. A
+/// connected server's browse pages ask their own lookups through [lookup]
+/// (screens/discovery/browse_copy_marks.dart) and hold the poll's 4 s beat
+/// while a mark of theirs moves ([holdPage]).
 ///
 /// Every call goes to the user's OWN server ([ownServerOf]), never a peer's
-/// virtual Server, and sends a row's recommendation exactly as received.
+/// virtual Server, and sends the recommendation it is given as it is given:
+/// a connected server's row as received, a per-song network row as its
+/// caller repaired it (objects/discovery.dart sendableRecommendation), a
+/// job's own recommendation on Retry.
 ///
 /// Polling, only while a job is live: ~1.5 s while a sheet showing a job is
 /// open ([holdFast]), ~4 s while Discover is in front ([discoverVisible]),
@@ -108,14 +113,32 @@ class DiscoveryJobsController extends ChangeNotifier
   static const Duration kFastBeat = Duration(milliseconds: 1500);
   static const Duration kDiscoverBeat = Duration(seconds: 4);
 
+  /// [youtubeShown] says whether this build shows YouTube adds at all
+  /// (tests pass their own); none reads [defaultYoutubeShown].
   DiscoveryJobsController({
     required Server server,
     DiscoveryPluginsApi? api,
     JobsTimerFactory? timer,
     this.watchLifecycle = true,
+    this._youtubeShown,
   })  : server = ownServerOf(server) ?? server,
         api = api ?? DiscoveryPluginsApi(server),
         _timer = timer ?? Timer.new;
+
+  /// What a controller made without its own `youtubeShown` reads: the
+  /// build's Add from YouTube switch ([ytdlEntry] — off in the Play bundle
+  /// and in iOS release builds). Tests that only reach controllers the hub
+  /// makes flip it here, and put it back in tearDown.
+  @visibleForTesting
+  static bool Function() defaultYoutubeShown = _buildShowsYoutube;
+  static bool _buildShowsYoutube() => ytdlEntry;
+
+  final bool Function()? _youtubeShown;
+
+  /// This build shows YouTube adds: the network-lead sheet's YouTube block,
+  /// and YouTube adds in Copies (their rows, counts, polls and toasts).
+  /// False (a store build): none of it, whatever the server lists.
+  bool get youtubeShown => (_youtubeShown ?? defaultYoutubeShown)();
 
   // ── state ────────────────────────────────────────────────────────────
 
@@ -184,6 +207,10 @@ class DiscoveryJobsController extends ChangeNotifier
   /// Live copies a browse page's lookup found ([lookup]), by id: polled for
   /// like the list's, so their endings are news (the toasts) too.
   final Map<int, DiscoveryJob> _pageLive = {};
+
+  /// Live jobs a lookup found that the list does not carry are being asked
+  /// for one by one ([_askUnlisted]).
+  bool _askingUnlisted = false;
   Future<void>? _regating;
   bool _discoverVisible = true;
   bool _foreground = true;
@@ -204,7 +231,7 @@ class DiscoveryJobsController extends ChangeNotifier
   /// Jobs this visit saw live that have finished since and settled (landed,
   /// already yours, nothing to copy, cancelled), newest first — the Copies
   /// sheet's "Just finished". One that failed or stopped is in [copies].
-  /// Only the phone's copies ([isKeepCopy]: a folder copy too) are news.
+  /// Only what Copies carries ([inCopies]) is news.
   List<DiscoveryJob> get justFinished =>
       List.unmodifiable(_finished.where((j) => !inTray(j)));
 
@@ -228,11 +255,31 @@ class DiscoveryJobsController extends ChangeNotifier
         entry: entry,
       );
 
-  /// Whether the Copies list (strip, home row, sheet) can exist at all.
+  /// Whether the network-lead sheet's YouTube block shows, and if not, why:
+  /// [gate] for the YouTube add (youtube listed with acquire, lookup and the
+  /// song scope; jobs allowed; the upload right; a library to put files
+  /// in). Hidden as not listed on a build that does not show YouTube
+  /// ([youtubeShown]), whatever the server says.
+  CopyGate youtubeGate() => youtubeShown
+      ? copyGate(
+          pluginsAvailable: server.discoveryPluginsAvailable,
+          listing: listing,
+          listingFailed: listingFailed,
+          destination: destination,
+          destinationFailed: destinationFailed,
+          noUpload: server.noUpload,
+          plugin: kYoutubePlugin,
+        )
+      : const CopyGate(CopyGateStatus.hidden, CopyGateBlock.notListed);
+
+  /// Whether the Copies list (strip, home row, sheet) can exist at all: on
+  /// a build that shows YouTube, a server whose only plug-in for it is the
+  /// YouTube add has one too.
   bool get copiesVisible => copiesListVisible(
         pluginsAvailable: server.discoveryPluginsAvailable,
         listing: listing,
         noUpload: server.noUpload,
+        youtube: youtubeShown,
       );
 
   /// The scopes Keep a copy offers for a song row's [lead].
@@ -250,11 +297,16 @@ class DiscoveryJobsController extends ChangeNotifier
 
   // ── the Copies list ──────────────────────────────────────────────────
 
-  /// The phone's copies among [jobs] ([isKeepCopy]: Discover's, and a
-  /// connected server's folder with its landing): the list answers every
-  /// plug-in's jobs, but a YouTube download is neither counted, listed,
-  /// retried nor polled for here.
-  Iterable<DiscoveryJob> get _copyJobs => jobs.where(isKeepCopy);
+  /// What the Copies list carries: the phone's copies ([isKeepCopy]:
+  /// Discover's, and a connected server's folder with its landing), and —
+  /// on a build that shows YouTube ([youtubeShown]) — YouTube adds
+  /// ([isYoutubeAdd]), whoever started them. Only these are counted,
+  /// listed, retried, polled for and news; the list answers every plug-in's
+  /// jobs, and the rest stay the webapp's.
+  bool inCopies(DiscoveryJob? job) =>
+      isKeepCopy(job) || (isYoutubeAdd(job) && youtubeShown);
+
+  Iterable<DiscoveryJob> get _copyJobs => jobs.where(inCopies);
 
   /// "Copying 2 · 1 failed": the strip's and the home row's counts.
   TraySummary get summary => traySummary(_copyJobs);
@@ -437,18 +489,20 @@ class DiscoveryJobsController extends ChangeNotifier
 
   /// A browse page's lookup (lookup/batch, in chunks of 100) for [recs] —
   /// asked without touching Discover's rows ([setRows]): each answer aligned
-  /// with [recs], only the phone's copies in it ([isKeepCopy]); a chunk that
-  /// failed is null. Null when nothing could be asked (plug-ins off: no
-  /// marks) or every chunk failed (no marks either). Asked whether or not
-  /// the gate is open: the route is not gated by plug-ins, jobs or the
-  /// upload right, and earlier copies keep their words. A live copy it
-  /// finds is polled for like the list's, so its ending is news.
-  Future<List<JobLookup?>?> lookup(List<Map<String, dynamic>> recs) async {
+  /// with [recs], only the jobs [keep] takes in it (the phone's copies,
+  /// [isKeepCopy], by default); a chunk that failed is null. Null when
+  /// nothing could be asked (plug-ins off: no marks) or every chunk failed
+  /// (no marks either). Asked whether or not the gate is open: the route is
+  /// not gated by plug-ins, jobs or the upload right, and earlier copies
+  /// keep their words. A live job it keeps is polled for like the list's,
+  /// so its ending is news.
+  Future<List<JobLookup?>?> lookup(List<Map<String, dynamic>> recs,
+      {bool Function(DiscoveryJob job) keep = isKeepCopy}) async {
     if (_disposed || !pluginsOn) return null;
     if (recs.isEmpty) return const [];
     _attachLifecycle();
     try {
-      final results = _keepOnly(await api.lookupBatch(recs));
+      final results = _keepOnly(await api.lookupBatch(recs), keep);
       if (_disposed) return null;
       _learn([
         for (final r in results)
@@ -460,18 +514,47 @@ class DiscoveryJobsController extends ChangeNotifier
     }
   }
 
-  static List<JobLookup?> _keepOnly(List<JobLookup?> results) => [
+  static List<JobLookup?> _keepOnly(
+          List<JobLookup?> results, bool Function(DiscoveryJob job) keep) =>
+      [
         for (final r in results)
-          r == null || r.jobs.every(isKeepCopy)
+          r == null || r.jobs.every(keep)
               ? r
-              : JobLookup(
-                  key: r.key, keys: r.keys, jobs: [...r.jobs.where(isKeepCopy)]),
+              : JobLookup(key: r.key, keys: r.keys, jobs: [...r.jobs.where(keep)]),
       ];
+
+  /// The YouTube add the caller already made of [rec]'s song (the single
+  /// `POST /plugin-jobs/lookup`, which older servers have too): the newest
+  /// youtube song job under its song key, or null — none, plug-ins off, a
+  /// build that does not show YouTube, or the lookup failed (the sheet then
+  /// offers the search). A live one is polled for like the list's
+  /// ([anyLive]), so its ending is news; what it is now is [latest] of it.
+  /// What the network-lead sheet restores its job line from when it opens.
+  Future<DiscoveryJob?> youtubeJobFor(Map<String, dynamic> rec) async {
+    if (_disposed || !pluginsOn || !youtubeShown) return null;
+    _attachLifecycle();
+    try {
+      final found = await api.lookupOne(rec);
+      if (_disposed) return null;
+      DiscoveryJob? newest;
+      for (final job in found.jobs) {
+        if (!isYoutubeAdd(job)) continue;
+        if (found.key != null && job.key != null && job.key != found.key) {
+          continue;
+        }
+        if (newest == null || job.id > newest.id) newest = job;
+      }
+      if (newest != null) _learn([newest]);
+      return newest;
+    } on DiscoveryPluginsException {
+      return null;
+    }
+  }
 
   /// What a page lookup said of the jobs it names: a live one is followed
   /// (and kept in step with the list), one seen live before and finished
-  /// now is news.
-  void _learn(List<DiscoveryJob> found) {
+  /// now is news. True when what is followed changed.
+  bool _learn(List<DiscoveryJob> found) {
     final before = [..._pageLive.values];
     var changed = false;
     for (final job in found) {
@@ -484,6 +567,33 @@ class DiscoveryJobsController extends ChangeNotifier
     }
     _news(finishedSince(before, found));
     if (changed) _schedule();
+    return changed;
+  }
+
+  /// Live jobs a lookup found that the list does not carry (past its 100
+  /// newest): each asked for by id (GET /plugin-jobs/:id), so its ending
+  /// is news and the poll stops once nothing is live — no lookup asks for
+  /// them again by itself (a reopened lead's YouTube add). One gone (404)
+  /// is let go.
+  Future<void> _askUnlisted(List<int> ids) async {
+    _askingUnlisted = true;
+    final found = <DiscoveryJob>[];
+    var dropped = false;
+    try {
+      for (final id in ids) {
+        try {
+          found.add(await api.job(id));
+        } on DiscoveryPluginsException catch (e) {
+          if (e.status == 404) dropped |= _pageLive.remove(id) != null;
+        }
+        if (_disposed) return;
+      }
+    } finally {
+      _askingUnlisted = false;
+    }
+    final changed = _learn(found);
+    if (dropped) _schedule();
+    if (changed || dropped) _notify();
   }
 
   BadgeRow? rowOf(DiscoveryLead lead) {
@@ -559,24 +669,33 @@ class DiscoveryJobsController extends ChangeNotifier
 
   // ── verbs ────────────────────────────────────────────────────────────
 
-  static String _startKey(Map<String, dynamic> rec, String? scope) {
+  /// One start in flight: a plug-in's, for a scope of a recommendation —
+  /// a copy and a YouTube add of the same song are two.
+  static String _startKey(
+      Map<String, dynamic> rec, String? scope, String plugin) {
     String body;
     try {
       body = jsonEncode(rec);
     } catch (_) {
       body = '${identityHashCode(rec)}';
     }
-    return '${scope ?? kScopeSong}|$body';
+    return '$plugin|${scope ?? kScopeSong}|$body';
   }
 
-  /// A start for [rec] and [scope] is in flight (the pill is busy).
-  bool isStarting(Map<String, dynamic> rec, [String? scope]) =>
-      _starting.contains(_startKey(rec, scope));
+  /// A start of [plugin]'s (Keep a copy's by default) for [rec] and [scope]
+  /// is in flight (the pill is busy).
+  bool isStarting(Map<String, dynamic> rec,
+          [String? scope, String plugin = kCopyPlugin]) =>
+      _starting.contains(_startKey(rec, scope, plugin));
 
-  /// Keep a copy: `POST /plugins/federation-copy/jobs` with the row's
-  /// recommendation UNCHANGED and [scope] (none for the song). A card's
-  /// album job sends its best row with scope album — never a song job from
-  /// a card.
+  /// Start [plugin]'s job for [rec]: Keep a copy's by default
+  /// (`POST /plugins/federation-copy/jobs`) with the recommendation as the
+  /// caller has it and [scope] (none for the song). A card's album job
+  /// sends its best row with scope album — never a song job from a card.
+  /// The YouTube add ([kYoutubePlugin], the song only) sends the upload
+  /// the user picked as [choice] (`{url}`), or none to let the server
+  /// search; the server's dedupe ignores the pick, so a 200 may answer a
+  /// live add of another upload.
   ///
   /// [shown] is where the surface showed the files going (nowhere
   /// included): the server pins the job to it, or — when it is no longer
@@ -592,9 +711,13 @@ class DiscoveryJobsController extends ChangeNotifier
   /// same folder while one is in flight sends nothing. A start refused 403
   /// or 404 reads the gate again ([regate]).
   Future<StartOutcome> start(Map<String, dynamic> rec,
-      {String? scope, ShownPlace? shown, Map<String, dynamic>? landing}) async {
+      {String plugin = kCopyPlugin,
+      String? scope,
+      ShownPlace? shown,
+      Map<String, dynamic>? landing,
+      Map<String, dynamic>? choice}) async {
     final s = scope == null || scope == kScopeSong ? null : scope;
-    final key = _startKey(rec, s);
+    final key = _startKey(rec, s, plugin);
     if (_disposed || _starting.contains(key)) {
       return const StartOutcome.ignored();
     }
@@ -604,7 +727,11 @@ class DiscoveryJobsController extends ChangeNotifier
     _notify();
     try {
       final r = await api.startJob(rec,
-          scope: s, destination: shown, landing: landing);
+          plugin: plugin,
+          scope: s,
+          destination: shown,
+          landing: landing,
+          choice: choice);
       if (_disposed) return StartOutcome(r.job, created: r.created);
       _note(r.job);
       final peer = rec['peer'];
@@ -651,11 +778,19 @@ class DiscoveryJobsController extends ChangeNotifier
   /// surface shows now (Keep a copy's card: where files land now, which it
   /// names first when the copy ran somewhere else), sent as [start] sends
   /// it. A folder copy goes again with its own landing (where it was asked
-  /// to go, not where the sheet points now). Only a phone copy
-  /// ([isKeepCopy]): another plug-in's job cannot be started again from
-  /// here as it was started — nothing is sent.
+  /// to go, not where the sheet points now); a YouTube add goes to youtube
+  /// again with its own pick ([DiscoveryJob.choiceUrl]; none, it searches).
+  /// Only what Copies carries ([inCopies]): another plug-in's job cannot be
+  /// started again from here as it was started — nothing is sent.
   Future<StartOutcome> retry(DiscoveryJob job, {ShownPlace? shown}) async {
-    if (!isKeepCopy(job)) return const StartOutcome.ignored();
+    if (!inCopies(job)) return const StartOutcome.ignored();
+    if (isYoutubeAdd(job)) {
+      final pick = job.choiceUrl;
+      return start(job.recommendation,
+          plugin: kYoutubePlugin,
+          shown: shown,
+          choice: pick == null ? null : {'url': pick});
+    }
     return start(job.recommendation,
         scope: job.scope, shown: shown, landing: job.landing);
   }
@@ -670,10 +805,11 @@ class DiscoveryJobsController extends ChangeNotifier
   /// no place at all. Its pills are busy while that read is out, and a
   /// second tap sends nothing.
   Future<StartOutcome> retryWhereItRan(DiscoveryJob job) async {
-    if (!isKeepCopy(job)) return const StartOutcome.ignored();
+    if (!inCopies(job)) return const StartOutcome.ignored();
     final key = _startKey(
       job.recommendation,
       job.scope == kScopeSong ? null : job.scope,
+      job.plugin,
     );
     if (_disposed || _starting.contains(key)) {
       return const StartOutcome.ignored();
@@ -749,7 +885,8 @@ class DiscoveryJobsController extends ChangeNotifier
   Future<List<PluginLink>> links(Map<String, dynamic> rec) => api.links(rec);
 
   /// A job the server answered for (a start, a cancel): first in the list,
-  /// and onto every row under its key.
+  /// and onto every row under its key (a copy only: a row marks nothing
+  /// else).
   void _note(DiscoveryJob job) {
     jobs = List.unmodifiable([job, ...jobs.where((j) => j.id != job.id)]);
     if (isDiscoverCopy(job)) _rows = jobBadges(_rows, jobs: [job]);
@@ -834,13 +971,20 @@ class DiscoveryJobsController extends ChangeNotifier
     if (done.any(isDiscoverCopy) || (unlisted && !lookingUp)) {
       unawaited(refreshLookups());
     }
+    final unlistedFound = [
+      for (final id in _pageLive.keys)
+        if (!listed.contains(id)) id,
+    ];
+    if (unlistedFound.isNotEmpty && !_askingUnlisted) {
+      unawaited(_askUnlisted(unlistedFound));
+    }
   }
 
   /// Jobs seen live and now finished: "Just finished", and the toasts — once
-  /// each.
+  /// each, for what Copies carries ([inCopies]).
   void _news(List<DiscoveryJob> done) {
     for (final job in done) {
-      if (!isKeepCopy(job)) continue;
+      if (!inCopies(job)) continue;
       if (!_told.add(job.id)) continue;
       _finished
         ..removeWhere((j) => j.id == job.id)
@@ -852,9 +996,15 @@ class DiscoveryJobsController extends ChangeNotifier
   final Set<int> _told = {};
 
   /// [job] as last heard of: the list's copy (its start's answer, a poll's),
-  /// else [job] itself.
+  /// else a lookup's (one the list does not carry, followed while live, and
+  /// as it finished), else [job] itself.
   DiscoveryJob latest(DiscoveryJob job) {
     for (final j in jobs) {
+      if (j.id == job.id) return j;
+    }
+    final followed = _pageLive[job.id];
+    if (followed != null) return followed;
+    for (final j in _finished) {
       if (j.id == job.id) return j;
     }
     return job;
@@ -863,12 +1013,14 @@ class DiscoveryJobsController extends ChangeNotifier
   /// Whether the caller is to tell [job]'s ending now: it has ended, and
   /// nothing told it yet — a copy of what is already here ends as it
   /// starts, before any poll saw it live. Asked once, it is told: the poll
-  /// never tells it again.
+  /// never tells it again. Only what Copies carries ([inCopies]).
   bool claimEnding(DiscoveryJob job) =>
-      isKeepCopy(job) && !isLive(job) && _told.add(job.id);
+      inCopies(job) && !isLive(job) && _told.add(job.id);
 
-  /// Any of the phone's copies known to be queued or running: the list's,
-  /// a row's (the rows hold only copies), or one a browse page found.
+  /// Anything Copies carries known to be queued or running: the list's
+  /// ([inCopies]: a YouTube add too), a row's (the rows hold only copies),
+  /// or one a lookup found (a browse page's, a reopened lead's YouTube
+  /// add).
   bool get anyLive =>
       _copyJobs.any(isLive) ||
       _rows.any((r) => r.jobs.values.any(isLive)) ||
@@ -916,10 +1068,11 @@ class DiscoveryJobsController extends ChangeNotifier
   }
 
   /// A connected server's browse page is in front with a mark of its own
-  /// moving (BrowseCopyMarks): the job list keeps Discover's 4 s beat, so
-  /// an ending is news (its toast) while the user browses. Call the
-  /// returned function when the page goes or its marks settle (more than
-  /// once is harmless).
+  /// moving (BrowseCopyMarks), or More like this is open (its Copies door
+  /// and network rows): the job list keeps Discover's 4 s beat, so an
+  /// ending is news (its toast) while the user browses. Call the returned
+  /// function when the page goes or its marks settle (more than once is
+  /// harmless).
   VoidCallback holdPage() {
     _pageHolds += 1;
     _schedule();

@@ -6513,7 +6513,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => 'Pokaż';
 
   @override
   String get discoverKeepFolder => 'Folder';
@@ -6717,4 +6717,350 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get discoverLeadPinned => 'Zostaje przy tym utworze';
+
+  @override
+  String discoverLeadMatchTo(int percent, String seed) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '$percentString% dopasowania do „$seed”';
+  }
+
+  @override
+  String discoverLeadMatch(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '$percentString% dopasowania';
+  }
+
+  @override
+  String get discoverLeadCopyTitle => 'Kopiuj tytuł';
+
+  @override
+  String get discoverLeadPreviewLabel => '30-sekundowy fragment';
+
+  @override
+  String get discoverLeadPreviewTap => 'Dotknij, aby posłuchać 30 sekund';
+
+  @override
+  String get discoverLeadPreviewLookingUp => 'Wyszukiwanie…';
+
+  @override
+  String get discoverLeadPreviewNone => 'Nie znaleziono fragmentu';
+
+  @override
+  String get discoverLeadPreviewBusy => 'Zajęte — spróbuj ponownie za minutę';
+
+  @override
+  String get discoverLeadPreviewUnavailable => 'Chwilowo niedostępne';
+
+  @override
+  String discoverLeadPreviewProgress(String position, String length) {
+    return '$position z $length';
+  }
+
+  @override
+  String discoverLeadPreviewPlayA11y(String provider) {
+    return 'Odtwórz fragment z $provider';
+  }
+
+  @override
+  String discoverLeadPreviewStopA11y(String provider) {
+    return 'Zatrzymaj fragment z $provider';
+  }
+
+  @override
+  String discoverLeadPreviewOpenIn(String service) {
+    return 'Otwórz w $service';
+  }
+
+  @override
+  String discoverLeadMatchPill(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return 'dopasowanie $percentString%';
+  }
+
+  @override
+  String discoverLeadLooseMatchPill(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return 'słabe $percentString%';
+  }
+
+  @override
+  String discoverLeadYtIdle(String query) {
+    return 'Wyszuka film najbardziej zbliżony do „$query” · na razie nic nie jest dodawane';
+  }
+
+  @override
+  String get discoverLeadYtSearch => 'Szukaj w YouTube';
+
+  @override
+  String get discoverLeadYtSearchingTag => 'Szukanie';
+
+  @override
+  String discoverLeadYtAsking(String query) {
+    return 'Wyszukiwanie „$query” w YouTube…';
+  }
+
+  @override
+  String get discoverLeadYtStopWaiting => 'Przestań czekać';
+
+  @override
+  String get discoverLeadYtSlowHint =>
+      'YouTube może potrzebować minuty. Możesz to zamknąć — serwer szuka dalej i pamięta odpowiedź przez kilka godzin.';
+
+  @override
+  String discoverLeadYtFound(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Znaleziono $countString filmu · wybierz jeden',
+      many: 'Znaleziono $countString filmów · wybierz jeden',
+      few: 'Znaleziono $countString filmy · wybierz jeden',
+      one: 'Znaleziono $countString film',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverLeadYtMore(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'jeszcze $countString',
+      many: 'jeszcze $countString',
+      few: 'jeszcze $countString',
+      one: 'jeszcze $countString',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverLeadYtFewer => 'Mniej';
+
+  @override
+  String get discoverLeadYtUploadsA11y => 'Filmy z YouTube';
+
+  @override
+  String get discoverLeadYtOpenOnYoutube => 'Otwórz w YouTube';
+
+  @override
+  String get discoverLeadYtAddThis => 'Dodaj ten';
+
+  @override
+  String get discoverLeadYtOnlyPick => 'Dodany zostanie tylko wybrany film.';
+
+  @override
+  String discoverLeadYtNothing(String query) {
+    return 'YouTube nie ma nic zbliżonego do „$query”';
+  }
+
+  @override
+  String get discoverLeadYtSearchAgain => 'Szukaj ponownie';
+
+  @override
+  String get discoverLeadYtBusy =>
+      'YouTube jest zajęty na tym serwerze — spróbuj ponownie za minutę.';
+
+  @override
+  String get discoverLeadYtCouldnt => 'Nie udało się teraz przeszukać YouTube.';
+
+  @override
+  String get discoverLeadYtTimedOut =>
+      'YouTube nie odpowiedział na czas. Serwer może jeszcze skończyć — wyszukaj ponownie za minutę.';
+
+  @override
+  String get discoverLeadYtSomeoneElse =>
+      'Ktoś inny na tym serwerze właśnie to dodaje — spróbuj ponownie za chwilę.';
+
+  @override
+  String discoverLeadYtQueueFull(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Masz już $countString w kolejce lub w toku — poczekaj, aż część się skończy.',
+      many:
+          'Masz już $countString w kolejce lub w toku — poczekaj, aż część się skończy.',
+      few:
+          'Masz już $countString w kolejce lub w toku — poczekaj, aż część się skończy.',
+      one:
+          'Masz już $countString w kolejce lub w toku — poczekaj, aż się skończy.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverLeadYtQueueFullNoCount =>
+      'Za dużo oczekujących — poczekaj, aż część się skończy.';
+
+  @override
+  String get discoverLeadYtStartFailed =>
+      'Nie udało się tego uruchomić. Spróbuj ponownie.';
+
+  @override
+  String get discoverLeadYtAlreadyAdding =>
+      'Inny film z tym utworem jest już dodawany.';
+
+  @override
+  String get discoverLeadAddOff =>
+      'Dodawanie utworów zostało właśnie wyłączone dla twojego konta.';
+
+  @override
+  String get discoverLeadOptionOff =>
+      'Ta opcja została właśnie wyłączona na tym serwerze.';
+
+  @override
+  String get discoverJobYtChecking => 'Sprawdzanie filmu';
+
+  @override
+  String get discoverJobYtSearching => 'Wyszukiwanie w YouTube';
+
+  @override
+  String get discoverJobYtFetching => 'Wczytywanie z YouTube';
+
+  @override
+  String discoverJobYtFetchingPercent(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return 'Wczytywanie z YouTube · $percentString%';
+  }
+
+  @override
+  String get discoverJobYtTagging => 'Zapisywanie tagów';
+
+  @override
+  String get discoverJobYtFiling => 'Umieszczanie w twojej bibliotece';
+
+  @override
+  String discoverJobYtFromChannel(String channel) {
+    return 'z kanału $channel';
+  }
+
+  @override
+  String get discoverJobAddFailed => 'Nie udało się dodać';
+
+  @override
+  String get discoverJobYtCancelled => 'Zatrzymano · nic nie dodano';
+
+  @override
+  String get discoverJobYtChooseAnother => 'Wybierz inny';
+
+  @override
+  String get discoverJobYtErrBroken =>
+      'YouTube nie działa teraz na tym serwerze.';
+
+  @override
+  String discoverJobYtErrNotClose(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return 'Nic na YouTube nie było wystarczająco zbliżone (najlepsze dopasowanie $percentString%).';
+  }
+
+  @override
+  String discoverJobYtErrNoResults(String query) {
+    return 'YouTube nic nie znalazł dla „$query”.';
+  }
+
+  @override
+  String get discoverJobYtErrLive =>
+      'Ten film to transmisja na żywo — wybierz inny.';
+
+  @override
+  String discoverJobYtErrTooBig(int size) {
+    final intl.NumberFormat sizeNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String sizeString = sizeNumberFormat.format(size);
+
+    return 'Ten film jest większy, niż pozwala ten serwer ($sizeString MB).';
+  }
+
+  @override
+  String get discoverJobYtErrTooBigNoSize =>
+      'Ten film jest większy, niż pozwala ten serwer.';
+
+  @override
+  String get discoverJobYtErrUnreadable =>
+      'Nie udało się odczytać tego filmu — wybierz inny.';
+
+  @override
+  String get discoverJobYtErrTooLong =>
+      'Trwało dłużej niż 30 minut i zostało przerwane.';
+
+  @override
+  String get discoverJobYtErrRefused =>
+      'YouTube odmówił wydania pliku — spróbuj później.';
+
+  @override
+  String get discoverJobYtErrNoTitle =>
+      'Ten utwór nie ma wykonawcy ani tytułu do wyszukania.';
+
+  @override
+  String get discoverJobYtErrNoLibrary =>
+      'Nie ma biblioteki, do której możesz dodawać pliki.';
+
+  @override
+  String get discoverJobYtErrLayout =>
+      'Twój układ folderów nie pozwala umieścić tego utworu.';
+
+  @override
+  String get discoverJobYtErrAccountGone =>
+      'Konto, które o to poprosiło, już nie istnieje.';
+
+  @override
+  String get discoverJobYtErrOther => 'Coś poszło nie tak.';
+
+  @override
+  String discoverToastAddingYt(String title) {
+    return 'Dodawanie „$title” z YouTube';
+  }
+
+  @override
+  String discoverToastAddFailedYt(String reason) {
+    return 'Nie udało się dodać z YouTube: $reason';
+  }
+
+  @override
+  String get discoverCopiesDestChangedYt =>
+      'Nie udało się rozpocząć: miejsce zapisu plików się zmieniło — otwórz utwór i dodaj go ponownie';
+
+  @override
+  String get discoverLeadYtChangeHint =>
+      'Zmień miejsce zapisu dodanych utworów';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved =>
+      'Nie udało się rozpocząć: miejsce zapisu plików się zmieniło';
+
+  @override
+  String get discoverCopiesAddThere => 'Dodaj tam';
 }

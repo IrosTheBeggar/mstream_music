@@ -2075,13 +2075,15 @@ Map<String, DiscoveryJob> jobsByPlugin(Iterable<DiscoveryJob>? jobs,
 // and the Copies strip counts it ("1 failed" = the failed or stopped ones
 // left). The webapp's trayRows keeps only state 'failed'.
 
-/// A copy the phone carries — its Copies list, its markers, its Retry: Keep
-/// a copy's own plug-in, with a scope Discover offers, started as Discover
-/// starts it (no landing, no choice). `GET /plugin-jobs` answers every
-/// plug-in's jobs; the others — a YouTube download, the webapp's folder copy
-/// with the landing chosen there — stay the webapp's: the phone could not
-/// draw them right, and its Retry (`{recommendation, scope}` to
-/// federation-copy) would not start them again as they were started.
+/// A copy Discover's own rows carry — their markers, their sheets' job
+/// lines: Keep a copy's own plug-in, with a scope Discover offers, started
+/// as Discover starts it (no landing, no choice). `GET /plugin-jobs`
+/// answers every plug-in's jobs; the others never mark a Discover row. A
+/// connected server's folder copy is the Copies list's ([isKeepCopy]), and
+/// so is a YouTube add on a build that shows YouTube ([isYoutubeAdd]); the
+/// webapp's copy with a landing chosen there stays the webapp's: the phone
+/// could not draw it right, and its Retry (`{recommendation, scope}` to
+/// federation-copy) would not start it again as it was started.
 bool isDiscoverCopy(DiscoveryJob? job) {
   if (job == null || job.plugin != kCopyPlugin) return false;
   if (!kDiscoverJobScopes.contains(jobScope(job))) return false;
@@ -2105,6 +2107,33 @@ bool isKeepCopy(DiscoveryJob? job) {
   if (p == null) return true;
   if (p['choice'] != null) return false;
   return p['landing'] == null || scope == kScopeFolder;
+}
+
+/// A YouTube add the Copies list carries beside the copies: the youtube
+/// plug-in's song job with no landing — the network-lead sheet's "Add this
+/// one" (its pick in `params.choice`), or one the webapp started, with a
+/// pick or searching for itself. Retry and Add again send it to the same
+/// plug-in with its own pick. Only on a build that shows YouTube
+/// (DiscoveryJobsController.inCopies); it never marks a Discover row
+/// ([isDiscoverCopy]).
+bool isYoutubeAdd(DiscoveryJob? job) =>
+    job != null &&
+    job.plugin == kYoutubePlugin &&
+    jobScope(job) == kScopeSong &&
+    job.params?['landing'] == null;
+
+/// [rec] came from the P2P network: `source: 'p2p'`, or no source with a
+/// network peer's `endpointId` (objects/discovery.dart
+/// DiscoveryLead.isNetwork's rule, on a job's recommendation). Only such a
+/// job's song can be shown again as a network lead (Copies' Choose another,
+/// the destination toast's View): a federation or library row is not "From
+/// the network".
+bool isNetworkRecommendation(Map rec) {
+  final source = rec['source'];
+  if (source is String && source.trim().isNotEmpty) return source.trim() == 'p2p';
+  final peer = rec['peer'];
+  final endpoint = peer is Map ? peer['endpointId'] : null;
+  return endpoint is String && endpoint.trim().isNotEmpty;
 }
 
 int _trayRank(DiscoveryJob job) => job.state == JobState.running

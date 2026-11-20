@@ -1,18 +1,22 @@
 /// Models for the server's discovery plug-in API (mStream
 /// `src/api/discovery-plugins.js`, `discovery-plugin-jobs.js`,
 /// `discovery-collection.js`; docs/openapi.yaml): the plug-in listing, a
-/// plug-in job, the batch lookup's answer, the collection destination and
-/// the links plug-in's answer.
+/// plug-in job, the batch lookup's answer, the collection destination, the
+/// links plug-in's answer, a preview plug-in's answer and the YouTube
+/// lookup's.
 ///
 /// Every route is the user's OWN server's (the parent of a connected
 /// server's virtual Server), never a peer's: the plug-ins act on a
 /// recommendation the caller already holds — a Discover row, forwarded
-/// unchanged.
+/// unchanged (a network row repaired first: objects/discovery.dart
+/// sendableRecommendation).
 ///
 /// Every parser is defensive about wire shapes, as discovery.dart's are: a
 /// malformed entry is dropped, a malformed field is read as absent, nothing
 /// throws.
 library;
+
+import '../util/youtube_add_words.dart' show isYouTubeUrl;
 
 /// The copy plug-in: a connected server's song, album or artist into a
 /// library on the user's own server.
@@ -20,6 +24,31 @@ const String kCopyPlugin = 'federation-copy';
 
 /// The "Open elsewhere" plug-in.
 const String kLinksPlugin = 'links';
+
+/// The YouTube add (src/discovery-plugins/plugins/youtube.js): a lookup
+/// that lists the uploads it found, and a job that fetches the one picked
+/// (or its own best) into the user's collection.
+const String kYoutubePlugin = 'youtube';
+
+/// The 30-second preview plug-ins (deezer.js, itunes.js).
+const String kDeezerPlugin = 'deezer';
+const String kItunesPlugin = 'itunes';
+
+/// A plug-in's capabilities (src/discovery-plugins/registry.js
+/// CAPABILITIES) the phone reads: links (Open elsewhere), preview (a clip),
+/// acquire (a job that brings a file in) and lookup (what that job would
+/// fetch, asked before it runs — the jobs route takes a `choice` only from
+/// a plug-in with one).
+const String kCapLinks = 'links';
+const String kCapPreview = 'preview';
+const String kCapAcquire = 'acquire';
+const String kCapLookup = 'lookup';
+
+/// The shared match scorer's bar (src/discovery-plugins/match.js
+/// MIN_SCORE): a YouTube upload under it is a loose match, and a job that
+/// searched for itself fails rather than take it. What a lookup that does
+/// not say its own `minScore` is read against.
+const double kYoutubeMinScore = 0.62;
 
 /// A job's scope (the server's JOB_SCOPES). A song job carries no scope in
 /// its params. Discover never offers [kScopeFolder].
@@ -143,6 +172,41 @@ class PluginListing {
 
   DiscoveryPlugin? get copy => plugin(kCopyPlugin);
   DiscoveryPlugin? get links => plugin(kLinksPlugin);
+
+  /// The YouTube add, when it can run here as the phone uses it: listed,
+  /// available, with both `acquire` (the job) and `lookup` (the search the
+  /// pick comes from — the jobs route takes a `choice` only from a plug-in
+  /// with a lookup), on the song scope. Null otherwise.
+  DiscoveryPlugin? get youtube {
+    final p = plugin(kYoutubePlugin);
+    return p != null &&
+            p.hasCapability(kCapAcquire) &&
+            p.hasCapability(kCapLookup) &&
+            p.hasScope(kScopeSong)
+        ? p
+        : null;
+  }
+
+  /// The preview plug-ins that can run here, one row each: deezer, then
+  /// itunes, then any other in the listing's order (a plug-in named twice
+  /// counts once).
+  List<DiscoveryPlugin> get previews {
+    final seen = <String>{};
+    final all = [
+      for (final p in plugins)
+        if (p.available && p.hasCapability(kCapPreview) && seen.add(p.name)) p,
+    ];
+    int rank(DiscoveryPlugin p) => switch (p.name) {
+          kDeezerPlugin => 0,
+          kItunesPlugin => 1,
+          _ => 2,
+        };
+    return [
+      for (var r = 0; r < 3; r++)
+        for (final p in all)
+          if (rank(p) == r) p,
+    ];
+  }
 }
 
 /// A job's state on the wire. Anything else parses to null (and reads as no
@@ -256,6 +320,17 @@ class DiscoveryJob {
     final l = params?['landing'];
     return l is Map ? _map(l) : null;
   }
+
+  /// A YouTube add's pick as it was started (`params.choice`, `{url}`: the
+  /// lookup candidate the user chose); null for one that searched for
+  /// itself. What Retry and Add again send again.
+  Map<String, dynamic>? get choice {
+    final c = params?['choice'];
+    return c is Map ? _map(c) : null;
+  }
+
+  /// The picked upload's link ([choice]'s `url`), or null.
+  String? get choiceUrl => _str(choice?['url'], max: 2048);
 
   bool get live => state?.live == true;
 
@@ -380,7 +455,8 @@ class LeftOutAlbum {
   }
 }
 
-/// A typed read of a job's `result` (federation-copy's shapes):
+/// A typed read of a job's `result` (federation-copy's shapes, and the
+/// youtube plug-in's):
 ///
 ///   song     { copied: { vpath, filepath, trackId, bytes, … } }
 ///            | { skipped: 'owned', existing: { filepath } }
@@ -388,6 +464,9 @@ class LeftOutAlbum {
 ///   many     { scope, songs: { total, copied[], skipped[], failed[] },
 ///              counts: { total, copied, skipped, failed }, albums[],
 ///              skippedAlbums[], bytes, stopped, peer, truncated? }
+///   youtube  { downloaded: { vpath, filepath, trackId, bytes, format, … },
+///              match: { score, url, title, channel, durationSec, chosen } }
+///            | the song's skipped shapes
 ///
 /// The per-song lists stop at 500 entries (federation-copy's
 /// RESULT_LIST_CAP): numbers come from `counts`, never list lengths.
@@ -454,6 +533,25 @@ class JobResultView {
   String? get downloadedFilepath {
     final d = _r['downloaded'];
     return d is Map ? _str(d['filepath'], max: 4096) : null;
+  }
+
+  /// The landed file's size in bytes.
+  int? get downloadedBytes {
+    final d = _r['downloaded'];
+    final b = d is Map ? _int(d['bytes']) : null;
+    return b != null && b >= 0 ? b : null;
+  }
+
+  /// The landed file's container as the server names it ("mp3", "opus").
+  String? get downloadedFormat {
+    final d = _r['downloaded'];
+    return d is Map ? _str(d['format'], max: 16) : null;
+  }
+
+  /// The channel a YouTube add's upload came from (`match.channel`).
+  String? get matchChannel {
+    final m = _r['match'];
+    return m is Map ? _str(m['channel']) : null;
   }
 
   /// quota · busy · peer · refused · cancelled · null
@@ -759,6 +857,191 @@ List<PluginLink> pluginLinksOf(dynamic resolveAnswer) {
   ];
 }
 
+/// A preview plug-in's clip for a recommendation: its resolve's
+/// `result.preview` (deezer.js choose, itunes.js choose) — a 30-second
+/// stream on the catalogue's own CDN, what it matched, the attribution the
+/// catalogue asks to be shown beside it ("Preview from Deezer", "Provided
+/// courtesy of iTunes", shown as sent) and a link to its store page.
+class PluginPreview {
+  /// The plug-in that found it ("deezer", "itunes").
+  final String provider;
+
+  /// The clip. http(s) only: nothing else is played.
+  final Uri url;
+
+  /// The clip's length as the catalogue states it; 30 when it does not say.
+  final int seconds;
+
+  /// What the catalogue matched: shown beside the clip, so the user can
+  /// tell when it found another recording.
+  final String? title;
+  final String? artist;
+  final String? album;
+  final String? attribution;
+
+  /// The store page (http(s) only).
+  final Uri? link;
+
+  /// The release's cover (http(s) only): Deezer's 250 px, iTunes' 100 px.
+  final Uri? artwork;
+
+  /// How closely it matched the recommendation, 0..1 (1 for an ISRC hit);
+  /// null when the answer does not say.
+  final double? match;
+
+  const PluginPreview({
+    required this.provider,
+    required this.url,
+    this.seconds = 30,
+    this.title,
+    this.artist,
+    this.album,
+    this.attribution,
+    this.link,
+    this.artwork,
+    this.match,
+  });
+
+  /// A resolve's whole answer (`{plugin, …, result: {preview}}`) read into
+  /// its clip: null when the plug-in found none (`preview: null`), or when
+  /// what it sent is no playable clip (no http(s) url). The provider is the
+  /// preview's own name, else the answer's plug-in.
+  static PluginPreview? ofAnswer(dynamic answer) {
+    if (answer is! Map) return null;
+    final result = answer['result'];
+    final p = result is Map ? result['preview'] : null;
+    if (p is! Map) return null;
+    final provider = _str(p['provider'], max: 64) ?? _str(answer['plugin'], max: 64);
+    final url = _web(p['url']);
+    if (provider == null || url == null) return null;
+    final seconds = _int(p['seconds']);
+    final match = p['match'];
+    return PluginPreview(
+      provider: provider,
+      url: url,
+      seconds: seconds != null && seconds > 0 ? seconds : 30,
+      title: _str(p['title']),
+      artist: _str(p['artist']),
+      album: _str(p['album']),
+      attribution: _str(p['attribution'], max: 256),
+      link: _web(p['link']),
+      artwork: _web(p['artwork']),
+      match: match is num && match.isFinite
+          ? match.toDouble().clamp(0.0, 1.0)
+          : null,
+    );
+  }
+}
+
+/// One upload the YouTube lookup found (youtube.js lookupCandidates), best
+/// first: what "Add this one" would fetch.
+class YoutubeCandidate {
+  final String? id;
+
+  /// The upload's page — always a link the jobs route takes as a `choice`
+  /// (isYouTubeUrl); a candidate with any other link is dropped.
+  final String url;
+
+  /// The upload's title as YouTube shows it (raw: lyric-video noise and
+  /// all); '' when it has none.
+  final String title;
+
+  /// The channel, and the length in whole seconds; null when the search's
+  /// thin entries did not carry them (the tail past the two the server
+  /// confirms).
+  final String? channel;
+  final int? durationSec;
+  final Uri? thumbnail;
+
+  /// From an auto-generated "Artist - Topic" channel: YouTube's own
+  /// release audio.
+  final bool topic;
+
+  /// The match scorer's score against the recommendation, 0..1.
+  final double score;
+
+  const YoutubeCandidate({
+    this.id,
+    required this.url,
+    this.title = '',
+    this.channel,
+    this.durationSec,
+    this.thumbnail,
+    this.topic = false,
+    this.score = 0,
+  });
+
+  static YoutubeCandidate? fromServerMap(dynamic m) {
+    if (m is! Map) return null;
+    final url = _str(m['url'], max: 2048);
+    if (url == null || !isYouTubeUrl(url)) return null;
+    final title = m['title'];
+    // Any finite number passes through the server (lookupCandidates), so a
+    // fractional length is rounded.
+    final d = m['durationSec'];
+    final seconds = d is num && d.isFinite ? d.round() : null;
+    final score = m['score'];
+    return YoutubeCandidate(
+      id: _str(m['id'], max: 64),
+      url: url,
+      title: title is String && title.length <= 1024 ? title : '',
+      channel: _str(m['channel']),
+      durationSec: seconds != null && seconds > 0 ? seconds : null,
+      thumbnail: _web(m['thumbnail']),
+      topic: m['topic'] == true,
+      score: score is num && score.isFinite
+          ? score.toDouble().clamp(0.0, 1.0)
+          : 0,
+    );
+  }
+
+  /// Under the bar the lookup was scored against: a loose match, shown as
+  /// one (the user may still pick it).
+  bool loose(double minScore) => score < minScore;
+}
+
+/// The YouTube lookup's answer (youtube.js resolve: `result.lookup`): what
+/// was searched for, the bar, the uploads found best first — or the song
+/// the library already has, answered before YouTube is asked.
+class YoutubeSearch {
+  /// The phrase searched ("Artist Title"); '' when the answer names none.
+  final String query;
+  final double minScore;
+  final List<YoutubeCandidate> candidates;
+
+  /// The library file that already is this song (`owned.filepath`,
+  /// library first), or null.
+  final String? ownedFilepath;
+
+  const YoutubeSearch({
+    this.query = '',
+    this.minScore = kYoutubeMinScore,
+    this.candidates = const [],
+    this.ownedFilepath,
+  });
+
+  /// A resolve's whole answer read into its lookup. A missing or malformed
+  /// lookup reads as an empty one (nothing found).
+  static YoutubeSearch ofAnswer(dynamic answer) {
+    final result = answer is Map ? answer['result'] : null;
+    final l = result is Map ? result['lookup'] : null;
+    if (l is! Map) return const YoutubeSearch();
+    final min = l['minScore'];
+    final owned = l['owned'];
+    return YoutubeSearch(
+      query: _str(l['query'], max: 1100) ?? '',
+      minScore: min is num && min.isFinite && min > 0 && min <= 1
+          ? min.toDouble()
+          : kYoutubeMinScore,
+      candidates: _listOf(l['candidates'], YoutubeCandidate.fromServerMap),
+      ownedFilepath: owned is Map ? _str(owned['filepath'], max: 4096) : null,
+    );
+  }
+
+  /// The library already has the song: nothing to search for.
+  bool get owned => ownedFilepath != null;
+}
+
 // ─── Wire sanitisers ─────────────────────────────────────────────────────
 
 String? _str(dynamic v, {int max = 512}) =>
@@ -769,6 +1052,16 @@ int? _int(dynamic v) {
   if (v is num) return v.isFinite ? v.round() : null;
   if (v is String) return int.tryParse(v.trim());
   return null;
+}
+
+/// An http(s) link as sent, or null: only a web address is played, shown or
+/// opened.
+Uri? _web(dynamic v) {
+  final s = _str(v, max: 4096);
+  final u = s == null ? null : Uri.tryParse(s.trim());
+  return u != null && (u.scheme == 'https' || u.scheme == 'http') && u.host.isNotEmpty
+      ? u
+      : null;
 }
 
 List<String> _strings(dynamic v) =>

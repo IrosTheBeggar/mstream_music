@@ -2,10 +2,14 @@
 // wire; always the user's OWN server (a connected server's virtual Server
 // resolves to its parent); recommendations sent exactly as received; the
 // server's error words surfaced verbatim; a cancel that lost the race
-// (409) read as "already finished"; the batch lookup in chunks of 100.
+// (409) read as "already finished"; the batch lookup in chunks of 100; the
+// preview and YouTube resolves with their own bounds (a bound that ran out
+// says so), a YouTube start's pick, the single lookup.
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -357,6 +361,200 @@ void main() {
     handler = (_) async => json({'error': 'plug-in links is rate-limited right now — try again shortly'}, 429);
     await expectLater(api().links(row),
         throwsA(isA<DiscoveryPluginsException>().having((e) => e.message, 'message', 'plug-in links is rate-limited right now — try again shortly')));
+  });
+
+  group('the network-lead sheet: previews, the YouTube search, a pick, the single lookup', () {
+    /// A repaired network row (objects/discovery.dart sendableRecommendation).
+    final lead = Map<String, dynamic>.unmodifiable({
+      'artist': 'Static Bloom',
+      'title': 'Paper Satellites',
+      'album': 'Tidewater',
+      'year': 2011,
+      'isrc': 'USRC17607839',
+      'duration': 238.4,
+      'similarity': 0.88,
+      'exportId': 'x1',
+      'peer': {'endpointId': 'ep1', 'name': 'Vinyl Vault'},
+      'source': 'p2p',
+    });
+    const pick = {'url': 'https://www.youtube.com/watch?v=abc123'};
+
+    test('a preview resolve: the plug-in\'s path, the body exactly {recommendation}; its clip, or null for none', () async {
+      handler = (_) async => json({
+            'plugin': 'deezer',
+            'capabilities': ['preview'],
+            'key': 'text:x',
+            'recommendation': lead,
+            'result': {
+              'preview': {'provider': 'deezer', 'url': 'https://cdns-preview-d.dzcdn.net/stream/c-1.mp3', 'seconds': 30, 'attribution': 'Preview from Deezer', 'match': 1}
+            },
+          });
+      final p = await api().preview('deezer', lead);
+      expect([seen.single.method, seen.single.url.path], ['POST', '/api/v1/discovery/plugins/deezer/resolve']);
+      expect(jsonDecode(seen.single.body), {'recommendation': jsonDecode(jsonEncode(lead))});
+      expect([p!.provider, p.url.host, p.attribution, p.match], ['deezer', 'cdns-preview-d.dzcdn.net', 'Preview from Deezer', 1.0]);
+      handler = (_) async => json({'plugin': 'itunes', 'result': {'preview': null}});
+      expect(await api().preview('itunes', lead), isNull);
+      expect(seen.last.url.path, '/api/v1/discovery/plugins/itunes/resolve');
+      handler = (_) async => json({'error': 'plug-in deezer is rate-limited right now — try again shortly'}, 429);
+      await expectLater(api().preview('deezer', lead),
+          throwsA(isA<DiscoveryPluginsException>()
+              .having((e) => e.status, 'status', 429)
+              .having((e) => e.message, 'message', 'plug-in deezer is rate-limited right now — try again shortly')
+              .having((e) => e.timedOut, 'timedOut', false)));
+    });
+
+    test('the YouTube search: its path and body; the query, the candidates and the owned copy', () async {
+      handler = (_) async => json({
+            'plugin': 'youtube',
+            'capabilities': ['acquire', 'lookup'],
+            'key': 'text:x',
+            'recommendation': lead,
+            'result': {
+              'lookup': {
+                'query': 'Static Bloom Paper Satellites',
+                'minScore': 0.62,
+                'candidates': [
+                  {'id': 'abc123', 'url': 'https://www.youtube.com/watch?v=abc123', 'title': 'Paper Satellites', 'channel': 'Static Bloom - Topic', 'durationSec': 238, 'thumbnail': null, 'topic': true, 'score': 0.93}
+                ],
+                'owned': null,
+              }
+            },
+          });
+      final s = await api().searchYoutube(lead);
+      expect([seen.single.method, seen.single.url.path], ['POST', '/api/v1/discovery/plugins/youtube/resolve']);
+      expect(jsonDecode(seen.single.body), {'recommendation': jsonDecode(jsonEncode(lead))});
+      expect([s.query, s.minScore, s.candidates.single.url, s.owned], ['Static Bloom Paper Satellites', 0.62, 'https://www.youtube.com/watch?v=abc123', false]);
+      // Refused like a job, in the server's words.
+      for (final (status, words) in [
+        (403, 'Uploading Disabled'),
+        (404, 'unknown discovery plug-in'),
+        (429, 'plug-in youtube is rate-limited right now — try again shortly'),
+        (502, 'plug-in youtube could not resolve this recommendation'),
+      ]) {
+        handler = (_) async => json({'error': words}, status);
+        await expectLater(api().searchYoutube(lead),
+            throwsA(isA<DiscoveryPluginsException>().having((e) => e.status, 'status', status).having((e) => e.message, 'message', words)),
+            reason: '$status');
+      }
+      // An answer with no lookup in it is no answer.
+      handler = (_) async => json({'plugin': 'youtube', 'result': {'preview': null}});
+      await expectLater(api().searchYoutube(lead),
+          throwsA(isA<DiscoveryPluginsException>().having((e) => e.status, 'status', 0).having((e) => e.timedOut, 'timedOut', false)));
+    });
+
+    test('the YouTube search waits 120 s, not 15: still pending at 15 s and at 119 s, timed out at 120 s', () {
+      fakeAsync((async) {
+        Object? failed;
+        var answered = false;
+        final a = DiscoveryPluginsApi(home, client: MockClient((_) => Completer<http.Response>().future));
+        a.searchYoutube(lead).then<void>((_) => answered = true, onError: (Object e) => failed = e);
+        async.elapse(const Duration(seconds: 15));
+        expect([answered, failed], [false, null], reason: 'the client\'s usual bound does not apply');
+        async.elapse(const Duration(seconds: 104));
+        expect([answered, failed], [false, null], reason: '119 s');
+        async.elapse(const Duration(seconds: 1));
+        expect(failed, isA<DiscoveryPluginsException>().having((e) => e.status, 'status', 0).having((e) => e.timedOut, 'timedOut', true));
+        // A caller may bound it otherwise.
+        Object? soon;
+        a.searchYoutube(lead, timeout: const Duration(seconds: 5)).then<void>((_) {}, onError: (Object e) => soon = e);
+        async.elapse(const Duration(seconds: 5));
+        expect(soon, isA<DiscoveryPluginsException>().having((e) => e.timedOut, 'timedOut', true));
+      });
+    });
+
+    test('a preview waits 30 s (Deezer may ask its catalogue three times); the other calls keep 15 s', () {
+      fakeAsync((async) {
+        Object? preview;
+        Object? lookup;
+        final a = DiscoveryPluginsApi(home, client: MockClient((_) => Completer<http.Response>().future));
+        a.preview('deezer', lead).then<void>((_) {}, onError: (Object e) => preview = e);
+        a.lookupOne(lead).then<void>((_) {}, onError: (Object e) => lookup = e);
+        async.elapse(const Duration(seconds: 15));
+        expect(lookup, isA<DiscoveryPluginsException>().having((e) => e.timedOut, 'timedOut', true), reason: 'the lookup: 15 s');
+        expect(preview, isNull);
+        async.elapse(const Duration(seconds: 14));
+        expect(preview, isNull, reason: '29 s');
+        async.elapse(const Duration(seconds: 1));
+        expect(preview, isA<DiscoveryPluginsException>()
+            .having((e) => e.status, 'status', 0)
+            .having((e) => e.message, 'message', 'your server did not answer in time')
+            .having((e) => e.timedOut, 'timedOut', true));
+      });
+    });
+
+    test('a call that could not be sent is status 0 but not timed out', () async {
+      handler = (_) async => throw http.ClientException('Connection refused');
+      for (final call in <Future<Object?> Function()>[
+        () => api().preview('deezer', lead),
+        () => api().searchYoutube(lead),
+        () => api().startJob(lead, plugin: kYoutubePlugin, choice: pick),
+        () => api().lookupOne(lead),
+      ]) {
+        await expectLater(call(),
+            throwsA(isA<DiscoveryPluginsException>().having((e) => e.status, 'status', 0).having((e) => e.timedOut, 'timedOut', false)));
+      }
+    });
+
+    test("a YouTube start: its plug-in's path, the pick beside the row, no scope; the pick kept when a server from before the destination key is asked again", () async {
+      handler = (_) async => json({'job': {...jobWire(), 'plugin': 'youtube', 'params': {'choice': pick}}, 'created': true}, 202);
+      final r = await api().startJob(lead, plugin: kYoutubePlugin, choice: pick);
+      expect([seen.single.method, seen.single.url.path], ['POST', '/api/v1/discovery/plugins/youtube/jobs']);
+      expect(jsonDecode(seen.single.body), {'recommendation': jsonDecode(jsonEncode(lead)), 'choice': pick},
+          reason: 'a song job: no scope');
+      expect([r.created, r.job.plugin, r.job.choiceUrl], [true, 'youtube', 'https://www.youtube.com/watch?v=abc123']);
+      // With no pick, the plug-in searches for itself: no choice key at all.
+      await api().startJob(lead, plugin: kYoutubePlugin);
+      expect((jsonDecode(seen.last.body) as Map).keys, ['recommendation']);
+
+      seen.clear();
+      const shown = ShownPlace(CollectionDestination(vpath: 'music', layout: '{{ALBUMARTIST}}/{{ALBUM}}'));
+      handler = (req) async => (jsonDecode(req.body) as Map).containsKey('destination')
+          ? json({'error': '"destination" is not allowed'}, 400)
+          : json({'job': {...jobWire(), 'plugin': 'youtube'}, 'created': true}, 202);
+      await api().startJob(lead, plugin: kYoutubePlugin, choice: pick, destination: shown);
+      expect([for (final s in seen) jsonDecode(s.body)], [
+        {'recommendation': jsonDecode(jsonEncode(lead)), 'choice': pick, 'destination': shown.toJson()},
+        {'recommendation': jsonDecode(jsonEncode(lead)), 'choice': pick},
+      ]);
+    });
+
+    test("a refused YouTube start keeps the server's words: 403, 404, 409, 429", () async {
+      for (final (status, words) in [
+        (403, 'Uploading Disabled'),
+        (404, 'unknown discovery plug-in'),
+        (409, 'someone else on this server is already getting this — try again in a moment'),
+        (429, 'you have 20 jobs queued or running — wait for some to finish (the limit is 20)'),
+        (400, 'the chosen upload must be a YouTube link'),
+      ]) {
+        handler = (_) async => json({'error': words}, status);
+        await expectLater(
+            api().startJob(lead, plugin: kYoutubePlugin, choice: pick),
+            throwsA(isA<DiscoveryPluginsException>()
+                .having((e) => e.status, 'status', status)
+                .having((e) => e.message, 'message', words)
+                .having((e) => e.fromServer, 'fromServer', true)),
+            reason: '$status');
+      }
+    });
+
+    test('the single lookup: its path, the body exactly {recommendation}, the keys and the jobs', () async {
+      handler = (_) async => json({
+            'key': 'text:abc',
+            'keys': {'song': 'text:abc', 'album': 'album:def', 'artist': 'artist:ghi'},
+            'jobs': [
+              {...jobWire(id: 31, state: 'running'), 'plugin': 'youtube', 'key': 'text:abc', 'params': {'choice': pick}},
+              {...jobWire(id: 30, state: 'done'), 'key': 'text:abc'},
+            ],
+          });
+      final l = await api().lookupOne(lead);
+      expect([seen.single.method, seen.single.url.path], ['POST', '/api/v1/discovery/plugin-jobs/lookup']);
+      expect(jsonDecode(seen.single.body), {'recommendation': jsonDecode(jsonEncode(lead))});
+      expect([l.key, l.keys['album'], [for (final j in l.jobs) j.id], l.jobs.first.choiceUrl],
+          ['text:abc', 'album:def', [31, 30], 'https://www.youtube.com/watch?v=abc123']);
+      handler = (_) async => json({'error': '"recommendation.isrc" with value "US-RC1" fails to match the required pattern'}, 400);
+      await expectLater(api().lookupOne(lead), throwsA(isA<DiscoveryPluginsException>().having((e) => e.status, 'status', 400)));
+    });
   });
 
   test("by default the calls ride ApiManager's pooled client, as the taste call does", () async {

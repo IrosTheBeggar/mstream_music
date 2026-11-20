@@ -7164,7 +7164,7 @@ abstract class AppLocalizations {
   /// **'Listen'**
   String get discoverSheetListen;
 
-  /// Connected-server sheets: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone).
+  /// Connected-server sheets and the network-song sheet: small-caps label over the card that copies the song/album/artist from that server into a library on the user's OWN server (not onto the phone), or adds the song from YouTube into that library.
   ///
   /// In en, this message translates to:
   /// **'Keep a copy'**
@@ -10179,6 +10179,432 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} file: {files}} other{{count} files: {files}}}'**
   String discoverKeepFilesAria(int count, String files);
+
+  /// More like this, after the user previews, plays or adds a network song: the screen stops following what is playing and keeps showing songs like this one. Screen-reader label of the push-pin glyph before the seed line.
+  ///
+  /// In en, this message translates to:
+  /// **'Staying on this song'**
+  String get discoverLeadPinned;
+
+  /// Network-song sheet header, under 'From the network · <server>': how much this song sounds like the one More like this started from. {percent} is a whole number; {seed} is that song's title.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% match to “{seed}”'**
+  String discoverLeadMatchTo(int percent, String seed);
+
+  /// Network-song sheet header, when the song More like this started from has no title. {percent} is a whole number.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% match'**
+  String discoverLeadMatch(int percent);
+
+  /// Network-song sheet: row that copies 'Artist - Title' to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy title'**
+  String get discoverLeadCopyTitle;
+
+  /// Network-song sheet: small-caps label over the rows that play a 30-second clip of the song from Deezer or iTunes.
+  ///
+  /// In en, this message translates to:
+  /// **'30-second preview'**
+  String get discoverLeadPreviewLabel;
+
+  /// Network-song sheet, under 'Deezer' / 'iTunes' before the clip was asked for. Nothing is sent to Deezer or Apple until the user taps.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to hear 30 seconds'**
+  String get discoverLeadPreviewTap;
+
+  /// Network-song sheet, under 'Deezer' / 'iTunes' while the server looks for the clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up…'**
+  String get discoverLeadPreviewLookingUp;
+
+  /// Network-song sheet, under 'Deezer' / 'iTunes': that catalogue has no clip of this song.
+  ///
+  /// In en, this message translates to:
+  /// **'No preview found'**
+  String get discoverLeadPreviewNone;
+
+  /// Network-song sheet, under 'Deezer' / 'iTunes': the catalogue is rate-limiting the server. A tap tries again.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy — try again in a minute'**
+  String get discoverLeadPreviewBusy;
+
+  /// Network-song sheet, under 'Deezer' / 'iTunes': the clip could not be found or played just now. A tap tries again.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable right now'**
+  String get discoverLeadPreviewUnavailable;
+
+  /// Network-song sheet, while a clip plays: '0:12 of 0:30'. {position} and {length} are clock times (minutes:seconds).
+  ///
+  /// In en, this message translates to:
+  /// **'{position} of {length}'**
+  String discoverLeadPreviewProgress(String position, String length);
+
+  /// Screen reader: the play button of a 30-second clip. {provider} is 'Deezer' or 'iTunes' (a brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Play the {provider} preview'**
+  String discoverLeadPreviewPlayA11y(String provider);
+
+  /// Screen reader: the stop button of a playing 30-second clip. {provider} is 'Deezer' or 'iTunes' (a brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Stop the {provider} preview'**
+  String discoverLeadPreviewStopA11y(String provider);
+
+  /// Tooltip of the link beside a clip that opens the song's store page. {service} is 'Deezer' or 'Apple Music' (a brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Open in {service}'**
+  String discoverLeadPreviewOpenIn(String service);
+
+  /// Tag beside a clip or a YouTube upload: how closely it matches the song. A small tag: keep it short (about 12 characters fit at 360 dp). {percent} is a whole number.
+  ///
+  /// In en, this message translates to:
+  /// **'match {percent}%'**
+  String discoverLeadMatchPill(int percent);
+
+  /// Tag beside a YouTube upload that matches the song only loosely (it may be another version). A small tag: keep it short (about 12 characters fit at 360 dp). {percent} is a whole number.
+  ///
+  /// In en, this message translates to:
+  /// **'loose match {percent}%'**
+  String discoverLeadLooseMatchPill(int percent);
+
+  /// Network-song sheet, YouTube card before a search: what pressing Search YouTube does. {query} is the 'Artist Title' it searches for. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Finds the closest upload for “{query}” · nothing is added yet'**
+  String discoverLeadYtIdle(String query);
+
+  /// Network-song sheet, YouTube card: the button that asks the server to look for uploads of the song. Nothing is added yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Search YouTube'**
+  String get discoverLeadYtSearch;
+
+  /// Network-song sheet, YouTube card: tag beside the card's title while the search runs. A small tag: keep it short (about 12 characters fit at 360 dp).
+  ///
+  /// In en, this message translates to:
+  /// **'Searching'**
+  String get discoverLeadYtSearchingTag;
+
+  /// Network-song sheet, YouTube card while the search runs. {query} is the 'Artist Title' searched for.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking YouTube for “{query}”…'**
+  String discoverLeadYtAsking(String query);
+
+  /// Network-song sheet, YouTube card: button that stops waiting for the search (the server may finish it anyway).
+  ///
+  /// In en, this message translates to:
+  /// **'Stop waiting'**
+  String get discoverLeadYtStopWaiting;
+
+  /// Network-song sheet, YouTube card, shown once a search has run for 20 seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube can take a minute. You can close this — the server keeps searching and remembers the answer for a few hours.'**
+  String get discoverLeadYtSlowHint;
+
+  /// Network-song sheet, YouTube card: how many uploads of the song the search found. The list under it lets the user pick one.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} upload found} other{{count} uploads found · pick one}}'**
+  String discoverLeadYtFound(int count);
+
+  /// Network-song sheet, YouTube card: toggle that shows the other uploads found ('4 more').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} more}}'**
+  String discoverLeadYtMore(int count);
+
+  /// Network-song sheet, YouTube card: toggle that folds the list of uploads back to the picked one.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer'**
+  String get discoverLeadYtFewer;
+
+  /// Screen reader: the list of uploads the YouTube search found.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube uploads'**
+  String get discoverLeadYtUploadsA11y;
+
+  /// Tooltip of the link beside an upload that opens it on YouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on YouTube'**
+  String get discoverLeadYtOpenOnYoutube;
+
+  /// Network-song sheet, YouTube card: the button that adds the picked upload. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Add this one'**
+  String get discoverLeadYtAddThis;
+
+  /// Network-song sheet, YouTube card: footnote under 'Add this one'. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Only the upload you pick is added.'**
+  String get discoverLeadYtOnlyPick;
+
+  /// Network-song sheet, YouTube card: the search found no upload that could be this song. {query} is the 'Artist Title' searched for.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube has nothing close to “{query}”'**
+  String discoverLeadYtNothing(String query);
+
+  /// Network-song sheet, YouTube card: button that runs the search again.
+  ///
+  /// In en, this message translates to:
+  /// **'Search again'**
+  String get discoverLeadYtSearchAgain;
+
+  /// Network-song sheet, YouTube card: the server is running as many YouTube searches as it allows.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube is busy on this server — try again in a minute.'**
+  String get discoverLeadYtBusy;
+
+  /// Network-song sheet, YouTube card: the search failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search YouTube right now.'**
+  String get discoverLeadYtCouldnt;
+
+  /// Network-song sheet, YouTube card: the phone stopped waiting for the search; the server keeps the answer once it has it.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube didn\'t answer in time. The server may still finish — search again in a minute.'**
+  String get discoverLeadYtTimedOut;
+
+  /// Network-song sheet and Copies: the add was not started because another account on the same server is adding the same song. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Someone else on this server is adding this right now — try again in a moment.'**
+  String get discoverLeadYtSomeoneElse;
+
+  /// Network-song sheet and Copies: the add was not started because the account already has as many adds waiting or running as the server allows. {count} is how many.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{You have {count} waiting or running — let some finish first.}}'**
+  String discoverLeadYtQueueFull(int count);
+
+  /// Network-song sheet and Copies: the add was not started because the account already has as many adds waiting or running as the server allows (the server did not say how many).
+  ///
+  /// In en, this message translates to:
+  /// **'Too many waiting — let some finish first.'**
+  String get discoverLeadYtQueueFullNoCount;
+
+  /// Network-song sheet: the server refused to start the add for a reason it did not explain.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start this. Try again.'**
+  String get discoverLeadYtStartFailed;
+
+  /// Network-song sheet: the add pressed was not started because an add of the same song, with another upload, is already waiting or running. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Already adding another upload of this song.'**
+  String get discoverLeadYtAlreadyAdding;
+
+  /// Toast: the server refused the add because the account may no longer add files. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Adding songs was just turned off for your account.'**
+  String get discoverLeadAddOff;
+
+  /// Toast: the preview or YouTube option the user pressed was turned off on the server since the sheet opened; its row goes away.
+  ///
+  /// In en, this message translates to:
+  /// **'That option was just switched off on this server.'**
+  String get discoverLeadOptionOff;
+
+  /// A running YouTube add's step: the server reads the picked upload's details.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the upload'**
+  String get discoverJobYtChecking;
+
+  /// A running YouTube add's step: the server searches for the song (an add started without a pick).
+  ///
+  /// In en, this message translates to:
+  /// **'Searching YouTube'**
+  String get discoverJobYtSearching;
+
+  /// A running YouTube add's step: the server is fetching the audio. Do not use the word for saving onto this phone: the file goes to the user's server.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching from YouTube'**
+  String get discoverJobYtFetching;
+
+  /// A running YouTube add's step with its progress: 'Fetching from YouTube · 42%'. {percent} is a whole number. The file goes to the user's server, not this phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching from YouTube · {percent}%'**
+  String discoverJobYtFetchingPercent(int percent);
+
+  /// A running YouTube add's step: the server writes the song's tags into the file.
+  ///
+  /// In en, this message translates to:
+  /// **'Tagging'**
+  String get discoverJobYtTagging;
+
+  /// A running YouTube add's step: the server files the song in the user's library.
+  ///
+  /// In en, this message translates to:
+  /// **'Putting it in your library'**
+  String get discoverJobYtFiling;
+
+  /// A finished YouTube add's details line ('MP3 · 6.4 MB · from Static Bloom - Topic'). {channel} is the YouTube channel's name.
+  ///
+  /// In en, this message translates to:
+  /// **'from {channel}'**
+  String discoverJobYtFromChannel(String channel);
+
+  /// A YouTube add that failed: the first line of its row (the reason follows under it). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add'**
+  String get discoverJobAddFailed;
+
+  /// A YouTube add the user stopped before anything landed. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped · nothing was added'**
+  String get discoverJobYtCancelled;
+
+  /// A failed YouTube add: button that searches again so the user can pick another upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another'**
+  String get discoverJobYtChooseAnother;
+
+  /// Why a YouTube add failed: the server is missing a tool it needs (an admin can fix it).
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube isn\'t working on this server right now.'**
+  String get discoverJobYtErrBroken;
+
+  /// Why a YouTube add failed: no upload matched the song well enough. {percent} is the best match, a whole number.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on YouTube was close enough (best match {percent}%).'**
+  String discoverJobYtErrNotClose(int percent);
+
+  /// Why a YouTube add failed: the search found no uploads. {query} is the 'Artist Title' searched for.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube found nothing for “{query}”.'**
+  String discoverJobYtErrNoResults(String query);
+
+  /// Why a YouTube add failed: the picked upload is a live stream, which is never added.
+  ///
+  /// In en, this message translates to:
+  /// **'That upload is a live stream — pick another.'**
+  String get discoverJobYtErrLive;
+
+  /// Why a YouTube add failed: the file passed the server's size limit. {size} is that limit in megabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'That upload is bigger than this server allows ({size} MB).'**
+  String discoverJobYtErrTooBig(int size);
+
+  /// Why a YouTube add failed: the file passed the server's size limit (the server did not say which).
+  ///
+  /// In en, this message translates to:
+  /// **'That upload is bigger than this server allows.'**
+  String get discoverJobYtErrTooBigNoSize;
+
+  /// Why a YouTube add failed: YouTube no longer serves the picked upload (removed, private, region-locked…).
+  ///
+  /// In en, this message translates to:
+  /// **'That upload couldn\'t be read — pick another.'**
+  String get discoverJobYtErrUnreadable;
+
+  /// Why a YouTube add failed: the server stops an add after 30 minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'It took longer than 30 minutes and was stopped.'**
+  String get discoverJobYtErrTooLong;
+
+  /// Why a YouTube add failed: YouTube refused the server (rate limiting, a bot check).
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube wouldn\'t hand it over — try again later.'**
+  String get discoverJobYtErrRefused;
+
+  /// Why a YouTube add failed: the song carries no artist or title.
+  ///
+  /// In en, this message translates to:
+  /// **'This song has no artist or title to search for.'**
+  String get discoverJobYtErrNoTitle;
+
+  /// Why a YouTube add failed: no library on the user's server takes their files. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no library you can add files to.'**
+  String get discoverJobYtErrNoLibrary;
+
+  /// Why a YouTube add failed: the folder layout chosen for added songs makes no usable path for this song. Change (where added songs go) is the way out.
+  ///
+  /// In en, this message translates to:
+  /// **'Your folder layout can\'t place this song.'**
+  String get discoverJobYtErrLayout;
+
+  /// Why a YouTube add failed: the account that started it was deleted while it waited.
+  ///
+  /// In en, this message translates to:
+  /// **'The account that asked for this no longer exists.'**
+  String get discoverJobYtErrAccountGone;
+
+  /// Why a YouTube add failed, when the server's words are none the app knows (they show under Details).
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong.'**
+  String get discoverJobYtErrOther;
+
+  /// Toast once the sheet that started a YouTube add closes. {title} is the song's title. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Adding {title} from YouTube'**
+  String discoverToastAddingYt(String title);
+
+  /// Toast when a YouTube add the phone saw running fails. {reason} is one of the 'Why a YouTube add failed' sentences. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add from YouTube: {reason}'**
+  String discoverToastAddFailedYt(String reason);
+
+  /// Toast when Retry or Add again on a YouTube add in Copies was not started because where the account's added songs land changed since. The View action opens the song, which shows the new place. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start: where files land changed — open the song and add again'**
+  String get discoverCopiesDestChangedYt;
+
+  /// Screen reader: the Change link beside 'Files go to …' on the network-song sheet's YouTube card. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Change where added songs go'**
+  String get discoverLeadYtChangeHint;
+
+  /// Toast when Retry or Add again on a YouTube add in Copies was not started because where the account's added songs land changed since, for a song the phone has no sheet for (one added from the web app). Its action, 'Add there' (discoverCopiesAddThere), adds the song again to where files land now. Same opening as discoverCopiesDestChangedYt. 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start: where files land changed'**
+  String get discoverCopiesDestChangedYtMoved;
+
+  /// The action on the toast 'Couldn't start: where files land changed' (discoverCopiesDestChangedYtMoved): adds the YouTube song again, to where added songs land now (the new place). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加).
+  ///
+  /// In en, this message translates to:
+  /// **'Add there'**
+  String get discoverCopiesAddThere;
 }
 
 class _AppLocalizationsDelegate

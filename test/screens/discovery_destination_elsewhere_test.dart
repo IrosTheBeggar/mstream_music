@@ -2009,6 +2009,83 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a song the YouTube add fetches (the network-lead sheet\'s Change): '
+      'no genre, server or server folder to file under — empty, never a '
+      'slot, and said so; its folders only (the file is named after the '
+      'upload)',
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': '{{GENRE}}/{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+        };
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        const download = DestinationPreviewSong(
+          title: 'Paper Satellites',
+          artist: 'The Quiet Assembly',
+          album: 'Static Bloom',
+          year: 2011,
+          download: true,
+        );
+        await pumpPicker(tester, previewing: download);
+        expect(preview(tester), 'copies › The Quiet Assembly › Static Bloom');
+        expect(
+          find.text(
+            'Always empty for YouTube songs, so left out: {{GENRE}}, {{PEER}}',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-slots')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-missing')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'the same song as a copy: its genre the slot, the server named, its '
+      'file',
+      (tester) async {
+        const mine = {
+          'vpath': 'copies',
+          'base': '',
+          'layout': '{{GENRE}}/{{PEER}}/{{ALBUMARTIST}}/{{ALBUM}}',
+        };
+        h.fake.destination = {
+          ...h.fake.destination,
+          'destination': {...mine, 'source': 'user'},
+          'saved': mine,
+        };
+        await pumpPicker(
+          tester,
+          previewing: const DestinationPreviewSong(
+            title: 'Paper Satellites',
+            artist: 'The Quiet Assembly',
+            album: 'Static Bloom',
+            year: 2011,
+          ),
+        );
+        expect(
+          preview(tester),
+          'copies › ‹genre› › Stage Peer B › The Quiet Assembly › Static '
+          'Bloom › Paper Satellites',
+        );
+        expect(
+          find.byKey(const ValueKey('destination-preview-never')),
+          findsNothing,
+        );
+      },
+    );
+
     testWidgets('loading: still blocks, Save off; then the form in place', (
       tester,
     ) async {

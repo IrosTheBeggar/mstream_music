@@ -6003,7 +6003,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get discoverToastView => 'View';
+  String get discoverToastView => '查看';
 
   @override
   String get discoverKeepFolder => 'Folder';
@@ -6207,4 +6207,317 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get discoverLeadPinned => '已固定在这首歌';
+
+  @override
+  String discoverLeadMatchTo(int percent, String seed) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '与“$seed”的匹配度 $percentString%';
+  }
+
+  @override
+  String discoverLeadMatch(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '匹配度 $percentString%';
+  }
+
+  @override
+  String get discoverLeadCopyTitle => '复制标题';
+
+  @override
+  String get discoverLeadPreviewLabel => '30 秒试听';
+
+  @override
+  String get discoverLeadPreviewTap => '点击试听 30 秒';
+
+  @override
+  String get discoverLeadPreviewLookingUp => '正在查找…';
+
+  @override
+  String get discoverLeadPreviewNone => '未找到试听片段';
+
+  @override
+  String get discoverLeadPreviewBusy => '繁忙 — 请一分钟后重试';
+
+  @override
+  String get discoverLeadPreviewUnavailable => '暂时不可用';
+
+  @override
+  String discoverLeadPreviewProgress(String position, String length) {
+    return '$position / $length';
+  }
+
+  @override
+  String discoverLeadPreviewPlayA11y(String provider) {
+    return '播放 $provider 试听';
+  }
+
+  @override
+  String discoverLeadPreviewStopA11y(String provider) {
+    return '停止 $provider 试听';
+  }
+
+  @override
+  String discoverLeadPreviewOpenIn(String service) {
+    return '在 $service 中打开';
+  }
+
+  @override
+  String discoverLeadMatchPill(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '匹配 $percentString%';
+  }
+
+  @override
+  String discoverLeadLooseMatchPill(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '弱匹配 $percentString%';
+  }
+
+  @override
+  String discoverLeadYtIdle(String query) {
+    return '查找与“$query”最接近的视频 · 暂不添加任何内容';
+  }
+
+  @override
+  String get discoverLeadYtSearch => '在 YouTube 上搜索';
+
+  @override
+  String get discoverLeadYtSearchingTag => '搜索中';
+
+  @override
+  String discoverLeadYtAsking(String query) {
+    return '正在 YouTube 上搜索“$query”…';
+  }
+
+  @override
+  String get discoverLeadYtStopWaiting => '停止等待';
+
+  @override
+  String get discoverLeadYtSlowHint =>
+      'YouTube 可能需要一分钟。你可以先关闭此窗口 — 服务器会继续搜索，并把结果保留几个小时。';
+
+  @override
+  String discoverLeadYtFound(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '找到 $countString 个视频 · 请选择一个',
+      one: '找到 $countString 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverLeadYtMore(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '另外 $countString 个',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverLeadYtFewer => '收起';
+
+  @override
+  String get discoverLeadYtUploadsA11y => 'YouTube 视频';
+
+  @override
+  String get discoverLeadYtOpenOnYoutube => '在 YouTube 上打开';
+
+  @override
+  String get discoverLeadYtAddThis => '添加这个';
+
+  @override
+  String get discoverLeadYtOnlyPick => '只会添加你选择的视频。';
+
+  @override
+  String discoverLeadYtNothing(String query) {
+    return 'YouTube 上没有与“$query”接近的内容';
+  }
+
+  @override
+  String get discoverLeadYtSearchAgain => '重新搜索';
+
+  @override
+  String get discoverLeadYtBusy => '此服务器上的 YouTube 正忙 — 请一分钟后重试。';
+
+  @override
+  String get discoverLeadYtCouldnt => '暂时无法搜索 YouTube。';
+
+  @override
+  String get discoverLeadYtTimedOut => 'YouTube 未及时响应。服务器可能仍会完成 — 请一分钟后重新搜索。';
+
+  @override
+  String get discoverLeadYtSomeoneElse => '此服务器上的其他人正在添加这首歌 — 请稍后重试。';
+
+  @override
+  String discoverLeadYtQueueFull(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你已有 $countString 个添加任务在等待或进行中 — 请先等其中一些完成。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverLeadYtQueueFullNoCount => '等待中的添加任务太多 — 请先等其中一些完成。';
+
+  @override
+  String get discoverLeadYtStartFailed => '无法开始。请重试。';
+
+  @override
+  String get discoverLeadYtAlreadyAdding => '已在添加这首歌的另一个视频。';
+
+  @override
+  String get discoverLeadAddOff => '你账户的添加歌曲功能刚刚被关闭。';
+
+  @override
+  String get discoverLeadOptionOff => '此服务器刚刚关闭了该选项。';
+
+  @override
+  String get discoverJobYtChecking => '正在检查视频';
+
+  @override
+  String get discoverJobYtSearching => '正在搜索 YouTube';
+
+  @override
+  String get discoverJobYtFetching => '正在从 YouTube 获取';
+
+  @override
+  String discoverJobYtFetchingPercent(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return '正在从 YouTube 获取 · $percentString%';
+  }
+
+  @override
+  String get discoverJobYtTagging => '正在写入标签';
+
+  @override
+  String get discoverJobYtFiling => '正在放入你的曲库';
+
+  @override
+  String discoverJobYtFromChannel(String channel) {
+    return '来自 $channel';
+  }
+
+  @override
+  String get discoverJobAddFailed => '添加失败';
+
+  @override
+  String get discoverJobYtCancelled => '已停止 · 未添加任何内容';
+
+  @override
+  String get discoverJobYtChooseAnother => '另选一个';
+
+  @override
+  String get discoverJobYtErrBroken => '此服务器上的 YouTube 目前无法使用。';
+
+  @override
+  String discoverJobYtErrNotClose(int percent) {
+    final intl.NumberFormat percentNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String percentString = percentNumberFormat.format(percent);
+
+    return 'YouTube 上没有足够接近的视频（最佳匹配 $percentString%）。';
+  }
+
+  @override
+  String discoverJobYtErrNoResults(String query) {
+    return 'YouTube 没有找到“$query”的结果。';
+  }
+
+  @override
+  String get discoverJobYtErrLive => '该视频是直播 — 请另选一个。';
+
+  @override
+  String discoverJobYtErrTooBig(int size) {
+    final intl.NumberFormat sizeNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String sizeString = sizeNumberFormat.format(size);
+
+    return '该视频超出了此服务器允许的大小（$sizeString MB）。';
+  }
+
+  @override
+  String get discoverJobYtErrTooBigNoSize => '该视频超出了此服务器允许的大小。';
+
+  @override
+  String get discoverJobYtErrUnreadable => '无法读取该视频 — 请另选一个。';
+
+  @override
+  String get discoverJobYtErrTooLong => '耗时超过 30 分钟，已停止。';
+
+  @override
+  String get discoverJobYtErrRefused => 'YouTube 拒绝提供 — 请稍后重试。';
+
+  @override
+  String get discoverJobYtErrNoTitle => '这首歌没有可搜索的艺人或标题。';
+
+  @override
+  String get discoverJobYtErrNoLibrary => '没有可供你添加文件的曲库。';
+
+  @override
+  String get discoverJobYtErrLayout => '按你的文件夹布局，无法确定这首歌的存放位置。';
+
+  @override
+  String get discoverJobYtErrAccountGone => '发起此请求的账户已不存在。';
+
+  @override
+  String get discoverJobYtErrOther => '出错了。';
+
+  @override
+  String discoverToastAddingYt(String title) {
+    return '正在从 YouTube 添加 $title';
+  }
+
+  @override
+  String discoverToastAddFailedYt(String reason) {
+    return '无法从 YouTube 添加：$reason';
+  }
+
+  @override
+  String get discoverCopiesDestChangedYt => '无法开始：文件存放位置已变 — 请打开这首歌重新添加';
+
+  @override
+  String get discoverLeadYtChangeHint => '更改所添加歌曲的保存位置';
+
+  @override
+  String get discoverCopiesDestChangedYtMoved => '无法开始：文件存放位置已变';
+
+  @override
+  String get discoverCopiesAddThere => '添加到新位置';
 }

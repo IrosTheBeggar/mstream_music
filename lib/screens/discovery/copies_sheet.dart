@@ -5,17 +5,22 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/discovery_plugins.dart';
-import '../../objects/display_item.dart';
+import '../../singletons/app_messenger.dart' show rootNavigatorKey;
+import '../../singletons/log_manager.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/discover_badges.dart' show nameKey;
 import '../../util/discover_jobs.dart';
+import '../../util/discovery_plugins_api.dart' show DiscoveryPluginsException;
 import '../../util/queue_actions.dart';
+import '../../util/youtube_add_words.dart';
 import 'copy_news.dart';
 import 'discovery_jobs_controller.dart';
+import 'discovery_keep_routes.dart';
 import 'discovery_listing.dart';
 import 'discovery_page_controller.dart';
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
+import 'youtube_add_ui.dart';
 
 /// The Copies sheet (the design canvas's PhoneCopies board): what the
 /// user's server is copying for them, reached from Discover's Copies strip
@@ -28,6 +33,15 @@ import 'keep_toast.dart';
 /// pinned at the bottom. A connected server's folder copy (kept while
 /// browsing it) is a row too — the folder's name, "Folder · from Server", a
 /// folder tile — whose Retry and Add again send its own landing again.
+///
+/// On a build that shows them (DiscoveryJobsController.inCopies), a YouTube
+/// add is a row as well — the network-lead sheet's, or one the webapp
+/// started: "Song · Artist · YouTube", a note tile, its step while it runs
+/// ("Fetching from YouTube · 42%"), and when it fails "Couldn't add" with
+/// why in the app's words, Retry when trying again can help, and Choose
+/// another when a different upload can ([CopiesSheet.openLead], for a song
+/// from the P2P network). Its Retry and Add again send its own pick again;
+/// a refusal reads as the song's own sheet words it.
 ///
 /// States: loading (still rows at the real row height), the list failing
 /// (Try again), nothing copying (from home: Open Discover), and a cancel
@@ -62,6 +76,55 @@ class CopiesSheet extends StatefulWidget {
   final bool fromHome;
   const CopiesSheet({super.key, required this.jobs, this.fromHome = false});
 
+  /// The way back to a YouTube add's song: its network-lead sheet, rebuilt
+  /// from [job]'s recommendation — with the YouTube search running
+  /// ([search]: a failed pick's Choose another) or not (the View on the
+  /// toast after a Retry that found where files land had moved). [context]
+  /// is the Copies sheet's while it is open, else the navigator it was on
+  /// (the toast outlives it). Offered only for a song from the P2P network
+  /// ([isNetworkRecommendation]) that a lead can be made of (a title),
+  /// while the YouTube add can start (DiscoveryJobsController.youtubeGate
+  /// ready). [reopenLead] by default (DiscoveryKeepRoutes.reset puts it
+  /// back); tests set their own, or none — then neither is offered.
+  static void Function(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryJob job, {
+    required bool search,
+  })?
+  openLead = reopenLead;
+
+  /// [openLead]'s own: the Copies sheet goes, and [job]'s song opens as its
+  /// network lead (DiscoveryKeepRoutes.openNetworkLead) over what Copies
+  /// was opened from — no match line (a job keeps no similarity), the peer
+  /// that recommended it in its source line, [search] starting the YouTube
+  /// search as it opens, [job]'s upload the one not picked first (the
+  /// sheet's own lookup of the song's newest YouTube add sets that add's
+  /// line aside, and names the upload when this one names none).
+  static void reopenLead(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryJob job, {
+    required bool search,
+  }) {
+    // Parsed as a network row is (peer.name and peer.endpointId kept); the
+    // sheet repairs it into what it sends.
+    final lead = DiscoveryLead.fromServerMap(job.recommendation);
+    if (lead == null) return;
+    appLog('[lead] copies → sheet job=${job.id} search=$search');
+    final nav = Navigator.of(context);
+    // The navigator's own context outlives the Copies sheet's: the lead
+    // sheet opens on it, and toasts what it started there once it closes.
+    if (ModalRoute.of(context)?.isCurrent ?? false) nav.pop();
+    DiscoveryKeepRoutes.openNetworkLead(
+      nav.context,
+      jobs,
+      lead,
+      autoSearch: search,
+      avoidUrl: search ? job.choiceUrl : null,
+    );
+  }
+
   @override
   State<CopiesSheet> createState() => _CopiesSheetState();
 }
@@ -92,15 +155,58 @@ class _CopiesSheetState extends State<CopiesSheet> {
     super.dispose();
   }
 
-  void _toast(String message) => KeepToast.show(context, message);
+  void _toast(String message, {String? action, VoidCallback? onAction}) =>
+      KeepToast.show(context, message, action: action, onAction: onAction);
 
-  /// The server's own words for a refused start, else the localized line.
-  String _startWords(AppLocalizations l, String error, int? status) {
+  /// Why a start was refused: a copy's in the server's own words, else the
+  /// localized line; a YouTube add's in the app's (another account is
+  /// adding it, the queue is full, …) — the words its sheet uses.
+  String _startWords(
+    AppLocalizations l,
+    DiscoveryJob job,
+    String error,
+    int? status,
+  ) {
+    if (isYoutubeAdd(job)) {
+      return youtubeStartRefusalText(
+        l,
+        DiscoveryPluginsException(status ?? 0, error),
+      );
+    }
     final fromServer =
         status != null &&
         status >= 400 &&
         !RegExp(r'^HTTP \d+$').hasMatch(error.trim());
     return fromServer ? error : l.discoverKeepStartFailed;
+  }
+
+  /// [job]'s song can be opened again as its network lead
+  /// ([CopiesSheet.openLead]) — never for a song with no title (no lead
+  /// can be made of it: the button would do nothing).
+  bool _opensLead(DiscoveryJob job) =>
+      CopiesSheet.openLead != null &&
+      isYoutubeAdd(job) &&
+      isNetworkRecommendation(job.recommendation) &&
+      DiscoveryLead.fromServerMap(job.recommendation) != null &&
+      jobs.youtubeGate().ready;
+
+  /// [nav] is the navigator Copies is on: a toast's View outlives the sheet
+  /// (4 s, and until closed with a screen reader on), and opens the song
+  /// over what Copies was opened from once it has gone.
+  void _openLead(
+    DiscoveryJob job, {
+    required bool search,
+    NavigatorState? nav,
+  }) {
+    final open = CopiesSheet.openLead;
+    if (open == null) return;
+    final at = mounted
+        ? context
+        : nav != null && nav.mounted
+        ? nav.context
+        : rootNavigatorKey.currentContext;
+    if (at == null || !at.mounted) return;
+    open(at, jobs, job, search: search);
   }
 
   Future<void> _cancel(DiscoveryJob job) async {
@@ -116,18 +222,76 @@ class _CopiesSheetState extends State<CopiesSheet> {
 
   /// Retry and Add again start the copy again where it ran (the sheet shows
   /// no place); one moved since starts nothing and says to retry it from
-  /// Keep a copy, which shows where files land now.
+  /// Keep a copy, which shows where files land now. A YouTube add: with
+  /// nowhere to land now, says so; for a song from the network, says to
+  /// open it and add it again ("View" opens it); for any other (the
+  /// webapp's: no sheet on the phone hosts it), offers "Add there" — the
+  /// same add, to where files land now.
   Future<void> _retry(DiscoveryJob job) async {
     final l = AppLocalizations.of(context);
+    final nav = Navigator.of(context);
     final out = await jobs.retryWhereItRan(job);
     if (!mounted) return;
+    _answered(l, nav, job, out);
+  }
+
+  /// What a Retry or an "Add there" answered: nothing when it started,
+  /// else a toast saying why not. Its actions work once Copies has closed
+  /// too ([nav] is the navigator it was on).
+  void _answered(
+    AppLocalizations l,
+    NavigatorState nav,
+    DiscoveryJob job,
+    StartOutcome out,
+  ) {
     final err = out.error;
     if (err == null) return;
-    _toast(
-      out.destinationChanged
-          ? l.discoverCopiesDestChanged
-          : _startWords(l, err, out.status),
+    void toast(String m, {String? action, VoidCallback? onAction}) =>
+        KeepToast.show(
+          mounted ? context : null,
+          m,
+          action: action,
+          onAction: onAction,
+        );
+    // Where files land now: the 409's answer is drawn at once.
+    final place = jobs.destination;
+    if (!out.destinationChanged) {
+      toast(_startWords(l, job, err, out.status));
+    } else if (!isYoutubeAdd(job)) {
+      toast(l.discoverCopiesDestChanged);
+    } else if (place != null && place.destination == null) {
+      // Nowhere takes files now: no add can start.
+      toast(l.discoverKeepNoLibrary);
+    } else if (_opensLead(job)) {
+      toast(
+        l.discoverCopiesDestChangedYt,
+        action: l.discoverToastView,
+        onAction: () => _openLead(job, search: false, nav: nav),
+      );
+    } else if (place != null) {
+      toast(
+        l.discoverCopiesDestChangedYtMoved,
+        action: l.discoverCopiesAddThere,
+        onAction: () => unawaited(_addThere(l, nav, job)),
+      );
+    } else {
+      // Not known yet where files land: nowhere to offer.
+      toast(l.discoverCopiesDestChangedYtMoved);
+    }
+  }
+
+  /// "Add there": [job]'s add again, to where files land now — what the
+  /// song's own sheet's Retry sends.
+  Future<void> _addThere(
+    AppLocalizations l,
+    NavigatorState nav,
+    DiscoveryJob job,
+  ) async {
+    final out = await jobs.retry(
+      job,
+      shown: ShownPlace(jobs.destination?.destination),
     );
+    if (!out.ignored) _answered(l, nav, job, out);
   }
 
   Future<void> _clear() async {
@@ -146,31 +310,23 @@ class _CopiesSheetState extends State<CopiesSheet> {
     }
   }
 
-  DisplayItem _ownFile(String filepath) {
-    final fp = filepath.startsWith('/') ? filepath : '/$filepath';
-    return DisplayItem(
-      jobs.server,
-      fp.split('/').last,
-      'file',
-      fp,
-      Icon(Icons.music_note, color: VelvetColors.accent),
-      null,
-    )..partialMetadata = true;
-  }
-
   Future<void> _play(List<String> files) async {
     if (files.isEmpty) return;
     if (files.length == 1) {
-      await playNow(_ownFile(files.first));
+      await playNow(keepOwnFileRow(jobs.server, files.first));
     } else {
-      await playFromHere([for (final f in files) _ownFile(f)], 0);
+      await playFromHere([
+        for (final f in files) keepOwnFileRow(jobs.server, f),
+      ], 0);
     }
   }
 
   Future<void> _queue(List<String> files) async {
     final l = AppLocalizations.of(context);
     if (files.isEmpty) return;
-    final n = await addRowsToQueue([for (final f in files) _ownFile(f)]);
+    final n = await addRowsToQueue([
+      for (final f in files) keepOwnFileRow(jobs.server, f),
+    ]);
     if (n > 0) _toast(l.browserSongsAdded(n));
   }
 
@@ -275,6 +431,9 @@ class _CopiesSheetState extends State<CopiesSheet> {
         onNewSeeds: _newSeeds,
         onPlay: _play,
         onQueue: _queue,
+        onChooseAnother: _opensLead(j)
+            ? () => _openLead(j, search: true)
+            : null,
       );
       body = SingleChildScrollView(
         key: const ValueKey('copies-list'),
@@ -372,7 +531,7 @@ class _CopiesSheetState extends State<CopiesSheet> {
 
 // ── one row ───────────────────────────────────────────────────────────────
 
-enum _Verb { cancel, retry, newSeeds, addAgain, play, queue }
+enum _Verb { cancel, retry, newSeeds, addAgain, play, queue, chooseAnother }
 
 /// What one row draws for its job.
 class _RowSpec {
@@ -397,6 +556,10 @@ class _CopyRow extends StatelessWidget {
   final Future<void> Function(List<String>) onPlay;
   final Future<void> Function(List<String>) onQueue;
 
+  /// A YouTube add's song can be opened again with the search running:
+  /// a failed pick offers Choose another.
+  final VoidCallback? onChooseAnother;
+
   const _CopyRow({
     super.key,
     required this.job,
@@ -407,9 +570,11 @@ class _CopyRow extends StatelessWidget {
     required this.onNewSeeds,
     required this.onPlay,
     required this.onQueue,
+    this.onChooseAnother,
   });
 
   Map<String, dynamic> get _rec => job.recommendation;
+  bool get _youtube => isYoutubeAdd(job);
   String _s(String k) => _rec[k] is String ? (_rec[k] as String).trim() : '';
 
   String _peer() => keepJobPeer(job, '');
@@ -431,9 +596,18 @@ class _CopyRow extends StatelessWidget {
   }
 
   String _kindLine(AppLocalizations l) {
+    String? nonEmpty(String s) => s.isEmpty ? null : s;
+    // Where a YouTube add came from is YouTube, never the peer that
+    // recommended it.
+    if (_youtube) {
+      return [
+        l.discoverCopiesKindSong,
+        ?nonEmpty(_s('artist')),
+        'YouTube',
+      ].join(' · ');
+    }
     final peer = _peer();
     final from = peer.isEmpty ? null : l.discoverCopiesFrom(peer);
-    String? nonEmpty(String s) => s.isEmpty ? null : s;
     return switch (job.scope) {
       kScopeAlbum => [
         l.discoverCopiesKindAlbum,
@@ -450,12 +624,14 @@ class _CopyRow extends StatelessWidget {
   }
 
   /// The library files a finished copy left (Play / Add to queue): a song's
-  /// landed or matched file, an album's or an artist's copied songs (and
-  /// the ones already there). The lists stop at 500.
+  /// landed, fetched or matched file, an album's or an artist's copied
+  /// songs (and the ones already there). The lists stop at 500.
   List<String> _files() {
     final v = job.view;
     final copied = v.copiedFilepath;
     if (copied != null) return [copied];
+    final fetched = v.downloadedFilepath;
+    if (fetched != null) return [fetched];
     if (v.skipped == 'owned' && v.existingFilepath != null) {
       return [v.existingFilepath!];
     }
@@ -489,7 +665,7 @@ class _CopyRow extends StatelessWidget {
 
   _RowSpec _spec(AppLocalizations l) {
     final r = _RowSpec();
-    final row = jobRowState(job, plugin: kCopyPlugin);
+    final row = jobRowState(job);
     final peer = _peer();
     final text2 = VelvetColors.textSecondary;
     final many = job.view.isMany ? job.result : null;
@@ -515,7 +691,9 @@ class _CopyRow extends StatelessWidget {
           r.glyph = KeepRing(size: 16, color: keepInk());
           r.line1 = l.discoverJobStopping;
         } else {
-          r.line1 = status.isNotEmpty ? status : l.discoverJobStarting;
+          r.line1 = _youtube
+              ? youtubeStepText(l, job)
+              : (status.isNotEmpty ? status : l.discoverJobStarting);
           r.line1Color = text2;
           r.verbs.add(_Verb.cancel);
         }
@@ -554,6 +732,17 @@ class _CopyRow extends StatelessWidget {
         r.line2 = _folderOf(job.view.filepath);
         r.line2Lines = 1;
         r.verbs.add(_Verb.retry);
+      case JobRowKind.failed when _youtube:
+        final err = keepTone(VelvetColors.error);
+        final failure = youtubeFailureOf(job.error);
+        r.glyph = icon(Icons.error_outline, err);
+        r.line1Color = err;
+        r.line1 = l.discoverJobAddFailed;
+        r.line2 = youtubeFailureText(l, failure);
+        if (failure.choosesAnother && onChooseAnother != null) {
+          r.verbs.add(_Verb.chooseAnother);
+        }
+        if (failure.retries) r.verbs.add(_Verb.retry);
       case JobRowKind.failed:
         final err = keepTone(VelvetColors.error);
         r.glyph = icon(Icons.error_outline, err);
@@ -585,9 +774,11 @@ class _CopyRow extends StatelessWidget {
       case JobRowKind.cancelled:
         r.glyph = icon(Icons.highlight_off, text2);
         final copied = many == null ? 0 : manyCounts(many).copied;
-        r.line1 = copied > 0
-            ? l.discoverJobCancelledSome(copied)
-            : l.discoverJobCancelledNothing;
+        r.line1 = _youtube
+            ? l.discoverJobYtCancelled
+            : (copied > 0
+                  ? l.discoverJobCancelledSome(copied)
+                  : l.discoverJobCancelledNothing);
         r.verbs.add(_Verb.addAgain);
       case JobRowKind.nothing:
         final guest = row.leadPhrase == JobPhrase.onlyAppearances;
@@ -622,6 +813,9 @@ class _CopyRow extends StatelessWidget {
       ),
       child: Icon(i, size: size, color: color ?? VelvetColors.textSecondary),
     );
+    // A YouTube add's file is not the peer's: no art of the row it came
+    // from.
+    if (_youtube) return tile(Icons.music_note);
     final scope = job.scope;
     if (scope == kScopeArtist || scope == kScopeArtistMissing) {
       return tile(Icons.person_outline);
@@ -666,8 +860,16 @@ class _CopyRow extends StatelessWidget {
           busy: jobs.isStarting(
             job.recommendation,
             job.scope == kScopeSong ? null : job.scope,
+            job.plugin,
           ),
           onTap: () => unawaited(onRetry(job)),
+        );
+      case _Verb.chooseAnother:
+        return KeepPill(
+          l.discoverJobYtChooseAnother,
+          key: const ValueKey('copies-choose-another'),
+          icon: Icons.search,
+          onTap: onChooseAnother,
         );
       case _Verb.newSeeds:
         return KeepPill(
@@ -684,6 +886,7 @@ class _CopyRow extends StatelessWidget {
           busy: jobs.isStarting(
             job.recommendation,
             job.scope == kScopeSong ? null : job.scope,
+            job.plugin,
           ),
           onTap: () => unawaited(onRetry(job)),
         );
@@ -826,11 +1029,14 @@ class _CopyRow extends StatelessWidget {
                     child: LayoutBuilder(
                       builder: (context, box) {
                         // The verbs sit beside the state line; on a narrow
-                        // row or at a large text size they go under it.
+                        // row, at a large text size, or two words wide
+                        // (Choose another and Retry) they go under it.
                         final scale = MediaQuery.textScalerOf(context).scale(1);
                         final stacked =
                             verbs != null &&
-                            (box.maxWidth < 250 || scale > 1.15);
+                            (box.maxWidth < 250 ||
+                                scale > 1.15 ||
+                                spec.verbs.contains(_Verb.chooseAnother));
                         if (verbs == null) {
                           return ConstrainedBox(
                             constraints: const BoxConstraints(minHeight: 24),
