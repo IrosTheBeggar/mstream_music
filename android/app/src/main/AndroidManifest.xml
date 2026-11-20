@@ -7,6 +7,14 @@
          choose the right network interface. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- Those two Wi-Fi permissions make Play IMPLY a required Wi-Fi radio,
+         which hides the app from devices without one (Ethernet-only boxes,
+         some car head units). Streaming works on any network, and the
+         Wi-Fi-only parts cope without it: bonsoir's registration fails soft
+         (the generated registrant catches it, LanDiscovery.start catches the
+         missing plugin), media_cast_dlna catches its multicast-lock failure,
+         and wifi_lock_shim casts with as?. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
@@ -39,6 +47,13 @@
          installable on mic-less devices and signals to Play that mic use is
          optional — supporting the permission justification. -->
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <!-- MainActivity's screenOrientation="portrait" makes Play IMPLY a required
+         portrait screen, which hides the app from devices that can't show one
+         (Chromebooks used as laptops, TVs, some car screens). The lock itself
+         stays wherever portrait exists: ChromeOS runs a portrait-locked app in
+         a phone-shaped window, and Android 16 already ignores the lock on large
+         screens for apps targeting API 36. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false"/>
     <!-- The cast plugins (Chromecast / DLNA) pull in location permissions
          transitively, but discovery here is mDNS + SSDP multicast (we already
          hold CHANGE_WIFI_MULTICAST_STATE) and the app never requests location at
