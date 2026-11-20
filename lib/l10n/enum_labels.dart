@@ -157,6 +157,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.discoverPageTitle;
     case 'Peer Recommendations':
       return l.peerRecsTitle;
+    case 'Instant mix':
+      return l.instantMix;
     case 'Federation':
       return l.browserFederation;
     case 'P2P Network':

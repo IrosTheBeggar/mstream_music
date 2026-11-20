@@ -137,6 +137,11 @@ class BrowserManager {
   // 1:1 with browserCache. Whose page an artist frame is (getArtistAlbums),
   // else null.
   final List<ArtistContext?> artistCache = [];
+  // 1:1 with browserCache. The album detail that was open when the frame
+  // was pushed over it (null for nearly every frame): Instant mix opens
+  // from the album detail and closes it, and Back from the mix reopens it,
+  // so Back retraces what the user saw.
+  final List<DisplayItem?> returnAlbumCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -301,6 +306,11 @@ class BrowserManager {
   late final BehaviorSubject<bool> _searchFocused =
       BehaviorSubject<bool>.seeded(false);
 
+  // Asks for the browser to be in view: a page opened from inside the
+  // expanded player (the queue, its Discover bar) lands in the browser,
+  // which the player covers until main.dart collapses it.
+  final PublishSubject<void> _reveal = PublishSubject<void>();
+
   StreamSubscription<int>? _letterStripSub;
   StreamSubscription<MigrationProgress?>? _migrationSub;
 
@@ -379,6 +389,10 @@ class BrowserManager {
     if (_searchFocused.value != focused) _searchFocused.add(focused);
   }
 
+  /// Bring the browser into view: the player panel collapses (main.dart
+  /// listens to [revealRequests]).
+  void requestReveal() => _reveal.add(null);
+
   void clear() {
     List<DisplayItem> hold = browserCache[0];
     bool holdAlpha = alphabeticalCache.isNotEmpty ? alphabeticalCache[0] : false;
@@ -394,6 +408,8 @@ class BrowserManager {
     String holdLabel = labelCache.isNotEmpty ? labelCache[0] : 'Browser';
     ArtistContext? holdArtist =
         artistCache.isNotEmpty ? artistCache[0] : null;
+    final holdReturn =
+        returnAlbumCache.isNotEmpty ? returnAlbumCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -425,6 +441,9 @@ class BrowserManager {
     artistCache
       ..clear()
       ..add(holdArtist);
+    returnAlbumCache
+      ..clear()
+      ..add(holdReturn);
   }
 
   void goToNavScreen() {
@@ -446,6 +465,7 @@ class BrowserManager {
     moodFrameCache.clear();
     labelCache.clear();
     artistCache.clear();
+    returnAlbumCache.clear();
 
     final Server? server = ServerManager().currentServer;
     if (server == null) {
@@ -632,6 +652,7 @@ class BrowserManager {
     moodFrameCache.add(null); // ...nor a list to filter by mood
     labelCache.add('Browser');
     artistCache.add(null);
+    returnAlbumCache.add(null); // ...and nothing sits under it
     browserList.addAll(sections);
 
     _browserLabel.sink.add('Browser');
@@ -666,6 +687,7 @@ class BrowserManager {
     moodFrameCache.clear();
     labelCache.clear();
     artistCache.clear();
+    returnAlbumCache.clear();
 
     browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -680,7 +702,8 @@ class BrowserManager {
       String? playlist,
       GenreListFrame? genreFrame,
       MoodListFrame? moodFrame,
-      ArtistContext? artist}) {
+      ArtistContext? artist,
+      DisplayItem? returnAlbum}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -699,6 +722,7 @@ class BrowserManager {
     moodFrameCache.add(moodFrame);
     labelCache.add(listName);
     artistCache.add(artist);
+    returnAlbumCache.add(returnAlbum);
 
     browserList
       ..clear()
@@ -869,6 +893,8 @@ class BrowserManager {
     if (moodFrameCache.isNotEmpty) moodFrameCache.removeLast();
     if (labelCache.isNotEmpty) labelCache.removeLast();
     if (artistCache.isNotEmpty) artistCache.removeLast();
+    final returnAlbum =
+        returnAlbumCache.isNotEmpty ? returnAlbumCache.removeLast() : null;
     browserList
       ..clear()
       ..addAll(browserCache.last);
@@ -886,6 +912,10 @@ class BrowserManager {
       // No clients to restore against, but keep the stack invariant.
       scrollCache.removeLast();
     }
+
+    // The frame left was opened from an album's detail, which it closed:
+    // Back lands on that album again, over the list it came from.
+    if (returnAlbum != null) openAlbumDetail(returnAlbum);
 
     _browserStream.sink.add(browserList);
 
@@ -923,6 +953,7 @@ class BrowserManager {
     _albumDetailSongs.close();
     _search.close();
     _searchFocused.close();
+    _reveal.close();
     _loading.close();
   }
 
@@ -934,4 +965,5 @@ class BrowserManager {
   ({bool open, String query}) get search => _search.value;
   Stream<bool> get searchFocusedStream => _searchFocused.stream;
   bool get searchFocused => _searchFocused.value;
+  Stream<void> get revealRequests => _reveal.stream;
 }

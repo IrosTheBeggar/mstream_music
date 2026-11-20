@@ -48,7 +48,7 @@ const Map<String, String> _rawKeyToCamelot = {
   'E': '12B', 'E major': '12B', 'Emaj': '12B',
 };
 
-final RegExp _camelotRe = RegExp(r'^([1-9]|1[0-2])[AB]$');
+final RegExp _camelotRe = RegExp(r'^([1-9]|1[0-2])([AB])$');
 
 /// Returns the Camelot code (e.g. "8A") for [raw], or null if the
 /// raw key isn't recognised. Strings that already look like Camelot

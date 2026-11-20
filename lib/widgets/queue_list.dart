@@ -11,11 +11,13 @@ import '../l10n/app_localizations.dart';
 import '../objects/discovery_plugins.dart' show kScopeSong;
 import '../singletons/api.dart';
 import '../singletons/track_capture.dart';
+import '../objects/instant_mix.dart';
 import '../objects/play_event.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../screens/discovery/copies_hub.dart';
 import '../screens/discovery/keep_copy_ui.dart' show keepInk;
+import '../screens/instant_mix/instant_mix_listing.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
@@ -66,6 +68,18 @@ bool _canFindSimilar(MediaItem item) {
   final server =
       ServerManager().byLocalname(item.extras?['server'] as String?);
   return server?.discoveryAvailable == true && item.extras?['path'] is String;
+}
+
+/// The server a queue item can seed Instant mix on, or null: a server
+/// track whose server can make a mix now (Server.instantMixUsable).
+Server? _instantMixServer(MediaItem item) {
+  final server =
+      ServerManager().byLocalname(item.extras?['server'] as String?);
+  return server != null &&
+          server.instantMixUsable &&
+          item.extras?['path'] is String
+      ? server
+      : null;
 }
 
 /// The connected server whose "Keep a copy…" a queued track offers (its
@@ -192,19 +206,23 @@ class QueueList extends StatelessWidget {
               // A connected server's track: Keep a copy… beside Info (a peer
               // never has Find similar — its discovery flags are pinned off).
               final keepPeer = _keepPeerOf(item);
+              final mixServer = _instantMixServer(item);
               final similar = _canFindSimilar(item);
-              final paneActions = 1 + (similar ? 1 : 0) + (keepPeer != null ? 1 : 0);
+              final paneActions = 1 +
+                  (mixServer != null ? 1 : 0) +
+                  (similar ? 1 : 0) +
+                  (keepPeer != null ? 1 : 0);
 
               return Slidable(
                 // Identity key (also the ReorderableListView item key): follows
                 // the *item* across reorders; distinct MediaItem instances avoid a
                 // duplicate-key clash.
                 key: ObjectKey(item),
-                // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
-                // similar when this track's server has discovery data, or Keep
-                // a copy… for a connected server's track (the pane widens to fit
-                // the second action; hidden on older servers and for local
-                // files, never probed).
+                // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus
+                // Instant mix and Find similar where this track's server can
+                // do them, or Keep a copy… for a connected server's track (the
+                // pane widens a quarter per action; hidden on older servers and
+                // for local files, never probed).
                 startActionPane: ActionPane(
                   motion: const DrawerMotion(),
                   extentRatio: 0.25 * paneActions,
@@ -230,6 +248,15 @@ class QueueList extends StatelessWidget {
                         onPressed: (context) =>
                             _keepQueued(context, item, keepPeer),
                         child: _KeepPaneLabel(title: item.title),
+                      ),
+                    if (mixServer != null)
+                      SlidableAction(
+                        backgroundColor: VelvetColors.raised,
+                        foregroundColor: VelvetColors.primary,
+                        icon: Icons.auto_awesome,
+                        label: l.instantMix,
+                        onPressed: (context) => openInstantMix(
+                            context, MixSeed.queued(mixServer, item)),
                       ),
                     if (_canFindSimilar(item))
                       SlidableAction(

@@ -2093,6 +2093,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverFindSimilar => 'Buscar similares';
 
   @override
+  String get instantMix => 'Mezcla instantánea';
+
+  @override
+  String get instantMixNotAnalyzed => 'Aún no analizado';
+
+  @override
+  String get instantMixNothingSimilar => 'Aún no hay nada similar';
+
+  @override
+  String get instantMixFailed => 'No se pudo crear la mezcla';
+
+  @override
+  String instantMixPlaylistName(String name) {
+    return '$name Mix';
+  }
+
+  @override
   String get discoverStartSession => 'Iniciar una sesión sonora';
 
   @override

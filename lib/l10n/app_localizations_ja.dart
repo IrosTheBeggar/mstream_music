@@ -2001,6 +2001,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverFindSimilar => '似ている曲を探す';
 
   @override
+  String get instantMix => 'インスタントミックス';
+
+  @override
+  String get instantMixNotAnalyzed => 'まだ解析されていません';
+
+  @override
+  String get instantMixNothingSimilar => '似ている曲はまだありません';
+
+  @override
+  String get instantMixFailed => 'ミックスを作成できませんでした';
+
+  @override
+  String instantMixPlaylistName(String name) {
+    return '$name Mix';
+  }
+
+  @override
   String get discoverStartSession => 'ソニックセッションを開始';
 
   @override

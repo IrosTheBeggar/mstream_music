@@ -252,6 +252,88 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
   await MediaManager().audioHandler.play();
 }
 
+/// The queue positions Play on an Instant mix removes so the track playing
+/// now keeps playing: every one but [current], last first. Null when the
+/// mix does not lead with that track — the lead row's [server] (localname)
+/// and app [path] are not the queue item at [current] — or nothing is
+/// current; Play then starts the mix over ([playFromHere]). Pure.
+///
+/// The paths compare without their leading slash: a queue item built from
+/// a browser row carries one, an Auto DJ pick (random-songs' filepath)
+/// does not.
+List<int>? mixPlayPlan(List<MediaItem> queue, int? current,
+    {required String? server, required String? path}) {
+  if (current == null || current < 0 || current >= queue.length) return null;
+  final extras = queue[current].extras;
+  final playing = extras?['path'];
+  String bare(String p) => p.startsWith('/') ? p.substring(1) : p;
+  if (path == null ||
+      extras?['server'] != server ||
+      playing is! String ||
+      bare(playing) != bare(path)) {
+    return null;
+  }
+  return [
+    for (var i = queue.length - 1; i >= 0; i--)
+      if (i != current) i,
+  ];
+}
+
+/// Play on an Instant mix: the queue becomes the mix, from its first row.
+/// When that row is the track playing now (a song's mix leads with it),
+/// the track is not started again: rows 2…n follow it and everything else
+/// leaves the queue, one removal per item — no clear, so an Auto DJ
+/// session keeps its anchors. Anything else replaces the queue and plays
+/// row 1 ([playFromHere]). The rows are built before the queue is touched,
+/// so a failed build never leaves it half replaced. [audio] stands in for
+/// the app's audio handler in tests.
+Future<void> playMix(List<DisplayItem> rows, {AudioHandler? audio}) async {
+  if (rows.isEmpty) return;
+  final handler = audio ?? MediaManager().audioHandler;
+  final queue = handler.queue.value;
+  final current = handler.playbackState.value.queueIndex;
+  final lead = rows.first;
+  final server = lead.server?.localname;
+  if (mixPlayPlan(queue, current, server: server, path: lead.data) == null) {
+    return playFromHere(rows, 0);
+  }
+  // Captured now: the handler changes its queue list in place, and the
+  // builds below give it time to.
+  final keep = queue[current!];
+
+  final rest = [
+    for (final r in rows.skip(1))
+      if (r.type == 'file' || r.type == 'localFile') r,
+  ];
+  await prefillMetadata(rest);
+  final built =
+      (await buildMediaItemsForRows(rest)).whereType<MediaItem>().toList();
+  if (rest.isNotEmpty && built.isEmpty) return;
+  final live = handler.queue.value;
+  final now = handler.playbackState.value.queueIndex;
+  final plan = now != null && now < live.length && identical(live[now], keep)
+      ? mixPlayPlan(live, now, server: server, path: lead.data)
+      : null;
+  // The track moved on while the rows were built: the mix starts over.
+  if (plan == null) return playFromHere(rows, 0);
+  // What leaves is what the queue holds now, the playing track aside: an
+  // Auto DJ pick that landed while the rows were built goes too.
+  final leaving = [for (final i in plan) live[i]];
+
+  // Rows 2…n go in first, so the playing track is never the queue's last
+  // while the rest leave: a removal ahead of it moves its index, and an
+  // index on the last row is Auto DJ's cue to top up (shouldTopUpAutoDJ),
+  // whose pick would land between the seed and row 2.
+  await handler.addQueueItems(built);
+  // By identity, as the queue's own swipe-to-remove does: positions shift
+  // as items go, and a queued copy of a mix row equals it (same id).
+  for (final item in leaving) {
+    final at = handler.queue.value.indexWhere((e) => identical(e, item));
+    if (at >= 0) await handler.removeQueueItemAt(at);
+  }
+  if (!handler.playbackState.value.playing) await handler.play();
+}
+
 /// Appends every playable item from [rows] to the queue WITHOUT clearing it.
 /// If the queue was empty, playback starts automatically (so a first "add"
 /// from a fresh state doesn't require a separate play press). Returns the

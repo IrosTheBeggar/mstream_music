@@ -3594,6 +3594,36 @@ abstract class AppLocalizations {
   /// **'Find similar'**
   String get discoverFindSimilar;
 
+  /// Track sheet, queue swipe, Song Info and toolbar action, and the toolbar label of the page it opens: about 50 songs that sound like the song, album, artist or playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant mix'**
+  String get instantMix;
+
+  /// Instant mix page line when the song, or every song of the album, artist or playlist, has not been analyzed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not analyzed yet'**
+  String get instantMixNotAnalyzed;
+
+  /// Instant mix page line when nothing in the library sounds like the item yet (no filters to blame).
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing similar yet'**
+  String get instantMixNothingSimilar;
+
+  /// Instant mix page line (with Try again) when the mix request failed, and the snackbar when a filter change failed and the page kept its songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t build the mix'**
+  String get instantMixFailed;
+
+  /// Default name Save as playlist offers for an Instant mix. The same in every language on purpose: it matches the web app's name for the same mix ("Dolo Mix"), so a mix saved from either client gets one name. " 2", " 3"… are added when the name is taken.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} Mix'**
+  String instantMixPlaylistName(String name);
+
   /// Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback.
   ///
   /// In en, this message translates to:

@@ -1970,6 +1970,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverFindSimilar => '查找相似歌曲';
 
   @override
+  String get instantMix => '即时混音';
+
+  @override
+  String get instantMixNotAnalyzed => '尚未分析';
+
+  @override
+  String get instantMixNothingSimilar => '暂无相似歌曲';
+
+  @override
+  String get instantMixFailed => '无法生成混音';
+
+  @override
+  String instantMixPlaylistName(String name) {
+    return '$name Mix';
+  }
+
+  @override
   String get discoverStartSession => '开始声音会话';
 
   @override

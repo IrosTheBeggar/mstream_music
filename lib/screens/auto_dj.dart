@@ -29,6 +29,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:rxdart/rxdart.dart' show MergeStream;
 
 import '../l10n/app_localizations.dart';
+import '../objects/genre_source.dart';
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -298,7 +299,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           ]),
         ));
     if (set.length < 2) {
-      return _ValueRow(
+      return AutoDjValueRow(
         key: const ValueKey('auto-dj-row-play-from'),
         title: l.autoDjPlayFrom,
         value: _home == null ? '' : autoDjServerName(_home!),
@@ -313,7 +314,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // rather than count servers that will not be asked.
     final blocked = _home == null ? null : fanOutHomeBlocked(_home!);
     if (blocked != null) {
-      return _ValueRow(
+      return AutoDjValueRow(
         key: const ValueKey('auto-dj-row-play-from'),
         title: l.autoDjPlayFrom,
         value: value,
@@ -327,7 +328,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         ? 0
         : fanOutConnecting(taking, ServerManager().tunnelServes).length;
     final short = taking.length < set.length;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: const ValueKey('auto-dj-row-play-from'),
       title: l.autoDjPlayFrom,
       value: value,
@@ -365,7 +366,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         ),
       ]);
 
-  Widget _firstSongRow(AppLocalizations l) => _ValueRow(
+  Widget _firstSongRow(AppLocalizations l) => AutoDjValueRow(
         key: const ValueKey('auto-dj-row-first-song'),
         title: l.autoDjFirstSong,
         value: switch (AutoDJManager().emptyQueueStart) {
@@ -385,10 +386,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     const key = ValueKey('auto-dj-row-mood');
     final reason = autoDjMoodBlocked(l, home: home, set: _set);
     if (reason != null) {
-      return _ValueRow(key: key, title: l.autoDjMoodTitle, value: reason);
+      return AutoDjValueRow(key: key, title: l.autoDjMoodTitle, value: reason);
     }
     final mood = mgr.activeMoodFilter;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjMoodTitle,
       value: mood == null ? l.autoDjAny : moodLabels(l, mood).join(' · '),
@@ -403,30 +404,19 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  /// A server's genre filter in words, or null while it sets nothing. Sorted,
-  /// so two servers with the same genres agree whatever order they were
-  /// ticked in.
-  String? _genreValue(AppLocalizations l, Server s) {
-    if (!s.autoDJGenreEnabled || s.autoDJGenres.isEmpty) return null;
-    final list = ([...s.autoDJGenres]
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())))
-        .join(' · ');
-    return s.autoDJGenreMode == 'blacklist'
-        ? l.autoDjGenresSkipValue(list)
-        : list;
-  }
-
   Widget _genresRow(AppLocalizations l) {
     const key = ValueKey('auto-dj-row-genres');
     final home = _home;
     if (home == null || autoDjFiltersKnownUnsupported(_version)) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key,
           title: l.autoDjGenres,
           value: home == null ? '' : _needs(l, ServerParam.genres));
     }
     final servers = _editServers;
-    final values = servers.map((s) => _genreValue(l, s)).toList();
+    final values = servers
+        .map((s) => autoDjGenreValue(l, GenreChoice.autoDj(s)))
+        .toList();
     // Servers agree on what they are sent, the kind of genre too, though the
     // value doesn't name it.
     final sent = [
@@ -434,7 +424,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         values[i] == null ? null : (values[i], genreKindSent(s)),
     ];
     final value = allSame(sent) ? values.firstOrNull : l.autoDjVaries;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjGenres,
       value: value ?? l.autoDjAny,
@@ -454,7 +444,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         if (!s.isFederated) s,
     ];
     if (servers.isEmpty) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key, title: l.autoDjRating, value: l.autoDjNotOnPeers);
     }
     final values = servers.map((s) => s.autoDJminRating).toList();
@@ -467,7 +457,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       value = null;
     }
     final home = _home;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjRating,
       value: value ?? l.autoDjAny,
@@ -483,13 +473,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // The track-length window landed long after the 6.7.1 filters, so it is
     // gated on its own.
     if (autoDjDurationKnownUnsupported(_version)) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key,
           title: l.autoDjDurationRange,
           value: _needs(l, ServerParam.minDuration));
     }
     final b = AutoDJManager().activeDurationBounds;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjDurationRange,
       value: b == null
@@ -506,7 +496,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // any server however old.
     final mgr = AutoDJManager();
     final on = mgr.keywordFilterEnabled && mgr.keywordFilterWords.isNotEmpty;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: const ValueKey('auto-dj-row-skip-words'),
       title: l.autoDjSkipWords,
       value: on ? mgr.keywordFilterWords.join(' · ') : l.commonOff,
@@ -533,7 +523,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // Three reasons it can't run, and the row says which.
     final reason = autoDjSonicBlocked(l, home);
     if (reason != null) {
-      return _ValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
+      return AutoDjValueRow(key: key, title: l.autoDjSonicTitle, value: reason);
     }
     void open() => _open((_) => const SonicSheet());
     // A running session that had to drop it says why, where the user goes to
@@ -541,7 +531,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final drop =
         _dj != null && mgr.sonicSimilarityEnabled ? MediaManager().audioHandler.sonicDrop : null;
     if (drop != null) {
-      return _ValueRow(
+      return AutoDjValueRow(
         key: key,
         title: l.autoDjSonicTitle,
         value: sonicDropLabel(l, drop),
@@ -550,7 +540,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       );
     }
     final on = mgr.sonicSimilarityEnabled;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjSonicTitle,
       value: on
@@ -583,7 +573,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         Opacity(
           // Dimmed alone only while the rows around it are lit.
           opacity: !off && cantLearn != null ? 0.38 : 1,
-          child: _SwitchRow(
+          child: AutoDjSwitchRow(
             key: const ValueKey('auto-dj-row-learn-skips'),
             switchKey: const ValueKey('auto-dj-learn-skips-switch'),
             title: l.autoDjLearnFromSkips,
@@ -663,12 +653,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // 6.7.1. On a server known to predate them the rows say so instead of
     // switching on something the app would strip before sending.
     if (autoDjFiltersKnownUnsupported(_version)) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key, title: l.autoDjTempo, value: _needs(l, ServerParam.bpmRanges));
     }
     final mgr = AutoDJManager();
     final on = mgr.bpmContinuityEnabled;
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjTempo,
       value: on ? l.autoDjBpmTolerance(mgr.bpmTolerance) : l.commonOff,
@@ -680,13 +670,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   Widget _harmonicRow(AppLocalizations l) {
     const key = ValueKey('auto-dj-row-harmonic');
     if (autoDjFiltersKnownUnsupported(_version)) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key,
           title: l.autoDjHarmonicTitle,
           value: _needs(l, ServerParam.musicalKeys));
     }
     final mgr = AutoDJManager();
-    return _SwitchRow(
+    return AutoDjSwitchRow(
       key: key,
       switchKey: const ValueKey('auto-dj-harmonic-switch'),
       title: l.autoDjHarmonicTitle,
@@ -703,10 +693,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // The app strips `limit` before sending to a server known to predate
     // batch picks (6.26.0), so a row promising a batch would be a lie there.
     if (autoDjBatchKnownUnsupported(_version)) {
-      return _ValueRow(
+      return AutoDjValueRow(
           key: key, title: l.autoDjBatch, value: _needs(l, ServerParam.limit));
     }
-    return _ValueRow(
+    return AutoDjValueRow(
       key: key,
       title: l.autoDjBatch,
       value: l.autoDjSongsPerFetchValue(AutoDJManager().songsPerFetch),
@@ -715,11 +705,24 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   }
 }
 
+/// A server's genre filter in words, or null while it sets nothing: the
+/// genres, or "Skip …" them. Sorted, so two servers with the same genres
+/// agree whatever order they were ticked in. The Genres row's value, here
+/// and on an Instant mix page's Filters.
+String? autoDjGenreValue(AppLocalizations l, GenreChoice choice) {
+  if (choice.isEmpty) return null;
+  final list = ([...choice.genres]
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())))
+      .join(' · ');
+  return choice.mode == 'blacklist' ? l.autoDjGenresSkipValue(list) : list;
+}
+
 /// One setting: its name at the left, its value at the right, a chevron.
 /// The whole row opens the setting's sheet. Without [onTap] it is a setting
 /// the server can't do: greyed, no chevron, and the value is the reason.
-class _ValueRow extends StatelessWidget {
-  const _ValueRow({
+/// Also an Instant mix page's Filters rows.
+class AutoDjValueRow extends StatelessWidget {
+  const AutoDjValueRow({
     super.key,
     required this.title,
     required this.value,
@@ -818,17 +821,19 @@ class _ValueRow extends StatelessWidget {
 /// A setting that is a plain yes or no, with nothing to tune: its name, a
 /// line under it saying what it does, and a switch; the whole row flips it.
 /// Harmonic mixing, and Learn from skips under Sonic similarity, which
-/// [indent] sets in under the row it belongs to.
+/// [indent] sets in under the row it belongs to. Also Harmonic mixing on an
+/// Instant mix page's Filters, without the line there: it speaks of a DJ's
+/// next pick.
 ///
 /// While [enabled] is false the row is drawn just as it is, in its usual
 /// colours with its switch as set, for whatever is around it to dim, and it
 /// takes no tap ([_oneNode]). A Switch with no onChanged would paint the
 /// disabled palette instead, which the dimming would then dim a second time.
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
+class AutoDjSwitchRow extends StatelessWidget {
+  const AutoDjSwitchRow({
     super.key,
     required this.title,
-    required this.line,
+    this.line,
     required this.value,
     required this.onChanged,
     required this.switchKey,
@@ -840,8 +845,9 @@ class _SwitchRow extends StatelessWidget {
 
   final String title;
 
-  /// Under the title: what the switch does, or why it can't be used.
-  final String line;
+  /// Under the title: what the switch does, or why it can't be used. None
+  /// on an Instant mix page's Filters.
+  final String? line;
   final bool value;
   final ValueChanged<bool> onChanged;
   final Key switchKey;
@@ -872,12 +878,13 @@ class _SwitchRow extends StatelessWidget {
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: VelvetColors.textPrimary)),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(line,
-                        style: TextStyle(
-                            fontSize: 13, color: VelvetColors.textSecondary)),
-                  ),
+                  if (line != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(line!,
+                          style: TextStyle(
+                              fontSize: 13, color: VelvetColors.textSecondary)),
+                    ),
                 ],
               ),
             ),
@@ -897,7 +904,10 @@ class _SwitchRow extends StatelessWidget {
     // One node for screen readers: the title and the line under it, then on
     // or off.
     return _oneNode(
-        enabled: enabled, label: '$title\n$line', toggled: value, row: row);
+        enabled: enabled,
+        label: line == null ? title : '$title\n$line',
+        toggled: value,
+        row: row);
   }
 }
 
