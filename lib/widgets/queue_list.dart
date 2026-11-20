@@ -172,9 +172,18 @@ class _QueueListState extends State<QueueList> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(l.queueHoldHint),
       duration: const Duration(seconds: 8),
+      persist: _persistWithAction,
       action: SnackBarAction(label: l.ok, onPressed: () {}),
     ));
   }
+
+  /// Whether the queue's snackbars with an action (the hint, Undo) stay up
+  /// until dismissed. Left to SnackBar they always would: `persist`
+  /// defaults to true once there is an action, so "Removed {title} · Undo"
+  /// sat on the panel until it was swiped away. They leave after their
+  /// time instead, except while a screen reader is navigating, where
+  /// reaching the action can take longer than the time allows.
+  bool get _persistWithAction => MediaQuery.accessibleNavigationOf(context);
 
   /// The move that makes [item] play next — moveQueueItem's from and its
   /// post-removal to — or null: nothing is playing, it is the song playing,
@@ -230,6 +239,7 @@ class _QueueListState extends State<QueueList> {
       ScaffoldMessenger.of(context),
       SnackBar(
         content: Text(l.queueRemovedSong(item.title)),
+        persist: _persistWithAction,
         action: SnackBarAction(
           label: l.queueUndo,
           onPressed: () => unawaited(_undoRemove(item, at)),

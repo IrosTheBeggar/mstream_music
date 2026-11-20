@@ -108,7 +108,7 @@ void main() {
 
   List<String> titles() => [for (final m in player.queue.value) m.title];
 
-  Future<void> openQueue(WidgetTester tester, {int playing = 0}) async {
+  Future<void> openQueue(WidgetTester tester, {int playing = 0, bool accessible = false}) async {
     h.setUp();
     h.home.discoveryAvailable = true;
     await h.openGate();
@@ -117,7 +117,7 @@ void main() {
     player.holdRemoval = null;
     player.playbackState.add(PlaybackState(queueIndex: playing, playing: true));
     player.queue.add(queue());
-    await h.pump(tester, const QueueList());
+    await h.pump(tester, const QueueList(), accessible: accessible);
     await BrowseHarness.frames(tester);
   }
 
@@ -364,6 +364,44 @@ void main() {
     await BrowseHarness.frames(tester, 24);
     expect(find.text('Removed Ghosts'), findsOneWidget);
     expect(find.text('Something said next'), findsNothing, reason: 'dropped, not shown first');
+    await close(tester);
+  });
+
+  // Found on the phone: a snackbar with an action persists by default, so
+  // "Removed … · Undo" stayed until it was swiped away.
+  testWidgets('Undo leaves after a few seconds', (tester) async {
+    await openQueue(tester);
+    await tester.fling(find.text('Ghosts'), const Offset(-300, 0), 1500);
+    await BrowseHarness.frames(tester, 24);
+    expect(find.text('Removed Ghosts'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await BrowseHarness.frames(tester, 12);
+    expect(find.text('Removed Ghosts'), findsNothing);
+    await close(tester);
+  });
+
+  testWidgets('the hint leaves after its 8 seconds', (tester) async {
+    await openQueue(tester);
+    SettingsManager().queueHoldHintShown = false;
+    nowPlayingExpanded.value = true;
+    await BrowseHarness.frames(tester, 8);
+    expect(find.text(hint), findsOneWidget);
+    await tester.pump(const Duration(seconds: 8));
+    await BrowseHarness.frames(tester, 12);
+    expect(find.text(hint), findsNothing);
+    await close(tester);
+  });
+
+  testWidgets('under a screen reader, Undo stays until it is used or dismissed', (tester) async {
+    await openQueue(tester, accessible: true);
+    await tester.fling(find.text('Ghosts'), const Offset(-300, 0), 1500);
+    await BrowseHarness.frames(tester, 24);
+    await tester.pump(const Duration(seconds: 10));
+    await BrowseHarness.frames(tester, 12);
+    expect(find.text('Removed Ghosts'), findsOneWidget);
+    await tester.tap(find.text('Undo'));
+    await BrowseHarness.frames(tester, 8);
+    expect(titles().last, 'Ghosts', reason: 'Undo still works after the time is up');
     await close(tester);
   });
 }
