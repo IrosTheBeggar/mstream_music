@@ -851,7 +851,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get browserConfirmDeletePlaylist => 'Playlist-Löschung bestätigen';
 
   @override
-  String get browserConfirmDeleteFolder => 'Ordner-Löschung bestätigen';
+  String get browserDeleteFromPhone => 'Von diesem Telefon löschen';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return '„$name“ löschen?';
+  }
+
+  @override
+  String get browserDeleteFileBody =>
+      'Die Datei wird von diesem Telefon gelöscht.';
+
+  @override
+  String get browserDeleteFolderBody =>
+      'Der Ordner wird mit allem darin von diesem Telefon gelöscht.';
 
   @override
   String get browserSearchHint => 'Datenbank durchsuchen';

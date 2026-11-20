@@ -37,9 +37,11 @@ import 'star_rating.dart';
 /// is how that quietly stops being true.
 ///
 /// [keep] adds "Keep a copy…" for a connected server's song whose Keep a
-/// copy gate is open (the caller's page knows both).
+/// copy gate is open (the caller's page knows both). [onDelete] adds a red
+/// "Delete from this phone" row last, for a file on this phone; it runs
+/// once the sheet has closed, and asks before deleting.
 void showTrackActionsSheet(BuildContext context, DisplayItem item,
-    {TrackSheetKeep? keep}) {
+    {TrackSheetKeep? keep, VoidCallback? onDelete}) {
   showModalBottomSheet(
     context: context,
     backgroundColor: VelvetColors.surface,
@@ -51,8 +53,8 @@ void showTrackActionsSheet(BuildContext context, DisplayItem item,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (_) =>
-        TrackActionsSheet(item: item, parentContext: context, keep: keep),
+    builder: (_) => TrackActionsSheet(
+        item: item, parentContext: context, keep: keep, onDelete: onDelete),
   );
 }
 
@@ -85,11 +87,15 @@ class TrackActionsSheet extends StatelessWidget {
   final DisplayItem item;
   final BuildContext parentContext;
   final TrackSheetKeep? keep;
+
+  /// A file on this phone: the red "Delete from this phone" row, last.
+  final VoidCallback? onDelete;
   const TrackActionsSheet(
       {super.key,
       required this.item,
       required this.parentContext,
-      this.keep});
+      this.keep,
+      this.onDelete});
 
   // Floating so it clears the docked mini-player overlay (a plain bottom
   // snackbar renders behind it) — same fix as the browser's other toasts.
@@ -341,6 +347,20 @@ class TrackActionsSheet extends StatelessWidget {
                 ),
               ));
             }),
+          // The one verb that can't be taken back sits apart, in red.
+          if (onDelete != null) ...[
+            Divider(color: VelvetColors.border, height: 1),
+            ListTile(
+              key: const ValueKey('track-sheet-delete'),
+              leading: Icon(Icons.delete_outline, color: VelvetColors.error),
+              title: Text(l.browserDeleteFromPhone,
+                  style: TextStyle(color: VelvetColors.error)),
+              onTap: () {
+                Navigator.of(context).pop();
+                onDelete!();
+              },
+            ),
+          ],
           const SizedBox(height: 8),
         ],
         ),

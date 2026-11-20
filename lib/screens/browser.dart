@@ -26,7 +26,6 @@ import '../widgets/letter_strip.dart';
 import '../widgets/mood_filter_sheet.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
@@ -926,62 +925,22 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      showDialog(
-                          context: c,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                                title: Text(l.browserConfirmDeleteFolder),
-                                content: b[i].getText(),
-                                actions: <Widget>[
-                                  TextButton(
-                                    child: Text(l.goBack),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                  ),
-                                  TextButton(
-                                      child: Text(
-                                        l.delete,
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                      onPressed: () {
-                                        FileExplorer().deleteDirectory(
-                                            b[i].data!, b[i].server);
-                                        Navigator.of(context).pop();
-                                      })
-                                ]);
-                          });
-                    })
-              ],
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            // Its menu (Delete from this phone) is a hold or the ⋮ away, as a
+            // phone file's is. It used to be a swipe drawer.
+            trailing: IconButton(
+              icon: Icon(Icons.more_vert,
+                  size: 20, color: VelvetColors.textSecondary),
+              tooltip: l.browserMoreActions,
+              onPressed: () => _showLocalFolderActions(b[i], c),
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: VelvetColors.textTertiary,
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onLongPress: () => _showLocalFolderActions(b[i], c),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -990,41 +949,27 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      FileExplorer().deleteFile(b[i].data!, b[i].server);
-                    })
-              ],
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            // Same overflow a server track row carries, so the queue actions
+            // sit in the same place whichever kind of track you're looking
+            // at. The sheet ends with Delete from this phone, which asks
+            // first (it used to be a swipe that deleted with no question).
+            trailing: IconButton(
+              icon: Icon(Icons.more_vert,
+                  size: 20, color: VelvetColors.textSecondary),
+              tooltip: l.browserMoreActions,
+              onPressed: () => _showTrackActions(b[i], c),
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  // Same overflow a server track row carries, so the queue
-                  // actions sit in the same place whichever kind of track
-                  // you're looking at. Delete stays on the swipe.
-                  trailing: IconButton(
-                    icon: Icon(Icons.more_vert,
-                        size: 20, color: VelvetColors.textSecondary),
-                    tooltip: l.browserMoreActions,
-                    onPressed: () => _showTrackActions(b[i], c),
-                  ),
-                  // Same long-press context sheet as server rows — the queue
-                  // actions apply to local files too (Find similar hides
-                  // itself: a local path can't seed the similarity index).
-                  onLongPress: () => _showTrackActions(b[i], c),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            // Same long-press context sheet as server rows — the queue
+            // actions apply to local files too (Find similar hides
+            // itself: a local path can't seed the similarity index).
+            onLongPress: () => _showTrackActions(b[i], c),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -1054,50 +999,31 @@ class _BrowserState extends State<Browser> {
       child: Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.add_to_queue,
-                    label: l.addAll,
-                    onPressed: (context) {
-                      ApiManager().getRecursiveFiles(b[i].data!,
-                          useThisServer: b[i].server!);
-                    })
-              ],
-            ),
-            child: Builder(
-              builder: (context) => KeepFocusAnchor(
-                focusKey: keep?.focusKey,
-                builder: (context, node) => ListTile(
-                    focusNode: node,
-                    // The subfolder an Add from YouTube just went into, for 2 s
-                    // (a tint: the row keeps its height).
-                    tileColor: YtdlRowHighlight.isLit(b[i])
-                        ? VelvetColors.primaryDim
-                        : null,
-                    // Long-press = this row's actions, the same convention the
-                    // track rows use. The swipe pane has carried Add all for a
-                    // while, but a swipe is only found by accident.
-                    onLongPress: () => _showFolderActions(b[i], c),
-                    leading: b[i].icon,
-                    title: b[i].getText(truncate: !allowWrap),
-                    subtitle: mark != null
-                        ? DiscoveryRowMarkerLine(marker: mark, counts: true)
-                        : b[i].getSubText(),
-                    // No caret: it opened the swipe pane, whose only action is
-                    // the Add all the long-press above now offers — two handles
-                    // on one action, the second sitting under the letter strip.
-                    // The swipe itself still works. makeLocalFolderWidget keeps
-                    // its caret: that pane is Delete, and nothing else reaches
-                    // it.
-                    onTap: () {
-                      handleTap(b, i, c);
-                    }),
-              ),
-            ))));
+        child: KeepFocusAnchor(
+          focusKey: keep?.focusKey,
+          builder: (context, node) => ListTile(
+              focusNode: node,
+              // The subfolder an Add from YouTube just went into, for 2 s
+              // (a tint: the row keeps its height).
+              tileColor:
+                  YtdlRowHighlight.isLit(b[i]) ? VelvetColors.primaryDim : null,
+              // Long-press = this row's actions (Add all, Keep a copy…), the
+              // same convention the track rows use. Add all used to be a
+              // swipe drawer too, found only by accident.
+              onLongPress: () => _showFolderActions(b[i], c),
+              leading: b[i].icon,
+              title: b[i].getText(truncate: !allowWrap),
+              subtitle: mark != null
+                  ? DiscoveryRowMarkerLine(marker: mark, counts: true)
+                  : b[i].getSubText(),
+              // No trailing button: the hold is the way in, and a button
+              // would sit under the letter strip.
+              onTap: () {
+                handleTap(b, i, c);
+              }),
+        ),
+      ),
+    );
   }
 
   // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
@@ -1654,6 +1580,99 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  /// A folder on this phone (Local Files): its one verb, Delete from this
+  /// phone, behind a confirmation. The row's hold and its ⋮ both open it.
+  void _showLocalFolderActions(DisplayItem item, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            key: const ValueKey('browse-local-folder-sheet'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+                child: Row(children: [
+                  Icon(Icons.folder_open_outlined,
+                      color: VelvetColors.textSecondary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary),
+                    ),
+                  ),
+                ]),
+              ),
+              Divider(color: VelvetColors.border, height: 17),
+              ListTile(
+                key: const ValueKey('browse-delete-from-phone'),
+                leading: Icon(Icons.delete_outline, color: VelvetColors.error),
+                title: Text(l.browserDeleteFromPhone,
+                    style: TextStyle(color: VelvetColors.error)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  unawaited(_confirmDeleteLocal(c, item));
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Ask, then delete [item] from this phone: a file on its own, a folder
+  /// with everything in it. Nothing brings either back, so the question
+  /// comes first (the swipe this replaced deleted a file with none).
+  Future<void> _confirmDeleteLocal(BuildContext c, DisplayItem item) async {
+    final path = item.data;
+    if (path == null) return;
+    final l = AppLocalizations.of(c);
+    final folder = item.type == 'localDirectory';
+    // The name the menu showed: the folder's, or the track sheet's title.
+    final name =
+        folder ? item.name : item.metadata?.title ?? path.split('/').last;
+    final ok = await showDialog<bool>(
+      context: c,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(l.browserDeleteConfirm(name)),
+        content:
+            Text(folder ? l.browserDeleteFolderBody : l.browserDeleteFileBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: Text(l.goBack),
+          ),
+          TextButton(
+            key: const ValueKey('browse-delete-confirm'),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: Text(l.delete, style: TextStyle(color: VelvetColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    if (folder) {
+      await FileExplorer().deleteDirectory(path, item.server);
+    } else {
+      await FileExplorer().deleteFile(path, item.server);
+    }
+  }
+
   // Long-press context sheet for track rows: the album-detail queue actions
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
@@ -1673,7 +1692,12 @@ class _BrowserState extends State<Browser> {
       showPeerSongSheet(c, item, lead, page);
       return;
     }
-    showTrackActionsSheet(c, item, keep: _fileKeep(item));
+    showTrackActionsSheet(c, item,
+        keep: _fileKeep(item),
+        // A file on this phone: the sheet ends with Delete from this phone.
+        onDelete: item.type == 'localFile'
+            ? () => unawaited(_confirmDeleteLocal(c, item))
+            : null);
   }
 
   /// A connected server's song row's Keep a copy: the song, and in the file

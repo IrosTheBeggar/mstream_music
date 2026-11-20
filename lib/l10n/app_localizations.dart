@@ -1566,11 +1566,29 @@ abstract class AppLocalizations {
   /// **'Confirm Delete Playlist'**
   String get browserConfirmDeletePlaylist;
 
-  /// No description provided for @browserConfirmDeleteFolder.
+  /// Red menu row on a file or folder stored on this phone (File Explorer, Local Files): deletes it, after a confirmation.
   ///
   /// In en, this message translates to:
-  /// **'Confirm Delete Folder'**
-  String get browserConfirmDeleteFolder;
+  /// **'Delete from this phone'**
+  String get browserDeleteFromPhone;
+
+  /// Title of the confirmation before deleting a file or folder from this phone. name = the song title or the folder name.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String browserDeleteConfirm(String name);
+
+  /// Body of the confirmation before deleting a file from this phone. Nothing brings it back.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s removed from this phone.'**
+  String get browserDeleteFileBody;
+
+  /// Body of the confirmation before deleting a folder from this phone, with everything in it.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s removed from this phone, with everything in it.'**
+  String get browserDeleteFolderBody;
 
   /// No description provided for @browserSearchHint.
   ///

@@ -88,7 +88,6 @@ class AboutScreen extends StatelessWidget {
             child: Text(
               'mStream Mobile',
               style: TextStyle(
-                fontFamily: 'Jura',
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
                 color: VelvetColors.textPrimary,

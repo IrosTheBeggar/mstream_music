@@ -740,7 +740,27 @@
     "description": "Generic Download / Add All action labels (browser toolbar + swipe actions)."
   },
   "browserConfirmDeletePlaylist": "Confirm Delete Playlist",
-  "browserConfirmDeleteFolder": "Confirm Delete Folder",
+  "browserDeleteFromPhone": "Delete from this phone",
+  "@browserDeleteFromPhone": {
+    "description": "Red menu row on a file or folder stored on this phone (File Explorer, Local Files): deletes it, after a confirmation."
+  },
+  "browserDeleteConfirm": "Delete “{name}”?",
+  "@browserDeleteConfirm": {
+    "description": "Title of the confirmation before deleting a file or folder from this phone. name = the song title or the folder name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "browserDeleteFileBody": "It's removed from this phone.",
+  "@browserDeleteFileBody": {
+    "description": "Body of the confirmation before deleting a file from this phone. Nothing brings it back."
+  },
+  "browserDeleteFolderBody": "It's removed from this phone, with everything in it.",
+  "@browserDeleteFolderBody": {
+    "description": "Body of the confirmation before deleting a folder from this phone, with everything in it."
+  },
   "browserSearchHint": "Search Database",
   "@browserConfirmDeletePlaylist": {
     "description": "Browser delete-confirmation dialog titles + search hint."

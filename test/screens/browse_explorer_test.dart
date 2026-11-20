@@ -12,7 +12,6 @@
 import 'dart:async';
 
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/objects/display_item.dart';
@@ -80,9 +79,9 @@ void main() {
   Finder header() => find.byKey(const ValueKey('browse-folder-header'));
   Finder pill() => find.byKey(const ValueKey('browse-keep-pill'));
   Finder menuRow() => find.byKey(const ValueKey('browse-keep-menu-row'));
-  // A row is its Slidable and the 1 pt rule under it.
+  // A row is its ListTile and the 1 pt rule under it.
   double rowHeight(WidgetTester tester, String name) =>
-      tester.getSize(find.ancestor(of: find.text(name), matching: find.byType(Slidable)).first).height + 1;
+      tester.getSize(find.ancestor(of: find.text(name), matching: find.byType(ListTile)).first).height + 1;
 
   group('the open folder', () {
     testWidgets('a library root has no header; its folder rows\' sheet has Add All, then Keep a copy… (2-line title)', (tester) async {

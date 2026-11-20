@@ -857,7 +857,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserConfirmDeletePlaylist => 'Подтвердите удаление плейлиста';
 
   @override
-  String get browserConfirmDeleteFolder => 'Подтвердите удаление папки';
+  String get browserDeleteFromPhone => 'Удалить с этого телефона';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
+  String get browserDeleteFileBody => 'Файл будет удалён с этого телефона.';
+
+  @override
+  String get browserDeleteFolderBody =>
+      'Папка будет удалена с этого телефона вместе со всем содержимым.';
 
   @override
   String get browserSearchHint => 'Поиск в базе данных';
