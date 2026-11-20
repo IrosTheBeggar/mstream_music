@@ -4,7 +4,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
@@ -15,29 +14,32 @@ import '../objects/play_event.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../screens/discovery/copies_hub.dart';
-import '../screens/discovery/keep_copy_ui.dart' show keepInk;
 import '../screens/metadata_screen.dart';
+import '../singletons/app_route_observer.dart' show nowPlayingExpanded;
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../singletons/play_history.dart';
 import '../singletons/server_list.dart';
+import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/auto_dj_play_from.dart';
 import '../util/auto_dj_recent.dart';
 import '../util/browse_keep_leads.dart';
+import '../util/discover_badges.dart' show CopyMarker;
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import 'auto_dj_quick_config.dart';
 import 'auto_dj_recent_menu.dart';
 import 'auto_dj_start_sheet.dart';
 import 'browse_keep_entry.dart';
-import 'keep_folder_glyph.dart';
+import 'playlist_picker_sheet.dart' show addSongToPlaylistFlow;
+import 'queue_item_sheet.dart';
 
 /// Active-row state — which queue slot is playing, and whether it's playing —
 /// pushed down to each row (see [QueueList.build]) so a track advancing rebuilds
 /// only the two rows whose highlight flips, never the ReorderableListView /
-/// Slidable rows above them (which used to hitch the whole queue on every
+/// rows above them (which used to hitch the whole queue on every
 /// advance, because the active flag lived in the list-wide snapshot).
 ///
 /// queueIndex is the playing *position*, not the playing MediaItem: MediaItem.==
@@ -93,11 +95,224 @@ void _openInfo(BuildContext context, MediaItem item) {
   );
 }
 
+/// Find similar for a queued track: Discover, seeded with it.
+void _findSimilar(BuildContext context, MediaItem item) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DiscoverScreen(
+        seedServer:
+            ServerManager().byLocalname(item.extras?['server'] as String?),
+        seedPath: item.extras?['path'] as String?,
+        seedTitle: item.title,
+        seedArtist: item.artist,
+      ),
+    ),
+  );
+}
+
 /// The "Up Next" queue list (design Variant B rows). Reads/writes the queue
 /// purely through `MediaManager().audioHandler`, so it works identically
-/// wherever it's mounted. Swipe a row for download / remove / info.
-class QueueList extends StatelessWidget {
+/// wherever it's mounted. Hold a row — or tap its grip — for the song's
+/// options ([QueueItemSheet]); swipe a row either way to remove it, with
+/// Undo; hold the grip and drag to reorder.
+class QueueList extends StatefulWidget {
   const QueueList({super.key});
+
+  @override
+  State<QueueList> createState() => _QueueListState();
+}
+
+class _QueueListState extends State<QueueList> {
+  /// Rows swiped away whose removal the handler has not echoed yet. A
+  /// dismissed [Dismissible] has to leave the tree in the frame it reports,
+  /// and the queue answers a beat later, so the row is hidden here at once.
+  /// By identity: MediaItem.== is id-only, and a queue can hold the same
+  /// track twice.
+  final Set<MediaItem> _hidden = Set<MediaItem>.identity();
+
+  @override
+  void initState() {
+    super.initState();
+    nowPlayingExpanded.addListener(_maybeShowHint);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowHint());
+  }
+
+  @override
+  void dispose() {
+    nowPlayingExpanded.removeListener(_maybeShowHint);
+    super.dispose();
+  }
+
+  /// The first time the queue is on screen with songs in it, say once how
+  /// its rows work, as the browser's keep hint does. Shown on the panel's
+  /// own messenger, which is where this list's snackbars land.
+  void _maybeShowHint() {
+    if (!mounted || !nowPlayingExpanded.value) return;
+    final settings = SettingsManager();
+    if (settings.queueHoldHintShown) return;
+    final queue =
+        MediaManager().audioHandler.queue.valueOrNull ?? const <MediaItem>[];
+    if (queue.isEmpty) return;
+    final l = AppLocalizations.of(context);
+    unawaited(settings.markQueueHoldHintShown());
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(l.queueHoldHint),
+      duration: const Duration(seconds: 8),
+      action: SnackBarAction(label: l.ok, onPressed: () {}),
+    ));
+  }
+
+  /// The move that makes [item] play next — moveQueueItem's from and its
+  /// post-removal to — or null: nothing is playing, it is the song playing,
+  /// or it is already next.
+  ({int from, int to})? _playNextMove(MediaItem item) {
+    final h = MediaManager().audioHandler;
+    final live = h.queue.valueOrNull ?? const <MediaItem>[];
+    final from = live.indexWhere((e) => identical(e, item));
+    final current = h.playbackState.valueOrNull?.queueIndex;
+    if (from < 0 ||
+        current == null ||
+        current < 0 ||
+        current >= live.length ||
+        from == current) {
+      return null;
+    }
+    // Taking a row out from before the playing one moves the playing one up
+    // a place, so "right after it" is then its old index.
+    final to = from < current ? current : current + 1;
+    return to == from ? null : (from: from, to: to);
+  }
+
+  void _playNext(MediaItem item) {
+    // Again, on the queue as it is now: the sheet may have stood open while
+    // the song moved on.
+    final move = _playNextMove(item);
+    if (move == null) return;
+    final l = AppLocalizations.of(context);
+    // The handler reorders the queue at once; the player follows behind.
+    unawaited(MediaManager().audioHandler.customAction(
+        'moveQueueItem', {'from': move.from, 'to': move.to}));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.queuePlaysNext(item.title))));
+  }
+
+  /// Take [item] out of the queue, then offer it back: "Removed {title}"
+  /// with Undo. The row's place is found by identity at the time — the
+  /// build-time index goes stale if the queue moved meanwhile (the playing
+  /// track advancing), and an id match would take a twin of the same track.
+  ///
+  /// The snackbar doesn't wait for the player: the handler drops the row
+  /// from the queue at once, but the player's own removal can take seconds
+  /// (about 5 s on the emulator, 2026-11), and an Undo that only shows up
+  /// then has missed its moment. The player applies its edits in order, so
+  /// an Undo's re-add still lands after the removal.
+  void _remove(MediaItem item) {
+    final h = MediaManager().audioHandler;
+    final at = h.queue.value.indexWhere((e) => identical(e, item));
+    if (at < 0) return;
+    final l = AppLocalizations.of(context);
+    unawaited(h.removeQueueItemAt(at));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(l.queueRemovedSong(item.title)),
+        action: SnackBarAction(
+          label: l.queueUndo,
+          onPressed: () => unawaited(_undoRemove(item, at)),
+        ),
+      ));
+  }
+
+  /// Undo puts [item] back where it was: appended, then moved into place —
+  /// the two queue edits the handler has. A removed song that was playing
+  /// comes back to the queue; playback stays on the song that took over.
+  Future<void> _undoRemove(MediaItem item, int at) async {
+    if (mounted) setState(() => _hidden.remove(item));
+    final h = MediaManager().audioHandler;
+    // The removal reaches the handler's queue a beat after the call. Put
+    // the song back only once it has gone, or the two edits would cross.
+    if (h.queue.value.any((e) => identical(e, item))) {
+      try {
+        await h.queue
+            .firstWhere((q) => !q.any((e) => identical(e, item)))
+            .timeout(const Duration(seconds: 2));
+      } on TimeoutException {
+        return; // it never left: there is nothing to put back
+      }
+    }
+    await h.addQueueItem(item);
+    final last = h.queue.value.length - 1;
+    final to = at < last ? at : last;
+    if (to != last) {
+      await h.customAction('moveQueueItem', {'from': last, 'to': to});
+    }
+  }
+
+  Future<void> _addToPlaylist(Server server, String path) {
+    final messenger = ScaffoldMessenger.of(context);
+    return addSongToPlaylistFlow(context,
+        server: server,
+        path: path,
+        toast: (m) => messenger.showSnackBar(SnackBar(content: Text(m))));
+  }
+
+  void _download(MediaItem item, Server server, String path) {
+    final l = AppLocalizations.of(context);
+    // As the header's download-all does: the queued stream URL, the track's
+    // own server and path.
+    unawaited(
+        DownloadManager().downloadOneFile(item.id, server.localname, path));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.browserDownloadsStarted(1))));
+  }
+
+  /// The options sheet for [item], with the verbs that apply to it.
+  void _openMenu(MediaItem item) {
+    final e = item.extras;
+    final server = ServerManager().byLocalname(e?['server'] as String?);
+    final path = e?['path'] as String?;
+    VoidCallback? addToPlaylist;
+    VoidCallback? download;
+    if (server != null && path != null) {
+      // Playlists live on the user's OWN server: a connected server's path
+      // would be stored where the parent cannot resolve it (and the playlist
+      // routes are off the federation allowlist besides).
+      if (!server.isFederated) {
+        addToPlaylist = () => unawaited(_addToPlaylist(server, path));
+      }
+      if (e?['localPath'] == null) {
+        download = () => _download(item, server, path);
+      }
+    }
+    final peer = _keepPeerOf(item);
+    final request =
+        peer == null ? null : BrowseKeepRequest.queued(item, peer);
+    VoidCallback? keep;
+    Future<CopyMarker?> Function()? keepAsk;
+    if (peer != null && request != null) {
+      keep = () => _keepQueued(context, item, peer);
+      keepAsk = () =>
+          KeepMenuState.lookupSong(CopiesHub().jobsFor(peer), request);
+    }
+    unawaited(showQueueItemSheet(
+      context,
+      QueueItemSheet(
+        item: item,
+        onPlayNext: _playNextMove(item) == null
+            ? null
+            : () => _playNext(item),
+        onKeep: keep,
+        keepAsk: keepAsk,
+        onAddToPlaylist: addToPlaylist,
+        onDownload: download,
+        onFindSimilar:
+            _canFindSimilar(item) ? () => _findSimilar(context, item) : null,
+        onInfo: () => _openInfo(context, item),
+        onRemove: () => _remove(item),
+      ),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,21 +326,29 @@ class QueueList extends StatelessWidget {
       initialData: MediaManager().audioHandler.queue.valueOrNull,
       builder: (context, snapshot) {
         final queue = snapshot.data ?? const <MediaItem>[];
+        // A swiped row the handler has let go of needs hiding no longer.
+        _hidden.removeWhere((h) => !queue.any((e) => identical(e, h)));
+        final rows = _hidden.isEmpty
+            ? queue
+            : [
+                for (final e in queue)
+                  if (!_hidden.contains(e)) e
+              ];
 
-        if (queue.isEmpty) return const _EmptyQueue();
+        if (rows.isEmpty) return const _EmptyQueue();
 
         // Built again once a queued connected server's own gate answers:
         // its rows' Keep a copy… offers itself only once known open.
         return _GateWatch(
           queue: queue,
           builder: (context) => ReorderableListView.builder(
-            // We supply our own per-row drag grip so reorder never competes with
-            // the Slidable's horizontal swipe; the default long-press-anywhere
-            // reorder is off.
+            // We supply our own per-row drag grip so reorder never competes
+            // with the row's swipe or its hold; the default
+            // long-press-anywhere reorder is off.
             buildDefaultDragHandles: false,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 8),
-            itemCount: queue.length,
+            itemCount: rows.length,
             // Haptic tick on pickup / drop — every polished native reorder does
             // this, and ReorderableListView fires none by default.
             onReorderStart: (_) => HapticFeedback.mediumImpact(),
@@ -152,13 +375,21 @@ class QueueList extends StatelessWidget {
             // onReorderItem (vs the deprecated onReorder) hands us the
             // post-removal target index already — matching what the handler and
             // just_audio's moveAudioSource expect, so no off-by-one fixup here.
+            // The indices are the rows'; while a swiped row is still hidden
+            // they are not the queue's, and that lasts a frame — let it go.
             onReorderItem: (oldIndex, newIndex) {
-              if (newIndex == oldIndex) return;
+              if (newIndex == oldIndex || _hidden.isNotEmpty) return;
               MediaManager().audioHandler.customAction(
                   'moveQueueItem', {'from': oldIndex, 'to': newIndex});
             },
             itemBuilder: (BuildContext context, int index) {
-              final item = queue[index];
+              final item = rows[index];
+              // The row's place in the QUEUE — what the active highlight and
+              // a tap mean. It is the list's index except while a swiped row
+              // is hidden.
+              final at = identical(rows, queue)
+                  ? index
+                  : queue.indexWhere((e) => identical(e, item));
               final downloaded = item.extras?['localPath'] != null;
 
               // This row's (active, playing) from the shared active-state stream,
@@ -166,110 +397,37 @@ class QueueList extends StatelessWidget {
               // flips rebuild on a track change (not the whole visible list).
               ({bool active, bool playing}) rowState(
                   ({int? index, bool playing}) s) {
-                final on = s.index == index;
+                final on = s.index == at;
                 return (active: on, playing: on && s.playing);
               }
 
               final activeNow = _activeStream.valueOrNull;
 
-              // Remove this row from the queue. Re-resolves the row's CURRENT
-              // position at dismiss time by IDENTITY: the build-time index can be
-              // stale if the queue shifted during the swipe (e.g. the playing
-              // track auto-advanced). We match the exact MediaItem instance —
-              // not `indexOf`, whose `==` is id-only — so that when two entries
-              // share an id (e.g. the same playlist track loaded twice) we delete
-              // the row the user actually swiped, not its twin. The ObjectKey
-              // below guarantees every queue entry is a distinct instance.
-              // -1 → already gone.
-              void removeItem() {
-                final live = MediaManager().audioHandler.queue.value;
-                final at = live.indexWhere((e) => identical(e, item));
-                if (at >= 0) {
-                  MediaManager().audioHandler.removeQueueItemAt(at);
-                }
-              }
-
-              // A connected server's track: Keep a copy… beside Info (a peer
-              // never has Find similar — its discovery flags are pinned off).
+              // A connected server's track offers Keep a copy… (in its menu
+              // and to a screen reader).
               final keepPeer = _keepPeerOf(item);
-              final similar = _canFindSimilar(item);
-              final paneActions = 1 + (similar ? 1 : 0) + (keepPeer != null ? 1 : 0);
 
-              return Slidable(
+              return Dismissible(
                 // Identity key (also the ReorderableListView item key): follows
                 // the *item* across reorders; distinct MediaItem instances avoid a
                 // duplicate-key clash.
                 key: ObjectKey(item),
-                // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
-                // similar when this track's server has discovery data, or Keep
-                // a copy… for a connected server's track (the pane widens to fit
-                // the second action; hidden on older servers and for local
-                // files, never probed).
-                startActionPane: ActionPane(
-                  motion: const DrawerMotion(),
-                  extentRatio: 0.25 * paneActions,
-                  // A full right-swipe past the actions also removes the track,
-                  // so a full swipe in EITHER direction removes.
-                  dismissible: DismissiblePane(onDismissed: removeItem),
-                  children: [
-                    SlidableAction(
-                      backgroundColor: VelvetColors.raised,
-                      foregroundColor: VelvetColors.textPrimary,
-                      icon: Icons.info,
-                      label: l.info,
-                      onPressed: (context) => _openInfo(context, item),
-                    ),
-                    if (keepPeer != null)
-                      // A custom action: SlidableAction draws one ellipsized
-                      // line, and "Keep a copy…" needs two at large text.
-                      CustomSlidableAction(
-                        key: const ValueKey('queue-keep-action'),
-                        backgroundColor: VelvetColors.raised,
-                        foregroundColor: keepInk(),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        onPressed: (context) =>
-                            _keepQueued(context, item, keepPeer),
-                        child: _KeepPaneLabel(title: item.title),
-                      ),
-                    if (_canFindSimilar(item))
-                      SlidableAction(
-                        backgroundColor: VelvetColors.raised,
-                        foregroundColor: VelvetColors.primary,
-                        icon: Icons.explore,
-                        label: l.discoverFindSimilar,
-                        onPressed: (context) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DiscoverScreen(
-                                seedServer: ServerManager().byLocalname(
-                                    item.extras?['server'] as String?),
-                                seedPath: item.extras?['path'] as String?,
-                                seedTitle: item.title,
-                                seedArtist: item.artist,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
-                ),
-                // LEFT swipe → Remove; a full left-swipe also removes (the
-                // DismissiblePane), so swipe-to-remove is back — on this side.
-                endActionPane: ActionPane(
-                  motion: const DrawerMotion(),
-                  extentRatio: 0.25,
-                  dismissible: DismissiblePane(onDismissed: removeItem),
-                  children: [
-                    SlidableAction(
-                      backgroundColor: Colors.red.shade700,
-                      foregroundColor: Colors.white,
-                      icon: Icons.delete_outline,
-                      label: l.mainRemove,
-                      onPressed: (_) => removeItem(),
-                    ),
-                  ],
-                ),
+                // A swipe either way removes, as a full swipe did when the
+                // rows had drawers; the menu holds everything else.
+                direction: DismissDirection.horizontal,
+                background: const _RemoveBackground(start: true),
+                secondaryBackground: const _RemoveBackground(start: false),
+                // A tick as the swipe crosses the point where letting go
+                // removes, and back.
+                onUpdate: (d) {
+                  if (d.reached != d.previousReached) {
+                    HapticFeedback.selectionClick();
+                  }
+                },
+                onDismissed: (_) {
+                  setState(() => _hidden.add(item));
+                  _remove(item);
+                },
                 // RepaintBoundary so a highlight flip repaints only this row's
                 // layer — the panel wraps QueueList in one RepaintBoundary, so
                 // without this every advance would re-raster all visible rows.
@@ -287,25 +445,26 @@ class QueueList extends StatelessWidget {
                         active: st.active,
                         playing: st.playing,
                         downloaded: downloaded,
-                        // The panes' actions, for a screen reader: the row's
-                        // swipe and grip are its only handles (on the grip's
-                        // node — see _QueueRow.actions).
+                        // The menu's shortcuts, for a screen reader: on the
+                        // grip's node (see _QueueRow.actions).
                         actions: {
                           CustomSemanticsAction(label: l.info): () =>
-                              _openInfo(context, item),
+                              _openInfo(this.context, item),
                           if (keepPeer != null)
                             CustomSemanticsAction(
                                     label: l.browseKeepOfItem(item.title)):
-                                () => _keepQueued(context, item, keepPeer),
-                          CustomSemanticsAction(label: l.mainRemove): removeItem,
+                                () => _keepQueued(this.context, item, keepPeer),
+                          CustomSemanticsAction(label: l.mainRemove): () =>
+                              _remove(item),
                         },
                         focusKey: keepPeer == null
                             ? null
                             : BrowseKeepRequest.queued(item, keepPeer)?.focusKey,
                         onTap: () {
-                          MediaManager().audioHandler.skipToQueueItem(index);
+                          MediaManager().audioHandler.skipToQueueItem(at);
                           MediaManager().audioHandler.play();
                         },
+                        onMenu: () => _openMenu(item),
                       );
                     },
                   ),
@@ -315,6 +474,40 @@ class QueueList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// What a swipe uncovers: Remove, on the side the row leaves from.
+class _RemoveBackground extends StatelessWidget {
+  /// Uncovered by a swipe toward the end (the row moves right).
+  final bool start;
+  const _RemoveBackground({required this.start});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return ExcludeSemantics(
+      child: Container(
+        color: Colors.red.shade700,
+        alignment: start ? Alignment.centerLeft : Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              l.mainRemove,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -384,64 +577,6 @@ class _GateWatchState extends State<_GateWatch> {
   Widget build(BuildContext context) => widget.builder(context);
 }
 
-/// The queue pane's "Keep a copy…": Keep a copy's glyph over a two-line
-/// label — the glyph dropped above 1.6× text, and below that too wherever
-/// it and the label as laid out would not fit the row (measured: the label
-/// keeps the room); the label ellipsized rather than ever overflowing.
-class _KeepPaneLabel extends StatelessWidget {
-  final String title;
-  const _KeepPaneLabel({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final style = TextStyle(
-      color: keepInk(),
-      fontSize: 12,
-      fontWeight: FontWeight.w500,
-    );
-    return Semantics(
-      label: l.browseKeepOfItem(title),
-      excludeSemantics: true,
-      child: LayoutBuilder(builder: (context, box) {
-        var glyph = MediaQuery.textScalerOf(context).scale(1) <= 1.6;
-        if (glyph && box.maxWidth.isFinite && box.maxHeight.isFinite) {
-          final p = TextPainter(
-            text: TextSpan(
-              text: l.browseKeepButton,
-              style: DefaultTextStyle.of(context).style.merge(style),
-            ),
-            textDirection: TextDirection.ltr,
-            textAlign: TextAlign.center,
-            textScaler: MediaQuery.textScalerOf(context),
-            maxLines: 2,
-          )..layout(maxWidth: box.maxWidth);
-          glyph = 22 + 4 + p.height <= box.maxHeight;
-          p.dispose();
-        }
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (glyph) ...[
-              KeepFolderGlyph(size: 22, color: keepInk()),
-              const SizedBox(height: 4),
-            ],
-            Flexible(
-              child: Text(
-                l.browseKeepButton,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: style,
-              ),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-}
-
 class _QueueRow extends StatelessWidget {
   final MediaItem item;
   final int index;
@@ -450,12 +585,15 @@ class _QueueRow extends StatelessWidget {
   final bool downloaded;
   final VoidCallback onTap;
 
-  /// What the start and end panes do, as the grip's screen-reader actions
-  /// ("Actions for {title}…": Info, Keep a copy…, Remove). The row's own
-  /// node is the reorderable list's — its Move up / Move down / to the
-  /// start / to the end, the swipe, the tap — and a node holds one set of
-  /// custom actions: these on the row would split it from the list's, its
-  /// moves left on a node that says nothing.
+  /// Opens the song's options sheet: a hold on the row, a tap on the grip.
+  final VoidCallback onMenu;
+
+  /// The menu's shortcuts, as the grip's screen-reader actions ("Actions
+  /// for {title}…": Info, Keep a copy…, Remove). The row's own node is the
+  /// reorderable list's — its Move up / Move down / to the start / to the
+  /// end, the tap, the hold — and a node holds one set of custom actions:
+  /// these on the row would split it from the list's, its moves left on a
+  /// node that says nothing.
   final Map<CustomSemanticsAction, VoidCallback> actions;
 
   /// The grip's stable key, for focus to come back to once a Keep sheet
@@ -468,6 +606,7 @@ class _QueueRow extends StatelessWidget {
     required this.playing,
     required this.downloaded,
     required this.onTap,
+    required this.onMenu,
     this.actions = const {},
     this.focusKey,
   });
@@ -492,6 +631,10 @@ class _QueueRow extends StatelessWidget {
         color: active ? VelvetColors.active : Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          // Hold for the song's options. The grip claims its own hold first
+          // (it grabs the row for a reorder after 220ms, before a long press
+          // is decided), so this is the rest of the row's.
+          onLongPress: onMenu,
           child: Container(
             decoration: BoxDecoration(
               border: Border(
@@ -625,12 +768,13 @@ class _QueueRow extends StatelessWidget {
                   ),
                 ),
                 // Drag-to-reorder grip — a comfortable 44px touch target. HOLD
-                // then drag to reorder, or TAP it to open the action drawer (the
-                // start/left pane). The GestureDetector also keeps the tap from
-                // falling through to the row's play-on-tap. A screen reader
-                // hears what it does: "Actions for Late Train Verse, or hold to
-                // reorder" — its actions the panes' (Info, Keep a copy…,
-                // Remove), its focus its own node's.
+                // then drag to reorder, or TAP it for the song's options, the
+                // sheet a hold on the row opens: the visible way in, since a
+                // hold can't be seen. The GestureDetector also keeps the tap
+                // from falling through to the row's play-on-tap. A screen
+                // reader hears what it does: "Actions for Late Train Verse, or
+                // hold to reorder" — its actions the menu's shortcuts (Info,
+                // Keep a copy…, Remove), its focus its own node's.
                 _HeldDragStartListener(
                   index: index,
                   child: KeepFocusAnchor(
@@ -640,17 +784,16 @@ class _QueueRow extends StatelessWidget {
                       container: true,
                       button: true,
                       label: l.queueRowGripLabel(item.title),
-                      onTap: () => Slidable.of(context)?.openStartActionPane(),
+                      onTap: onMenu,
                       customSemanticsActions: actions,
                       child: Focus(
                         focusNode: node,
                         child: ExcludeSemantics(
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            // Tap → open the download/info drawer; drag →
+                            // Tap → the song's options; hold and drag →
                             // reorder.
-                            onTap: () =>
-                                Slidable.of(context)?.openStartActionPane(),
+                            onTap: onMenu,
                             child: SizedBox(
                               width: 44,
                               height: 44,

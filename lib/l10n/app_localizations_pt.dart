@@ -595,7 +595,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Crie uma com o botão Nova playlist e depois use o gesto de deslizar Adicionar à playlist na fila para preenchê-la.';
+      'Crie uma com o botão Nova playlist e depois toque e segure uma música na fila e escolha Adicionar à playlist.';
 
   @override
   String get playlistNameHint => 'Nome';
@@ -6362,6 +6362,29 @@ class AppLocalizationsPt extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Reproduzir a seguir';
+
+  @override
+  String queuePlaysNext(String title) {
+    return 'A seguir: $title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Remover da fila';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Removida da fila: $title';
+  }
+
+  @override
+  String get queueUndo => 'Desfazer';
+
+  @override
+  String get queueHoldHint =>
+      'Toque e segure uma música para ver as opções. Deslize-a para removê-la.';
 
   @override
   String get discoverToastView => 'Ver';

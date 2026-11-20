@@ -598,7 +598,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get playlistsEmptyBody =>
-      'Créez-en une avec le bouton Nouvelle liste de lecture, puis utilisez l\'action de balayage Ajouter à la liste de lecture de la file pour la remplir.';
+      'Créez-en une avec le bouton Nouvelle liste de lecture, puis maintenez un morceau de la file appuyé et choisissez Ajouter à la liste de lecture.';
 
   @override
   String get playlistNameHint => 'Nom';
@@ -6392,6 +6392,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String queueRowGripLabel(String title) {
     return 'Actions for $title, or hold to reorder';
   }
+
+  @override
+  String get queuePlayNext => 'Lire ensuite';
+
+  @override
+  String queuePlaysNext(String title) {
+    return 'À suivre : $title';
+  }
+
+  @override
+  String get queueRemoveFromQueue => 'Retirer de la file';
+
+  @override
+  String queueRemovedSong(String title) {
+    return 'Retiré de la file : $title';
+  }
+
+  @override
+  String get queueUndo => 'Annuler';
+
+  @override
+  String get queueHoldHint =>
+      'Maintenez un morceau appuyé pour voir ses options. Balayez-le pour le retirer.';
 
   @override
   String get discoverToastView => 'Voir';
