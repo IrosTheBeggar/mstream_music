@@ -15,6 +15,7 @@ import '../../widgets/song_picker_sheet.dart';
 import 'discovery_listing.dart';
 import 'discovery_page_controller.dart';
 import 'discovery_seeds_sheet.dart';
+import 'taste_seeds_host.dart';
 
 /// The pieces of Discover's browser listing that the browser does not draw
 /// itself — the configuration bar, the state cards, the footers — and the
@@ -86,9 +87,14 @@ void discoveryToast(BuildContext context, String message) {
 }
 
 /// "More options": the seeds sheet. "Use these N" pops it and asks again;
-/// the page shows the new answer when it lands.
-Future<void> discoveryEditSeeds(
-    BuildContext context, DiscoveryPageController c) async {
+/// the page shows the new answer when it lands. [c] is either page's
+/// [TasteSeedsHost] (Discover or Peer Recommendations). [onOpen] runs just
+/// before the sheet rises: Peer Recommendations ends a live preview there,
+/// since the sheet covers the band that says what is playing (the phone
+/// build plan's D2 on mStream plan §2 item 14).
+Future<void> discoveryEditSeeds(BuildContext context, TasteSeedsHost c,
+    {VoidCallback? onOpen}) async {
+  onOpen?.call();
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -206,9 +212,16 @@ class _HitArea extends StatelessWidget {
 /// (nothing would be asked; the scan-pending card's "Check again" is the way
 /// out), and for "More options" before any answer (no seeds to show yet).
 /// A thin line under the bar says a call is out while rows are already up.
+///
+/// The bar draws from a [TasteSeedsHost], so Peer Recommendations draws the
+/// same bar over its own controller (mStream plan §4.2). [onOpenSeeds] runs
+/// as "More options" opens the seeds sheet ([discoveryEditSeeds]'s
+/// `onOpen`); Discover passes none.
 class DiscoveryConfigBar extends StatelessWidget {
-  final DiscoveryPageController controller;
-  const DiscoveryConfigBar({super.key, required this.controller});
+  final TasteSeedsHost controller;
+  final VoidCallback? onOpenSeeds;
+  const DiscoveryConfigBar(
+      {super.key, required this.controller, this.onOpenSeeds});
 
   @override
   Widget build(BuildContext context) {
@@ -279,8 +292,10 @@ class DiscoveryConfigBar extends StatelessWidget {
                   // Standard density: the padded 48 px target.
                   child: TextButton(
                     key: const ValueKey('discovery-more-options'),
-                    onPressed:
-                        canSeeds ? () => discoveryEditSeeds(context, c) : null,
+                    onPressed: canSeeds
+                        ? () => discoveryEditSeeds(context, c,
+                            onOpen: onOpenSeeds)
+                        : null,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
@@ -302,7 +317,7 @@ class DiscoveryConfigBar extends StatelessWidget {
           // A fixed 2 px slot, so the rows never jump when it comes and goes.
           SizedBox(
             height: 2,
-            child: c.loading && c.seeded != null
+            child: c.loading && c.answerShown
                 ? LinearProgressIndicator(
                     minHeight: 2,
                     color: VelvetColors.primary,
