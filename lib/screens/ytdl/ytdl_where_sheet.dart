@@ -643,6 +643,7 @@ class _YtdlWhereSheetState extends State<YtdlWhereSheet> {
             Expanded(
               child: Semantics(
                 header: true,
+                headingLevel: 1,
                 child: Text(
                   l.ytdlWhereTitle,
                   style: TextStyle(

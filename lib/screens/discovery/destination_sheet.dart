@@ -521,6 +521,7 @@ class _DestinationSheetState extends State<DestinationSheet> {
                 children: [
                   Semantics(
                     header: true,
+                    headingLevel: 1,
                     child: Text(
                       l.discoverDestTitle,
                       style: TextStyle(

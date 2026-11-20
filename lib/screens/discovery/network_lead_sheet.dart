@@ -447,6 +447,7 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
       key: const ValueKey('network-lead-header'),
       child: Semantics(
         header: true,
+        headingLevel: 1,
         child: DiscoverySheetHeader(
           cover: _cover(),
           title: lead.title,

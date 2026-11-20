@@ -178,7 +178,7 @@ class DiscoverySheetHeader extends StatelessWidget {
     // One header node: what the sheet is about, then where it comes from.
     return MergeSemantics(
       key: const ValueKey('browse-keep-header'),
-      child: Semantics(header: true, child: head),
+      child: Semantics(header: true, headingLevel: 1, child: head),
     );
   }
 }

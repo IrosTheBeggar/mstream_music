@@ -467,6 +467,7 @@ class AutoDjSeedsView extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(14, 20, 14, tight ? 2 : 8),
         child: Semantics(
           header: true,
+          headingLevel: 2,
           child: Text(text,
               style: TextStyle(
                   fontSize: 13,

@@ -594,6 +594,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     Widget headed(Widget child) => Semantics(
           container: true,
           header: true,
+          headingLevel: 1,
           label: widget.album.name,
           value: [
             if (artist.isNotEmpty) artist,

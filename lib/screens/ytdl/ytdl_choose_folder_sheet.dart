@@ -229,6 +229,7 @@ class _YtdlChooseFolderSheetState extends State<YtdlChooseFolderSheet> {
                 children: [
                   Semantics(
                     header: true,
+                    headingLevel: 1,
                     child: Text(
                       l.ytdlChooseTitle,
                       style: TextStyle(

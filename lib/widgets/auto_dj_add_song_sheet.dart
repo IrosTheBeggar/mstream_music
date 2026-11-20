@@ -253,6 +253,7 @@ class _AddSongSheetState extends State<_AddSongSheet> {
             Expanded(
               child: Semantics(
                 header: true,
+                headingLevel: 1,
                 child: Text(l.autoDjAddSong,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -452,6 +453,7 @@ class _AddSongSheetState extends State<_AddSongSheet> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
         child: Semantics(
           header: true,
+          headingLevel: 2,
           child: Text(text,
               style: TextStyle(
                   fontSize: 13,

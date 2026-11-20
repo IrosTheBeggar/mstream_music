@@ -18,7 +18,12 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 0.40.0+59
 
 environment:
+  # The sdk floor sets the Dart language version, so it stays at 3.12 rather
+  # than opting the code into Dart 3.13's language changes along with Flutter.
   sdk: ">=3.12.0 <4.0.0"
+  # material_ui 1.4+, cupertino_ui 1.1.1+, flutter_slidable 5 and
+  # background_downloader 9.6 all need Flutter 3.47.
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
@@ -33,15 +38,10 @@ dependencies:
   audio_session: ^0.2.2
   audio_service: ^0.18.18
   just_audio: ^0.10.3
-  flutter_slidable: ^4.0.3
-  # Pinned: 9.5.8 fails :background_downloader:compileDebugKotlin under the
-  # transitional android.builtInKotlin=false toolchain — its build.gradle tries
-  # to re-apply legacy KGP for that case but checks hasProperty('builtInKotlin')
-  # (missing the android. prefix), so the branch never fires. 9.5.5 is the last
-  # version verified to build here; unpin once upstream fixes the property check.
-  background_downloader: 9.5.5
+  flutter_slidable: ^5.2.0
+  background_downloader: ^9.6.6
   flutter_launcher_icons: ^0.14.2
-  permission_handler: ^12.0.1
+  permission_handler: ^13.0.2
   url_launcher: ^6.3.1
   # QR scanning for iroh pairing codes (CameraX/ML Kit). Replaces the
   # long-removed flutter_barcode_scanner.
@@ -52,12 +52,12 @@ dependencies:
   # Network-change signal that kicks the iroh tunnel's reconnect — iroh can't
   # self-detect interface changes (Wi-Fi<->cellular) on Android.
   connectivity_plus: ^7.2.0
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
   path: any
   # Visualizer: FFI bindings to libprojectM (loaded from jniLibs on Android).
   ffi: ^2.1.4
   media_cast_dlna: ^0.3.1
-  flutter_chrome_cast: ^1.4.6
+  flutter_chrome_cast: ^2.0.0
   # Native share sheet for exporting diagnostic logs (Diagnostics screen).
   share_plus: ^13.2.0
   # .torrent file picker for the Add-torrent screen (links cleanly on the
@@ -104,7 +104,7 @@ dependencies:
   # Direct dependency (material_ui already pulls it in) for its
   # GlobalCupertinoLocalizations - see lib/l10n/localizations_delegates.dart.
   cupertino_ui: ^1.0.1
-  flutter_local_notifications: ^22.3.0
+  flutter_local_notifications: ^23.0.2
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

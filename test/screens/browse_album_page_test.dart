@@ -235,6 +235,8 @@ void main() {
       await open(tester, tapes(), width: 600);
       final node = tester.getSemantics(find.bySemanticsLabel('Borrowed Tapes').first);
       expect(node.getSemanticsData().flagsCollection.isHeader, isTrue);
+      expect(node.getSemanticsData().headingLevel, 1,
+          reason: 'VoiceOver and TalkBack take the heading from headingLevel, not isHeader');
       expect(node.rect.width, greaterThan(200), reason: 'the facts it reads, not the 86 pt cover');
       handle.dispose();
       await close(tester);

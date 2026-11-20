@@ -824,6 +824,8 @@ void main() {
         t.getSemantics(find.text('ADDING')),
         isSemantics(
             label: "ADDING\nRuns on the server · can't be stopped from the app", isHeader: true));
+    expect(t.getSemantics(find.text('ADDING')).getSemanticsData().headingLevel, 2,
+        reason: 'VoiceOver and TalkBack take the heading from headingLevel, not isHeader');
     expect(find.bySemanticsLabel("Runs on the server · can't be stopped from the app"), findsNothing,
         reason: 'the note is no other node\'s label');
     final row = t.getSemantics(find.text('Instant Crush'));
