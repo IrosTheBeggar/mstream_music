@@ -11,6 +11,7 @@ import '../../util/discovery_plugins_api.dart';
 import 'elsewhere_sheet.dart' show openOutside;
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
+import 'preview_answers.dart';
 
 /// The network-lead sheet's 30-SECOND PREVIEW (the design canvas's
 /// NetworkSheet board and its Degraded preview outcomes): one row per
@@ -28,7 +29,12 @@ import 'keep_toast.dart';
 /// the clip's own included) ask again on the next press. A plug-in the
 /// server no longer offers this caller (403 / 404) takes its row away.
 /// One clip at a time: pressing another row switches, the song staying
-/// paused in between.
+/// paused in between. A sheet opened from Peer Recommendations shares the
+/// page's answers (preview_answers.dart): what the page found plays here
+/// with no lookup, what it found none for reads "No preview found". A clip
+/// that fails is forgotten from those answers (PreviewAnswers.forget), so
+/// the next press here, on the page or on a sheet opened later asks the
+/// plug-in again, and its 200 is the page's answer too.
 
 /// A preview row's name: the catalogues by their own names, any other
 /// preview plug-in by its listing title.
@@ -78,18 +84,39 @@ enum _Lookup { idle, lookingUp, found, none, busy, unavailable }
 
 /// One sheet's previews: what each plug-in answered, and the press that
 /// asks it and plays its clip. Lives as long as the sheet; the sheet ends
-/// the preview player's flow as it closes.
+/// its own flow on the preview player as it closes. It plays as the
+/// clip's owner, and reads only its own clip (or one that named nobody)
+/// as its rows': a clip the Peer Recommendations page plays is not one of
+/// these rows' (mStream plan §2 item 15).
 class NetworkPreviews extends ChangeNotifier {
   /// [recommendation] is sent to each preview plug-in as it is (the sheet's
   /// repaired one). [onPress] runs on every press that asks or plays (the
   /// sheet pins Discover's seed); [onGone] when a plug-in answered 403 or
   /// 404 (its row is gone; the sheet reads the gate again and says so).
+  /// [answers]: the Peer Recommendations visit's answers for this lead —
+  /// what they hold seeds the rows (a clip found reads as found and plays
+  /// with no lookup; none reads "No preview found"), a press reads them
+  /// again first, and every plug-in's 200 is written back.
   NetworkPreviews({
     required this.api,
     required this.recommendation,
     this.onPress,
     this.onGone,
+    this.answers,
   }) : _player = PreviewPlayer() {
+    final seeds = answers;
+    if (seeds != null) {
+      for (final MapEntry(key: plugin, value: a)
+          in seeds.store.answersFor(seeds.leadKey).entries) {
+        final found = a.found;
+        if (found != null) {
+          _found[plugin] = found;
+          _lookups[plugin] = _Lookup.found;
+        } else {
+          _lookups[plugin] = _Lookup.none;
+        }
+      }
+    }
     _clip = _player.state.value;
     _sub = _player.state.listen(_onClip);
   }
@@ -98,6 +125,7 @@ class NetworkPreviews extends ChangeNotifier {
   final Map<String, dynamic> recommendation;
   final VoidCallback? onPress;
   final void Function(String plugin)? onGone;
+  final LeadPreviewAnswers? answers;
   final PreviewPlayer _player;
 
   final Map<String, _Lookup> _lookups = {};
@@ -130,13 +158,17 @@ class NetworkPreviews extends ChangeNotifier {
     return null;
   }
 
+  /// The preview player's [s] is these rows' clip: theirs, or one that
+  /// named no owner.
+  bool _mine(PreviewClipState s) => s.owner == null || identical(s.owner, this);
+
   /// How [plugin]'s row reads now: what its plug-in answered, and whether
   /// the preview player is loading or playing its clip.
   PreviewRowState stateOf(String plugin) {
     final lookup = _lookups[plugin] ?? _Lookup.idle;
     if (lookup == _Lookup.none) return PreviewRowState.none;
     if (lookup == _Lookup.lookingUp) return PreviewRowState.lookingUp;
-    if (_clip.provider == plugin) {
+    if (_clip.provider == plugin && _mine(_clip)) {
       if (_clip.phase == PreviewPhase.loading) return PreviewRowState.loading;
       if (_clip.phase == PreviewPhase.playing) return PreviewRowState.playing;
     }
@@ -158,7 +190,7 @@ class NetworkPreviews extends ChangeNotifier {
       case PreviewRowState.loading:
       case PreviewRowState.playing:
         _wanted = null;
-        await _player.end(PreviewEnd.stopped);
+        await _player.end(PreviewEnd.stopped, owner: this);
         return;
       case PreviewRowState.lookingUp:
       case PreviewRowState.none:
@@ -171,6 +203,25 @@ class NetworkPreviews extends ChangeNotifier {
       case PreviewRowState.idle:
       case PreviewRowState.busy:
       case PreviewRowState.unavailable:
+        // The page (or another sheet of its visit) may have answered since
+        // the sheet opened: a press reads the visit's answers once more. A
+        // clip that failed here is no longer among them (_play, _onClip).
+        final shared = answers;
+        final stored = shared?.store.of(shared.leadKey, name);
+        if (stored != null) {
+          final found = stored.found;
+          if (found == null) {
+            _found.remove(name);
+            _set(name, _Lookup.none);
+            return;
+          }
+          _found[name] = found;
+          _set(name, _Lookup.found);
+          _wanted = name;
+          onPress?.call();
+          await _play(name, found);
+          return;
+        }
         onPress?.call();
         _wanted = name;
         await _ask(name);
@@ -199,6 +250,11 @@ class NetworkPreviews extends ChangeNotifier {
       _set(name, e.status == 429 ? _Lookup.busy : _Lookup.unavailable);
       return;
     }
+    // A 200 is the visit's answer, found or none, even once the sheet has
+    // closed: the page reads it rather than ask again (mStream plan §2 item
+    // 15). A failure is never kept: the next press asks again.
+    final shared = answers;
+    shared?.store.put(shared.leadKey, name, found);
     if (_disposed) return;
     if (found == null) {
       _found.remove(name);
@@ -215,7 +271,15 @@ class NetworkPreviews extends ChangeNotifier {
   }
 
   Future<void> _play(String name, PluginPreview preview) async {
-    final out = await _player.play(provider: name, url: preview.url);
+    final out =
+        await _player.play(provider: name, url: preview.url, owner: this);
+    // A clip that would not load is dead (a signed CDN address that
+    // expired, say): the visit's answers forget it, even once the sheet
+    // has closed, as the page's do. _onClip may have forgotten it already.
+    if (out == PreviewPlayOutcome.failed) {
+      final shared = answers;
+      shared?.store.forget(shared.leadKey, name, preview.url);
+    }
     if (_disposed) return;
     if (out == PreviewPlayOutcome.failed) _set(name, _Lookup.unavailable);
   }
@@ -224,12 +288,24 @@ class NetworkPreviews extends ChangeNotifier {
     if (_disposed) return;
     _clip = s;
     // The clip would not load or broke while playing: the row reads
-    // unavailable, and its next press asks the plug-in again.
+    // unavailable, and its next press asks the plug-in again. Another
+    // surface's clip failing says nothing of these rows. Its address is
+    // dead (a signed CDN address that expired, say), so the visit's
+    // answers forget it too, and the page and any later sheet ask again.
+    // A clip that would not load may be told here before its play returns
+    // or after it (the row then reads unavailable already, and _play has
+    // forgotten it); a clip that broke while playing is told only here.
     final provider = s.provider;
     if (s.phase == PreviewPhase.failed &&
+        _mine(s) &&
         provider != null &&
         _lookups[provider] == _Lookup.found) {
       _lookups[provider] = _Lookup.unavailable;
+      final shared = answers;
+      final dead = _found[provider];
+      if (shared != null && dead != null) {
+        shared.store.forget(shared.leadKey, provider, dead.url);
+      }
     }
     notifyListeners();
   }
