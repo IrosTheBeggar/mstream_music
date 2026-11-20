@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "Cambiar dónde se guardan las canciones añadidas",
   "discoverCopiesDestChangedYtMoved": "No se pudo iniciar: cambió dónde se guardan los archivos",
   "discoverCopiesAddThere": "Añadir allí",
-  "discoverToastView": "Ver"
+  "discoverToastView": "Ver",
+  "peerRecsTitle": "Recomendaciones de pares",
+  "peerRecsAll": "Todos",
+  "peerRecsAdding": "Cargando…",
+  "peerRecsNoRoom": "Sin espacio",
+  "peerRecsNoPeers": "Aún no hay pares",
+  "peerRecsNothingNew": "Nada nuevo",
+  "peerRecsPreviewAll": "Escuchar todas",
+  "peerRecsCopyList": "Copiar lista",
+  "peerRecsCopied": "Copiado",
+  "peerRecsNoPreview": "Sin vista previa",
+  "peerRecsPeers": "Pares",
+  "peerRecsOffline": "sin conexión",
+  "peerRecsAddPeer": "Añadir {name}",
+  "peerRecsPreviewTrack": "Escuchar vista previa de {title}",
+  "peerRecsPauseTrack": "Pausar vista previa de {title}",
+  "peerRecsNextPreview": "Siguiente vista previa"
 }

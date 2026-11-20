@@ -11,6 +11,7 @@ import '../../widgets/song_picker_sheet.dart';
 import '../discover_screen.dart';
 import 'discovery_page_controller.dart';
 import 'discovery_widgets.dart';
+import 'taste_seeds_host.dart';
 
 /// The seeds sheet (the PhoneSeeds canvas board), opened from "More options"
 /// in Discover's configuration bar — the power feature for a targeted query:
@@ -19,10 +20,14 @@ import 'discovery_widgets.dart';
 /// "Find similar" on a seed (the per-song lens the old seed chips opened).
 /// The window is not here — the bar is its one home. The seeds are a draft:
 /// nothing is sent until "Use these N", which hands it to
-/// [DiscoveryPageController.applySeeds]. Drops and pins last for this visit
+/// [TasteSeedsHost.applySeeds]. Drops and pins last for this visit
 /// only (plan §2.3, §2.13): the server stores nothing.
+///
+/// The host is either page's: Discover's controller or Peer
+/// Recommendations' (mStream plan §4.2, one sheet for both). It still
+/// imports Discover's controller for [discoverySeedItem].
 class DiscoverySeedsSheet extends StatefulWidget {
-  final DiscoveryPageController controller;
+  final TasteSeedsHost controller;
   const DiscoverySeedsSheet({super.key, required this.controller});
 
   @override
@@ -40,7 +45,7 @@ class _Pin {
 }
 
 class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
-  DiscoveryPageController get c => widget.controller;
+  TasteSeedsHost get c => widget.controller;
 
   final Set<String> _off = {}; // history seeds switched off
   final Set<String> _on = {}; // dropped seeds switched back on

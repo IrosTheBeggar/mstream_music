@@ -6603,4 +6603,58 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => '新しい保存先に追加';
+
+  @override
+  String get peerRecsTitle => 'ピアのおすすめ';
+
+  @override
+  String get peerRecsAll => 'すべて';
+
+  @override
+  String get peerRecsAdding => '追加中…';
+
+  @override
+  String get peerRecsNoRoom => '空きがありません';
+
+  @override
+  String get peerRecsNoPeers => 'ピアはまだありません';
+
+  @override
+  String get peerRecsNothingNew => '新しい曲はありません';
+
+  @override
+  String get peerRecsPreviewAll => 'すべて試聴';
+
+  @override
+  String get peerRecsCopyList => 'リストをコピー';
+
+  @override
+  String get peerRecsCopied => 'コピーしました';
+
+  @override
+  String get peerRecsNoPreview => '試聴なし';
+
+  @override
+  String get peerRecsPeers => 'ピア';
+
+  @override
+  String get peerRecsOffline => 'オフライン';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return '$nameを追加';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return '$titleを試聴';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return '$titleの試聴を一時停止';
+  }
+
+  @override
+  String get peerRecsNextPreview => '次の試聴';
 }

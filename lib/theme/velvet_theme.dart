@@ -308,6 +308,7 @@ class VelvetColors {
     _active = p;
   }
 
+  static Brightness get brightness => _active.brightness;
   static Color get bg => _active.bg;
   static Color get surface => _active.surface;
   static Color get raised => _active.raised;

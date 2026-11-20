@@ -549,5 +549,32 @@ void main() {
       final fed = federation.withRaw({...federation.raw, 'extra': 1});
       expect([fed.peerId, fed.filepath, fed.genreTags, fed.raw['extra']], [1, 'peer-vpath/song.mp3', isEmpty, 1]);
     });
+
+    // A Peer Recommendations lead opened in the network-lead sheet goes
+    // through _sendable → withRaw (network_lead_sheet.dart): the strip's
+    // label and the generated tile must survive it (taste generation 3).
+    test('withRaw keeps peerLabel and tile', () {
+      final lead = DiscoveryLead.fromServerMap({
+        'artist': 'Paper Lantern',
+        'title': 'Signal Fires',
+        'album': 'Night Ferry',
+        'year': 0,
+        'source': 'p2p',
+        'exportId': 'x1',
+        'peer': {'endpointId': 'ep1', 'name': '', 'label': 'mStream · 3f9a'},
+        'tile': {'key': 'paper lantern|night ferry', 'hue': 39, 'letter': 'P'},
+      })!;
+      expect([lead.peerLabel, lead.tile], ['mStream · 3f9a', const LeadTile('paper lantern|night ferry', 39, 'P')]);
+      final rec = lead.recommendation!;
+      final l = lead.withRaw(rec);
+      expect([l.peerLabel, l.tile, l.year], ['mStream · 3f9a', lead.tile, null]);
+      // A raw without them keeps what was parsed: they are not re-read from it.
+      final bare = lead.withRaw(const {'title': 'Signal Fires'});
+      expect([bare.peerLabel, bare.tile], [lead.peerLabel, lead.tile]);
+      expect(bare.raw, {'title': 'Signal Fires'});
+      // A lead without them stays without them.
+      final plain = perSong.withRaw(perSong.recommendation!);
+      expect([plain.peerLabel, plain.tile], [null, null]);
+    });
   });
 }

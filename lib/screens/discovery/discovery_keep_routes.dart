@@ -11,13 +11,15 @@ import 'destination_sheet.dart';
 import 'discovery_jobs_controller.dart';
 import 'elsewhere_sheet.dart';
 import 'network_lead_sheet.dart';
+import 'preview_answers.dart';
 
 /// Where the Keep a copy surfaces hand off to the sheets they open but do
 /// not draw: "Open elsewhere" (the links plug-in's sub-sheet), the Copies
 /// sheet (the strip under Discover's bar), the destination picker ("Change"
 /// on the Keep card — a folder's "By your layout" previews the folder),
 /// "Show in your library" (a folder copy's files on the user's own server),
-/// and the network-lead sheet (a "From the network" row on More like this).
+/// and the network-lead sheet (a "From the network" row on More like this,
+/// a card on Peer Recommendations).
 /// The entry points call these; tests set their own to see the call.
 class DiscoveryKeepRoutes {
   DiscoveryKeepRoutes._();
@@ -82,6 +84,20 @@ class DiscoveryKeepRoutes {
   })
   openNetworkLead = _openNetworkLead;
 
+  /// A card's tap on Peer Recommendations: the network-lead sheet for
+  /// [lead] (showNetworkLeadSheet — [seedTitle] for its match line,
+  /// [answers] the visit's preview answers it shares). Completes once the
+  /// sheet has closed, so the page can hold its list while it is up
+  /// (mStream plan §2 item 15: one window for every network lead).
+  static Future<void> Function(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryLead lead, {
+    String? seedTitle,
+    LeadPreviewAnswers? answers,
+  })
+  openPeerLead = _openPeerLead;
+
   /// Put the real sheets back (tests) — Copies' way back to a YouTube add's
   /// song (CopiesSheet.openLead) too.
   static void reset() {
@@ -91,6 +107,7 @@ class DiscoveryKeepRoutes {
     changeFolderDestination = _changeFolderDestination;
     showInLibrary = _showInLibrary;
     openNetworkLead = _openNetworkLead;
+    openPeerLead = _openPeerLead;
     CopiesSheet.openLead = CopiesSheet.reopenLead;
   }
 
@@ -121,6 +138,20 @@ class DiscoveryKeepRoutes {
       avoidUrl: avoidUrl,
       onLeadAction: onLeadAction,
     ),
+  );
+
+  static Future<void> _openPeerLead(
+    BuildContext context,
+    DiscoveryJobsController jobs,
+    DiscoveryLead lead, {
+    String? seedTitle,
+    LeadPreviewAnswers? answers,
+  }) => showNetworkLeadSheet(
+    context,
+    jobs: jobs,
+    lead: lead,
+    seedTitle: seedTitle,
+    answers: answers,
   );
 
   static void _changeDestination(

@@ -10605,6 +10605,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add there'**
   String get discoverCopiesAddThere;
+
+  /// Title of the Peer Recommendations page (toolbar) and its card under LISTEN on a server's home: songs that other mStream servers on the P2P discovery network have, picked to sound like songs this account finished. A "peer" is another server on the P2P network, never a connected (federated) server.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer Recommendations'**
+  String get peerRecsTitle;
+
+  /// Peer Recommendations: the first item of the peer strip — songs from every peer on this server's shelf.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get peerRecsAll;
+
+  /// Peer Recommendations, admins only: the label under a peer whose snapshot this server is fetching onto its shelf (after its "+" was pressed); also read after the peer's name by screen readers. It is not a song being added to the library. It sits under a 56 px circle in a column 68 px wide, on at most two lines, so keep every word short (about 9 letters): a longer word is drawn smaller to fit.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get peerRecsAdding;
+
+  /// Peer Recommendations, admins only: the label under a peer whose snapshot does not fit on this server's shelf even after swapping out every unpinned one. Not a button; it clears itself once an admin unpins a snapshot. Like "Adding…", it sits in a column 68 px wide on at most two lines, so keep every word short.
+  ///
+  /// In en, this message translates to:
+  /// **'No room'**
+  String get peerRecsNoRoom;
+
+  /// Peer Recommendations: the page's only line while this server holds no peer snapshot it can search.
+  ///
+  /// In en, this message translates to:
+  /// **'No peers yet'**
+  String get peerRecsNoPeers;
+
+  /// Peer Recommendations: the page's line when the peers had no new songs for these seed songs; a "New seeds" button follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new'**
+  String get peerRecsNothingNew;
+
+  /// Peer Recommendations: the button under the songs that plays each song's 30-second preview in turn.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview all'**
+  String get peerRecsPreviewAll;
+
+  /// Peer Recommendations: copies the shown songs as "Artist - Title" lines.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy list'**
+  String get peerRecsCopyList;
+
+  /// Toast after Copy list, or after a song is copied because no plug-in can open it.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get peerRecsCopied;
+
+  /// Peer Recommendations: toast when a song's preview button found no 30-second preview; also read by screen readers on the dimmed preview button.
+  ///
+  /// In en, this message translates to:
+  /// **'No preview'**
+  String get peerRecsNoPreview;
+
+  /// Screen reader: the name of the peer strip (the row of P2P peers at the top of Peer Recommendations).
+  ///
+  /// In en, this message translates to:
+  /// **'Peers'**
+  String get peerRecsPeers;
+
+  /// Screen reader: a peer's state in the strip, read after its name ("Attic Tapes, offline"); lower case like p2pOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'offline'**
+  String get peerRecsOffline;
+
+  /// Screen reader, admins only: the "+" under a peer not on this server's shelf yet; fetches its snapshot onto the shelf. {name} is the peer's label ("Lighthouse Tapes", "mStream · 3f9a").
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name}'**
+  String peerRecsAddPeer(String name);
+
+  /// Screen reader: a song card's round play button (and the band's play button while paused): plays the song's 30-second preview. {title} is the song's title.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview {title}'**
+  String peerRecsPreviewTrack(String title);
+
+  /// Screen reader: the same button while the preview plays; pauses it. {title} is the song's title.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause preview of {title}'**
+  String peerRecsPauseTrack(String title);
+
+  /// Screen reader: the preview band's next button: plays the next song's 30-second preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Next preview'**
+  String get peerRecsNextPreview;
 }
 
 class _AppLocalizationsDelegate

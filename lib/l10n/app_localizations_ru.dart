@@ -7076,4 +7076,58 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => 'Добавить туда';
+
+  @override
+  String get peerRecsTitle => 'Рекомендации пиров';
+
+  @override
+  String get peerRecsAll => 'Все';
+
+  @override
+  String get peerRecsAdding => 'Загрузка…';
+
+  @override
+  String get peerRecsNoRoom => 'Нет места';
+
+  @override
+  String get peerRecsNoPeers => 'Пиров пока нет';
+
+  @override
+  String get peerRecsNothingNew => 'Ничего нового';
+
+  @override
+  String get peerRecsPreviewAll => 'Прослушать все';
+
+  @override
+  String get peerRecsCopyList => 'Копировать список';
+
+  @override
+  String get peerRecsCopied => 'Скопировано';
+
+  @override
+  String get peerRecsNoPreview => 'Нет фрагмента';
+
+  @override
+  String get peerRecsPeers => 'Пиры';
+
+  @override
+  String get peerRecsOffline => 'не в сети';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return 'Добавить $name';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return 'Прослушать фрагмент: $title';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return 'Приостановить фрагмент: $title';
+  }
+
+  @override
+  String get peerRecsNextPreview => 'Следующий фрагмент';
 }

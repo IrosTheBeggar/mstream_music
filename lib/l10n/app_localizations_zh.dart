@@ -6520,4 +6520,58 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => '添加到新位置';
+
+  @override
+  String get peerRecsTitle => '节点推荐';
+
+  @override
+  String get peerRecsAll => '全部';
+
+  @override
+  String get peerRecsAdding => '正在添加…';
+
+  @override
+  String get peerRecsNoRoom => '空间不足';
+
+  @override
+  String get peerRecsNoPeers => '暂无节点';
+
+  @override
+  String get peerRecsNothingNew => '没有新内容';
+
+  @override
+  String get peerRecsPreviewAll => '全部试听';
+
+  @override
+  String get peerRecsCopyList => '复制列表';
+
+  @override
+  String get peerRecsCopied => '已复制';
+
+  @override
+  String get peerRecsNoPreview => '无试听';
+
+  @override
+  String get peerRecsPeers => '节点';
+
+  @override
+  String get peerRecsOffline => '离线';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return '添加 $name';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return '试听 $title';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return '暂停试听 $title';
+  }
+
+  @override
+  String get peerRecsNextPreview => '下一个试听';
 }

@@ -21,6 +21,7 @@ import '../widgets/album_grid.dart';
 import '../widgets/browse_keep_entry.dart';
 import '../widgets/browse_keep_pill.dart' show KeepPageAction;
 import '../widgets/browse_page_header.dart';
+import '../widgets/home_card_rows.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/mood_filter_sheet.dart';
 import '../widgets/player_panel.dart';
@@ -51,6 +52,8 @@ import 'discovery/discovery_page_controller.dart';
 import 'discovery/discovery_widgets.dart';
 import 'discovery/keep_copy_ui.dart';
 import 'discovery/keep_toast.dart';
+import 'discovery/peer_recs_listing.dart';
+import 'discovery/peer_recs_view.dart';
 import 'discovery/peer_sheets.dart';
 import 'sonic_path_screen.dart';
 import 'ytdl/ytdl_folder_strip.dart';
@@ -424,6 +427,16 @@ class _BrowserState extends State<Browser> {
         browserList[index].data == 'discover') {
       final s = browserList[index].server;
       if (s != null) DiscoveryListing().open(s);
+      return;
+    }
+
+    // Peer Recommendations is a browser listing too: one marker frame the
+    // page draws from its controller (peer_recs_listing.dart; mStream
+    // docs/peer-recommendations-plan.md §4.2), and Back returns to the home.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'peerRecs') {
+      final s = browserList[index].server;
+      if (s != null) PeerRecsListing().open(s);
       return;
     }
 
@@ -1311,17 +1324,22 @@ class _BrowserState extends State<Browser> {
       if (group.isEmpty) return;
       final items = group;
       group = [];
-      for (var i = 0; i < items.length; i += 2) {
-        final pair = items.skip(i).take(2).toList();
+      // Cards pair up in order; a wide card (Peer Recommendations) takes a
+      // row of its own (homeCardRows; mStream
+      // docs/peer-recommendations-plan.md §4.2). Each row keeps indices into
+      // the group, which _homeCard hands to handleTap.
+      final layout = homeCardRows([for (final it in items) it.data]);
+      for (var r = 0; r < layout.length; r++) {
+        final row = layout[r];
         rows.add(Padding(
-          padding: EdgeInsets.only(top: i == 0 ? 0 : _homeCardGap),
+          padding: EdgeInsets.only(top: r == 0 ? 0 : _homeCardGap),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (var j = 0; j < pair.length; j++) ...[
+                for (var j = 0; j < row.length; j++) ...[
                   if (j > 0) SizedBox(width: _homeCardGap),
-                  Expanded(child: _homeCard(context, items, i + j)),
+                  Expanded(child: _homeCard(context, items, row[j])),
                 ],
               ],
             ),
@@ -2162,6 +2180,12 @@ class _BrowserState extends State<Browser> {
                       final search = BrowserManager().search;
                       return _discoveryView(context, rawList,
                           search.open ? search.query.trim() : '');
+                    }
+
+                    // Peer Recommendations draws from its controller, not
+                    // from the frame's one marker item (peer_recs_view.dart).
+                    if (PeerRecsListing.isListing(rawList)) {
+                      return const PeerRecsView();
                     }
 
                     // Local search filters only the *displayed* list; the

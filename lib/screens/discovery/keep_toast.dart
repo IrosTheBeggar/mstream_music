@@ -45,13 +45,22 @@ class KeepToast {
   static void Function(String message, String action, VoidCallback onAction)?
       debugActionSink;
 
+  /// What is docked over the mini player now: the Peer Recommendations
+  /// page's preview band (mStream plan §2 item 14) puts its laid-out height
+  /// here while it shows, and 0 once it goes. Every toast floats that much
+  /// higher, live, so none covers the band. A toast shown before the band
+  /// rose moves up over it, and one lifted for a band drops back once the
+  /// band goes.
+  static final ValueNotifier<double> dockLift = ValueNotifier<double>(0);
+
   static OverlayEntry? _entry;
   static Timer? _timer;
 
   /// Show [message] ([success] leads it with a green check: "Saved · …").
   /// [action] / [onAction] add its one button ("View"); a tap on it takes
   /// the toast down and runs [onAction]. [context] picks the overlay;
-  /// without one the app's root navigator's.
+  /// without one the app's root navigator's. It floats over whatever is
+  /// docked over the mini player ([dockLift]).
   static void show(
     BuildContext? context,
     String message, {
@@ -136,10 +145,17 @@ class _KeepToastView extends StatelessWidget {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final act = action;
-    return Positioned(
-      left: 16,
-      right: 16,
-      bottom: PlayerPanel.kCollapsedHeight + mq.viewPadding.bottom + 8,
+    // The slot follows what is docked over the mini player while the toast
+    // shows. The builder adds no render object, so the Positioned still
+    // sits in the overlay's stack.
+    return ValueListenableBuilder<double>(
+      valueListenable: KeepToast.dockLift,
+      builder: (context, dock, child) => Positioned(
+        left: 16,
+        right: 16,
+        bottom: PlayerPanel.kCollapsedHeight + mq.viewPadding.bottom + 8 + dock,
+        child: child!,
+      ),
       child: Semantics(
         liveRegion: act == null,
         container: true,

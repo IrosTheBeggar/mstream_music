@@ -12,6 +12,7 @@ import '../../singletons/server_list.dart';
 import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import 'discovery_jobs_controller.dart';
+import 'taste_seeds_host.dart';
 
 typedef TasteFetch = Future<DiscoveryFetchResult<TasteResponse>> Function(
     Server server, TasteRequest req);
@@ -56,7 +57,13 @@ const int kDiscoveryPeerAlbumsMax = 12;
 /// `exclude`). The now-playing song is pinned ONCE, at open ([pinAtOpen])
 /// — the controller never watches playback, so a track change never
 /// reshuffles the listing under the user's thumb (plan §2.3).
-class DiscoveryPageController extends ChangeNotifier {
+///
+/// It is the configuration bar's and the seeds sheet's [TasteSeedsHost],
+/// and the toolbar's New seeds reads it as a [TasteRefreshable] (plan
+/// §4.2: Peer Recommendations draws the same bar over its own controller).
+class DiscoveryPageController extends ChangeNotifier
+    implements TasteSeedsHost, TasteRefreshable {
+  @override
   final Server server;
 
   /// The visit's plug-in jobs (Keep a copy): the listing and destination,
@@ -69,6 +76,7 @@ class DiscoveryPageController extends ChangeNotifier {
   final TasteFetch _fetch;
   final Future<void> Function(Server) _reping;
   final void Function(int) _saveWindow;
+  @override
   final DateTime Function() now;
 
   /// [readWindow] / [saveWindow] are the phone's remembered window
@@ -107,6 +115,7 @@ class DiscoveryPageController extends ChangeNotifier {
 
   /// The latest library answer: seeds, seed source, window, this call's
   /// exclusions, scan state. Null until the first one lands.
+  @override
   TasteResponse? seeded;
   TastePeers? peers;
 
@@ -126,6 +135,7 @@ class DiscoveryPageController extends ChangeNotifier {
   List<DisplayItem> peerRows = const [];
   List<DisplayItem> peerAlbumItems = const [];
 
+  @override
   bool loading = false;
   bool loadingPeers = false;
 
@@ -140,6 +150,7 @@ class DiscoveryPageController extends ChangeNotifier {
 
   /// 403 latches, one per call: a refusal is not asked again until the user
   /// says so ([recheck]).
+  @override
   bool disabled = false;
   bool peersDisabled = false;
   bool rechecking = false;
@@ -149,6 +160,7 @@ class DiscoveryPageController extends ChangeNotifier {
   /// remembered choice, [kTasteDefaultWindow] until there is one. After
   /// widening the answer's `window` is the one that produced seeds (often
   /// 0) — the bar shows this one, the user's own.
+  @override
   late int window;
 
   /// The visit's steering, gone on a fresh open (a new controller): the
@@ -173,6 +185,7 @@ class DiscoveryPageController extends ChangeNotifier {
   TasteRequest? _peersReq;
   bool _disposed = false;
 
+  @override
   List<String> get pins => List.unmodifiable(_pins);
   List<String> get exclude => List.unmodifiable(_exclude);
 
@@ -182,12 +195,14 @@ class DiscoveryPageController extends ChangeNotifier {
   /// The answer's exclusions the seeds sheet shows (and can use again): the
   /// server lists every `exclude` hash that resolves — the random picks
   /// passed over included, but those were never dropped.
+  @override
   List<TasteExcluded> get excluded => [
         for (final e in seeded?.excluded ?? const <TasteExcluded>[])
           if (_exclude.contains(e.hash) || !_passed.contains(e.hash)) e,
       ];
 
   TasteLibrary? get library => seeded?.library;
+  @override
   List<TasteSeed> get seeds => seeded?.seeds ?? const [];
 
   /// Both flags the home card is gated on. False here means a re-ping since
@@ -216,8 +231,14 @@ class DiscoveryPageController extends ChangeNotifier {
   /// What a call sends as `moods`: the filter, where the server takes it.
   Map<String, dynamic>? get _moodsSent => moodsAvailable ? moods.toJson() : null;
 
+  @override
   bool get isRandom =>
       seeded?.seedSource == TasteSeedSource.random || seeded?.fallback == true;
+
+  /// Discover keeps its answer up while a call is out, so the bar's thin
+  /// line shows once one has landed.
+  @override
+  bool get answerShown => seeded != null;
 
   /// Whether connected servers are part of this visit at all: asked, not
   /// refused, and (once answered) at least one paired. Without one Discover
@@ -358,6 +379,7 @@ class DiscoveryPageController extends ChangeNotifier {
 
   /// The toolbar's refresh ("New seeds"), Try again, pull to refresh: a
   /// plain re-ask with the same window, pins, drops and passed picks.
+  @override
   Future<void> refresh() => load();
 
   /// The connected servers' Try again: their last call again, as it was
@@ -375,6 +397,7 @@ class DiscoveryPageController extends ChangeNotifier {
   /// Whether the toolbar's refresh can do anything now: an answer is up, no
   /// call is out (the bar's thin line shows it), and the route is not
   /// latched off.
+  @override
   bool get canRefresh =>
       available && !disabled && !loading && seeded != null;
 
@@ -507,6 +530,7 @@ class DiscoveryPageController extends ChangeNotifier {
   /// is off then too. A call that fails puts the old window back (the rows
   /// still shown came from it — the peers rows too: a failed library call
   /// leaves them be), remembered again.
+  @override
   Future<void> setWindow(int w) async {
     if (w == window || !kTasteWindows.contains(w) || disabled || !available) {
       return;
@@ -539,6 +563,7 @@ class DiscoveryPageController extends ChangeNotifier {
   /// The seeds sheet's "Use these N": [drop] are seed hashes switched off
   /// (left out of every call this visit), [restore] are dropped ones used
   /// again, [pins] replaces the visit's pins (app paths). Then one new call.
+  @override
   Future<void> applySeeds({
     Set<String> drop = const {},
     Set<String> restore = const {},

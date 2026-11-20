@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "Modifier l'emplacement des morceaux ajoutés",
   "discoverCopiesDestChangedYtMoved": "Impossible de démarrer : l'emplacement des fichiers a changé",
   "discoverCopiesAddThere": "Ajouter au nouvel emplacement",
-  "discoverToastView": "Voir"
+  "discoverToastView": "Voir",
+  "peerRecsTitle": "Recommandations des pairs",
+  "peerRecsAll": "Tous",
+  "peerRecsAdding": "Ajout…",
+  "peerRecsNoRoom": "Plus de place",
+  "peerRecsNoPeers": "Aucun pair pour l’instant",
+  "peerRecsNothingNew": "Rien de nouveau",
+  "peerRecsPreviewAll": "Tout écouter",
+  "peerRecsCopyList": "Copier la liste",
+  "peerRecsCopied": "Copié",
+  "peerRecsNoPreview": "Pas d’extrait",
+  "peerRecsPeers": "Pairs",
+  "peerRecsOffline": "hors ligne",
+  "peerRecsAddPeer": "Ajouter {name}",
+  "peerRecsPreviewTrack": "Écouter l’extrait de {title}",
+  "peerRecsPauseTrack": "Mettre en pause l’extrait de {title}",
+  "peerRecsNextPreview": "Extrait suivant"
 }

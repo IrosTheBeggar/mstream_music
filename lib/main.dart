@@ -39,6 +39,7 @@ import 'screens/eq/eq_screen.dart';
 import 'screens/transcode_screen.dart';
 import 'screens/visualizer_launcher.dart';
 import 'native/torrent_channel.dart';
+import 'singletons/app_route_observer.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/federation_inbox_alerts.dart';
@@ -211,6 +212,10 @@ Future<void> _startApp() async {
         title: 'mStream Music',
         scaffoldMessengerKey: rootMessengerKey,
         navigatorKey: rootNavigatorKey,
+        // Page routes pushed over the home cover the browser's pages (Peer
+        // Recommendations stops its preview; mStream
+        // docs/peer-recommendations-plan.md §2 item 14).
+        navigatorObservers: [appRouteObserver],
         home: MStreamApp(),
         theme: buildAppTheme(palette),
         locale: locale,
@@ -1015,6 +1020,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           // Keep the body full-height when the keyboard opens (see _homeScaffold).
           resizeToAvoidBottomInset: false,
           drawer: _appDrawer(context, l),
+          // The drawer slides over the browser, so the browser's pages count
+          // it as a cover (Peer Recommendations ends its preview under it).
+          onDrawerChanged: (open) => appDrawerOpen.value = open,
           body: Stack(children: [
             _homeScaffold(context, l),
             // Full-screen player overlay — collapsed it's the bottom mini-player;

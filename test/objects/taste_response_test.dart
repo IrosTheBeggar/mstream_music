@@ -305,6 +305,8 @@ void main() {
       expect(lead.raw['peer'], {'endpointId': 'ep-abc', 'name': 'Riverside'});
       expect(lead.raw['source'], 'p2p');
       expect(() => lead.raw['x'] = 1, throwsUnsupportedError);
+      // A generation 2 row: no label, no tile, no reason.
+      expect([lead.peerLabel, lead.tile, net.reason], [null, null, null]);
     });
 
     test('peers are grouped, with state and playable rows', () {
@@ -404,6 +406,153 @@ void main() {
       expect(r.notAnalyzed, isTrue);
       expect(r.seedSource, TasteSeedSource.pinned);
       expect(r.seeds.single.analyzed, isFalse);
+    });
+  });
+
+  // Taste generation 3 (mStream docs/peer-recommendations-plan.md §3.4):
+  // the network section says why it is empty, and each lead carries its
+  // peer's strip label and a generated tile (src/api/discovery-taste.js
+  // stampNetworkRows, networkReason).
+  group('TasteResponse.fromServerMap — Peer Recommendations (generation 3)', () {
+    TasteLeads? network(Object? reason) => TasteResponse.fromServerMap({
+          'network': {
+            'results': [],
+            'searched': {'peers': 0, 'tracks': 0},
+            'reason': reason,
+          },
+        }).network;
+
+    test('every network reason parses, unknown is null', () {
+      expect(
+          {
+            for (final w in [
+              'empty-shelf',
+              'not-on-shelf',
+              'no-compatible',
+              'nothing-new',
+              'scan-pending',
+              'error',
+            ])
+              w: network(w)!.reason,
+          },
+          {
+            'empty-shelf': NetworkReason.emptyShelf,
+            'not-on-shelf': NetworkReason.notOnShelf,
+            'no-compatible': NetworkReason.noCompatible,
+            'nothing-new': NetworkReason.nothingNew,
+            'scan-pending': NetworkReason.scanPending,
+            'error': NetworkReason.error,
+          });
+      for (final r in NetworkReason.values) {
+        expect(NetworkReason.parse(r.wire), r, reason: r.wire);
+      }
+      for (final bad in [
+        null,
+        '',
+        'emptyShelf',
+        'EMPTY-SHELF',
+        'something-later',
+        42,
+        true,
+        ['error'],
+        {'reason': 'error'},
+      ]) {
+        expect(network(bad)!.reason, isNull, reason: '$bad');
+      }
+    });
+
+    test('a network lead carries peerLabel and tile; raw is the wire row', () {
+      final row = {
+        'artist': 'Paper Lantern',
+        'title': 'Signal Fires',
+        'album': 'Night Ferry',
+        'year': null,
+        'isrc': 'QZPRS2600003',
+        'releaseGroupMbid': null,
+        'duration': 198,
+        'similarity': 0.9213,
+        'recordingMbid': null,
+        'exportId': 'anon:1a2b3c4d5e6f7a8b',
+        'peer': {
+          'endpointId':
+              '3f9a1c7cbd00116d0312b285b279e969ca58077702b933169bdb017e0180a4c8',
+          'name': '',
+          'label': 'mStream · 3f9a',
+        },
+        'source': 'p2p',
+        'seedHash': 'h-seed-1',
+        'tile': {'key': 'paper lantern|night ferry', 'hue': 39, 'letter': 'P'},
+      };
+      final r = TasteResponse.fromServerMap({
+        'network': {
+          'results': [row],
+          'searched': {'peers': 3, 'tracks': 14},
+          'reason': null,
+        },
+      });
+      final lead = r.network!.results.single;
+      expect(r.network!.reason, isNull);
+      expect(lead.peerLabel, 'mStream · 3f9a');
+      expect(lead.peerName, isNull, reason: "a nameless peer's name is ''");
+      expect(lead.tile, const LeadTile('paper lantern|night ferry', 39, 'P'));
+      expect([lead.tile!.key, lead.tile!.hue, lead.tile!.letter],
+          ['paper lantern|night ferry', 39, 'P']);
+      expect(lead.endpointId, (row['peer'] as Map)['endpointId']);
+      expect(lead.raw, row, reason: 'raw stays the wire row as sent');
+      expect(lead.raw['tile'], row['tile']);
+      expect((lead.raw['peer'] as Map)['label'], 'mStream · 3f9a');
+      // The recommendation the plug-in routes take keeps the tile and the
+      // label riding along (the server strips or keeps them).
+      expect(lead.recommendation!['tile'], row['tile']);
+      expect((lead.recommendation!['peer'] as Map)['label'], 'mStream · 3f9a');
+
+      DiscoveryLead parse(Object? label, Object? tile) =>
+          DiscoveryLead.fromServerMap({
+            'title': 'T',
+            'peer': {'endpointId': 'ep1', 'name': 'Kitchen', 'label': label},
+            'tile': tile,
+          })!;
+      expect(parse('  ', null).peerLabel, isNull,
+          reason: 'a blank label falls back to peerName at the call site');
+      expect(parse('', null).peerLabel, isNull);
+      expect(parse(42, null).peerLabel, isNull);
+      expect(parse('Kitchen Radio · cafe', null).peerLabel,
+          'Kitchen Radio · cafe');
+      expect(
+          DiscoveryLead.fromServerMap({'title': 'T', 'peer': 'x'})!.peerLabel,
+          isNull);
+      // Tile edges the server can stamp: an empty key (nothing to fold), no
+      // letter, a whole number sent as a double, a letter past the BMP.
+      expect(parse(null, {'key': '', 'hue': 0, 'letter': ''}).tile,
+          const LeadTile('', 0, ''));
+      expect(parse(null, {'key': 'k', 'hue': 359.0, 'letter': 'ß'}).tile,
+          const LeadTile('k', 359, 'ß'));
+      expect(parse(null, {'key': 'k', 'hue': 12, 'letter': '𝄞'}).tile!.letter,
+          '𝄞');
+      expect(parse(null, {'key': 'k' * 2048, 'hue': 1, 'letter': 'K'}).tile,
+          isNotNull);
+    });
+
+    test('hostile tiles parse to null', () {
+      LeadTile? tile(Object? t) =>
+          DiscoveryLead.fromServerMap({'title': 'T', 'tile': t})!.tile;
+      Map<String, dynamic> good() => {'key': 'k', 'hue': 39, 'letter': 'P'};
+      expect(tile(good()), isNotNull);
+      for (final hue in [360, -1, 3.5, '39', null, double.nan,
+          double.infinity, true]) {
+        expect(tile({...good(), 'hue': hue}), isNull, reason: 'hue $hue');
+      }
+      for (final letter in ['ab', 'PL', 'é́', null, 7]) {
+        expect(tile({...good(), 'letter': letter}), isNull,
+            reason: 'letter $letter');
+      }
+      for (final key in [null, 42, ['k'], {'k': 1}, 'k' * 2049]) {
+        expect(tile({...good(), 'key': key}), isNull, reason: 'key $key');
+      }
+      for (final bad in [null, 'tile', 42, ['k', 39, 'P'], <String, dynamic>{}]) {
+        expect(tile(bad), isNull, reason: '$bad');
+      }
+      expect(tile({'hue': 39, 'letter': 'P'}), isNull, reason: 'no key');
     });
   });
 
@@ -716,6 +865,105 @@ void main() {
           {'seeds': 1, 'tracks': 0, 'albums': 24, 'network': 50, 'peers': 25},
           reason: 'seeds 1..12; the row limits may be 0');
       expect(j.containsKey('ignoreVPaths'), isFalse);
+    });
+
+    // Taste generation 3, the Peer Recommendations page's body (mStream
+    // docs/peer-recommendations-plan.md §3.5 R1; src/api/discovery-taste.js
+    // :86-105 — strict Joi, so a key is only ever sent cleaned).
+    test('TasteRequest golden R1 body', () {
+      final j = const TasteRequest(
+        window: 30,
+        pin: ['/testlib/Vosto/Highway.mp3'],
+        sources: {TasteSource.network},
+        limit: TasteLimits(seeds: 12, network: 32),
+        newArtistsOnly: false,
+        networkOnRandomSeed: true,
+      ).toJson();
+      expect(j, {
+        'window': 30,
+        'pin': ['testlib/Vosto/Highway.mp3'],
+        'sources': ['network'],
+        'limit': {'seeds': 12, 'network': 32},
+        'newArtistsOnly': false,
+        'networkOnRandomSeed': true,
+      });
+      expect(j.containsKey('networkPeers'), isFalse, reason: 'All');
+      const kitchen =
+          'cafea9ed902dcc07c36cadfab1be6f48860e86c105e73497e890998d6305e2dc';
+      final tab = const TasteRequest(
+        sources: {TasteSource.network},
+        networkPeers: [kitchen],
+        networkOnRandomSeed: false,
+      ).toJson();
+      expect(tab, {
+        'sources': ['network'],
+        'networkPeers': [kitchen],
+        'networkOnRandomSeed': false,
+      });
+    });
+
+    test(
+        'networkPeers: lower-cased, 64-hex only, deduped after folding, ≤50, '
+        'omitted when empty', () {
+      String id(int n) => n.toRadixString(16).padLeft(64, '0');
+      final a = 'ab' * 32;
+      List<String>? sent(List<String>? peers) =>
+          (TasteRequest(networkPeers: peers).toJson()['networkPeers'] as List?)
+              ?.cast<String>();
+      expect(sent([a]), [a]);
+      expect(sent([a.toUpperCase()]), [a],
+          reason: "any case, sent lower-case (the route's lowercase())");
+      expect(sent([a, a.toUpperCase(), id(1), a]), [a, id(1)],
+          reason: 'de-duplicated after the fold (Joi checks unique after '
+              'lowercase), in order');
+      expect(
+          sent(['ab' * 31, 'ab' * 33, ' $a', '$a ', 'zz' * 32, '', a]), [a],
+          reason: 'short, long, padded and non-hex ids dropped');
+      final many = [for (var i = 1; i <= 51; i++) id(i)];
+      expect(sent(many), many.sublist(0, 50),
+          reason: "51 ids: the first 50 (the route's max)");
+      expect(sent([...List.filled(60, 'nope'), a]), [a],
+          reason: 'the cap counts ids kept, not ids given');
+      for (final none in <List<String>?>[null, [], ['nope'], ['G' * 64]]) {
+        expect(TasteRequest(networkPeers: none).toJson(), isEmpty,
+            reason: '$none: the key left out (the route answers 400 to [])');
+      }
+      expect(kTasteNetworkPeersMax, 50);
+    });
+
+    test('Discover bodies unchanged', () {
+      // Discover's library and peers calls set neither key, so neither is
+      // ever sent (their golden bodies above and in
+      // discovery_page_controller_test stay as they were).
+      final library = const TasteRequest(
+        window: 30,
+        pin: ['/music/now.mp3'],
+        exclude: ['h1'],
+        sources: {TasteSource.library},
+        limit: TasteLimits(seeds: 12, tracks: 24, albums: 8),
+        newArtistsOnly: false,
+        moods: {'mode': 'any'},
+      ).toJson();
+      final peers = const TasteRequest(
+        window: 30,
+        pin: ['/music/a.mp3', '/music/b.mp3'],
+        sources: {TasteSource.peers},
+        limit: TasteLimits(seeds: 2, peers: 12),
+        newArtistsOnly: false,
+      ).toJson();
+      for (final j in [library, peers, const TasteRequest().toJson()]) {
+        expect(j.containsKey('networkPeers'), isFalse);
+        expect(j.containsKey('networkOnRandomSeed'), isFalse);
+      }
+      expect(library.keys, [
+        'window',
+        'pin',
+        'exclude',
+        'sources',
+        'limit',
+        'newArtistsOnly',
+        'moods',
+      ]);
     });
   });
 

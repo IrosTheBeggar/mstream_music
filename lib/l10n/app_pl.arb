@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "Zmień miejsce zapisu dodanych utworów",
   "discoverCopiesDestChangedYtMoved": "Nie udało się rozpocząć: miejsce zapisu plików się zmieniło",
   "discoverCopiesAddThere": "Dodaj tam",
-  "discoverToastView": "Pokaż"
+  "discoverToastView": "Pokaż",
+  "peerRecsTitle": "Polecenia od peerów",
+  "peerRecsAll": "Wszystkie",
+  "peerRecsAdding": "Dodaję…",
+  "peerRecsNoRoom": "Brak miejsca",
+  "peerRecsNoPeers": "Brak peerów",
+  "peerRecsNothingNew": "Nic nowego",
+  "peerRecsPreviewAll": "Odsłuchaj wszystkie",
+  "peerRecsCopyList": "Kopiuj listę",
+  "peerRecsCopied": "Skopiowano",
+  "peerRecsNoPreview": "Brak fragmentu",
+  "peerRecsPeers": "Peery",
+  "peerRecsOffline": "offline",
+  "peerRecsAddPeer": "Dodaj {name}",
+  "peerRecsPreviewTrack": "Odsłuchaj fragment: {title}",
+  "peerRecsPauseTrack": "Wstrzymaj fragment: {title}",
+  "peerRecsNextPreview": "Następny fragment"
 }

@@ -6844,4 +6844,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => 'Add there';
+
+  @override
+  String get peerRecsTitle => 'Peer Recommendations';
+
+  @override
+  String get peerRecsAll => 'All';
+
+  @override
+  String get peerRecsAdding => 'Adding…';
+
+  @override
+  String get peerRecsNoRoom => 'No room';
+
+  @override
+  String get peerRecsNoPeers => 'No peers yet';
+
+  @override
+  String get peerRecsNothingNew => 'Nothing new';
+
+  @override
+  String get peerRecsPreviewAll => 'Preview all';
+
+  @override
+  String get peerRecsCopyList => 'Copy list';
+
+  @override
+  String get peerRecsCopied => 'Copied';
+
+  @override
+  String get peerRecsNoPreview => 'No preview';
+
+  @override
+  String get peerRecsPeers => 'Peers';
+
+  @override
+  String get peerRecsOffline => 'offline';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return 'Add $name';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return 'Preview $title';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return 'Pause preview of $title';
+  }
+
+  @override
+  String get peerRecsNextPreview => 'Next preview';
 }

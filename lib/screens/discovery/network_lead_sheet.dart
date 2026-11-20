@@ -20,6 +20,7 @@ import 'elsewhere_sheet.dart' show openOutside;
 import 'keep_copy_ui.dart';
 import 'keep_toast.dart';
 import 'network_preview_rows.dart';
+import 'preview_answers.dart';
 import 'youtube_pick_card.dart';
 
 /// The network-lead sheet (the design canvas's NetworkSheet board): what a
@@ -41,7 +42,7 @@ import 'youtube_pick_card.dart';
 /// route hands out a peer's tags as they are).
 ///
 /// It opens at 0.62 of the screen, snaps to 0.94, and closes below 0.40. A
-/// clip playing stops as it closes, and the song it paused comes back.
+/// clip it plays stops as it closes, and the song it paused comes back.
 
 /// The sheet's sections for [jobs]' server, as the gate reads them
 /// (util/network_sheet_gate.dart): the user's own server's flag and
@@ -80,7 +81,9 @@ NetworkLeadTap networkLeadTapFor(
 /// the sheet started is toasted once it closes, with "View" (Copies) while
 /// it runs, or — ended by then — with its ending; one the user already
 /// asked to stop says nothing. A start the server answers after the sheet
-/// closed is toasted as it answers.
+/// closed is toasted as it answers. [answers]: the Peer Recommendations
+/// visit's preview answers for [lead] (network_preview_rows.dart
+/// NetworkPreviews.answers), shared both ways.
 Future<void> showNetworkLeadSheet(
   BuildContext context, {
   required DiscoveryJobsController jobs,
@@ -89,6 +92,7 @@ Future<void> showNetworkLeadSheet(
   bool autoSearch = false,
   String? avoidUrl,
   VoidCallback? onLeadAction,
+  LeadPreviewAnswers? answers,
 }) async {
   final l = AppLocalizations.of(context);
   final started = <DiscoveryJob>[];
@@ -135,6 +139,7 @@ Future<void> showNetworkLeadSheet(
       autoSearch: autoSearch,
       avoidUrl: avoidUrl,
       onLeadAction: onLeadAction,
+      answers: answers,
       // Answered once the sheet has closed (or while it animates away):
       // told at once.
       onStarted: (job) => closed ? tell(job) : started.add(job),
@@ -206,6 +211,10 @@ class NetworkLeadSheet extends StatefulWidget {
   /// when it answers after).
   final void Function(DiscoveryJob job)? onStarted;
 
+  /// The Peer Recommendations visit's preview answers for [lead], shared
+  /// with the sheet's rows (NetworkPreviews.answers).
+  final LeadPreviewAnswers? answers;
+
   const NetworkLeadSheet({
     super.key,
     required this.jobs,
@@ -215,6 +224,7 @@ class NetworkLeadSheet extends StatefulWidget {
     this.avoidUrl,
     this.onLeadAction,
     this.onStarted,
+    this.answers,
   });
 
   /// The sheet's frame (DraggableScrollableSheet): where it opens and snaps
@@ -269,6 +279,7 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
       recommendation: _lead.raw,
       onPress: _leadAction,
       onGone: _previewGone,
+      answers: widget.answers,
     );
     final s = networkSheetSectionsFor(jobs);
     appLog(
@@ -279,8 +290,9 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
 
   @override
   void dispose() {
-    // The clip stops; the song it paused comes back.
-    unawaited(PreviewPlayer().end(PreviewEnd.sheetClosed));
+    // The sheet's clip stops; the song it paused comes back. Another
+    // surface's clip (the Peer Recommendations page's) plays on.
+    unawaited(PreviewPlayer().end(PreviewEnd.sheetClosed, owner: _previews));
     _previews.dispose();
     _release?.call();
     super.dispose();
@@ -428,7 +440,7 @@ class _NetworkLeadSheetState extends State<NetworkLeadSheet> {
   Widget _header(AppLocalizations l) {
     final lead = _lead;
     final d = lead.durationSeconds;
-    final peer = (lead.peerName ?? '').trim();
+    final peer = (lead.peerLabel ?? lead.peerName ?? '').trim();
     final seed = (widget.seedTitle ?? '').trim();
     final pct = (lead.similarity * 100).round();
     return MergeSemantics(

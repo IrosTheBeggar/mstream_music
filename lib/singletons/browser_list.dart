@@ -544,6 +544,14 @@ class BrowserManager {
           server.discoveryTasteAvailable == true)
         DisplayItem(server, 'Discover', 'execAction', 'discover',
             Icon(Icons.explore, color: VelvetColors.textSecondary), null),
+      // Peer Recommendations: leads from the P2P network's snapshots on this
+      // server's shelf, seeded by this account's finished songs (mStream
+      // docs/peer-recommendations-plan.md §4.2). Full width (homeCardRows).
+      // Pinned false on a peer, like Discover.
+      if (server.peerRecsAvailable == true)
+        DisplayItem(server, 'Peer Recommendations', 'execAction', 'peerRecs',
+            Icon(Icons.travel_explore, color: VelvetColors.textSecondary),
+            null),
       // Listening stats are one record across every server (this phone's,
       // plus each server's), so they live in the drawer, not under a server.
       // NETWORK: the libraries other servers share with this one. Only when

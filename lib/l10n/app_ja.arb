@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "追加した曲の保存先を変更",
   "discoverCopiesDestChangedYtMoved": "開始できませんでした：保存先が変わりました",
   "discoverCopiesAddThere": "新しい保存先に追加",
-  "discoverToastView": "表示"
+  "discoverToastView": "表示",
+  "peerRecsTitle": "ピアのおすすめ",
+  "peerRecsAll": "すべて",
+  "peerRecsAdding": "追加中…",
+  "peerRecsNoRoom": "空きがありません",
+  "peerRecsNoPeers": "ピアはまだありません",
+  "peerRecsNothingNew": "新しい曲はありません",
+  "peerRecsPreviewAll": "すべて試聴",
+  "peerRecsCopyList": "リストをコピー",
+  "peerRecsCopied": "コピーしました",
+  "peerRecsNoPreview": "試聴なし",
+  "peerRecsPeers": "ピア",
+  "peerRecsOffline": "オフライン",
+  "peerRecsAddPeer": "{name}を追加",
+  "peerRecsPreviewTrack": "{title}を試聴",
+  "peerRecsPauseTrack": "{title}の試聴を一時停止",
+  "peerRecsNextPreview": "次の試聴"
 }

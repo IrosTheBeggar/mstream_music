@@ -21,6 +21,16 @@
 // dropping while it loads ends the flow before anything sounds, and no clip
 // starts while the app is in the background.
 //
+// Each play names its owner (a sheet's previews, the Peer Recommendations
+// page), carried on the state, so a surface never reads another's clip as
+// its own and an end that names its owner ends only that owner's flow (a
+// sheet closing over the page's clip leaves it playing). The page's band
+// pauses and resumes a clip within its flow, and Preview all asks a clip
+// to hold the flow when it completes, so the song stays paused from the
+// first clip to the last (mStream plan §2 items 13–15, §5.5). A page press
+// made while a sheet's clip still runs claims the flow at once (claim), so
+// the sheet's end as it closes no longer reaches it.
+//
 // Nothing here reads MediaManager, CastManager or the audio session before
 // the first play(), and end() with nothing playing does nothing. Widget
 // tests that pump the sheet (whose dispose ends the preview) install a fake
@@ -43,7 +53,11 @@ import '../singletons/media.dart';
 import 'audio_stuff.dart' show AudioPlayerHandler;
 import 'transport_log.dart';
 
-enum PreviewPhase { idle, loading, playing, failed }
+/// Where a flow's clip is. [paused] and [held] keep the flow (and the song
+/// paused): [paused] is a clip the user paused (Peer Recommendations' band),
+/// [held] one that played to its end in a play that asked to hold on
+/// completion (Preview all, between two clips).
+enum PreviewPhase { idle, loading, playing, failed, paused, held }
 
 /// What the sheet draws: whose clip, and how far into it.
 @immutable
@@ -53,6 +67,7 @@ class PreviewClipState {
     this.phase = PreviewPhase.idle,
     this.position = Duration.zero,
     this.duration,
+    this.owner,
   });
 
   static const PreviewClipState idle = PreviewClipState();
@@ -69,20 +84,28 @@ class PreviewClipState {
   /// the answer's `seconds` until then.
   final Duration? duration;
 
+  /// Who played the clip, as [PreviewPlayer.play] was told (a sheet's
+  /// NetworkPreviews, the Peer Recommendations page); null while idle and
+  /// for a play that named nobody. A surface reads a clip of another owner
+  /// as not its own (mStream plan §2 item 15: one engine, several surfaces).
+  final Object? owner;
+
   @override
   bool operator ==(Object other) =>
       other is PreviewClipState &&
       other.provider == provider &&
       other.phase == phase &&
       other.position == position &&
-      other.duration == duration;
+      other.duration == duration &&
+      other.owner == owner;
 
   @override
-  int get hashCode => Object.hash(provider, phase, position, duration);
+  int get hashCode => Object.hash(provider, phase, position, duration, owner);
 
   @override
   String toString() =>
-      'PreviewClipState(${phase.name}, $provider, $position / $duration)';
+      'PreviewClipState(${phase.name}, $provider, $position / $duration, '
+      '${owner?.runtimeType})';
 }
 
 /// Why a preview flow ended; [PreviewPlayer.resumesSong] decides from it
@@ -177,7 +200,8 @@ abstract class PreviewPort {
   void playSong();
 }
 
-/// One clip player, reused across clips until the sheet closes.
+/// One clip player, reused across clips until the sheet (or the page)
+/// closes.
 abstract class PreviewClip {
   Future<void> load(Uri url);
 
@@ -185,6 +209,9 @@ abstract class PreviewClip {
   /// playback next pauses. It fails when the system would not give the
   /// clip the audio (iOS: the session would not activate).
   Future<void> play();
+
+  /// Pauses the clip where it is; a later [play] goes on from there.
+  Future<void> pause();
   Future<void> stop();
   Future<void> dispose();
 
@@ -216,6 +243,7 @@ class PreviewPlayer {
     this._port, {
     PreviewClip Function()? makeClip,
     this.loadTimeout = const Duration(seconds: 15),
+    this.heldTimeout = const Duration(seconds: 120),
   }) : _makeClip = makeClip ?? JustAudioPreviewClip.new;
 
   final PreviewPort _port;
@@ -223,6 +251,13 @@ class PreviewPlayer {
 
   /// How long a clip may take to load before its row reads as unavailable.
   final Duration loadTimeout;
+
+  /// How long a held flow ([PreviewPhase.held]) waits for its owner's next
+  /// play or end before it ends as completed, and the song comes back. A
+  /// guard against an owner that forgot its flow, not a bound on a chain:
+  /// an owner still on its way to the next clip (a lookup, a 429's wait)
+  /// calls [keepHeld] at every step it waits on.
+  final Duration heldTimeout;
 
   final BehaviorSubject<PreviewClipState> _state =
       BehaviorSubject<PreviewClipState>.seeded(PreviewClipState.idle);
@@ -236,6 +271,16 @@ class PreviewPlayer {
 
   // A flow runs from a play until its end. Switching clips stays in one.
   bool _active = false;
+
+  // Who asked for the flow's current clip (play's owner); the next play
+  // may hand the flow to another. Null once the flow ends.
+  Object? _owner;
+
+  // The current clip's play asked to hold the flow when it completes.
+  bool _holdOnComplete = false;
+
+  // A held flow's guard ([heldTimeout]).
+  Timer? _heldTimer;
 
   // The song this flow paused, until the flow ends or something drops it.
   SongHold? _hold;
@@ -271,23 +316,78 @@ class PreviewPlayer {
   /// Bumped by every end asked for, with a flow or without, except a
   /// clip's own (it completed, or failed): a preview lookup that outlives
   /// one (a store link opened, the app sent to the background, a call, the
-  /// song started) plays nothing it found.
+  /// song started) plays nothing it found. An end that names its owner
+  /// counts only when it ends that owner's flow: a sheet closing with
+  /// nothing of its own playing silences nobody's lookup.
   int get endCount => _ends;
 
   /// The app is in front: a clip may start (PreviewPort.appVisible).
   bool get appVisible => _port.appVisible;
 
+  /// The song is playing now (PreviewPort.songPlaying). It reads the
+  /// handler, so it is read only at a user's press, never before the app's
+  /// media has started.
+  bool get songPlaying => _port.songPlaying;
+
+  /// Each time the song starts, from the moment it is listened to: a Play
+  /// command (the lock screen, CarPlay, a headset, the mini player) or,
+  /// while not casting, the song's playing flag going from off to on. A
+  /// surface that asks for a clip while the song is paused listens until
+  /// its clip plays, since the flow watches the song only once a clip has
+  /// loaded: the user starting the song in between ends that preview, as
+  /// the web's aside does for a session asked while the song was paused.
+  /// It knows nothing of flows, so it also hears a flow resuming the song.
+  Stream<void> get songStarts {
+    var subs = const <StreamSubscription<Object?>>[];
+    late final StreamController<void> starts;
+    starts = StreamController<void>(
+      onListen: () {
+        final armed = _port.transportEpoch;
+        bool? wasPlaying;
+        subs = [
+          _port.transportCommands.listen((c) {
+            if (c.epoch > armed && c.command == 'play') starts.add(null);
+          }, onError: _ignore),
+          _port.playingChanges.listen((playing) {
+            // The first value is a replay of the flag as it is now.
+            final was = wasPlaying;
+            wasPlaying = playing;
+            // A cast's flag can flicker; its Play is a command, heard above.
+            if (was == false && playing && !_port.casting) starts.add(null);
+          }, onError: _ignore),
+        ];
+      },
+      onCancel: () {
+        for (final s in subs) {
+          unawaited(s.cancel());
+        }
+        subs = const [];
+      },
+    );
+    return starts.stream;
+  }
+
   /// Plays [provider]'s clip at [url] (http or https only). The song is
   /// paused once the clip has loaded; a clip already playing stops first
-  /// and the song stays paused in between.
+  /// and the song stays paused in between — whoever played it: a play by
+  /// another [owner] is a switch too, and the flow is the new owner's.
+  /// [holdOnComplete]: when the clip plays to its end, the flow holds
+  /// ([PreviewPhase.held]) with the song still paused, for the owner's
+  /// next play (Peer Recommendations' Preview all keeps the first pause).
   Future<PreviewPlayOutcome> play({
     required String provider,
     required Uri url,
+    Object? owner,
+    bool holdOnComplete = false,
   }) async {
     final gen = ++_gen;
     _active = true;
+    _owner = owner;
+    _holdOnComplete = holdOnComplete;
+    _cancelHeldTimer();
     _stopWatchingClip();
-    _publish(PreviewClipState(provider: provider, phase: PreviewPhase.loading));
+    _publish(PreviewClipState(
+        provider: provider, phase: PreviewPhase.loading, owner: _owner));
     if (!_playable(url)) {
       appLog('[preview] the $provider clip has no http(s) address');
       await end(PreviewEnd.failed);
@@ -332,7 +432,8 @@ class PreviewPlayer {
       }
       if (gen != _gen) return PreviewPlayOutcome.superseded;
     }
-    _publish(PreviewClipState(provider: provider, phase: PreviewPhase.playing));
+    _publish(PreviewClipState(
+        provider: provider, phase: PreviewPhase.playing, owner: _owner));
     _watchClip(clip, gen);
     unawaited(clip.play().catchError((Object e) {
       if (gen != _gen) return;
@@ -355,8 +456,19 @@ class PreviewPlayer {
   /// allows it and nobody touched the song since the clip paused it.
   /// Safe at any time; with nothing loading or playing it does nothing,
   /// except that [PreviewEnd.sheetClosed] also frees the clip player.
-  Future<void> end(PreviewEnd reason) async {
-    if (reason != PreviewEnd.completed && reason != PreviewEnd.failed) _ends++;
+  ///
+  /// With an [owner], it ends only that owner's flow: while another
+  /// owner's runs (a page's clip under a sheet that closes), it does
+  /// nothing at all and is not counted in [endCount]. With none (a link
+  /// opening, the app hidden, a call), it ends whichever flow runs. A flow
+  /// whose play named nobody is anybody's.
+  Future<void> end(PreviewEnd reason, {Object? owner}) async {
+    if (!_ownedBy(owner)) return;
+    if (reason != PreviewEnd.completed &&
+        reason != PreviewEnd.failed &&
+        (owner == null || _active)) {
+      _ends++;
+    }
     final clip = _clip;
     final closing = reason == PreviewEnd.sheetClosed;
     if (closing) _clip = null;
@@ -369,6 +481,7 @@ class PreviewPlayer {
     }
     _gen++;
     _active = false;
+    _cancelHeldTimer();
     _stopWatchingClip();
     _stopWatchingPort();
     final hold = _hold;
@@ -376,13 +489,17 @@ class PreviewPlayer {
     _hold = null;
     _pausing = null;
     final provider = _state.value.provider;
+    final flowOwner = _owner;
+    _owner = null;
+    _holdOnComplete = false;
     // Started, not awaited, before the song resumes: everything up to the
     // resume runs in this one turn, so no play or end slips in between, and
     // on iOS the song comes back while the session is still active.
     final stopping =
         clip == null ? null : _quietly(closing ? clip.dispose : clip.stop);
     _publish(reason == PreviewEnd.failed
-        ? PreviewClipState(provider: provider, phase: PreviewPhase.failed)
+        ? PreviewClipState(
+            provider: provider, phase: PreviewPhase.failed, owner: flowOwner)
         : PreviewClipState.idle);
     if (hold != null) {
       if (resumesSong(
@@ -400,6 +517,106 @@ class PreviewPlayer {
       }
     }
     await stopping;
+  }
+
+  /// Pauses the playing clip and keeps the flow: the song stays paused,
+  /// and everything that ends a flow still ends it (Play on the lock screen
+  /// then is the song starting). True when it paused; false unless a clip
+  /// of [owner]'s (or of nobody's) is playing — a clip still loading is
+  /// not paused.
+  Future<bool> pause({Object? owner}) async {
+    final s = _state.value;
+    final clip = _clip;
+    if (!_active ||
+        !_ownedBy(owner) ||
+        s.phase != PreviewPhase.playing ||
+        clip == null) {
+      return false;
+    }
+    final gen = _gen;
+    // Published before the clip is told: its playing flag dropping would
+    // otherwise read as the system refusing the audio (_watchClip).
+    _publish(PreviewClipState(
+        provider: s.provider,
+        phase: PreviewPhase.paused,
+        position: s.position,
+        duration: s.duration,
+        owner: _owner));
+    try {
+      await clip.pause();
+    } catch (e) {
+      if (gen != _gen) return false;
+      appLog('[preview] the clip would not pause: $e');
+      _endSoon(PreviewEnd.failed);
+      return false;
+    }
+    return true;
+  }
+
+  /// Plays a paused clip on from where it was. True when it did; false
+  /// unless a clip of [owner]'s (or of nobody's) is paused, and while the
+  /// app is in the background.
+  Future<bool> resume({Object? owner}) async {
+    final s = _state.value;
+    final clip = _clip;
+    if (!_active ||
+        !_ownedBy(owner) ||
+        s.phase != PreviewPhase.paused ||
+        clip == null ||
+        !_port.appVisible) {
+      return false;
+    }
+    final gen = _gen;
+    // Watched afresh: the pause's playing=false may still be on its way
+    // to the old watch, and would read as the system refusing the audio
+    // once this says playing. The new watch counts nothing until the clip
+    // sounds again.
+    _stopWatchingClip();
+    _publish(PreviewClipState(
+        provider: s.provider,
+        phase: PreviewPhase.playing,
+        position: s.position,
+        duration: s.duration,
+        owner: _owner));
+    _watchClip(clip, gen);
+    unawaited(clip.play().catchError((Object e) {
+      if (gen != _gen) return;
+      appLog('[preview] the clip would not play on: $e');
+      _endSoon(PreviewEnd.failed);
+    }));
+    return true;
+  }
+
+  /// A held flow waits another [heldTimeout] for its owner's next play or
+  /// end: the owner is still on its way to the next clip (a lookup, a
+  /// 429's wait). Does nothing unless a flow of [owner]'s (or of nobody's)
+  /// is held.
+  void keepHeld({Object? owner}) {
+    if (!_active ||
+        !_ownedBy(owner) ||
+        _state.value.phase != PreviewPhase.held) {
+      return;
+    }
+    _armHeldTimer();
+  }
+
+  /// [owner] takes the running flow before it knows its next clip, as the
+  /// web's aside claim does: the Peer Recommendations page's press while a
+  /// sheet's clip still runs (the sheet animating closed). Whatever sounds
+  /// or loads stops, the song stays paused, and the flow holds
+  /// ([PreviewPhase.held]) for [owner]'s next play, a switch, or its end,
+  /// which resumes the song as usual. The old owner's end then no longer
+  /// reaches the flow and is not counted in [endCount]. True when [owner]
+  /// holds the flow now; false, changing nothing, when no flow runs.
+  bool claim({required Object owner}) {
+    if (!_active) return false;
+    if (identical(_owner, owner)) return true;
+    appLog('[preview] the flow is taken over before its next clip');
+    _owner = owner;
+    _holdOnComplete = false;
+    // A play still loading for the old owner is superseded by the bump.
+    _enterHeld(_clip);
+    return true;
   }
 
   /// Ends the flow as [PreviewEnd.leftApp] (a link is about to open) and
@@ -571,7 +788,8 @@ class PreviewPlayer {
             provider: s.provider,
             phase: s.phase,
             position: position,
-            duration: s.duration));
+            duration: s.duration,
+            owner: _owner));
       }, onError: failed),
       clip.duration.listen((duration) {
         final s = playing();
@@ -580,12 +798,49 @@ class PreviewPlayer {
             provider: s.provider,
             phase: s.phase,
             position: s.position,
-            duration: duration));
+            duration: duration,
+            owner: _owner));
       }, onError: failed),
-      clip.completed
-          .listen((_) => _endSoon(PreviewEnd.completed), onError: failed),
+      clip.completed.listen((_) {
+        if (_holdOnComplete && gen == _gen && _active) {
+          _enterHeld(clip);
+        } else {
+          _endSoon(PreviewEnd.completed);
+        }
+      }, onError: failed),
       clip.errors.listen(failed, onError: failed),
     ];
+  }
+
+  /// A clip whose play asked to hold played to its end: the flow stays
+  /// (the song paused, every watch on the song and the world still armed)
+  /// for its owner's next play, a switch; an end resumes the song as
+  /// usual. Nothing comes within [heldTimeout] (or the last [keepHeld]):
+  /// it ends as completed. [claim] holds a flow taken over the same way.
+  void _enterHeld(PreviewClip? clip) {
+    _gen++;
+    _stopWatchingClip();
+    if (clip != null) unawaited(_quietly(clip.stop));
+    _publish(PreviewClipState(
+        provider: _state.value.provider,
+        phase: PreviewPhase.held,
+        owner: _owner));
+    _armHeldTimer();
+  }
+
+  void _armHeldTimer() {
+    _heldTimer?.cancel();
+    _heldTimer = Timer(heldTimeout, () {
+      _heldTimer = null;
+      if (!_active || _state.value.phase != PreviewPhase.held) return;
+      appLog('[preview] nothing followed the held clip');
+      _endSoon(PreviewEnd.completed);
+    });
+  }
+
+  void _cancelHeldTimer() {
+    _heldTimer?.cancel();
+    _heldTimer = null;
   }
 
   void _dropHold(String why) {
@@ -619,6 +874,12 @@ class PreviewPlayer {
   void _publish(PreviewClipState s) {
     if (_state.value != s) _state.add(s);
   }
+
+  /// [owner] may act on the flow: no flow runs, either side named nobody,
+  /// or it is the flow's owner (mStream plan §2 item 15: a sheet closing
+  /// leaves the page's clip alone).
+  bool _ownedBy(Object? owner) =>
+      owner == null || !_active || _owner == null || identical(_owner, owner);
 
   static bool _playable(Uri url) =>
       (url.isScheme('https') || url.isScheme('http')) && url.host.isNotEmpty;
@@ -680,16 +941,26 @@ class AppPreviewPort implements PreviewPort {
       .asyncExpand((s) => s.becomingNoisyEventStream);
 
   // A listener of its own per watch, made when the flow starts watching and
-  // disposed when it stops.
+  // disposed a microtask after it stops. The binding tells a lifecycle
+  // change to a copy of its observer list, and iOS's one "paused" arrives
+  // as hidden and paused in one go. So when an observer told first ends the
+  // flow (the Peer Recommendations page does as the app is hidden), the
+  // binding still calls this listener afterwards, and a disposed one throws
+  // in a debug build. A hide it is told of once the watch has stopped adds
+  // nothing.
   @override
   Stream<void> get appHidden {
     final hidden = StreamController<void>();
     AppLifecycleListener? listener;
-    hidden.onListen =
-        () => listener = AppLifecycleListener(onHide: () => hidden.add(null));
+    var stopped = false;
+    hidden.onListen = () => listener = AppLifecycleListener(onHide: () {
+      if (!stopped) hidden.add(null);
+    });
     hidden.onCancel = () {
-      listener?.dispose();
+      stopped = true;
+      final done = listener;
       listener = null;
+      if (done != null) scheduleMicrotask(done.dispose);
     };
     return hidden.stream;
   }
@@ -733,6 +1004,9 @@ class JustAudioPreviewClip implements PreviewClip {
   // just_audio's play completes only when playback next pauses.
   @override
   Future<void> play() => _p.play();
+
+  @override
+  Future<void> pause() => _player?.pause() ?? Future<void>.value();
 
   @override
   Future<void> stop() async {
