@@ -16,6 +16,8 @@
 //   • Discover           → back · label · Filters · New seeds (no search, no
 //                          verbs: its footers carry them; Filters when the
 //                          server filters by mood)
+//   • Peer Recommendations → back · label · New seeds (no Filters, no search,
+//                          no verbs: its footer carries them)
 //   • Genres (the list)  → back · label · search · Tags | Generated | Both
 //                          (only when the server has both kinds)
 //   • Albums / Artists   → back · label · Filters · search (Filters when the
@@ -39,6 +41,8 @@ import '../objects/genre_source.dart';
 import '../objects/mood_filter.dart';
 import '../objects/server.dart';
 import '../screens/discovery/discovery_listing.dart';
+import '../screens/discovery/peer_recs_listing.dart';
+import '../screens/discovery/taste_seeds_host.dart' show TasteRefreshable;
 import '../screens/ytdl/ytdl_folder_sheet.dart';
 import '../screens/ytdl/ytdl_folder_strip.dart';
 import '../singletons/api.dart';
@@ -352,14 +356,13 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     unawaited(BrowserToolbar.openYtdlFolderSheet(context, server, path));
   }
 
-  // Discover's "New seeds": the open frame's controller asks again
-  // (DiscoveryPageController.refresh) — a plain re-ask, which the server
-  // answers from a new random batch of seeds. Off while it could do nothing
-  // — no answer yet, a call out (the bar's thin line shows it; the rows stay
-  // up), the route refused — so the button follows the controller, not only
-  // the browser streams.
-  Widget _newSeedsButton(AppLocalizations l) {
-    final c = DiscoveryListing().controller;
+  // Discover's and Peer Recommendations' "New seeds": the open frame's
+  // controller [c] asks again (TasteRefreshable.refresh) — a plain re-ask,
+  // which the server answers from a new random batch of seeds. Off while it
+  // could do nothing — no answer yet, a call out (the bar's thin line shows
+  // it; the rows stay up), the route refused — so the button follows the
+  // controller, not only the browser streams.
+  Widget _newSeedsButton(AppLocalizations l, TasteRefreshable? c) {
     Widget button(bool on) => IconButton(
           key: const ValueKey('discovery-new-seeds'),
           icon: const Icon(Icons.refresh, size: 22),
@@ -671,9 +674,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // from a new random batch of songs you finished ([_newSeedsButton]).
     final canBack = BrowserManager().browserCache.length > 1;
     final discover = DiscoveryListing.isListing(s.list);
+    // Peer Recommendations likewise: its leads are other servers' songs,
+    // with no page-wide verbs and nothing to search (its footer carries
+    // Preview all · Copy list). Back · label · New seeds.
+    final peerRecs = PeerRecsListing.isListing(s.list);
     final genreFrame = BrowserManager().currentGenreFrame;
     final moodFrame = BrowserManager().currentMoodFrame;
-    final targets = discover ? const <DisplayItem>[] : _actionTargets;
+    final targets =
+        (discover || peerRecs) ? const <DisplayItem>[] : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
       if (canBack)
@@ -689,7 +697,13 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           : browserChromeLabel(l, s.label)),
       if (discover) ...[
         _discoverMoodButton(),
-        _newSeedsButton(l),
+        _newSeedsButton(l, DiscoveryListing().controller),
+        const SizedBox(width: 12),
+      ] else if (peerRecs) ...[
+        // Before canPlay and the final else: the latter would also draw
+        // search and the YouTube gate. No Filters (mStream
+        // docs/peer-recommendations-plan.md §4.2).
+        _newSeedsButton(l, PeerRecsListing().controller),
         const SizedBox(width: 12),
       ] else if (canPlay) ...[
         // Play/Add all claim the bar, so search moves into the overflow.

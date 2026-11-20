@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../objects/player_layout.dart';
 import '../objects/server.dart';
 import '../screens/discovery/copies_hub.dart';
+import '../singletons/app_route_observer.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
@@ -79,6 +80,14 @@ class PlayerPanelState extends State<PlayerPanel>
     _queueSub = MediaManager().audioHandler.queue.listen((_) {
       if (isExpanded) _readQueueGates();
     });
+    // Now Playing covers the browser while the panel is expanded: the
+    // browser's pages read it to stop what plays out of sight (Peer
+    // Recommendations' preview; mStream docs/peer-recommendations-plan.md §2
+    // item 14). Written on the edge only, not on every frame of a drag.
+    _ctrl.addListener(() {
+      final e = _ctrl.value > 0.5;
+      if (nowPlayingExpanded.value != e) nowPlayingExpanded.value = e;
+    });
   }
 
   void _readQueueGates() => readQueueKeepGates(
@@ -88,6 +97,8 @@ class PlayerPanelState extends State<PlayerPanel>
   void dispose() {
     _queueSub?.cancel();
     _ctrl.dispose();
+    // A panel that is gone covers nothing.
+    nowPlayingExpanded.value = false;
     super.dispose();
   }
 
