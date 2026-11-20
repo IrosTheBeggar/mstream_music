@@ -375,6 +375,7 @@ class ServerManager {
       final bool? prevDiscoveryTaste = server.discoveryTasteAvailable;
       final bool? prevDiscoveryPlugins = server.discoveryPluginsAvailable;
       final bool? prevMoodFilters = server.moodFiltersAvailable;
+      final bool? prevPeerRecs = server.peerRecsAvailable;
       final bool? prevNoUpload = server.noUpload;
       final bool? prevNoMkdir = server.noMkdir;
       final List<String>? prevFormats = server.supportedAudioFormats;
@@ -440,6 +441,7 @@ class ServerManager {
           server.discoveryTasteAvailable != prevDiscoveryTaste ||
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
           server.moodFiltersAvailable != prevMoodFilters ||
+          server.peerRecsAvailable != prevPeerRecs ||
           server.noUpload != prevNoUpload ||
           server.noMkdir != prevNoMkdir ||
           !sameAudioFormats(server.supportedAudioFormats, prevFormats) ||
@@ -462,6 +464,8 @@ class ServerManager {
           server.discoveryPathAvailable != prevDiscoveryPath ||
           server.discoveryAvailable != prevDiscovery ||
           server.discoveryTasteAvailable != prevDiscoveryTaste ||
+          // The Peer Recommendations card follows its own flag.
+          server.peerRecsAvailable != prevPeerRecs ||
           // The SERVER section's Copies row follows these two.
           server.discoveryPluginsAvailable != prevDiscoveryPlugins ||
           server.noUpload != prevNoUpload ||
@@ -588,6 +592,11 @@ class ServerManager {
         features is Map && features['discoveryPlugins'] == true;
     server.moodFiltersAvailable = features is Map &&
         hasMoodFilters(features['discoveryTaste'], features['moodFilters']);
+    // The Peer Recommendations page: four server-wide flags, so all under
+    // `features` here. Set before the federated pin below, which wins.
+    server.peerRecsAvailable = features is Map &&
+        hasPeerRecs(features['discovery'], features['discoveryP2p'],
+            features['discoveryTaste'], features['discoveryP2pPeers']);
     // Caller-scoped (the account's upload right), so under `user` here.
     server.noUpload = user is Map && user['noUpload'] is bool
         ? user['noUpload'] as bool
@@ -658,6 +667,10 @@ class ServerManager {
     server.discoveryPluginsAvailable = res['discoveryPlugins'] == true;
     server.moodFiltersAvailable =
         hasMoodFilters(res['discoveryTaste'], res['moodFilters']);
+    // Flat here too: ping lists `discoveryP2pPeers` beside `discoveryTaste`
+    // (mStream src/api/playlist.js).
+    server.peerRecsAvailable = hasPeerRecs(res['discovery'],
+        res['discoveryP2p'], res['discoveryTaste'], res['discoveryP2pPeers']);
     server.noUpload = res['noUpload'] is bool ? res['noUpload'] as bool : null;
     server.noMkdir = res['noMkdir'] is bool ? res['noMkdir'] as bool : null;
     server.supportedAudioFormats =
@@ -699,6 +712,23 @@ class ServerManager {
   @visibleForTesting
   static bool hasMoodFilters(dynamic taste, dynamic moodFilters) =>
       taste is int && taste >= 2 && moodFilters == true;
+
+  /// Whether a server has the Peer Recommendations page (mStream
+  /// docs/peer-recommendations-plan.md §2 item 2): discovery and the p2p
+  /// network switched on, the taste route's generation 3 (networkPeers,
+  /// networkOnRandomSeed, network.reason, peer.label) and the peers route's
+  /// generation 1. Integers only, as [hasTasteGeneration]: a string, a
+  /// fraction or a bool is off. The web also takes a numeric string; no
+  /// server sends one.
+  @visibleForTesting
+  static bool hasPeerRecs(
+          dynamic discovery, dynamic p2p, dynamic taste, dynamic peers) =>
+      discovery == true &&
+      p2p == true &&
+      taste is int &&
+      taste >= 3 &&
+      peers is int &&
+      peers >= 1;
 
   /// Test seam over [_applyServerInfo]: fold a layered `GET /api/` body into
   /// [server] exactly as a refresh would, minus the network.
@@ -2721,6 +2751,7 @@ class ServerManager {
     server.discoveryTasteAvailable = false;
     server.discoveryPluginsAvailable = false;
     server.moodFiltersAvailable = false; // Discover is the parent's page
+    server.peerRecsAvailable = false; // the network page is the parent's
     server.noUpload = null; // a copy lands on the parent, whose flag governs
     // /ytdl and mkdir are off the federation allowlist: Add from YouTube is
     // the parent's, so neither of its flags means anything on a peer.

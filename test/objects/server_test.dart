@@ -242,6 +242,42 @@ void main() {
       expect(reparsed.discoveryP2pAvailable, isFalse);
       expect(reparsed.federationDiscoveryAvailable, isTrue);
     });
+
+    // The Peer Recommendations page (mStream
+    // docs/peer-recommendations-plan.md §2 item 2): the app keeps the
+    // answer so the home card is right before the first refresh lands.
+    test('peerRecsAvailable absent → null, junk → null, round trip', () {
+      Map<String, dynamic> record(Map<String, dynamic> extra) => {
+            'url': 'u',
+            'username': null,
+            'password': null,
+            'jwt': null,
+            'localname': 'l',
+            ...extra,
+          };
+      expect(Server.fromJson(record({})).peerRecsAvailable, isNull,
+          reason: 'a record from before the flag: unknown, not off');
+      expect(Server('u', null, null, null, 'l').peerRecsAvailable, isNull);
+      for (final junk in <Object?>['yes', 1, 0, 3, {}, <Object?>[], null]) {
+        expect(
+            Server.fromJson(record({'peerRecsAvailable': junk}))
+                .peerRecsAvailable,
+            isNull,
+            reason: 'junk $junk');
+      }
+      for (final value in [true, false]) {
+        final original = Server('u', null, null, null, 'l')
+          ..peerRecsAvailable = value;
+        final json = original.toJson();
+        expect(json['peerRecsAvailable'], value);
+        expect(Server.fromJson(json).peerRecsAvailable, value);
+      }
+      expect(
+          Server.fromJson(Server('u', null, null, null, 'l').toJson())
+              .peerRecsAvailable,
+          isNull,
+          reason: 'unknown stays unknown through servers.json');
+    });
   });
 
   // Add from YouTube: the account's folder right, the formats the server

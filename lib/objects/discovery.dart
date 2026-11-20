@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+
 import 'metadata.dart';
 
 /// Models for the server's discovery (sonic-similarity) API
@@ -181,6 +183,17 @@ class DiscoveryLead {
   /// The network peer's id (`peer.endpointId`): a P2P row's only
   /// provenance on the per-song route, which stamps no [source].
   final String? endpointId;
+
+  /// The peer's label as the Peer Recommendations strip draws it
+  /// (`peer.label`, taste generation 3: the peers route's label, e.g.
+  /// "mStream · 3f9a" for a default-named peer). Null when the row has none
+  /// or a blank one; the caller then falls back to [peerName].
+  final String? peerLabel;
+
+  /// The generated tile the server stamped on a network row (taste
+  /// generation 3), drawn verbatim (mStream peer-recommendations plan §5.1);
+  /// null when absent or malformed.
+  final LeadTile? tile;
   final Map<String, dynamic> raw;
 
   DiscoveryLead(this.artist, this.title, this.similarity,
@@ -196,6 +209,8 @@ class DiscoveryLead {
       this.releaseGroupMbid,
       this.exportId,
       this.endpointId,
+      this.peerLabel,
+      this.tile,
       this.raw = const {}});
 
   /// [peerId] / [peerName] stand in for a row that does not name its peer
@@ -225,6 +240,8 @@ class DiscoveryLead {
       releaseGroupMbid: _str(m['releaseGroupMbid'], max: 64),
       exportId: _str(m['exportId'], max: 256),
       endpointId: peer is Map ? _str(peer['endpointId'], max: 128) : null,
+      peerLabel: peer is Map ? _str(peer['label']) : null,
+      tile: LeadTile.fromServerMap(m['tile']),
       raw: _rawCopy(m),
     );
   }
@@ -272,6 +289,8 @@ class DiscoveryLead {
         releaseGroupMbid: releaseGroupMbid,
         exportId: exportId,
         endpointId: endpointId,
+        peerLabel: peerLabel,
+        tile: tile,
         raw: _rawCopy(raw),
       );
 
@@ -294,6 +313,52 @@ class DiscoveryLead {
     }
     return null;
   }
+}
+
+/// A network lead's generated tile, as the server stamps it on a taste
+/// generation 3 row (mStream src/state/discovery-peer-view.js leadTile):
+/// [key] is the folded `artist|album` (either alone, else the title; it may
+/// be ''), shared by every lead of one album so art a preview earns for one
+/// spreads to the rest; [hue] is FNV-1a-32 of the key mod 360; [letter] is
+/// the first letter or number of the artist, else of the title, else ''
+/// (draw none). Drawn verbatim and never computed here (plan §5.1).
+@immutable
+class LeadTile {
+  final String key;
+  final int hue;
+  final String letter;
+
+  const LeadTile(this.key, this.hue, this.letter);
+
+  /// Null unless [m] is a map with a [key] string of at most 2048 chars, a
+  /// [hue] that is a whole number 0..359, and a [letter] string of at most
+  /// one character (rune).
+  static LeadTile? fromServerMap(dynamic m) {
+    if (m is! Map) return null;
+    final key = m['key'];
+    final hue = m['hue'];
+    final letter = m['letter'];
+    if (key is! String || key.length > 2048) return null;
+    if (hue is! num || !hue.isFinite || hue != hue.roundToDouble()) {
+      return null;
+    }
+    if (hue < 0 || hue > 359) return null;
+    if (letter is! String || letter.runes.length > 1) return null;
+    return LeadTile(key, hue.toInt(), letter);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is LeadTile &&
+      other.key == key &&
+      other.hue == hue &&
+      other.letter == letter;
+
+  @override
+  int get hashCode => Object.hash(key, hue, letter);
+
+  @override
+  String toString() => 'LeadTile($key, $hue, $letter)';
 }
 
 /// The sources the plug-in routes' schema takes (mStream
@@ -535,6 +600,36 @@ enum TasteSeedSource {
       v is String ? TasteSeedSource.values.asNameMap()[v] : null;
 }
 
+/// Why the network section came back empty (taste generation 3,
+/// `network.reason`; mStream src/api/discovery-taste.js networkReason):
+/// the shelf holds no snapshot ([emptyShelf]), none of the asked peers is
+/// on it ([notOnShelf]), none on it shares the local model
+/// ([noCompatible]), nothing new matched ([nothingNew]), no seed is
+/// analyzed yet ([scanPending]), or the walk failed ([error]). Null on the
+/// wire when there are results.
+enum NetworkReason {
+  emptyShelf('empty-shelf'),
+  notOnShelf('not-on-shelf'),
+  noCompatible('no-compatible'),
+  nothingNew('nothing-new'),
+  scanPending('scan-pending'),
+  error('error');
+
+  const NetworkReason(this.wire);
+
+  /// The value the server sends.
+  final String wire;
+
+  /// A wire value as a reason; null for anything unknown or not a string.
+  static NetworkReason? parse(dynamic v) {
+    if (v is! String) return null;
+    for (final r in values) {
+      if (r.wire == v) return r;
+    }
+    return null;
+  }
+}
+
 /// Per-source row limits; the server takes seeds 1..12 and tracks 0..50,
 /// albums 0..24, network 0..50, peers 0..25 (peers: per peer). Only the set
 /// ones are sent.
@@ -589,6 +684,20 @@ class TasteRequest {
   /// 2: the body schema refuses a key it does not know).
   final Map<String, dynamic>? moods;
 
+  /// The Peer Recommendations page's peer tab (taste generation 3): the
+  /// shelf walk narrowed to these endpoint ids. Sent cleaned the way the
+  /// route's Joi takes them — lower-cased, 64 hex only, de-duplicated after
+  /// the fold (Joi checks `unique` after `lowercase`), the first
+  /// [kTasteNetworkPeersMax] — and left out when none is left: `[]` is a
+  /// 400, and no key walks the whole shelf (mStream webapp
+  /// discovery-page.js cleanEndpoints).
+  final List<String>? networkPeers;
+
+  /// Walk the network on a random seed too (taste generation 3), so an
+  /// account with nothing finished still gets leads. Only the Peer
+  /// Recommendations page sends it.
+  final bool? networkOnRandomSeed;
+
   const TasteRequest({
     this.window,
     this.pin,
@@ -598,6 +707,8 @@ class TasteRequest {
     this.newArtistsOnly,
     this.ignoreVPaths,
     this.moods,
+    this.networkPeers,
+    this.networkOnRandomSeed,
   });
 
   Map<String, dynamic> toJson() {
@@ -608,6 +719,7 @@ class TasteRequest {
         .toList();
     final drops = exclude == null ? null : _newestHashes(exclude!);
     final limits = limit?.toJson();
+    final peers = _cleanNetworkPeers(networkPeers);
     return {
       if (window != null && kTasteWindows.contains(window)) 'window': window,
       if (pins != null && pins.isNotEmpty) 'pin': pins,
@@ -623,8 +735,31 @@ class TasteRequest {
       if (ignoreVPaths != null && ignoreVPaths!.isNotEmpty)
         'ignoreVPaths': ignoreVPaths,
       if (moods != null && moods!.isNotEmpty) 'moods': moods,
+      if (peers.isNotEmpty) 'networkPeers': peers,
+      if (networkOnRandomSeed != null)
+        'networkOnRandomSeed': networkOnRandomSeed,
     };
   }
+}
+
+/// The most peers one taste call narrows to (the route's
+/// `networkPeers.max(50)`).
+const int kTasteNetworkPeersMax = 50;
+
+final RegExp _endpointIdShape = RegExp(r'^[0-9a-f]{64}$');
+
+/// [ids] as the taste route's `networkPeers` takes them: each lower-cased,
+/// kept only as 64 hex, de-duplicated after the fold, the first
+/// [kTasteNetworkPeersMax], in order (mStream webapp discovery-page.js
+/// cleanEndpoints). Empty for none.
+List<String> _cleanNetworkPeers(Iterable<String>? ids) {
+  final out = <String>[];
+  for (final raw in ids ?? const <String>[]) {
+    if (out.length >= kTasteNetworkPeersMax) break;
+    final id = raw.toLowerCase();
+    if (_endpointIdShape.hasMatch(id) && !out.contains(id)) out.add(id);
+  }
+  return out;
 }
 
 /// One seed the page is built from: a song this account finished
@@ -821,7 +956,12 @@ class TasteLeads {
   final int searchedTracks;
   final List<DiscoveryLead> results;
 
-  TasteLeads(this.searchedPeers, this.searchedTracks, this.results);
+  /// Why [results] is empty (taste generation 3); null when the server
+  /// names no reason, or one this client does not know.
+  final NetworkReason? reason;
+
+  TasteLeads(this.searchedPeers, this.searchedTracks, this.results,
+      {this.reason});
 
   factory TasteLeads.fromServerMap(Map m) {
     final searched = m['searched'];
@@ -829,6 +969,7 @@ class TasteLeads {
       searched is Map ? _count(searched['peers']) ?? 0 : 0,
       searched is Map ? _count(searched['tracks']) ?? 0 : 0,
       _listOf(m['results'], DiscoveryLead.fromServerMap),
+      reason: NetworkReason.parse(m['reason']),
     );
   }
 }

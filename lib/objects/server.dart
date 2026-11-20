@@ -115,6 +115,17 @@ class Server {
   //                                  it does not know). Albums and Artists
   //                                  need no flag: their answers say so.
   bool? moodFiltersAvailable;
+  //   peerRecsAvailable            — the Peer Recommendations page (mStream
+  //                                  docs/peer-recommendations-plan.md §2
+  //                                  item 2): discovery and discoveryP2p
+  //                                  on, discoveryTaste ≥ 3 and
+  //                                  discoveryP2pPeers ≥ 1, integers only
+  //                                  (`features.*` on /api, flat on ping;
+  //                                  ServerManager.hasPeerRecs). The app
+  //                                  keeps the answer, not the numbers.
+  //                                  Pinned false on a federated peer: the
+  //                                  network page is the parent's.
+  bool? peerRecsAvailable;
   //   noUpload                     — this ACCOUNT may not add files to the
   //                                  server (caller-scoped: `user.noUpload`
   //                                  on /api, `noUpload` on ping — the
@@ -513,6 +524,9 @@ class Server {
         moodFiltersAvailable = json['moodFiltersAvailable'] is bool
             ? json['moodFiltersAvailable']
             : null,
+        peerRecsAvailable = json['peerRecsAvailable'] is bool
+            ? json['peerRecsAvailable']
+            : null,
         noUpload = json['noUpload'] is bool ? json['noUpload'] : null,
         noMkdir = json['noMkdir'] is bool ? json['noMkdir'] : null,
         supportedAudioFormats = json['supportedAudioFormats'] is List
@@ -588,6 +602,7 @@ class Server {
         'discoveryTasteAvailable': discoveryTasteAvailable,
         'discoveryPluginsAvailable': discoveryPluginsAvailable,
         'moodFiltersAvailable': moodFiltersAvailable,
+        'peerRecsAvailable': peerRecsAvailable,
         'noUpload': noUpload,
         'noMkdir': noMkdir,
         'supportedAudioFormats': supportedAudioFormats,

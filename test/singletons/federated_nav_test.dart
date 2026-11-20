@@ -4,11 +4,38 @@
 // peer — everything else on this screen is allowlisted, and Local Files is
 // this device's own downloads either way.
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/l10n/enum_labels.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
+import 'package:mstream_music/media/audio_stuff.dart';
 import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/screens/browser.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
+import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/server_list.dart';
+import 'package:rxdart/rxdart.dart';
+
+/// The player with nothing playing: the Auto DJ card's second line reads its
+/// custom state, and nothing else is asked.
+class _NothingPlaying implements AudioPlayerHandler {
+  @override
+  final BehaviorSubject<MediaItem?> mediaItem = BehaviorSubject.seeded(null);
+  @override
+  final BehaviorSubject<PlaybackState> playbackState =
+      BehaviorSubject.seeded(PlaybackState());
+  @override
+  final BehaviorSubject<List<MediaItem>> queue =
+      BehaviorSubject.seeded(const []);
+  @override
+  final BehaviorSubject<dynamic> customState = BehaviorSubject.seeded(null);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// The `data` slug of every execAction row currently on the nav screen.
 List<String?> _sections() => BrowserManager()
@@ -273,6 +300,181 @@ void main() {
     manager.currentServer = parent;
     BrowserManager().goToNavScreen();
     expect(_sections(), contains('discover'));
+  });
+
+  // Peer Recommendations (mStream docs/peer-recommendations-plan.md §4.2):
+  // the network page's card under LISTEN, right after Discover, on the
+  // server-wide flag alone (the four /api flags folded into one).
+  group('the Peer Recommendations card', () {
+    Server discoverServer() =>
+        Server('https://home.example.com', null, null, 'JWT', 'home')
+          ..discoveryPathAvailable = true
+          ..discoveryAvailable = true
+          ..discoveryTasteAvailable = true;
+
+    test('the Peer Recommendations card follows Discover only with the flag',
+        () {
+      final s = discoverServer();
+      manager.serverList.add(s);
+      manager.currentServer = s;
+
+      BrowserManager().goToNavScreen();
+      expect(_sections(), isNot(contains('peerRecs')),
+          reason: 'never reported: no card');
+
+      s.peerRecsAvailable = false;
+      BrowserManager().goToNavScreen();
+      expect(_sections(), isNot(contains('peerRecs')));
+
+      s.peerRecsAvailable = true;
+      BrowserManager().goToNavScreen();
+      expect(_sections(), [
+        'fileExplorer',
+        'playlists',
+        'albums',
+        'artists',
+        'genres',
+        'rated',
+        'recent',
+        'localFiles',
+        'autoDj',
+        'sonicPath',
+        'discover',
+        'peerRecs',
+        'torrents',
+      ]);
+      expect(_headers(), ['Library', 'Listen', 'Server'],
+          reason: 'in the LISTEN group, no group of its own');
+      final card =
+          BrowserManager().browserList.singleWhere((r) => r.data == 'peerRecs');
+      expect(card.type, 'execAction');
+      expect(card.server, same(s));
+      expect(card.icon?.icon, Icons.travel_explore,
+          reason: 'the globe-magnifier of the Way in board and the lead rows');
+      expect(card.subtext, isNull, reason: 'the board draws the label alone');
+
+      // The flag going off takes the card away on the next home.
+      s.peerRecsAvailable = false;
+      BrowserManager().goToNavScreen();
+      expect(_sections(), isNot(contains('peerRecs')));
+    });
+
+    test('absent on a federated peer whose /api says yes', () {
+      // The page is the parent's: the peer's own GET /api answer goes
+      // through the real fold, which pins the flag false after folding it.
+      final parent = discoverServer()..peerRecsAvailable = true;
+      final peer =
+          Server('federated://home/3', null, null, null, 'peer-basement')
+            ..federationParent = 'home'
+            ..federationPeerId = 3
+            ..parentServer = parent;
+      manager.serverList.addAll([parent, peer]);
+      manager.applyServerInfoForTest(peer, {
+        'server': '6.33.0',
+        'features': {
+          'discovery': true,
+          'discoveryReady': true,
+          'discoveryTaste': 3,
+          'discoveryPlugins': true,
+          'discoveryP2p': true,
+          'discoveryP2pPeers': 1,
+        },
+        'user': {'vpaths': ['music']},
+      });
+      expect(peer.peerRecsAvailable, isFalse);
+
+      manager.currentServer = peer;
+      BrowserManager().goToNavScreen();
+      expect(_sections(), isNot(contains('peerRecs')));
+
+      manager.currentServer = parent;
+      BrowserManager().goToNavScreen();
+      expect(_sections(), contains('peerRecs'));
+    });
+
+    test('its label is Peer Recommendations', () {
+      final s = discoverServer()..peerRecsAvailable = true;
+      manager.serverList.add(s);
+      manager.currentServer = s;
+      BrowserManager().goToNavScreen();
+      final card =
+          BrowserManager().browserList.singleWhere((r) => r.data == 'peerRecs');
+      expect(card.name, 'Peer Recommendations',
+          reason: 'browserChromeLabel keys on it');
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(browserChromeLabel(en, card.name), 'Peer Recommendations');
+      expect(browserChromeLabel(en, card.name), en.peerRecsTitle);
+      // In the user's language, from the title key (the toolbar's title
+      // reads the same).
+      final de = lookupAppLocalizations(const Locale('de'));
+      expect(browserChromeLabel(de, card.name), de.peerRecsTitle);
+      expect(de.peerRecsTitle, isNot('Peer Recommendations'));
+    });
+
+    testWidgets('Discover and Peer Recommendations lay out full width',
+        (t) async {
+      // The LISTEN group as the Way in board draws it: Auto DJ | Sonic path,
+      // then Discover on its own row, then Peer Recommendations on its own.
+      t.view.physicalSize = const Size(390 * 3, 844 * 3);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      MediaManager().audioHandler = _NothingPlaying();
+      final s = discoverServer()..peerRecsAvailable = true;
+      manager.serverList.add(s);
+      manager.currentServer = s;
+      BrowserManager().goToNavScreen();
+      final home = BrowserManager().browserList;
+      // The LISTEN group on its own, as a home list (a header, then cards).
+      final from =
+          home.indexWhere((e) => e.type == 'section' && e.name == 'Listen');
+      final to = home.indexWhere(
+          (e) => e.type == 'section' && e.name == 'Server', from + 1);
+      BrowserManager().addListToStack(home.sublist(from, to));
+      await t.pumpWidget(MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        home: const Scaffold(body: Browser()),
+      ));
+      await t.pump();
+      expect(t.takeException(), isNull);
+
+      Rect card(String label) => t.getRect(find
+          .ancestor(of: find.text(label), matching: find.byType(Material))
+          .first);
+      final dj = card('Auto DJ');
+      final path = card('Sonic path');
+      final discover = card('Discover');
+      final peer = card('Peer Recommendations');
+
+      // Auto DJ and Sonic path pair up on the first row.
+      expect(path.top, dj.top);
+      expect(path.left, dj.right + 10);
+      // Discover and Peer Recommendations each span the group's width
+      // (both pair cards and the 10 px gap between them).
+      for (final wide in [discover, peer]) {
+        expect(wide.left, dj.left);
+        expect(wide.right, path.right);
+        expect(wide.width, moreOrLessEquals(dj.width * 2 + 10));
+      }
+      // One row each, in order, the home's 10 px apart.
+      expect(discover.top, moreOrLessEquals(dj.bottom + 10));
+      expect(peer.top, moreOrLessEquals(discover.bottom + 10));
+
+      // Without the flag Discover still spans its row alone (an odd last
+      // card), as before.
+      s.peerRecsAvailable = false;
+      BrowserManager().goToNavScreen();
+      final again = BrowserManager().browserList;
+      final f2 =
+          again.indexWhere((e) => e.type == 'section' && e.name == 'Listen');
+      final t2 = again.indexWhere(
+          (e) => e.type == 'section' && e.name == 'Server', f2 + 1);
+      BrowserManager().addListToStack(again.sublist(f2, t2));
+      await t.pump();
+      expect(find.text('Peer Recommendations'), findsNothing);
+      expect(card('Discover').width, moreOrLessEquals(dj.width * 2 + 10));
+      BrowserManager().goToNavScreen();
+    });
   });
 
   test('a federated server explains itself with an inert note row', () {
