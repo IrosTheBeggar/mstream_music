@@ -61,6 +61,19 @@ Widget _artFallback() => albumArtFallback(iconSize: 20);
 String _fmtDur(Duration? d) =>
     d == null ? '' : formatDuration(d, padMinutes: false);
 
+/// Say what the queue just did, now: the answer takes the place of whatever
+/// the panel's messenger is showing or holding (the first-run hint, an
+/// earlier answer, an Undo) instead of queueing behind it. Queued, it could
+/// land long after the tap: the hint's timer stops while the menu covers it
+/// and starts over once the menu closes, and under a screen reader a
+/// snackbar with an action (the hint, Undo) stays until it is dismissed,
+/// holding up everything behind it.
+void _sayNow(ScaffoldMessengerState messenger, SnackBar bar) {
+  messenger
+    ..clearSnackBars()
+    ..showSnackBar(bar);
+}
+
 /// Whether a queue item can seed Discover: a server track whose server
 /// advertised discovery on ping. Local files (no server path) and older
 /// servers get no Find-similar action — never probed.
@@ -193,7 +206,7 @@ class _QueueListState extends State<QueueList> {
     // The handler reorders the queue at once; the player follows behind.
     unawaited(MediaManager().audioHandler.customAction(
         'moveQueueItem', {'from': move.from, 'to': move.to}));
-    ScaffoldMessenger.of(context).showSnackBar(
+    _sayNow(ScaffoldMessenger.of(context),
         SnackBar(content: Text(l.queuePlaysNext(item.title))));
   }
 
@@ -213,15 +226,16 @@ class _QueueListState extends State<QueueList> {
     if (at < 0) return;
     final l = AppLocalizations.of(context);
     unawaited(h.removeQueueItemAt(at));
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
+    _sayNow(
+      ScaffoldMessenger.of(context),
+      SnackBar(
         content: Text(l.queueRemovedSong(item.title)),
         action: SnackBarAction(
           label: l.queueUndo,
           onPressed: () => unawaited(_undoRemove(item, at)),
         ),
-      ));
+      ),
+    );
   }
 
   /// Undo puts [item] back where it was: appended, then moved into place —
@@ -254,7 +268,7 @@ class _QueueListState extends State<QueueList> {
     return addSongToPlaylistFlow(context,
         server: server,
         path: path,
-        toast: (m) => messenger.showSnackBar(SnackBar(content: Text(m))));
+        toast: (m) => _sayNow(messenger, SnackBar(content: Text(m))));
   }
 
   void _download(MediaItem item, Server server, String path) {
@@ -263,7 +277,7 @@ class _QueueListState extends State<QueueList> {
     // own server and path.
     unawaited(
         DownloadManager().downloadOneFile(item.id, server.localname, path));
-    ScaffoldMessenger.of(context).showSnackBar(
+    _sayNow(ScaffoldMessenger.of(context),
         SnackBar(content: Text(l.browserDownloadsStarted(1))));
   }
 

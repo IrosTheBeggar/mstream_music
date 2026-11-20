@@ -334,4 +334,36 @@ void main() {
     expect(SettingsManager().queueHoldHintShown, isFalse);
     await close(tester);
   });
+
+  // Found on the emulator: Play next's answer sat behind the first-run hint,
+  // whose timer stops while the menu covers it and starts over once the menu
+  // closes, so the first thing done from the menu said nothing for 8 s.
+  testWidgets("what the menu did shows at once, in the hint's place", (tester) async {
+    await openQueue(tester);
+    SettingsManager().queueHoldHintShown = false;
+    nowPlayingExpanded.value = true;
+    await BrowseHarness.frames(tester, 8);
+    expect(find.text(hint), findsOneWidget);
+    await holdRow(tester, 'Rehearsal take 3');
+    await tester.tap(find.byKey(const ValueKey('queue-sheet-play-next')));
+    await BrowseHarness.frames(tester, 16);
+    expect(find.text('Rehearsal take 3 plays next'), findsOneWidget);
+    expect(find.text(hint), findsNothing);
+    await close(tester);
+  });
+
+  testWidgets("Undo doesn't wait behind other snackbars either", (tester) async {
+    await openQueue(tester);
+    final messenger = ScaffoldMessenger.of(tester.element(find.byType(QueueList)));
+    messenger
+      ..showSnackBar(const SnackBar(content: Text('Something said first'), duration: Duration(seconds: 8)))
+      ..showSnackBar(const SnackBar(content: Text('Something said next')));
+    await BrowseHarness.frames(tester, 8);
+    expect(find.text('Something said first'), findsOneWidget);
+    await tester.fling(find.text('Ghosts'), const Offset(-300, 0), 1500);
+    await BrowseHarness.frames(tester, 24);
+    expect(find.text('Removed Ghosts'), findsOneWidget);
+    expect(find.text('Something said next'), findsNothing, reason: 'dropped, not shown first');
+    await close(tester);
+  });
 }
