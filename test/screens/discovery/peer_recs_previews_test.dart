@@ -69,6 +69,23 @@ class _Resolver {
   }
 }
 
+/// The fake player over a clip that completes in the instant it is paused,
+/// as an engine that takes the completion after the pause would: the pause
+/// answers true, and the flow is held by the time that answer comes back
+/// (its state reaching the page later).
+class _CompletesAsPaused extends FakePreviewPlayer {
+  @override
+  Future<bool> pause({Object? owner}) async {
+    final paused = await super.pause(owner: owner);
+    if (paused) {
+      final s = state.value;
+      emit(PreviewClipState(
+          provider: s.provider, phase: PreviewPhase.held, owner: s.owner));
+    }
+    return paused;
+  }
+}
+
 /// [l]'s clip from [provider], matching its album (https art by default);
 /// [signed] stands for the signature a CDN address carries (a fresh
 /// answer's differs from an expired one's).
@@ -181,8 +198,11 @@ void main() {
   /// The real engine over a scripted song side and clip, as the app's
   /// PreviewPlayer; every flow ended and the fake put back afterwards.
   ({PreviewPlayer player, FakePreviewPort port, FakePreviewClip clip})
-      realEngine({bool holdLoads = false, bool songPlaying = true}) {
-    final port = FakePreviewPort(songPlaying: songPlaying);
+      realEngine(
+          {bool holdLoads = false,
+          bool songPlaying = true,
+          bool casting = false}) {
+    final port = FakePreviewPort(songPlaying: songPlaying, casting: casting);
     final clip = FakePreviewClip()..holdLoads = holdLoads;
     final player = PreviewPlayer.withPort(port, makeClip: () => clip);
     final previous = PreviewPlayer.instance;
@@ -886,6 +906,265 @@ void main() {
       expect(rig.port.playingNow, isTrue);
     });
 
+    // Review F1: a second press made while the first clip still loaded let
+    // go of the watch, though the engine watches the song only once a clip
+    // of the flow has loaded: the first clip, landing after the user had
+    // started the song, paused it.
+    test('… and another lead pressed while that clip loads: still watched; '
+        'the user starting the song drops the load, and nothing pauses it',
+        () async {
+      final rig = realEngine(songPlaying: false, holdLoads: true);
+      make();
+      previews.answers.put(keyOf(signal), kDeezerPlugin, clipOf(signal));
+      await press(signal);
+      expect(previews.status, PeerClipStatus.loading);
+      await press(harbor);
+      expect(previews.status, PeerClipStatus.resolving);
+      expect(rig.clip.pendingLoads, 1, reason: 'Signal Fires still loads');
+
+      rig.port.userPlay();
+      await settle();
+      expect(previews.status, PeerClipStatus.idle);
+      expect(rig.clip.pendingLoads, 0, reason: 'the load was dropped');
+      expect(rig.player.state.value, PreviewClipState.idle);
+      await resolver.answer(clipOf(harbor));
+      expect(rig.clip.loads, [clipOf(signal).url],
+          reason: 'Harbor Lights never plays');
+      expect(previews.answers.of(keyOf(harbor), kDeezerPlugin), isNotNull);
+      expect(rig.port.pauses, 0);
+      expect(rig.port.playingNow, isTrue);
+    });
+
+    test('… the same for a press made once the user paused the song while a '
+        'clip asked with it playing still loads (that load watches nothing '
+        'yet)', () async {
+      final rig = realEngine(holdLoads: true);
+      make();
+      previews.answers.put(keyOf(signal), kDeezerPlugin, clipOf(signal));
+      await press(signal);
+      expect(previews.status, PeerClipStatus.loading);
+      rig.port.userPause();
+      await press(harbor);
+      expect(previews.status, PeerClipStatus.resolving);
+
+      rig.port.userPlay();
+      await settle();
+      expect(previews.status, PeerClipStatus.idle);
+      expect(rig.clip.pendingLoads, 0, reason: 'the load was dropped');
+      expect(rig.port.pauses, 0);
+      expect(rig.port.playingNow, isTrue);
+    });
+
+    test("… and for a second press over a sheet's flow taken over while its "
+        'clip still loaded', () async {
+      final rig = realEngine(songPlaying: false, holdLoads: true);
+      make();
+      unawaited(rig.player
+          .play(provider: kItunesPlugin, url: sheetClip, owner: sheet));
+      await settle();
+      await press(signal);
+      expect(rig.player.state.value.owner, same(previews));
+      expect(rig.player.state.value.phase, PreviewPhase.held);
+      await press(harbor);
+      expect(previews.live, same(harbor));
+
+      rig.port.userPlay();
+      await settle();
+      expect(previews.status, PeerClipStatus.idle);
+      expect(rig.player.state.value, PreviewClipState.idle);
+      await resolver.answer(clipOf(signal));
+      expect(resolver.asks, hasLength(1),
+          reason: "Harbor Lights' queued ask was dropped");
+      expect(rig.clip.loads, [sheetClip]);
+      expect(rig.port.pauses, 0);
+      expect(rig.port.playingNow, isTrue);
+    });
+
+    // A watch of the page's over a flow whose clip had paused the song heard
+    // the engine bringing the song back, as an earlier clip of that flow
+    // failed, as the user starting it: the press made meanwhile was dropped
+    // with no word, and its clip never played.
+    test("a sheet's flow whose clip paused the song, taken over; the press's "
+        'stored clip fails after another lead was pressed: the song comes '
+        'back, and that lead still plays', () async {
+      final rig = realEngine(holdLoads: true);
+      make();
+      unawaited(rig.player
+          .play(provider: kItunesPlugin, url: sheetClip, owner: sheet));
+      await settle();
+      rig.clip.finishLoad();
+      await settle();
+      expect(rig.port.pauses, 1);
+      previews.answers
+          .put(keyOf(signal), kDeezerPlugin, clipOf(signal, signed: 'old'));
+      await press(signal);
+      expect(previews.status, PeerClipStatus.loading);
+      await press(harbor);
+      expect(previews.status, PeerClipStatus.resolving);
+
+      rig.clip.failLoad('expired');
+      await settle();
+      expect(rig.port.plays, 1, reason: 'the failed flow brought the song back');
+      expect(previews.status, PeerClipStatus.resolving);
+      expect(previews.live, same(harbor));
+      expect(previews.answers.of(keyOf(signal), kDeezerPlugin), isNull);
+      await resolver.answer(clipOf(harbor));
+      rig.clip.finishLoad();
+      await settle();
+      expect(previews.status, PeerClipStatus.playing);
+      expect(rig.clip.loads.last, clipOf(harbor).url);
+      expect(rig.port.pauses, 2);
+      expect(misses, 0);
+    });
+
+    test("… the same over a sheet's switch: its first clip played, its "
+        'second still loaded when the press took the flow over', () async {
+      final rig = realEngine(holdLoads: true);
+      make();
+      unawaited(rig.player
+          .play(provider: kItunesPlugin, url: sheetClip, owner: sheet));
+      await settle();
+      rig.clip.finishLoad();
+      await settle();
+      unawaited(rig.player.play(
+          provider: kItunesPlugin,
+          url: Uri.parse('https://cdn.example/sheet-row-2.mp3'),
+          owner: sheet));
+      await settle();
+      expect(rig.player.state.value.phase, PreviewPhase.loading);
+      previews.answers
+          .put(keyOf(signal), kDeezerPlugin, clipOf(signal, signed: 'old'));
+      await press(signal);
+      await press(harbor);
+      expect(rig.clip.pendingLoads, 1, reason: "only Signal Fires' loads");
+
+      rig.clip.failLoad('expired');
+      await settle();
+      expect(rig.port.plays, 1);
+      expect(previews.live, same(harbor));
+      await resolver.answer(clipOf(harbor));
+      rig.clip.finishLoad();
+      await settle();
+      expect(previews.status, PeerClipStatus.playing);
+      expect(rig.port.pauses, 2);
+    });
+
+    // The engine watches the song from a clip's load, before that clip's
+    // playing state (sent once its pause of the song lands) can reach the
+    // page. A press in between, and another while the next clip loads,
+    // left a watch of the page's to hear the song coming back as that clip
+    // failed.
+    test('… the same for presses made while the clip they supersede still '
+        'pauses the song', () async {
+      final rig = realEngine(holdLoads: true);
+      make();
+      previews.answers.put(keyOf(signal), kDeezerPlugin, clipOf(signal));
+      previews.answers
+          .put(keyOf(harbor), kDeezerPlugin, clipOf(harbor, signed: 'old'));
+      final landing = rig.port.pauseGate = Completer<void>();
+      await press(signal);
+      rig.clip.finishLoad();
+      await settle();
+      expect(rig.port.pauses, 1);
+      expect(previews.status, PeerClipStatus.loading,
+          reason: 'its pause still lands');
+      await press(harbor);
+      rig.port.pauseGate = null;
+      landing.complete();
+      await settle();
+      expect(rig.clip.pendingLoads, 1, reason: "Harbor Lights' loads");
+      await press(glass);
+      expect(previews.status, PeerClipStatus.resolving);
+
+      rig.clip.failLoad('expired');
+      await settle();
+      expect(rig.port.plays, 1, reason: 'the failed flow brought the song back');
+      expect(previews.live, same(glass));
+      expect(previews.status, PeerClipStatus.resolving);
+      await resolver.answer(clipOf(glass));
+      rig.clip.finishLoad();
+      await settle();
+      expect(previews.status, PeerClipStatus.playing);
+      expect(rig.clip.loads.last, clipOf(glass).url);
+      expect(rig.port.pauses, 2);
+      expect(misses, 0);
+    });
+
+    test('… and while casting, for a press whose clip takes over the pause '
+        'of a flow stopped as that pause still landed', () async {
+      final rig = realEngine(holdLoads: true, casting: true);
+      make();
+      previews.answers.put(keyOf(signal), kDeezerPlugin, clipOf(signal));
+      previews.answers
+          .put(keyOf(harbor), kDeezerPlugin, clipOf(harbor, signed: 'old'));
+      final landing = rig.port.pauseGate = Completer<void>();
+      await press(signal);
+      rig.clip.finishLoad();
+      await settle();
+      await previews.stop();
+      await settle();
+      expect(rig.port.plays, 0, reason: 'the Play waits for the Pause');
+      await press(harbor);
+      rig.port.pauseGate = null;
+      landing.complete();
+      await settle();
+      expect(rig.port.plays, 0, reason: "Harbor Lights' clip took it over");
+      await press(glass);
+      expect(previews.status, PeerClipStatus.resolving);
+
+      rig.clip.failLoad('expired');
+      await settle();
+      expect(rig.port.plays, 1, reason: 'the failed flow brought the cast back');
+      expect(previews.live, same(glass));
+      expect(previews.status, PeerClipStatus.resolving);
+      await resolver.answer(clipOf(glass));
+      rig.clip.finishLoad();
+      await settle();
+      expect(previews.status, PeerClipStatus.playing);
+      expect(rig.clip.loads.last, clipOf(glass).url);
+      expect(rig.port.pauses, 2);
+      expect(misses, 0);
+    });
+
+    test("the fake engine: a press over a sheet's flow whose clip has played "
+        "leaves the song to the engine's watch; over one whose first clip "
+        'still loads, it watches the song itself', () async {
+      engine.songPlaying = false;
+      make();
+      await emit(PreviewClipState(
+          provider: kItunesPlugin, phase: PreviewPhase.playing, owner: sheet));
+      await emit(PreviewClipState(
+          provider: kItunesPlugin, phase: PreviewPhase.loading, owner: sheet));
+      await press(harbor);
+      expect(engine.claims, [previews]);
+      expect(engine.watchingSong, isFalse);
+
+      await previews.stop();
+      await emit(PreviewClipState(
+          provider: kItunesPlugin, phase: PreviewPhase.loading, owner: sheet));
+      await press(glass);
+      expect(engine.claims, [previews, previews]);
+      expect(engine.watchingSong, isTrue);
+    });
+
+    test('control: once a clip of the flow has loaded, a press leaves the '
+        "song to the engine's own watch, which ends the flow", () async {
+      final rig = realEngine(songPlaying: false);
+      make();
+      await press(signal);
+      await resolver.answer(clipOf(signal));
+      expect(previews.status, PeerClipStatus.playing);
+      await press(harbor);
+      expect(previews.status, PeerClipStatus.resolving);
+
+      rig.port.userPlay();
+      await settle();
+      expect(previews.status, PeerClipStatus.idle);
+      expect(rig.player.state.value, PreviewClipState.idle);
+      expect(rig.port.pauses, 0);
+      expect(rig.port.playingNow, isTrue);
+    });
+
     test('control: the song playing at the press, a Play while it is asked '
         'changes nothing; the clip plays and pauses the song once', () async {
       final rig = realEngine();
@@ -1123,6 +1402,93 @@ void main() {
           reason: 'no run into the limiter');
       expect(misses, 0, reason: 'Preview all ends quietly');
       expect(ourEnds().map((c) => c.reason), [PreviewEnd.stopped]);
+    });
+
+    // Review F3: the band's ⏸ in the instant the clip completed left the
+    // page paused over a held engine, and ▶ did nothing (the engine resumes
+    // only a paused clip) until the held flow timed out. A held flow of the
+    // session's own play means its clip ended, whatever the band reads.
+    test('the engine held while the band reads paused: the clip ended, so '
+        'the chain goes on; with the list moved on, it ends as completed',
+        () async {
+      make();
+      final held = PreviewClipState(
+          provider: kDeezerPlugin, phase: PreviewPhase.held, owner: previews);
+      await previewAll([saltRoad, breakwater]);
+      await resolver.answer(clipOf(saltRoad));
+      await previews.toggle();
+      await settle();
+      expect(previews.status, PeerClipStatus.paused);
+
+      await emit(held);
+      expect(previews.live, same(breakwater));
+      expect(previews.status, PeerClipStatus.resolving);
+      expect(resolver.titles, ['Salt Road', 'Breakwater']);
+      expect(engine.keepHelds, greaterThan(0), reason: 'the hold is kept');
+      await resolver.answer(clipOf(breakwater));
+      expect(previews.status, PeerClipStatus.playing);
+      expect(engine.plays.last.holdOnComplete, isTrue);
+      expect(ourEnds(), isEmpty, reason: 'the song stayed paused throughout');
+
+      await previews.stop();
+      await previewAll([glass, quiet]);
+      await resolver.answer(clipOf(glass));
+      await previews.toggle();
+      await settle();
+      previews.listChanged(all);
+      await emit(held);
+      expect(previews.status, PeerClipStatus.idle);
+      expect(ourEnds().map((c) => c.reason),
+          [PreviewEnd.stopped, PreviewEnd.completed]);
+      expect(engine.state.value, PreviewClipState.idle);
+    });
+
+    test('… and ▶ pressed before that state reaches the page goes on at once, '
+        'never asking a held engine to play on', () async {
+      make();
+      await previewAll([saltRoad, breakwater]);
+      await resolver.answer(clipOf(saltRoad));
+      await previews.toggle();
+      await settle();
+      expect(previews.status, PeerClipStatus.paused);
+
+      engine.emit(PreviewClipState(
+          provider: kDeezerPlugin, phase: PreviewPhase.held, owner: previews));
+      unawaited(previews.toggle());
+      expect(previews.live, same(breakwater));
+      expect(previews.status, PeerClipStatus.resolving);
+      expect(resolver.titles, ['Salt Road', 'Breakwater']);
+      await settle();
+      expect(engine.resumes, 0);
+      expect(previews.live, same(breakwater));
+      await resolver.answer(clipOf(breakwater));
+      expect(previews.status, PeerClipStatus.playing);
+      expect(ourEnds(), isEmpty);
+    });
+
+    test('… and a pause the engine answers as the clip completes: the page '
+        'goes on to the next lead, never drawing paused over the held flow',
+        () async {
+      final racing = _CompletesAsPaused();
+      PreviewPlayer.instance = racing;
+      addTearDown(() => PreviewPlayer.instance = engine);
+      make();
+      await previewAll([saltRoad, breakwater]);
+      await resolver.answer(clipOf(saltRoad));
+      expect(previews.status, PeerClipStatus.playing);
+      final seen = <PeerClipStatus>[];
+      previews.addListener(() => seen.add(previews.status));
+
+      await previews.toggle();
+      await settle();
+      expect(racing.state.value.phase, PreviewPhase.held);
+      expect(previews.live, same(breakwater));
+      expect(previews.status, PeerClipStatus.resolving);
+      expect(seen, isNot(contains(PeerClipStatus.paused)));
+      expect(resolver.titles, ['Salt Road', 'Breakwater']);
+      await resolver.answer(clipOf(breakwater));
+      expect(previews.status, PeerClipStatus.playing);
+      expect(racing.endCalls, isEmpty, reason: 'the song stayed paused');
     });
 
     test('pressed while running → stop', () async {

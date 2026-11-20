@@ -102,6 +102,20 @@ Map<String, dynamic> itunesClip() => {
   'match': 0.9,
 };
 
+/// The song side with the app's timing: the handler's Play is numbered at
+/// once, but the song's playing flag goes on only later, as the handler's
+/// playbackState does.
+class _LateFlagPort extends FakePreviewPort {
+  @override
+  void playSong() {
+    touches++;
+    plays++;
+    log.add('song.play');
+    transport.note('play');
+    Timer(const Duration(milliseconds: 30), startsByItself);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final defaultLaunch = elsewhereLaunch;
@@ -1710,9 +1724,10 @@ void main() {
       await closeSheet(tester);
     });
 
-    // Round 3's W1 on #237's path: the sheet registers no lifecycle
-    // observer of its own, so the engine's own watch ends its clip as the
-    // app is hidden, a microtask after the binding told it.
+    // Round 3's W1 on #237's path: the sheet's own lifecycle observer ends
+    // no flow (it only keeps a lookup still out quiet), so the engine's own
+    // watch ends its clip as the app is hidden, a microtask after the
+    // binding told it.
     testWidgets("the app sent to the background ends the sheet's clip "
         'through the app port\'s own watch: no "used after being disposed", '
         'the song back, and a clip after the return is watched afresh', (
@@ -1866,6 +1881,342 @@ void main() {
       };
       await pumpSheet(tester, lead: leadOf(blank), viaPeerRoute: true);
       expect(find.text('From the network · mStream'), findsOneWidget);
+    });
+  });
+
+  // The preview player watches the app only from a play on and the song
+  // only once a clip has loaded; before then the rows watch both
+  // themselves (mStream plan §2 items 13–14: the main player always wins,
+  // and the app going to the background ends a preview even before its
+  // clip loads).
+  group('before a clip of the sheet sounds', () {
+    String? lineOf(WidgetTester tester, String plugin) => tester
+        .widget<Text>(find.byKey(ValueKey('lead-preview-line-$plugin')))
+        .data;
+
+    const found = 'Paper Satellites · The Quiet Assembly';
+
+    /// The app's preview player over a song side and a clip of the test's
+    /// (the fake's install puts the fake back).
+    ({PreviewPlayer player, FakePreviewPort port, FakePreviewClip clip})
+    realEngine(FakePreviewPort port) {
+      final clip = FakePreviewClip();
+      final player = PreviewPlayer.withPort(port, makeClip: () => clip);
+      PreviewPlayer.instance = player;
+      return (player: player, port: port, clip: clip);
+    }
+
+    testWidgets('the song paused at the press and started by the user while '
+        'the row is looked up: the clip it finds never plays, and the song '
+        'plays on', (tester) async {
+      final engine = realEngine(FakePreviewPort(songPlaying: false));
+      final port = engine.port;
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(lineOf(tester, 'deezer'), 'Looking up…');
+
+      port.userPlay(); // Play on a headset, the lock screen, CarPlay
+      await frames(tester, 2);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(engine.clip.loads, isEmpty);
+      expect(port.pauses, 0);
+      expect(port.playingNow, isTrue);
+      expect(engine.player.state.value, PreviewClipState.idle);
+      expect(lineOf(tester, 'deezer'), found, reason: 'found, not playing');
+
+      // A press now plays it, pausing the song as any press does.
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 1);
+      await closeSheet(tester);
+      expect(port.plays, 1, reason: 'the sheet closing brings it back');
+    });
+
+    testWidgets('the song paused at the press and started by the user while '
+        "the row's clip loads: the clip stops before it pauses the song", (
+      tester,
+    ) async {
+      final engine = realEngine(FakePreviewPort(songPlaying: false));
+      final port = engine.port;
+      final store = PreviewAnswers()
+        ..put('lead-1', 'deezer', answerOf(deezerClip()));
+      engine.clip.holdLoads = true;
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(engine.player.state.value.phase, PreviewPhase.loading);
+
+      port.userPlay();
+      await frames(tester, 2);
+      expect(engine.clip.pendingLoads, 0, reason: 'the load was stopped');
+      expect(engine.player.state.value, PreviewClipState.idle);
+      expect(engine.clip.playCalls, 0);
+      expect(port.pauses, 0);
+      expect(port.plays, 0, reason: 'nothing brings the song back for it');
+      expect(port.playingNow, isTrue);
+      expect(lineOf(tester, 'deezer'), found);
+      expect(store.of('lead-1', 'deezer'), isNotNull, reason: 'kept');
+      expect(resolveCount(), 0);
+      await closeSheet(tester);
+    });
+
+    testWidgets('the song paused at the press, a clip of the sheet played '
+        "over it and ended while another row is looked up: the user's Play "
+        'then keeps that row quiet too', (tester) async {
+      preview.songPlaying = false;
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(preview.watchingSong, isTrue);
+      fake.resolveGates['deezer'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-deezer');
+      await preview.complete(); // the iTunes clip played out
+      await frames(tester, 2);
+      expect(preview.watchingSong, isTrue, reason: 'deezer is still asked');
+      preview.startSong();
+      await frames(tester, 2);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect([for (final p in preview.plays) p.provider], ['itunes']);
+      expect(lineOf(tester, 'deezer'), found);
+      expect(preview.watchingSong, isFalse);
+    });
+
+    testWidgets('the song a clip of the sheet paused comes back as it ends '
+        "while another row is looked up: no start of the user's, so that "
+        'row plays once it answers', (tester) async {
+      final engine = realEngine(FakePreviewPort());
+      final port = engine.port;
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(port.pauses, 1);
+      fake.resolveGates['deezer'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-deezer'); // the song is paused now
+      engine.clip.finish();
+      await frames(tester, 2);
+      expect(port.plays, 1, reason: 'the iTunes clip played out');
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(engine.clip.loads, [
+        Uri.parse(itunesClip()['url'] as String),
+        Uri.parse(deezerClip()['url'] as String),
+      ]);
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 2);
+      await closeSheet(tester);
+    });
+
+    testWidgets('the song watch is there only while a press made with the '
+        'song paused is on its way, and a clip already playing is the '
+        "preview player's to end", (tester) async {
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      await pumpSheet(tester);
+      // The song playing at the press: the preview player watches it.
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.watchingSong, isFalse);
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+
+      preview.songPlaying = false;
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.watchingSong, isTrue, reason: 'kept while it plays');
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+      expect(preview.watchingSong, isFalse);
+
+      // A lookup that answers 429 lets go of it.
+      fake.refuse['/plugins/itunes/resolve'] = (429, 'too many lookups');
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(lineOf(tester, 'itunes'), 'Busy — try again in a minute');
+      expect(preview.watchingSong, isFalse);
+      fake.refuse.clear();
+
+      // The user starting the song over a clip of the sheet that plays:
+      // the sheet asks no end of its own.
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(preview.watchingSong, isTrue);
+      final before = preview.endCalls.length;
+      preview.startSong();
+      await frames(tester, 2);
+      expect(preview.endCalls, hasLength(before));
+      expect(preview.watchingSong, isFalse);
+
+      // Closing the sheet lets go of it.
+      preview.songPlaying = false;
+      await tapKey(tester, 'lead-preview-deezer'); // stops it
+      fake.resolveGates['itunes'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(preview.watchingSong, isTrue);
+      await closeSheet(tester);
+      expect(preview.watchingSong, isFalse);
+      fake.resolveGates.remove('itunes')!.complete();
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the app sent to the background and back while the row is '
+        'looked up: the clip it finds never plays, and the song is not '
+        'paused', (tester) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      final engine = realEngine(BindingPreviewPort());
+      final port = engine.port;
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(lineOf(tester, 'deezer'), 'Looking up…');
+
+      backgroundApp(tester);
+      await frames(tester, 2);
+      foregroundApp(tester);
+      await frames(tester, 2);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+      expect(engine.clip.loads, isEmpty);
+      expect(port.pauses, 0);
+      expect(engine.player.state.value, PreviewClipState.idle);
+      expect(lineOf(tester, 'deezer'), found, reason: 'waits for a press');
+
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(fake.resolves('deezer'), hasLength(1));
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 1);
+      await closeSheet(tester);
+    });
+
+    testWidgets('a passing inactive state (a system sheet, the app '
+        'switcher) keeps the lookup: its clip plays once it answers', (
+      tester,
+    ) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect([for (final p in preview.plays) p.provider], ['deezer']);
+    });
+
+    // The song watch does not hear a cast started from the TV's own remote
+    // (only its flag goes on, and a cast's flag can flicker). The clip the
+    // lookup then finds pauses the cast, and its end brings it back: that
+    // resume is no start of the user's.
+    testWidgets('while casting, the song paused at the press and started '
+        "from the TV's own remote while the row is looked up: the song a "
+        'clip of the sheet paused comes back as it ends while another row '
+        'is looked up, and that row plays once it answers', (tester) async {
+      final engine = realEngine(
+        FakePreviewPort(songPlaying: false, casting: true),
+      );
+      final port = engine.port;
+      fake.previews['deezer'] = deezerClip();
+      fake.previews['itunes'] = itunesClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(lineOf(tester, 'deezer'), 'Looking up…');
+      port.startsByItself(); // the TV's own remote: no command
+      await frames(tester, 2);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 1, reason: 'the clip paused the cast');
+
+      fake.resolveGates['itunes'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(lineOf(tester, 'itunes'), 'Looking up…');
+      engine.clip.finish();
+      await frames(tester, 2);
+      expect(port.plays, 1, reason: 'the Deezer clip played out');
+      fake.resolveGates.remove('itunes')!.complete();
+      await frames(tester);
+      expect(engine.clip.loads, [
+        Uri.parse(deezerClip()['url'] as String),
+        Uri.parse(itunesClip()['url'] as String),
+      ]);
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 2);
+      await closeSheet(tester);
+      expect(port.plays, 2, reason: 'the sheet closing brings it back');
+    });
+
+    testWidgets('the song paused at the press, a clip of the sheet played '
+        'over it and ended while another row is looked up (the real preview '
+        "player): the user's Play then keeps that row quiet", (tester) async {
+      final engine = realEngine(FakePreviewPort(songPlaying: false));
+      final port = engine.port;
+      final store = PreviewAnswers()
+        ..put('lead-1', 'itunes', answerOf(itunesClip()));
+      fake.previews['deezer'] = deezerClip();
+      fake.resolveGates['deezer'] = Completer<void>();
+      await pumpSheet(tester, answers: (store: store, leadKey: 'lead-1'));
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 0, reason: 'the song was paused already');
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(lineOf(tester, 'deezer'), 'Looking up…');
+      engine.clip.finish();
+      await frames(tester, 2);
+      expect(engine.player.state.value, PreviewClipState.idle);
+      expect(port.plays, 0, reason: 'nothing to bring back');
+
+      port.userPlay();
+      await frames(tester, 2);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(engine.clip.loads, [Uri.parse(itunesClip()['url'] as String)]);
+      expect(port.pauses, 0);
+      expect(port.playingNow, isTrue);
+      expect(lineOf(tester, 'deezer'), found);
+      expect(port.listeners, 0);
+      await closeSheet(tester);
+    });
+
+    // A press made while a clip of the sheet runs arms no watch, though
+    // that clip has paused the song: its end brings the song back, and with
+    // the flag going on after the Play, a watch would hear that flag as the
+    // user starting the song.
+    testWidgets('the song playing at the press and paused by its clip, '
+        'another row looked up meanwhile: the song back as that clip ends is '
+        "no start of the user's, and the row plays once it answers (the "
+        "song's flag going on after the Play, as the app's does)", (
+      tester,
+    ) async {
+      final engine = realEngine(_LateFlagPort());
+      final port = engine.port;
+      fake.previews['itunes'] = itunesClip();
+      fake.previews['deezer'] = deezerClip();
+      await pumpSheet(tester);
+      await tapKey(tester, 'lead-preview-itunes');
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 1);
+      fake.resolveGates['deezer'] = Completer<void>();
+      await tapKey(tester, 'lead-preview-deezer');
+      expect(lineOf(tester, 'deezer'), 'Looking up…');
+
+      engine.clip.finish();
+      await frames(tester, 2);
+      expect(port.plays, 1, reason: 'the iTunes clip played out');
+      expect(port.playingNow, isTrue);
+      fake.resolveGates.remove('deezer')!.complete();
+      await frames(tester);
+      expect(engine.clip.loads, [
+        Uri.parse(itunesClip()['url'] as String),
+        Uri.parse(deezerClip()['url'] as String),
+      ]);
+      expect(engine.player.state.value.phase, PreviewPhase.playing);
+      expect(port.pauses, 2);
+      await closeSheet(tester);
+      expect(port.plays, 2, reason: 'the sheet closing brings it back');
     });
   });
 

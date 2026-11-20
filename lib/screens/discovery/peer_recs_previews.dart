@@ -135,9 +135,9 @@ class PeerRecsPreviews extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _queueTimer;
   Timer? _retry;
 
-  // The song starting, heard from a press made while it was paused with no
-  // flow of ours holding it, until the session's clip plays (the engine
-  // watches the song only once a clip has loaded).
+  // The song starting, heard from a press made while it was paused and the
+  // engine did not watch it (PreviewPlayer.flowWatchesSong), until the
+  // session's clip plays.
   StreamSubscription<void>? _songWatch;
 
   // The list index the prefetch last asked ahead for.
@@ -302,18 +302,30 @@ class PeerRecsPreviews extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _toggleLive() async {
     if (_disposed) return;
+    // The clip has ended (the engine holds the flow for Preview all's next
+    // clip), though its state has not reached the page yet: there is
+    // nothing to pause or play on, so the chain goes on or ends.
+    if (_clipEnded) {
+      _advance();
+      return;
+    }
     final gen = _gen;
     switch (_status) {
       case PeerClipStatus.idle:
         return;
       case PeerClipStatus.playing:
         // The status moves only when the engine said it did (webapp
-        // clipPause).
+        // clipPause). A clip that completed as it was paused has ended all
+        // the same.
         if (await _engine.pause(owner: this) &&
             gen == _gen &&
             _status == PeerClipStatus.playing) {
-          _status = PeerClipStatus.paused;
-          _notify();
+          if (_clipEnded) {
+            _advance();
+          } else {
+            _status = PeerClipStatus.paused;
+            _notify();
+          }
         }
       case PeerClipStatus.paused:
         if (await _engine.resume(owner: this) &&
@@ -373,10 +385,16 @@ class PeerRecsPreviews extends ChangeNotifier with WidgetsBindingObserver {
         _flowClip = null;
       }
     }
-    // The song is paused and no flow of ours holds it: the user starting it
-    // before the clip plays ends the session, and the clip never pauses it
-    // (webapp asideMainPlaying, a session asked while it was paused).
-    if (!ownFlow && !_engine.songPlaying) _watchSong(gen);
+    // The song is paused and the engine does not watch it
+    // (PreviewPlayer.flowWatchesSong): no flow runs, or the flow's first
+    // clip still loads with no pause of the song taken over (this press
+    // came while it loads, or took over a sheet's that still loaded). The
+    // user starting it before the clip plays ends the session, and the clip
+    // never pauses it (webapp asideMainPlaying, a session asked while it
+    // was paused). While the engine watches it, its own watch ends the flow
+    // instead, and this one would hear the engine bringing the song back
+    // (a clip of the flow failing) as the user starting it.
+    if (!_engine.flowWatchesSong && !_engine.songPlaying) _watchSong(gen);
     final p = providerPlugin;
     if (p == null || _recOf(lead) == null) return _settle(gen, _Miss.none);
     final stored = answers.of(_liveKey!, p.name);
@@ -689,7 +707,7 @@ class PeerRecsPreviews extends ChangeNotifier with WidgetsBindingObserver {
       final current = _flowGen == _gen;
       switch (s.phase) {
         case PreviewPhase.held:
-          if (current && _status == PeerClipStatus.playing) _advance();
+          if (_clipEnded) _advance();
         case PreviewPhase.failed:
           // The clip would not load or broke while playing: the visit
           // forgets its answer (an expired address), whether or not it is
@@ -759,6 +777,19 @@ class PeerRecsPreviews extends ChangeNotifier with WidgetsBindingObserver {
   Map<String, Uri>? _artOf(DiscoveryLead lead) {
     final key = lead.tile?.key;
     return key == null || key.isEmpty ? null : _art[key];
+  }
+
+  /// The session's clip played to its end in a play that asked to hold:
+  /// the engine holds this session's flow while the band still reads
+  /// playing, or paused (a clip that completed as the band paused it ended
+  /// all the same, and cannot play on).
+  bool get _clipEnded {
+    final s = _engine.state.value;
+    return _engineFlow &&
+        _flowGen == _gen &&
+        _ours(s) &&
+        s.phase == PreviewPhase.held &&
+        (_status == PeerClipStatus.playing || _status == PeerClipStatus.paused);
   }
 
   void _keepHeld() {

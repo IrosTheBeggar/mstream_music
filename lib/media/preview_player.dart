@@ -14,7 +14,9 @@
 // same track, the same cast target, and not playing already. A switch to
 // another provider's clip keeps the song paused in between. While casting,
 // the cast is paused and resumed the same way (the handler's pause and play
-// work on every backend); the clip itself plays on the phone.
+// work on every backend); the clip itself plays on the phone. A cast's Play
+// waits for the flow's own Pause to land: each is a request of its own to
+// the renderer, and the two could cross.
 //
 // The outside world is watched from the moment a play starts, before its
 // clip loads: the app going to the background, a call or the output
@@ -158,6 +160,10 @@ enum PreviewPlayOutcome {
 /// flow's own pause, and the cast target it was playing on.
 typedef SongHold = ({String? key, int epoch, String target});
 
+/// A cast flow's resume waiting for the flow's own pause: the song it
+/// paused, that pause, and why the flow ended.
+typedef _Landing = ({SongHold hold, Future<void> pausing, PreviewEnd reason});
+
 /// The song's side, as the preview player sees it: the audio handler, the
 /// cast manager, the app-wide audio session and the app's lifecycle. The
 /// app's is [AppPreviewPort]; tests drive a fake.
@@ -221,6 +227,11 @@ abstract class PreviewClip {
   Stream<bool> get playingStream;
   Stream<Duration> get position;
   Stream<Duration?> get duration;
+
+  /// The clip played to its end. A listener that comes while the clip sits
+  /// at its end (until the next load or stop) is told at once, as
+  /// just_audio's processing state replays to a new listener: a clip paused
+  /// as it completed completes when it plays on.
   Stream<void> get completed;
   Stream<Object> get errors;
 }
@@ -289,6 +300,16 @@ class PreviewPlayer {
   // though it is about to be paused.
   Future<void>? _pausing;
 
+  // A cast flow's resume, waiting for the flow's own pause to land
+  // (_resumeOnceLanded). The next play takes its hold over instead
+  // (_takeOverLanding), as a switch keeps the song paused.
+  _Landing? _landing;
+
+  // The transport numbers of the Plays _resumeOnceLanded sent, kept while
+  // anyone listens to songStarts, which leaves them out.
+  final Set<int> _landedResumes = {};
+  int _songStartsListeners = 0;
+
   // Transport commands numbered up to this are older than the flow; the
   // pauses it sent itself are skipped by number too.
   int _armedEpoch = 0;
@@ -329,6 +350,14 @@ class PreviewPlayer {
   /// media has started.
   bool get songPlaying => _port.songPlaying;
 
+  /// The flow watches the song, and ends itself when the user starts or
+  /// touches it: from its clip's load, or from the start of a play that
+  /// took over the last flow's pause still landing, until the flow ends. A
+  /// surface asking for a clip meanwhile leaves the song to it: a watch of
+  /// its own ([songStarts]) would hear the flow bringing the song back (a
+  /// clip of the flow failing) as the user starting it.
+  bool get flowWatchesSong => _watchingPort;
+
   /// Each time the song starts, from the moment it is listened to: a Play
   /// command (the lock screen, CarPlay, a headset, the mini player) or,
   /// while not casting, the song's playing flag going from off to on. A
@@ -336,17 +365,25 @@ class PreviewPlayer {
   /// its clip plays, since the flow watches the song only once a clip has
   /// loaded: the user starting the song in between ends that preview, as
   /// the web's aside does for a session asked while the song was paused.
-  /// It knows nothing of flows, so it also hears a flow resuming the song.
+  /// It knows nothing of flows, so it also hears a flow resuming the song
+  /// as the flow ends. A cast's resume that waited for the flow's own pause
+  /// to land is left out: it goes out later, and can come after the next
+  /// press, which would read it as the user starting the song.
   Stream<void> get songStarts {
     var subs = const <StreamSubscription<Object?>>[];
     late final StreamController<void> starts;
     starts = StreamController<void>(
       onListen: () {
+        _songStartsListeners++;
         final armed = _port.transportEpoch;
         bool? wasPlaying;
         subs = [
           _port.transportCommands.listen((c) {
-            if (c.epoch > armed && c.command == 'play') starts.add(null);
+            if (c.epoch > armed &&
+                c.command == 'play' &&
+                !_landedResumes.contains(c.epoch)) {
+              starts.add(null);
+            }
           }, onError: _ignore),
           _port.playingChanges.listen((playing) {
             // The first value is a replay of the flag as it is now.
@@ -362,6 +399,7 @@ class PreviewPlayer {
           unawaited(s.cancel());
         }
         subs = const [];
+        if (--_songStartsListeners == 0) _landedResumes.clear();
       },
     );
     return starts.stream;
@@ -386,6 +424,7 @@ class PreviewPlayer {
     _holdOnComplete = holdOnComplete;
     _cancelHeldTimer();
     _stopWatchingClip();
+    _takeOverLanding();
     _publish(PreviewClipState(
         provider: provider, phase: PreviewPhase.loading, owner: _owner));
     if (!_playable(url)) {
@@ -397,6 +436,9 @@ class PreviewPlayer {
     // From here on: the app going to the background, a call or the output
     // dropping while the clip loads ends the flow before it sounds.
     if (!_watchingOutside) _watchOutside();
+    // A hold taken over from the last flow is watched while the clip loads,
+    // as a switch's is: the song is paused (or about to be) already.
+    if (_hold != null && !_watchingPort) _watchPort();
     final clip = _clip ??= _makeClip();
     try {
       await clip.stop();
@@ -481,11 +523,14 @@ class PreviewPlayer {
     }
     _gen++;
     _active = false;
+    // Read before the watch stops: a cast's flag back on inside
+    // castStartWindow (_watchPort).
+    final startUnconfirmed = _castStart != null;
     _cancelHeldTimer();
     _stopWatchingClip();
     _stopWatchingPort();
     final hold = _hold;
-    final pauseLanding = _pausing != null;
+    final pausing = _pausing;
     _hold = null;
     _pausing = null;
     final provider = _state.value.provider;
@@ -494,7 +539,9 @@ class PreviewPlayer {
     _holdOnComplete = false;
     // Started, not awaited, before the song resumes: everything up to the
     // resume runs in this one turn, so no play or end slips in between, and
-    // on iOS the song comes back while the session is still active.
+    // on iOS the song comes back while the session is still active. (A
+    // cast's resume whose pause still lands waits for it, and a play in
+    // between takes its hold over: _resumeOnceLanded.)
     final stopping =
         clip == null ? null : _quietly(closing ? clip.dispose : clip.stop);
     _publish(reason == PreviewEnd.failed
@@ -502,21 +549,92 @@ class PreviewPlayer {
             provider: provider, phase: PreviewPhase.failed, owner: flowOwner)
         : PreviewClipState.idle);
     if (hold != null) {
-      if (resumesSong(
+      final casting = _port.casting;
+      if (!resumesSong(
           reason: reason,
           held: hold,
           epochNow: _port.transportEpoch,
           keyNow: _port.songKey,
           targetNow: _port.castTarget,
-          songPlaying: !pauseLanding && _port.songPlaying,
-          casting: _port.casting)) {
+          // A pause still landing leaves the song reading as playing, and
+          // a cast's flag back on inside the window is not believed yet.
+          songPlaying:
+              pausing == null && !startUnconfirmed && _port.songPlaying,
+          casting: casting)) {
+        appLog('[preview] leaving the song paused (${reason.name})');
+      } else if (pausing != null && casting) {
+        appLog('[preview] resuming the song (${reason.name}) once its pause '
+            'has landed');
+        unawaited(_resumeOnceLanded(
+            (hold: hold, pausing: pausing, reason: reason)));
+      } else {
+        // On the phone the handler's pause and play reach one player in
+        // order, so a Play sent now still lands after the Pause.
         appLog('[preview] resuming the song (${reason.name})');
         _port.playSong();
-      } else {
-        appLog('[preview] leaving the song paused (${reason.name})');
       }
     }
     await stopping;
+  }
+
+  /// A cast's Play sent while the flow's Pause is still on its way can
+  /// reach the renderer first, or have its answer overtaken by the Pause's
+  /// (each backend sets its playing flag after its own request): the TV
+  /// stays paused, or plays while the app says paused. So the resume goes
+  /// out once the pause has landed, and only if nobody touched the song
+  /// meanwhile and no play took the hold over. The song's flag is not read
+  /// then: just after the pause, a renderer can still report PLAYING
+  /// ([castStartWindow]), and a Play to a renderer that plays changes
+  /// nothing.
+  Future<void> _resumeOnceLanded(_Landing landing) async {
+    _landing = landing;
+    try {
+      await landing.pausing;
+    } catch (_) {
+      // The play that sent it logged it.
+    }
+    // A flow that took the hold over no longer waits on it either.
+    if (identical(_pausing, landing.pausing)) _pausing = null;
+    if (!identical(_landing, landing)) return;
+    _landing = null;
+    final reason = landing.reason;
+    if (resumesSong(
+        reason: reason,
+        held: landing.hold,
+        epochNow: _port.transportEpoch,
+        keyNow: _port.songKey,
+        targetNow: _port.castTarget,
+        songPlaying: false,
+        casting: _port.casting)) {
+      appLog('[preview] resuming the song (${reason.name}), its pause landed');
+      _port.playSong();
+      // Numbered at once, delivered later: songStarts leaves it out.
+      if (_songStartsListeners > 0) _landedResumes.add(_port.transportEpoch);
+    } else {
+      appLog('[preview] leaving the song paused (${reason.name}): it was '
+          'touched while its pause landed');
+    }
+  }
+
+  /// A play while the last flow's resume waits on its pause: the play takes
+  /// that hold over, unless the song was touched since (a transport
+  /// command, another track or cast target), and the resume is dropped
+  /// either way. The flow then resumes it at its own end, as after a switch.
+  void _takeOverLanding() {
+    final landing = _landing;
+    if (landing == null) return;
+    _landing = null;
+    final hold = landing.hold;
+    if (_port.transportEpoch != hold.epoch ||
+        _port.songKey != hold.key ||
+        _port.castTarget != hold.target) {
+      appLog('[preview] the song is left as it is (touched while its pause '
+          'landed)');
+      return;
+    }
+    appLog('[preview] the song stays paused for the next clip');
+    _hold = hold;
+    _pausing = landing.pausing;
   }
 
   /// Pauses the playing clip and keeps the flow: the song stays paused,
@@ -569,8 +687,9 @@ class PreviewPlayer {
     final gen = _gen;
     // Watched afresh: the pause's playing=false may still be on its way
     // to the old watch, and would read as the system refusing the audio
-    // once this says playing. The new watch counts nothing until the clip
-    // sounds again.
+    // once this says playing. The new watch takes no refusal until the
+    // clip sounds again; a clip paused at its end completes on it at once
+    // (PreviewClip.completed).
     _stopWatchingClip();
     _publish(PreviewClipState(
         provider: s.provider,
@@ -802,7 +921,12 @@ class PreviewPlayer {
             owner: _owner));
       }, onError: failed),
       clip.completed.listen((_) {
-        if (_holdOnComplete && gen == _gen && _active) {
+        // Only the clip playing now completes. One paused as it completed
+        // (the band's pause won the race) stays paused, and is told again
+        // when it plays on (PreviewClip.completed); held then, it would be
+        // a flow no resume reaches, its band still reading paused.
+        if (playing() == null) return;
+        if (_holdOnComplete) {
           _enterHeld(clip);
         } else {
           _endSoon(PreviewEnd.completed);
@@ -1030,6 +1154,8 @@ class JustAudioPreviewClip implements PreviewClip {
   @override
   Stream<Duration?> get duration => _p.durationStream;
 
+  // processingStateStream replays the state the player is in to each new
+  // listener, so a clip watched afresh at its end hears it completed.
   @override
   Stream<void> get completed => _p.processingStateStream
       .where((s) => s == ProcessingState.completed)
