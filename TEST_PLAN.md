@@ -67,7 +67,7 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - [ ] `NowPlaying` queue — pumps with seeded queue stream, verifies items render with title + artist.
 - [ ] `AddServerScreen` form validation — text input, error states.
 
-**Regression value**: catches UI regressions from `flutter_slidable` major version bumps, theme changes, breaking widget API changes (e.g. `PopScope` renames). This is the layer that catches the kinds of bugs that current modernization work introduces.
+**Regression value**: catches UI regressions from UI package major version bumps (`material_ui`, `cupertino_ui`), theme changes, breaking widget API changes (e.g. `PopScope` renames). This is the layer that catches the kinds of bugs that current modernization work introduces.
 
 ### Layer 3 — Golden tests (visual regression)
 
@@ -177,7 +177,6 @@ These are the *minimum* refactors that pay for themselves quickly. None changes 
 
 ## Known follow-ups (not regressions, but worth the round trip)
 
-- [ ] **`flutter_slidable` 3.1.2 → 4.0.3 major bump** — held back from this dep upgrade because major bumps deserve their own PR + regression sweep. Likely changes `ActionPane` / `Slidable` API.
 - [ ] **`ConcatenatingAudioSource` deprecation** — migrate `audio_stuff.dart:19` to `AudioPlayer.setAudioSources`. This is the kind of change that needs Layer 4 integration tests around playback before it's safe to do.
 - [ ] **Dead code**: remove `_deleteServeDirectory` in [lib/singletons/server_list.dart:200](lib/singletons/server_list.dart#L200) (or wire it back up — comment in `removeServer` suggests it was intentionally disabled).
 
