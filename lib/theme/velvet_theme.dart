@@ -162,6 +162,23 @@ Color onAccent(Color c) {
   return withBlackInk >= withWhiteInk ? Colors.black : Colors.white;
 }
 
+/// A snackbar action's ink ("Undo", "OK", "Open settings"): the accent
+/// where it reads on the snackbar (4.5:1), else the snackbar's own text
+/// colour. Left unset, Material draws the action in inversePrimary, which
+/// this scheme never sets and which then falls back to onPrimary — black on
+/// the dark palette's grey snackbar. And the accent alone is no answer
+/// either: amber on the light palette's snackbar is 1.7:1, purple on the
+/// navy one 3:1.
+Color snackBarActionInk(VelvetPalette p) {
+  double contrast(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    return ((la > lb ? la : lb) + 0.05) / ((la > lb ? lb : la) + 0.05);
+  }
+
+  return contrast(p.primary, p.raised) >= 4.5 ? p.primary : p.textPrimary;
+}
+
 /// Ink for content on top of the accent-filled play button (e.g. the play/pause
 /// glyph): dark espresso on bright accents, white on a dark custom accent, so it
 /// stays legible whatever accent the user picks. Memoized — `computeLuminance()`
@@ -467,6 +484,7 @@ ThemeData buildAppTheme(VelvetPalette p) {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: p.raised,
       contentTextStyle: TextStyle(color: p.textPrimary),
+      actionTextColor: snackBarActionInk(p),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
