@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "Изменить, куда сохраняются добавленные треки",
   "discoverCopiesDestChangedYtMoved": "Не удалось начать: место для файлов изменилось",
   "discoverCopiesAddThere": "Добавить туда",
-  "discoverToastView": "Открыть"
+  "discoverToastView": "Открыть",
+  "peerRecsTitle": "Рекомендации пиров",
+  "peerRecsAll": "Все",
+  "peerRecsAdding": "Загрузка…",
+  "peerRecsNoRoom": "Нет места",
+  "peerRecsNoPeers": "Пиров пока нет",
+  "peerRecsNothingNew": "Ничего нового",
+  "peerRecsPreviewAll": "Прослушать все",
+  "peerRecsCopyList": "Копировать список",
+  "peerRecsCopied": "Скопировано",
+  "peerRecsNoPreview": "Нет фрагмента",
+  "peerRecsPeers": "Пиры",
+  "peerRecsOffline": "не в сети",
+  "peerRecsAddPeer": "Добавить {name}",
+  "peerRecsPreviewTrack": "Прослушать фрагмент: {title}",
+  "peerRecsPauseTrack": "Приостановить фрагмент: {title}",
+  "peerRecsNextPreview": "Следующий фрагмент"
 }

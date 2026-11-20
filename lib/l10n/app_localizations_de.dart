@@ -6926,4 +6926,58 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => 'Dort hinzufügen';
+
+  @override
+  String get peerRecsTitle => 'Peer-Empfehlungen';
+
+  @override
+  String get peerRecsAll => 'Alle';
+
+  @override
+  String get peerRecsAdding => 'Wird geladen…';
+
+  @override
+  String get peerRecsNoRoom => 'Kein Platz';
+
+  @override
+  String get peerRecsNoPeers => 'Noch keine Peers';
+
+  @override
+  String get peerRecsNothingNew => 'Nichts Neues';
+
+  @override
+  String get peerRecsPreviewAll => 'Alle anhören';
+
+  @override
+  String get peerRecsCopyList => 'Liste kopieren';
+
+  @override
+  String get peerRecsCopied => 'Kopiert';
+
+  @override
+  String get peerRecsNoPreview => 'Keine Hörprobe';
+
+  @override
+  String get peerRecsPeers => 'Peers';
+
+  @override
+  String get peerRecsOffline => 'offline';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return '$name hinzufügen';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return 'Hörprobe von $title abspielen';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return 'Hörprobe von $title anhalten';
+  }
+
+  @override
+  String get peerRecsNextPreview => 'Nächste Hörprobe';
 }

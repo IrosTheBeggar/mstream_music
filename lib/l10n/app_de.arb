@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "Ziel für hinzugefügte Titel ändern",
   "discoverCopiesDestChangedYtMoved": "Start nicht möglich: Wo Dateien landen, hat sich geändert",
   "discoverCopiesAddThere": "Dort hinzufügen",
-  "discoverToastView": "Ansehen"
+  "discoverToastView": "Ansehen",
+  "peerRecsTitle": "Peer-Empfehlungen",
+  "peerRecsAll": "Alle",
+  "peerRecsAdding": "Wird geladen…",
+  "peerRecsNoRoom": "Kein Platz",
+  "peerRecsNoPeers": "Noch keine Peers",
+  "peerRecsNothingNew": "Nichts Neues",
+  "peerRecsPreviewAll": "Alle anhören",
+  "peerRecsCopyList": "Liste kopieren",
+  "peerRecsCopied": "Kopiert",
+  "peerRecsNoPreview": "Keine Hörprobe",
+  "peerRecsPeers": "Peers",
+  "peerRecsOffline": "offline",
+  "peerRecsAddPeer": "{name} hinzufügen",
+  "peerRecsPreviewTrack": "Hörprobe von {title} abspielen",
+  "peerRecsPauseTrack": "Hörprobe von {title} anhalten",
+  "peerRecsNextPreview": "Nächste Hörprobe"
 }

@@ -6905,4 +6905,58 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => 'Aggiungi lì';
+
+  @override
+  String get peerRecsTitle => 'Consigli dai peer';
+
+  @override
+  String get peerRecsAll => 'Tutti';
+
+  @override
+  String get peerRecsAdding => 'Aggiunta…';
+
+  @override
+  String get peerRecsNoRoom => 'Spazio esaurito';
+
+  @override
+  String get peerRecsNoPeers => 'Ancora nessun peer';
+
+  @override
+  String get peerRecsNothingNew => 'Niente di nuovo';
+
+  @override
+  String get peerRecsPreviewAll => 'Ascolta tutti';
+
+  @override
+  String get peerRecsCopyList => 'Copia elenco';
+
+  @override
+  String get peerRecsCopied => 'Copiato';
+
+  @override
+  String get peerRecsNoPreview => 'Nessuna anteprima';
+
+  @override
+  String get peerRecsPeers => 'Peer';
+
+  @override
+  String get peerRecsOffline => 'offline';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return 'Aggiungi $name';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return 'Ascolta l’anteprima di $title';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return 'Metti in pausa l’anteprima di $title';
+  }
+
+  @override
+  String get peerRecsNextPreview => 'Anteprima successiva';
 }

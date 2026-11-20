@@ -7063,4 +7063,58 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverCopiesAddThere => 'Dodaj tam';
+
+  @override
+  String get peerRecsTitle => 'Polecenia od peerów';
+
+  @override
+  String get peerRecsAll => 'Wszystkie';
+
+  @override
+  String get peerRecsAdding => 'Dodaję…';
+
+  @override
+  String get peerRecsNoRoom => 'Brak miejsca';
+
+  @override
+  String get peerRecsNoPeers => 'Brak peerów';
+
+  @override
+  String get peerRecsNothingNew => 'Nic nowego';
+
+  @override
+  String get peerRecsPreviewAll => 'Odsłuchaj wszystkie';
+
+  @override
+  String get peerRecsCopyList => 'Kopiuj listę';
+
+  @override
+  String get peerRecsCopied => 'Skopiowano';
+
+  @override
+  String get peerRecsNoPreview => 'Brak fragmentu';
+
+  @override
+  String get peerRecsPeers => 'Peery';
+
+  @override
+  String get peerRecsOffline => 'offline';
+
+  @override
+  String peerRecsAddPeer(String name) {
+    return 'Dodaj $name';
+  }
+
+  @override
+  String peerRecsPreviewTrack(String title) {
+    return 'Odsłuchaj fragment: $title';
+  }
+
+  @override
+  String peerRecsPauseTrack(String title) {
+    return 'Wstrzymaj fragment: $title';
+  }
+
+  @override
+  String get peerRecsNextPreview => 'Następny fragment';
 }

@@ -1697,5 +1697,21 @@
   "discoverLeadYtChangeHint": "更改所添加歌曲的保存位置",
   "discoverCopiesDestChangedYtMoved": "无法开始：文件存放位置已变",
   "discoverCopiesAddThere": "添加到新位置",
-  "discoverToastView": "查看"
+  "discoverToastView": "查看",
+  "peerRecsTitle": "节点推荐",
+  "peerRecsAll": "全部",
+  "peerRecsAdding": "正在添加…",
+  "peerRecsNoRoom": "空间不足",
+  "peerRecsNoPeers": "暂无节点",
+  "peerRecsNothingNew": "没有新内容",
+  "peerRecsPreviewAll": "全部试听",
+  "peerRecsCopyList": "复制列表",
+  "peerRecsCopied": "已复制",
+  "peerRecsNoPreview": "无试听",
+  "peerRecsPeers": "节点",
+  "peerRecsOffline": "离线",
+  "peerRecsAddPeer": "添加 {name}",
+  "peerRecsPreviewTrack": "试听 {title}",
+  "peerRecsPauseTrack": "暂停试听 {title}",
+  "peerRecsNextPreview": "下一个试听"
 }

@@ -7888,5 +7888,84 @@
   "discoverCopiesAddThere": "Add there",
   "@discoverCopiesAddThere": {
     "description": "The action on the toast 'Couldn't start: where files land changed' (discoverCopiesDestChangedYtMoved): adds the YouTube song again, to where added songs land now (the new place). 'Add' here means putting the song into the user's music library on their OWN mStream server, not saving it onto this phone (pl Dodaj, ja 追加)."
+  },
+  "peerRecsTitle": "Peer Recommendations",
+  "@peerRecsTitle": {
+    "description": "Title of the Peer Recommendations page (toolbar) and its card under LISTEN on a server's home: songs that other mStream servers on the P2P discovery network have, picked to sound like songs this account finished. A \"peer\" is another server on the P2P network, never a connected (federated) server."
+  },
+  "peerRecsAll": "All",
+  "@peerRecsAll": {
+    "description": "Peer Recommendations: the first item of the peer strip — songs from every peer on this server's shelf."
+  },
+  "peerRecsAdding": "Adding…",
+  "@peerRecsAdding": {
+    "description": "Peer Recommendations, admins only: the label under a peer whose snapshot this server is fetching onto its shelf (after its \"+\" was pressed); also read after the peer's name by screen readers. It is not a song being added to the library. It sits under a 56 px circle in a column 68 px wide, on at most two lines, so keep every word short (about 9 letters): a longer word is drawn smaller to fit."
+  },
+  "peerRecsNoRoom": "No room",
+  "@peerRecsNoRoom": {
+    "description": "Peer Recommendations, admins only: the label under a peer whose snapshot does not fit on this server's shelf even after swapping out every unpinned one. Not a button; it clears itself once an admin unpins a snapshot. Like \"Adding…\", it sits in a column 68 px wide on at most two lines, so keep every word short."
+  },
+  "peerRecsNoPeers": "No peers yet",
+  "@peerRecsNoPeers": {
+    "description": "Peer Recommendations: the page's only line while this server holds no peer snapshot it can search."
+  },
+  "peerRecsNothingNew": "Nothing new",
+  "@peerRecsNothingNew": {
+    "description": "Peer Recommendations: the page's line when the peers had no new songs for these seed songs; a \"New seeds\" button follows."
+  },
+  "peerRecsPreviewAll": "Preview all",
+  "@peerRecsPreviewAll": {
+    "description": "Peer Recommendations: the button under the songs that plays each song's 30-second preview in turn."
+  },
+  "peerRecsCopyList": "Copy list",
+  "@peerRecsCopyList": {
+    "description": "Peer Recommendations: copies the shown songs as \"Artist - Title\" lines."
+  },
+  "peerRecsCopied": "Copied",
+  "@peerRecsCopied": {
+    "description": "Toast after Copy list, or after a song is copied because no plug-in can open it."
+  },
+  "peerRecsNoPreview": "No preview",
+  "@peerRecsNoPreview": {
+    "description": "Peer Recommendations: toast when a song's preview button found no 30-second preview; also read by screen readers on the dimmed preview button."
+  },
+  "peerRecsPeers": "Peers",
+  "@peerRecsPeers": {
+    "description": "Screen reader: the name of the peer strip (the row of P2P peers at the top of Peer Recommendations)."
+  },
+  "peerRecsOffline": "offline",
+  "@peerRecsOffline": {
+    "description": "Screen reader: a peer's state in the strip, read after its name (\"Attic Tapes, offline\"); lower case like p2pOnline."
+  },
+  "peerRecsAddPeer": "Add {name}",
+  "@peerRecsAddPeer": {
+    "description": "Screen reader, admins only: the \"+\" under a peer not on this server's shelf yet; fetches its snapshot onto the shelf. {name} is the peer's label (\"Lighthouse Tapes\", \"mStream · 3f9a\").",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peerRecsPreviewTrack": "Preview {title}",
+  "@peerRecsPreviewTrack": {
+    "description": "Screen reader: a song card's round play button (and the band's play button while paused): plays the song's 30-second preview. {title} is the song's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "peerRecsPauseTrack": "Pause preview of {title}",
+  "@peerRecsPauseTrack": {
+    "description": "Screen reader: the same button while the preview plays; pauses it. {title} is the song's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "peerRecsNextPreview": "Next preview",
+  "@peerRecsNextPreview": {
+    "description": "Screen reader: the preview band's next button: plays the next song's 30-second preview."
   }
 }
