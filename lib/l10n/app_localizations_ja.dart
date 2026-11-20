@@ -821,7 +821,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserConfirmDeletePlaylist => 'プレイリスト削除の確認';
 
   @override
-  String get browserConfirmDeleteFolder => 'フォルダ削除の確認';
+  String get browserDeleteFromPhone => 'この端末から削除';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get browserDeleteFileBody => 'このファイルはこの端末から削除されます。';
+
+  @override
+  String get browserDeleteFolderBody => 'フォルダとその中身がすべてこの端末から削除されます。';
 
   @override
   String get browserSearchHint => 'データベースを検索';

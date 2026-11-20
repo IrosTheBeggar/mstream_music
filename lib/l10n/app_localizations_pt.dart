@@ -847,7 +847,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get browserConfirmDeletePlaylist => 'Confirmar exclusão da playlist';
 
   @override
-  String get browserConfirmDeleteFolder => 'Confirmar exclusão da pasta';
+  String get browserDeleteFromPhone => 'Excluir deste celular';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return 'Excluir “$name”?';
+  }
+
+  @override
+  String get browserDeleteFileBody => 'O arquivo será excluído deste celular.';
+
+  @override
+  String get browserDeleteFolderBody =>
+      'A pasta será excluída deste celular, com tudo o que há nela.';
 
   @override
   String get browserSearchHint => 'Pesquisar no banco de dados';

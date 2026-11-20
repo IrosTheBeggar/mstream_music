@@ -850,8 +850,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Confirmar eliminación de la lista de reproducción';
 
   @override
-  String get browserConfirmDeleteFolder =>
-      'Confirmar eliminación de la carpeta';
+  String get browserDeleteFromPhone => 'Eliminar de este teléfono';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return '¿Eliminar «$name»?';
+  }
+
+  @override
+  String get browserDeleteFileBody =>
+      'El archivo se eliminará de este teléfono.';
+
+  @override
+  String get browserDeleteFolderBody =>
+      'La carpeta se eliminará de este teléfono, con todo lo que contiene.';
 
   @override
   String get browserSearchHint => 'Buscar en la base de datos';

@@ -813,7 +813,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserConfirmDeletePlaylist => '确认删除播放列表';
 
   @override
-  String get browserConfirmDeleteFolder => '确认删除文件夹';
+  String get browserDeleteFromPhone => '从这部手机删除';
+
+  @override
+  String browserDeleteConfirm(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
+  String get browserDeleteFileBody => '该文件将从这部手机中删除。';
+
+  @override
+  String get browserDeleteFolderBody => '该文件夹及其中的所有内容将从这部手机中删除。';
 
   @override
   String get browserSearchHint => '搜索数据库';
