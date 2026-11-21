@@ -133,6 +133,28 @@ void main() {
     await close(tester);
   });
 
+  // The hold menu took over from the swipe pane: its Keep a copy… opens the
+  // sheet through the same door as the browse pages' ways in
+  // (BrowseKeepEntry.open, whose opener the harness records).
+  testWidgets("a hold on the row opens the same menu; its Keep a copy… goes through the browse pages' door", (tester) async {
+    h.setUp();
+    await openQueue(tester);
+    await holdRow(tester, 'Late Train Verse');
+    expect(find.byType(QueueItemSheet), findsOneWidget);
+    await tester.tap(keepRow);
+    await BrowseHarness.frames(tester, 8);
+    expect(find.byType(QueueItemSheet), findsNothing);
+    final r = h.opened.single;
+    expect([r.subject, r.variant, identical(r.peer, h.peerB), identical(r.own, h.home), r.lead['filepath']], [
+      KeepSubject.song,
+      KeepVariant.menu,
+      true,
+      true,
+      'music/Boukmanflow/Borrowed Tapes/Late Train Verse.mp3',
+    ]);
+    await close(tester);
+  });
+
   // A node holds one set of custom actions, and the reorderable list puts
   // its Move actions on each row's own node: the row keeps its name, its
   // play, its hold and the list's moves; the menu's shortcuts are the
