@@ -6,6 +6,7 @@
 // play). Keeping one source of truth means a fix to the streaming-URL / local-
 // cache logic lands everywhere at once.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -255,7 +256,8 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
 /// Appends every playable item from [rows] to the queue WITHOUT clearing it.
 /// If the queue was empty, playback starts automatically (so a first "add"
 /// from a fresh state doesn't require a separate play press). Returns the
-/// number of tracks enqueued.
+/// number of tracks enqueued as soon as they are queued, without waiting for
+/// playback: callers toast on it (see [_startPlayback]).
 Future<int> addRowsToQueue(List<DisplayItem> rows) async {
   final handler = MediaManager().audioHandler;
   final wasEmpty = handler.queue.value.isEmpty;
@@ -269,17 +271,25 @@ Future<int> addRowsToQueue(List<DisplayItem> rows) async {
   final items = built.whereType<MediaItem>().toList();
   if (items.isEmpty) return 0;
   await handler.addQueueItems(items);
-  if (wasEmpty) await handler.play();
+  if (wasEmpty) _startPlayback(handler);
   return items.length;
 }
+
+/// Starts playback without waiting for it. The handler's play() returns late:
+/// on an idle player it first loads the first song, which takes a second or
+/// more and longer on a slow link, and otherwise it returns just_audio's
+/// play(), whose future completes only when playback pauses, stops or ends.
+/// An add that awaited it showed its "added to queue" toast that late.
+void _startPlayback(AudioHandler handler) => unawaited(handler.play());
 
 /// Applies the user's TapBehavior (Settings — the same setting the file browser
 /// uses) to a single-row tap within [rows] at [index]:
 ///   • playFromHere  → play the whole list from [index]
 ///   • appendAndJump → append the row, jump to it, and play
 ///   • addToQueue    → append the row (play only if the queue was empty)
-/// Returns true only for a pure append (addToQueue onto a non-empty queue), so
-/// the caller can show an "added to queue" toast.
+/// Returns true for an addToQueue add, onto an empty queue too, so the caller
+/// can show an "added to queue" toast; it returns as soon as the row is
+/// queued, without waiting for playback (see [_startPlayback]).
 Future<bool> handleTrackTap(List<DisplayItem> rows, int index) async {
   if (index < 0 || index >= rows.length) return false;
   final behavior = SettingsManager().tapBehavior;
@@ -299,7 +309,7 @@ Future<bool> handleTrackTap(List<DisplayItem> rows, int index) async {
   }
   // addToQueue: also start playback when the queue was empty. Always report a
   // queued result so the caller shows the "added to queue" toast.
-  if (wasEmpty) await handler.play();
+  if (wasEmpty) _startPlayback(handler);
   return true;
 }
 

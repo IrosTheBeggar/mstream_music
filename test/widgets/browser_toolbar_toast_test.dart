@@ -4,6 +4,14 @@
 // the toolbar the way main.dart does: in the home Scaffold's app bar, under
 // the outer Scaffold that shows the app's snackbars, with the mini player
 // docked across the bottom.
+//
+// Onto an empty queue, Add All also starts playback, and it waited on the
+// handler's play(), which returns late: on an idle player once the first
+// song has loaded, otherwise only when playback stops (just_audio's play()).
+// Its toast came that late; now it comes at once. The fake player takes the
+// worst case: its play() does not return while the song plays.
+
+import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +25,8 @@ import 'package:mstream_music/widgets/browser_toolbar.dart';
 import 'package:mstream_music/widgets/player_panel.dart';
 import 'package:rxdart/rxdart.dart';
 
-/// A player with nothing playing whose queue takes what Add All sends.
+/// A player whose queue takes what Add All sends, and whose play() does not
+/// return while the song plays.
 class _Player implements AudioPlayerHandler {
   @override
   final BehaviorSubject<MediaItem?> mediaItem = BehaviorSubject.seeded(null);
@@ -29,31 +38,49 @@ class _Player implements AudioPlayerHandler {
       BehaviorSubject.seeded(const []);
   @override
   final BehaviorSubject<dynamic> customState = BehaviorSubject.seeded(null);
+  int plays = 0;
+  Completer<void>? _playing;
+
+  /// play() was called and has not returned: the song is still playing.
+  bool get playing => _playing != null && !_playing!.isCompleted;
 
   @override
   Future<void> addQueueItems(List<MediaItem> mediaItems) async =>
       queue.add([...queue.value, ...mediaItems]);
 
   @override
-  Future<void> play() async {}
+  Future<void> play() {
+    plays++;
+    return (_playing ??= Completer<void>()).future;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// The mini player's play/pause and next taps.
+class _Taps {
+  int plays = 0;
+  int nexts = 0;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late _Player player;
 
   setUp(() {
-    MediaManager().audioHandler = _Player();
+    player = _Player();
+    MediaManager().audioHandler = player;
     BrowserManager().goToNavScreen();
   });
   tearDown(() => BrowserManager().goToNavScreen());
 
-  testWidgets(
-      "Add All's toast floats above the mini player, whose play/pause and "
-      'next still take taps', (tester) async {
-    // A 402 × 874 phone whose bottom 34 dp are the home bar's.
+  final toast = find.text('3 songs added to queue');
+
+  /// The toolbar in the home Scaffold's app bar, under the outer Scaffold,
+  /// with the mini player docked across the bottom, on a 402 × 874 phone
+  /// whose bottom 34 dp are the home bar's. The browser lists three songs.
+  Future<_Taps> pumpShell(WidgetTester tester) async {
     tester.view.physicalSize = const Size(402 * 3, 874 * 3);
     tester.view.devicePixelRatio = 3;
     tester.view.padding = const FakeViewPadding(top: 62 * 3, bottom: 34 * 3);
@@ -61,8 +88,7 @@ void main() {
         const FakeViewPadding(top: 62 * 3, bottom: 34 * 3);
     addTearDown(tester.view.reset);
 
-    var plays = 0;
-    var nexts = 0;
+    final taps = _Taps();
     await tester.pumpWidget(MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: appSupportedLocales,
@@ -90,12 +116,12 @@ void main() {
                   IconButton(
                     key: const ValueKey('mini-play'),
                     icon: const Icon(Icons.play_arrow),
-                    onPressed: () => plays++,
+                    onPressed: () => taps.plays++,
                   ),
                   IconButton(
                     key: const ValueKey('mini-next'),
                     icon: const Icon(Icons.skip_next),
-                    onPressed: () => nexts++,
+                    onPressed: () => taps.nexts++,
                   ),
                 ]),
               ),
@@ -111,12 +137,23 @@ void main() {
             null, '$t.mp3', 'localFile', '/storage/music/$t.mp3', null, null),
     ]);
     await tester.pump();
+    return taps;
+  }
+
+  Future<void> addAll(WidgetTester tester) async {
     await tester.tap(find.byTooltip('Add All'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 750));
-    final toast = find.text('3 songs added to queue');
+  }
+
+  testWidgets(
+      "Add All's toast floats above the mini player, whose play/pause and "
+      'next still take taps', (tester) async {
+    player.queue.add([MediaItem(id: 'now', title: 'Now playing')]);
+    final taps = await pumpShell(tester);
+    await addAll(tester);
     expect(toast, findsOneWidget);
-    expect(MediaManager().audioHandler.queue.value, hasLength(3));
+    expect(player.queue.value, hasLength(4));
 
     final miniTop =
         tester.getTopLeft(find.byKey(const ValueKey('mini-player'))).dy;
@@ -127,8 +164,23 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('mini-play')));
     await tester.tap(find.byKey(const ValueKey('mini-next')));
-    expect((plays, nexts), (1, 1));
+    expect((taps.plays, taps.nexts), (1, 1));
     expect(toast, findsOneWidget, reason: 'the taps landed while it showed');
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(toast, findsNothing);
+  });
+
+  testWidgets(
+      'onto an empty queue, the toast comes at once, without waiting for '
+      'playback', (tester) async {
+    await pumpShell(tester);
+    await addAll(tester);
+    expect(player.plays, 1, reason: 'the first add starts playback');
+    expect(player.playing, isTrue, reason: 'and the song is still playing');
+    expect(toast, findsOneWidget);
+    expect(player.queue.value, hasLength(3));
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
