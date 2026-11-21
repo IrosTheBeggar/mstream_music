@@ -41,6 +41,13 @@ import 'seed_art.dart' show SeedTiles;
 /// Past this many servers, Play from moves to a page of its own.
 const kQuickConfigInlineServers = 4;
 
+/// Up to this text scale the Auto DJ button shows its word; past it, its
+/// glyph.
+const _kWordUpTo = 1.5;
+
+/// The Auto DJ button's word, at text 1.0.
+const double _kLabelSize = 13;
+
 /// The bar an [AutoDjSplitButton] sits in — the mini player, the queue
 /// header. Quick config opens away from it and leaves it undimmed.
 class AutoDjAnchorBar extends StatefulWidget {
@@ -122,6 +129,11 @@ class _AutoDjSplitButtonState extends State<AutoDjSplitButton> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Past 1.5× text the word outgrows its bars (at 2.0× the queue header
+    // ran off a 402 dp phone), so the toggle shows Auto DJ's glyph instead.
+    // A screen reader still hears "Auto DJ", and a long press shows it.
+    final glyph = MediaQuery.textScalerOf(context).scale(_kLabelSize) >
+        _kLabelSize * _kWordUpTo;
     return StreamBuilder<bool>(
       stream: _on,
       builder: (context, snap) {
@@ -129,6 +141,19 @@ class _AutoDjSplitButtonState extends State<AutoDjSplitButton> {
         final ink = on ? VelvetColors.primary : VelvetColors.appBarText;
         // Points where quick config opens; flips while it is open.
         final up = widget.menuAbove != _open;
+        final Widget toggle = Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 10, 0),
+          child: Center(
+            child: glyph
+                ? Icon(Icons.all_inclusive,
+                    size: 20, color: ink, semanticLabel: l.autoDjTitle)
+                : Text(l.autoDjTitle,
+                    style: TextStyle(
+                        fontSize: _kLabelSize,
+                        fontWeight: FontWeight.w700,
+                        color: ink)),
+          ),
+        );
         return Material(
           color: on ? VelvetColors.primaryDim : Colors.transparent,
           shape: StadiumBorder(
@@ -144,16 +169,12 @@ class _AutoDjSplitButtonState extends State<AutoDjSplitButton> {
                 child: InkWell(
                   key: const ValueKey('auto-dj-split-toggle'),
                   onTap: widget.onToggle ?? () => toggleAutoDJ(context),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 10, 0),
-                    child: Center(
-                      child: Text(l.autoDjTitle,
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: ink)),
-                    ),
-                  ),
+                  child: glyph
+                      ? Tooltip(
+                          message: l.autoDjTitle,
+                          excludeFromSemantics: true,
+                          child: toggle)
+                      : toggle,
                 ),
               ),
               Container(

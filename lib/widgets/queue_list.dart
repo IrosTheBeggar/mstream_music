@@ -864,34 +864,40 @@ class QueueHeader extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              StreamBuilder<List<MediaItem>>(
-                stream: MediaManager().audioHandler.queue,
-                builder: (context, snap) {
-                  final n = snap.data?.length ?? 0;
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        l.tabQueue.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 2.0,
-                          fontWeight: FontWeight.w600,
-                          color: VelvetColors.textSecondary,
+              // Flexible, and one line cut with an ellipsis: at large text
+              // the label and count give way, so the Auto DJ button and ⋮
+              // stay on screen.
+              Flexible(
+                child: StreamBuilder<List<MediaItem>>(
+                  stream: MediaManager().audioHandler.queue,
+                  builder: (context, snap) {
+                    final n = snap.data?.length ?? 0;
+                    return Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                          text: l.tabQueue.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.0,
+                            fontWeight: FontWeight.w600,
+                            color: VelvetColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        l.mainQueueCount(n),
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                          color: VelvetColors.textTertiary,
+                        const WidgetSpan(child: SizedBox(width: 9)),
+                        TextSpan(
+                          text: l.mainQueueCount(n),
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: VelvetColors.textTertiary,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
+                ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
