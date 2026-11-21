@@ -39,6 +39,11 @@ class PlayerPanel extends StatefulWidget {
   /// bottom padding on the body so list content clears the bar.
   static const double kCollapsedHeight = 104.0;
 
+  /// The collapsed bar on its own, as the panel docks it (tests).
+  @visibleForTesting
+  static Widget miniBar({Key? key}) => _MiniPlayer(
+      key: key, onTap: () {}, onDragUpdate: (_) {}, onDragEnd: (_) {});
+
   final double collapsedHeight;
   const PlayerPanel({super.key, this.collapsedHeight = kCollapsedHeight});
 
@@ -1117,6 +1122,19 @@ class _AmbientLayerState extends State<_AmbientLayer> {
 // Collapsed mini-player (no album-art glow, per the design).
 // ---------------------------------------------------------------------------
 
+/// The mini player's title line: its words' size, its row, and the line
+/// height its words are set in. The theme's own line height, 1.43, made a
+/// 13 px line 18.6 px tall, past the row already at text 1.0.
+const double _kMiniTitleSize = 13;
+const double _kMiniTitleRow = 18;
+const double _kMiniTitleLeading = 1.2;
+
+/// The text scale the title line's words stop growing at: the largest that
+/// still fits the row. The bar is a fixed [PlayerPanel.kCollapsedHeight]
+/// and has no room to give the line more height.
+const double _kMiniTitleScaleUpTo =
+    _kMiniTitleRow / (_kMiniTitleSize * _kMiniTitleLeading);
+
 class _MiniPlayer extends StatelessWidget {
   final VoidCallback onTap;
   final GestureDragUpdateCallback onDragUpdate;
@@ -1170,49 +1188,56 @@ class _MiniPlayer extends StatelessWidget {
                   ),
                 ),
               ),
-              // Title · artist + position / duration.
+              // Title · artist + position / duration. The bar has no room to
+              // give this line more height, so past about 1.15× text its words
+              // stop growing: at 2.0× they ran out of the 18 dp row and were
+              // cut off. The full player shows them at any size.
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 3),
-                child: StreamBuilder<_MediaPos>(
-                  stream: _mediaPos,
-                  builder: (context, snap) {
-                    final item = snap.data?.item;
-                    final pos = snap.data?.position ?? Duration.zero;
-                    final dur = item?.duration;
-                    return SizedBox(
-                      height: 18,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item == null
-                                  ? ''
-                                  : (item.artist == null
-                                      ? item.title
-                                      : '${item.title}  ·  ${item.artist}'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: VelvetColors.appBarText,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500),
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: _kMiniTitleScaleUpTo,
+                  child: StreamBuilder<_MediaPos>(
+                    stream: _mediaPos,
+                    builder: (context, snap) {
+                      final item = snap.data?.item;
+                      final pos = snap.data?.position ?? Duration.zero;
+                      final dur = item?.duration;
+                      return SizedBox(
+                        height: _kMiniTitleRow,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item == null
+                                    ? ''
+                                    : (item.artist == null
+                                        ? item.title
+                                        : '${item.title}  ·  ${item.artist}'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: VelvetColors.appBarText,
+                                    fontSize: _kMiniTitleSize,
+                                    height: _kMiniTitleLeading,
+                                    fontWeight: FontWeight.w500),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          _transcodeBadge(context, item),
-                          Text(
-                            dur == null
-                                ? _fmt(pos)
-                                : '${_fmt(pos)} / ${_fmt(dur)}',
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10.5,
-                                color: VelvetColors.appBarTextSecondary),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                            const SizedBox(width: 8),
+                            _transcodeBadge(context, item),
+                            Text(
+                              dur == null
+                                  ? _fmt(pos)
+                                  : '${_fmt(pos)} / ${_fmt(dur)}',
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 10.5,
+                                  color: VelvetColors.appBarTextSecondary),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
               // Seekable waveform (the "original" mStream bottom-bar scrubber).
