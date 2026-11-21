@@ -54,6 +54,7 @@ import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
 import 'util/self_signed_overrides.dart';
+import 'util/drawer_swipe.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -1020,6 +1021,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           // Keep the body full-height when the keyboard opens (see _homeScaffold).
           resizeToAvoidBottomInset: false,
           drawer: _appDrawer(context, l),
+          // Off where Android's gesture navigation keeps the edge for its
+          // Back swipe; the hamburger still opens it (drawer_swipe.dart).
+          drawerEnableOpenDragGesture: drawerEdgeSwipeAllowed(context),
           // The drawer slides over the browser, so the browser's pages count
           // it as a cover (Peer Recommendations ends its preview under it).
           onDrawerChanged: (open) => appDrawerOpen.value = open,
