@@ -20,7 +20,7 @@ import 'keep_folder_glyph.dart';
 
 /// How a browse way in opens the Keep sheet: one door for all of them
 /// (peer_sheets.dart's showBrowseKeepSheet), so the pill, a card's ⋯, a
-/// menu row and the queue's pane all open the same sheet the same way.
+/// menu row and the queue's hold menu all open the same sheet the same way.
 /// [marks] is the opener page's own lookup holder (the sheet reads the
 /// request's state from it, and asks it again once it closes).
 typedef BrowseKeepOpener = Future<void> Function(

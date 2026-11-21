@@ -665,8 +665,8 @@ typedef KeepTrackFetch =
 
 /// Keep a copy entered while browsing a connected server — a page pill, a
 /// card's ⋯ or long-press, an album row, a track or folder menu's row, the
-/// queue's pane ([BrowseKeepRequest] says which, and what): the sheet in
-/// one of its three shapes, its copies the user's own server's
+/// queue's hold menu ([BrowseKeepRequest] says which, and what): the sheet
+/// in one of its three shapes, its copies the user's own server's
 /// (`CopiesHub().jobsFor(request.peer)`), never a Discover page's.
 ///   V-page  header · Listen (an album's Play album and Queue album, a
 ///           folder's Play folder and Add to queue, an artist's none) ·
