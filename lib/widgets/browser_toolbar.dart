@@ -56,6 +56,7 @@ import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import 'local_search_bar.dart';
 import 'mood_filter_sheet.dart';
+import 'player_panel.dart';
 
 // Combined snapshot the toolbar renders from.
 typedef _Tb = ({
@@ -159,8 +160,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     final l = AppLocalizations.of(context);
     final files = _downloadable(all);
     if (files.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.browserNothingToDownload)));
+      _toast(context, l.browserNothingToDownload);
       return;
     }
     final n = files.length;
@@ -186,8 +186,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
                     downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.browserDownloadsStarted(n))));
+              _toast(context, l.browserDownloadsStarted(n));
             },
             child: Text(l.download),
           ),
@@ -200,8 +199,23 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     final l = AppLocalizations.of(context);
     final n = await addRowsToQueue(_enqueueable(all));
     if (!context.mounted || n == 0) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(l.browserSongsAdded(n))));
+    _toast(context, l.browserSongsAdded(n));
+  }
+
+  // Floating above the docked mini player. A plain snackbar lands on the mini
+  // player's controls and takes their taps until it leaves, about 4 s later.
+  void _toast(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: PlayerPanel.kCollapsedHeight +
+            MediaQuery.viewPaddingOf(context).bottom +
+            8,
+      ),
+    ));
   }
 
   // The list the download / add-all actions act on right now.
