@@ -159,8 +159,11 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   Future<void> seekToNext() => _player.seekToNext();
 
+  // The first row has no previous one: start it over, as the cast backends do.
   @override
-  Future<void> seekToPrevious() => _player.seekToPrevious();
+  Future<void> seekToPrevious() => _player.hasPrevious
+      ? _player.seekToPrevious()
+      : _player.seek(Duration.zero);
 
   @override
   Future<void> setShuffleEnabled(bool enabled) =>
