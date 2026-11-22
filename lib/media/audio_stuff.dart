@@ -3845,17 +3845,58 @@ class AudioPlayerHandler extends BaseAudioHandler
             .contains(vector));
   }
 
+  /// Past this far into a song, Previous starts it over; within it, Previous
+  /// goes to the song before. 3 s is Android's own player's default
+  /// (Media3's maxSeekToPreviousPosition), and Spotify's and the desktop
+  /// players' too.
+  static const previousRestartWindow = Duration(seconds: 3);
+
+  /// When the last Previous started its song over, so a second press goes
+  /// back even while a cast renderer's position still reads the old spot.
+  /// A user seek clears it.
+  DateTime? _previousRestartedAt;
+
+  /// Whether a Previous at [position] starts the song over rather than going
+  /// to the one before: past [previousRestartWindow], unless a Previous
+  /// started it over within that window already ([restartedAt]). The press
+  /// that follows a restart goes back, however stale [position] reads.
+  /// Pure; unit-tested.
+  static bool previousRestarts({
+    required Duration position,
+    required DateTime now,
+    DateTime? restartedAt,
+  }) {
+    final pressedAgain = restartedAt != null &&
+        now.difference(restartedAt) < previousRestartWindow;
+    return !pressedAgain && position > previousRestartWindow;
+  }
+
   @override
   Future<void> skipToPrevious() async {
     transport.note('skipToPrevious');
     _restoreSpot = null; // user navigation supersedes a failed-restore park
     _releasePark();
-    _backend.seekToPrevious();
+    final now = DateTime.now();
+    final restarts = previousRestarts(
+        position: _backend.position,
+        now: now,
+        restartedAt: _previousRestartedAt);
+    _previousRestartedAt = restarts ? now : null;
+    if (restarts) {
+      _seekTo(Duration.zero);
+    } else {
+      _backend.seekToPrevious();
+    }
   }
 
   @override
   Future<void> seek(Duration position) {
     transport.note('seek');
+    _previousRestartedAt = null; // a scrub after a restart is a new spot
+    return _seekTo(position);
+  }
+
+  Future<void> _seekTo(Duration position) {
     // A manual scrub supersedes the parked position (keep nothing: the next
     // re-seed should read the live player, which this seek just updated).
     _restoreSpot = null;
